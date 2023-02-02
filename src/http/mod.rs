@@ -11,6 +11,7 @@ use crate::solr_client::SolrClient;
 
 pub mod error;
 pub mod search;
+pub mod graphql;
 
 use error::Error;
 
@@ -56,6 +57,7 @@ fn router(context: Context) -> Result<Router, Error> {
 
     let router = Router::new()
         .merge(search::router())
+        .merge(graphql::router(context.clone()))
         .layer(TraceLayer::new_for_http())
         .layer(
             CorsLayer::new()

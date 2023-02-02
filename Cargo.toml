@@ -7,6 +7,8 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.68"
+async-graphql = { version = "5.0.5", features = ["tracing", "tokio"] }
+async-graphql-axum = "5.0.5"
 axum = "0.6.4"
 dotenvy = "0.15.6"
 hyper = "0.14.23"

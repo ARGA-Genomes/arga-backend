@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Deserialize};
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("Internal request error")]
+    #[error("internal request error")]
     Request(#[from] reqwest::Error),
 }
 

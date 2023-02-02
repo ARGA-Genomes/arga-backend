@@ -63,6 +63,6 @@ async fn search(
     State(state): State<Context>,
 ) -> Result<Json<Taxa>, Error> {
     let query = params.get("q").ok_or(Error::MissingParam("q".to_string()))?;
-    let records = state.solr.select::<Taxa>(&query, 10).await?;
+    let records = state.solr.select::<Taxa>(query, 50).await?;
     Ok(Json(records))
 }
