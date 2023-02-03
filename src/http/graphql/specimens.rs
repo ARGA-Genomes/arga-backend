@@ -69,8 +69,8 @@ pub struct Specimen {
     /// The taxonomic class
     class: Option<String>,
 
-    species_group: Vec<String>,
-    species_subgroup: Vec<String>,
+    species_group: Option<Vec<String>>,
+    species_subgroup: Option<Vec<String>>,
     biome: Option<String>,
 
     locality: Option<String>,
@@ -98,8 +98,8 @@ pub struct Specimen {
     data_resource_name: Option<String>,
     record_number: Option<String>,
     provenance: Option<String>,
-    recorded_by: Vec<String>,
-    identified_by: Vec<String>,
+    recorded_by: Option<Vec<String>>,
+    identified_by: Option<Vec<String>>,
 
-    assertions: Vec<String>,
+    assertions: Option<Vec<String>>,
 }
