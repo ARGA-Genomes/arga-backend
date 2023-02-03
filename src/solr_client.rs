@@ -31,7 +31,7 @@ impl SolrClient {
     pub async fn select<'a, T>(&self, query: &str, rows: usize) -> Result<T, Error>
         where T: DeserializeOwned + std::fmt::Debug
     {
-        let url = format!("{}/solr/biocache/select?q={query}&rows={rows}", self.host);
+        let url = format!("{}/select?q={query}&rows={rows}", self.host);
         let resp = self.client.get(url).send().await?;
         let json = resp.json::<SolrResult<T>>().await;
         Ok(json?.response)
