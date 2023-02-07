@@ -14,6 +14,11 @@ struct SolrResult<T> {
     response: T,
 }
 
+#[derive(Deserialize)]
+struct SolrGroupResult<T> {
+    grouped: T,
+}
+
 #[derive(Clone)]
 pub struct SolrClient {
     host: String,
@@ -35,5 +40,14 @@ impl SolrClient {
         let resp = self.client.get(url).send().await?;
         let json = resp.json::<SolrResult<T>>().await;
         Ok(json?.response)
+    }
+
+    pub async fn select_grouped<'a, T>(&self, query: &str, rows: usize) -> Result<T, Error>
+        where T: DeserializeOwned + std::fmt::Debug
+    {
+        let url = format!("{}/select?q={query}&rows={rows}", self.host);
+        let resp = self.client.get(url).send().await?;
+        let json = resp.json::<SolrGroupResult<T>>().await;
+        Ok(json?.grouped)
     }
 }

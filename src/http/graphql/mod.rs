@@ -1,3 +1,4 @@
+pub mod overview;
 pub mod specimens;
 pub mod extensions;
 
@@ -11,6 +12,7 @@ use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 
 use crate::http::Context;
+use self::overview::Overview;
 use self::specimens::Specimens;
 use self::extensions::ErrorLogging;
 
@@ -22,6 +24,9 @@ pub struct Query;
 
 #[Object]
 impl Query {
+    async fn overview(&self) -> Overview {
+        Overview {}
+    }
     async fn specimens(&self) -> Specimens {
         Specimens {}
     }
