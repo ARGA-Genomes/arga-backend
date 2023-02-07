@@ -1,5 +1,6 @@
 pub mod overview;
 pub mod specimens;
+pub mod search;
 pub mod extensions;
 
 use axum::{Extension, Router};
@@ -14,6 +15,7 @@ use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use crate::http::Context;
 use self::overview::Overview;
 use self::specimens::Specimens;
+use self::search::Search;
 use self::extensions::ErrorLogging;
 
 
@@ -29,6 +31,9 @@ impl Query {
     }
     async fn specimens(&self) -> Specimens {
         Specimens {}
+    }
+    async fn search(&self) -> Search {
+        Search {}
     }
 }
 
