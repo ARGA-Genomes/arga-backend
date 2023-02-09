@@ -3,12 +3,22 @@ use serde::{Serialize, Deserialize};
 
 use crate::http::Error;
 use crate::http::Context as State;
+use crate::index::filters::{TaxonomyFilters, Filterable};
 
 
 pub struct Search;
 
 #[Object]
 impl Search {
+    async fn filters(&self, ctx: &Context<'_>) -> Result<FilterTypeResults, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let taxonomy = state.provider.taxonomy_filters().await.unwrap();
+
+        Ok(FilterTypeResults {
+            taxonomy,
+        })
+    }
+
     /// Returns the amount of preserved specimens in the index
     async fn with_kingdom(&self, ctx: &Context<'_>, kingdom: String) -> Result<SearchResults, Error> {
         let state = ctx.data::<State>().unwrap();
@@ -25,6 +35,13 @@ async fn search_query(query: &str, state: &State) -> Result<SearchResults, Error
             err
         }
     }
+}
+
+
+#[derive(Debug, Serialize, Deserialize, SimpleObject)]
+pub struct FilterTypeResults {
+    /// Filters to narrow down specimens by taxonomic rank
+    pub taxonomy: TaxonomyFilters,
 }
 
 
