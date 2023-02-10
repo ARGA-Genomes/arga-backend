@@ -4,6 +4,8 @@ use serde::{Serialize, Deserialize};
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
+use crate::index::search::SearchFilterItem;
+use crate::index::search::{Searchable, SearchResults};
 
 
 pub struct Search;
@@ -19,21 +21,26 @@ impl Search {
         })
     }
 
-    /// Returns the amount of preserved specimens in the index
-    async fn with_kingdom(&self, ctx: &Context<'_>, kingdom: String) -> Result<SearchResults, Error> {
+    async fn filtered(
+        &self,
+        ctx: &Context<'_>,
+        kingdom: Option<String>,
+        phylum: Option<String>,
+        class: Option<String>,
+        family: Option<String>,
+        genus: Option<String>,
+    ) -> Result<SearchResults, Error> {
         let state = ctx.data::<State>().unwrap();
-        search_query(&format!(r#"kingdom:"{kingdom}""#), state).await
-    }
-}
 
-async fn search_query(query: &str, state: &State) -> Result<SearchResults, Error> {
-    match state.solr.select::<SearchResults>(&query, 20).await {
-        Ok(results) => Ok(results),
-        Err(e) => {
-            let err = Err(crate::http::Error::Solr(e));
-            tracing::error!(?err);
-            err
-        }
+        let mut filters = Vec::new();
+        if let Some(value) = kingdom { filters.push(SearchFilterItem { field: "kingdom".into(), value })}
+        if let Some(value) = phylum { filters.push(SearchFilterItem { field: "phylum".into(), value })}
+        if let Some(value) = class { filters.push(SearchFilterItem { field: "class".into(), value })}
+        if let Some(value) = family { filters.push(SearchFilterItem { field: "family".into(), value })}
+        if let Some(value) = genus { filters.push(SearchFilterItem { field: "genus".into(), value })}
+
+        let results = state.provider.filtered(&filters).await.unwrap();
+        Ok(results)
     }
 }
 
@@ -42,46 +49,4 @@ async fn search_query(query: &str, state: &State) -> Result<SearchResults, Error
 pub struct FilterTypeResults {
     /// Filters to narrow down specimens by taxonomic rank
     pub taxonomy: TaxonomyFilters,
-}
-
-
-#[derive(Debug, SimpleObject, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SearchResults {
-    #[serde(rename(deserialize = "numFound"))]
-    total: usize,
-    #[serde(rename(deserialize = "docs"))]
-    records: Vec<SearchItem>,
-}
-
-#[derive(Debug, SimpleObject, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct SearchItem {
-    id: String,
-
-    /// The scientific name given to this taxon
-    scientific_name: Option<String>,
-    /// The taxonomic genus
-    genus: Option<String>,
-    /// The taxonomic sub genus
-    subgenus: Option<String>,
-    /// The taxonomic kingdom
-    kingdom: Option<String>,
-    /// The taxonomic phylum
-    phylum: Option<String>,
-    /// The taxonomic family
-    family: Option<String>,
-    /// The taxonomic class
-    class: Option<String>,
-
-    species_group: Option<Vec<String>>,
-    species_subgroup: Option<Vec<String>>,
-    biome: Option<String>,
-
-    event_date: Option<String>,
-    event_time: Option<String>,
-    license: Option<String>,
-
-    recorded_by: Option<Vec<String>>,
-    identified_by: Option<Vec<String>>,
 }
