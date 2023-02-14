@@ -11,36 +11,53 @@ pub struct SearchResults {
     pub records: Vec<SearchItem>,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
+pub struct SpeciesList {
+    pub total: usize,
+    pub groups: Vec<GroupedSearchItem>,
+}
+
 #[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchItem {
-    id: String,
+    pub id: String,
+    pub species_uuid: Option<String>,
+
+    pub genomic_data_records: Option<usize>,
 
     /// The scientific name given to this taxon
-    scientific_name: Option<String>,
+    pub scientific_name: Option<String>,
     /// The taxonomic genus
-    genus: Option<String>,
+    pub genus: Option<String>,
     /// The taxonomic sub genus
-    subgenus: Option<String>,
+    pub subgenus: Option<String>,
     /// The taxonomic kingdom
-    kingdom: Option<String>,
+    pub kingdom: Option<String>,
     /// The taxonomic phylum
-    phylum: Option<String>,
+    pub phylum: Option<String>,
     /// The taxonomic family
-    family: Option<String>,
+    pub family: Option<String>,
     /// The taxonomic class
-    class: Option<String>,
+    pub class: Option<String>,
 
-    species_group: Option<Vec<String>>,
-    species_subgroup: Option<Vec<String>>,
-    biome: Option<String>,
+    pub species_group: Option<Vec<String>>,
+    pub species_subgroup: Option<Vec<String>>,
+    pub biome: Option<String>,
 
-    event_date: Option<String>,
-    event_time: Option<String>,
-    license: Option<String>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
+    pub license: Option<String>,
 
-    recorded_by: Option<Vec<String>>,
-    identified_by: Option<Vec<String>>,
+    pub recorded_by: Option<Vec<String>>,
+    pub identified_by: Option<Vec<String>>,
+}
+
+#[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GroupedSearchItem {
+    pub key: Option<String>,
+    pub matches: usize,
+    pub records: Vec<SearchItem>
 }
 
 
@@ -55,4 +72,6 @@ pub trait Searchable {
     type Error;
 
     async fn filtered(&self, filters: &Vec<SearchFilterItem>) -> Result<SearchResults, Self::Error>;
+
+    async fn species(&self, filters: &Vec<SearchFilterItem>) -> Result<SpeciesList, Self::Error>;
 }

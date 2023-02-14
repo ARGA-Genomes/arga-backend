@@ -13,7 +13,7 @@ impl Filterable for Solr {
         let params = vec![
             ("q", "*:*"),
             ("fl", "id"),
-            ("rows", "300"),
+            ("rows", "30000"),
             ("group", "true"),
             ("group.field", "kingdom"),
             ("group.field", "phylum"),

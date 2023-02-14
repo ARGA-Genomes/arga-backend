@@ -46,11 +46,11 @@ impl SolrClient {
         let resp = self.client.get(url.as_str()).send().await?;
 
         if grouped {
-            let json = resp.json::<SolrGroupResult<T>>().await;
-            Ok(json?.grouped)
+            let json = resp.json::<SolrGroupResult<T>>().await?;
+            Ok(json.grouped)
         } else {
-            let json = resp.json::<SolrResult<T>>().await;
-            Ok(json?.response)
+            let json = resp.json::<SolrResult<T>>().await?;
+            Ok(json.response)
         }
     }
 }
