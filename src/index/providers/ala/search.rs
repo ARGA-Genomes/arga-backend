@@ -125,6 +125,7 @@ struct AlaSearchItem {
     /// The taxonomic class
     class: Option<String>,
 
+    species: Option<String>,
     species_group: Option<Vec<String>>,
     species_subgroup: Option<Vec<String>>,
     biome: Option<String>,
@@ -150,6 +151,7 @@ impl From<AlaSearchItem> for SearchItem {
             phylum: source.phylum,
             family: source.family,
             class: source.class,
+            species: source.species,
             species_group: source.species_group,
             species_subgroup: source.species_subgroup,
             biome: source.biome,

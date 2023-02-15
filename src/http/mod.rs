@@ -8,6 +8,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::index::providers::ala::Ala;
+use crate::index::providers::db::Database;
 use crate::index::providers::solr::Solr;
 use crate::solr_client::SolrClient;
 
@@ -33,14 +34,16 @@ pub(crate) struct Context {
     pub solr: SolrClient,
     pub provider: Solr,
     pub ala_provider: Ala,
+    pub db_provider: Database,
 }
 
 
-pub async fn serve(config: Config, solr: SolrClient, provider: Solr) -> anyhow::Result<()> {
+pub async fn serve(config: Config, solr: SolrClient, provider: Solr, db_provider: Database) -> anyhow::Result<()> {
     let context = Context {
         config,
         solr,
         provider,
+        db_provider,
         ala_provider: Ala::new(),
     };
 

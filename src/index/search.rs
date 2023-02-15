@@ -40,6 +40,7 @@ pub struct SearchItem {
     /// The taxonomic class
     pub class: Option<String>,
 
+    pub species: Option<String>,
     pub species_group: Option<Vec<String>>,
     pub species_subgroup: Option<Vec<String>>,
     pub biome: Option<String>,
