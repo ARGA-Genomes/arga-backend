@@ -41,7 +41,7 @@ pub(crate) fn schema(context: Context) -> ArgaSchema {
     Schema::build(Query, EmptyMutation, EmptySubscription)
         .data(context)
         .extension(ErrorLogging)
-        // .extension(Tracing)
+        .extension(Tracing)
         .finish()
 }
 
