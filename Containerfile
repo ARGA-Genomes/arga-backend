@@ -1,4 +1,8 @@
 FROM rust:1.67 as builder
+LABEL org.opencontainers.image.source="https://github.com/ARGA-Genomes/arga-backend"
+LABEL org.opencontainers.image.description="A container image running the backend server"
+LABEL org.opencontainers.image.licenses="AGPL-3.0"
+
 WORKDIR /usr/src/arga-backend
 COPY . .
 RUN cargo install --path .
