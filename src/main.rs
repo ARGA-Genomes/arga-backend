@@ -12,6 +12,9 @@ async fn main() {
 
     dotenv().ok();
 
+    let bind_address = std::env::var("BIND_ADDRESS").expect("No binding address specified");
+    let bind_address = bind_address.parse().expect("Failed to parse the binding address");
+
     // used for cors
     let frontend_host = std::env::var("FRONTEND_URL").expect("No frontend URL specified");
 
@@ -22,6 +25,7 @@ async fn main() {
     let provider = Solr::new(client);
 
     let config = http::Config {
+        bind_address,
         frontend_host,
     };
 
