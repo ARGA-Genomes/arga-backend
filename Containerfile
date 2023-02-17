@@ -9,7 +9,7 @@ COPY --from=builder /usr/local/cargo/bin/arga-backend /usr/local/bin/arga-backen
 
 ENV SOLR_URL=http://localhost:8983/api
 ENV FRONTEND_URL=http://localhost:3000
-ENV BINDING_ADDRESS=0.0.0.0:5000
+ENV BIND_ADDRESS=0.0.0.0:5000
 EXPOSE 5000
 CMD ["arga-backend"]
 
