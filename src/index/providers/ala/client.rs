@@ -5,7 +5,7 @@ use serde::{Deserialize, de::DeserializeOwned};
 use super::Error;
 
 
-static HOST: &str = "https://apis.ala.org.au/species";
+static HOST: &str = "https://api.ala.org.au/species";
 
 
 #[derive(Deserialize)]
