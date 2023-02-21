@@ -67,6 +67,17 @@ pub struct SearchFilterItem {
     pub value: String,
 }
 
+
+#[derive(Debug, Deserialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchSuggestion {
+    pub guid: String,
+    pub species_name: String,
+    pub common_name: Option<String>,
+    pub matched: String,
+}
+
+
 #[async_trait]
 pub trait Searchable {
     type Error;
@@ -74,4 +85,6 @@ pub trait Searchable {
     async fn filtered(&self, filters: &Vec<SearchFilterItem>) -> Result<SearchResults, Self::Error>;
 
     async fn species(&self, filters: &Vec<SearchFilterItem>) -> Result<SpeciesList, Self::Error>;
+
+    async fn suggestions(&self, query: &str) -> Result<Vec<SearchSuggestion>, Self::Error>;
 }

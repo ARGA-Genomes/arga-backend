@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList};
+use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SearchSuggestion};
 use super::{Solr, Error};
 
 
@@ -65,6 +65,10 @@ impl Searchable for Solr {
             total: results.species_id.matches,
             groups,
         })
+    }
+
+    async fn suggestions(&self, _query: &str) -> Result<Vec<SearchSuggestion>, Error> {
+        Ok(vec![])
     }
 }
 

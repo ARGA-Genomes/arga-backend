@@ -5,6 +5,7 @@ use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
 use crate::index::search::SearchFilterItem;
+use crate::index::search::SearchSuggestion;
 use crate::index::search::{Searchable, SearchResults};
 
 
@@ -79,6 +80,12 @@ impl Search {
         }
 
         Ok(ala_results)
+    }
+
+    async fn suggestions(&self, ctx: &Context<'_>, query: String) -> Result<Vec<SearchSuggestion>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let suggestions = state.ala_provider.suggestions(&query).await.unwrap();
+        Ok(suggestions)
     }
 }
 
