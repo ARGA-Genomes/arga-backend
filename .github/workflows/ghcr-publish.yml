@@ -1,9 +1,8 @@
-name: Build and deploy to ghcr.io
+name: Build image and deploy to ghcr.io
 
 on:
   push:
     branches: [ "main" ]
-  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io/arga-genomes
