@@ -8,6 +8,10 @@ COPY . .
 RUN cargo install --path .
 
 FROM debian:bullseye-slim
+LABEL org.opencontainers.image.source="https://github.com/ARGA-Genomes/arga-backend"
+LABEL org.opencontainers.image.description="A container image running the backend server"
+LABEL org.opencontainers.image.licenses="AGPL-3.0"
+
 RUN apt-get update && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/cargo/bin/arga-backend /usr/local/bin/arga-backend
 
