@@ -1,12 +1,14 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use serde::Deserialize;
 
 use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SearchSuggestion};
-use super::{Solr, Error};
+use super::{Ala, Error};
 
 
 #[async_trait]
-impl Searchable for Solr {
+impl Searchable for Ala {
     type Error = Error;
 
     async fn filtered(&self, filters: &Vec<SearchFilterItem>) -> Result<SearchResults, Error> {
@@ -16,15 +18,17 @@ impl Searchable for Solr {
         let mut params = vec![
             ("q", "*:*"),
             ("rows", "20"),
+            ("group", "true"),
+            ("group.field", "scientificName"),
         ];
 
-        // having multiple `fq` params is the same as using AND
-        for filter in filters.iter() {
-            params.push(("fq", filter));
-        }
+        // unlike solr we cant provide multiple fq fields so instead we
+        // join all the filters with an 'AND' to narrow down the search
+        let joined_filter = filters.join(" AND ");
+        params.push(("fq", &joined_filter));
 
         tracing::debug!(?params);
-        let results = self.client.select::<Results>(&params).await?;
+        let results = self.client.search::<Results>(&params).await?;
 
         Ok(SearchResults {
             total: results.total,
@@ -41,19 +45,19 @@ impl Searchable for Solr {
             ("q", "*:*"),
             ("rows", "20"),
             ("group", "true"),
-            ("group.field", "speciesID"),
+            ("group.field", "scientificName"),
         ];
 
-        // craft a single filter by joining them all with OR since the default
-        // will treat it as an AND query
-        let joined_filter = filters.join(" OR ");
-        params.push(("fq", &joined_filter));
+        // having multiple `fq` params is the same as using AND
+        for filter in filters.iter() {
+            params.push(("fq", filter));
+        }
 
         tracing::debug!(?params);
-        let results = self.client.select::<Fields>(&params).await?;
+        let results = self.client.search::<Fields>(&params).await?;
 
         let mut groups = Vec::new();
-        for group in results.species_id.groups.into_iter() {
+        for group in results.id.groups.into_iter() {
             groups.push(GroupedSearchItem {
                 key: group.group_value,
                 matches: group.doclist.total,
@@ -62,21 +66,53 @@ impl Searchable for Solr {
         }
 
         Ok(SpeciesList {
-            total: results.species_id.matches,
+            total: results.id.matches,
             groups,
         })
     }
 
-    async fn suggestions(&self, _query: &str) -> Result<Vec<SearchSuggestion>, Error> {
-        Ok(vec![])
+    async fn suggestions(&self, query: &str) -> Result<Vec<SearchSuggestion>, Error> {
+        let items = self.client.auto::<Vec<AutocompleteItem>>(query, "TAXON", 10).await?;
+        let mut uniqued = HashMap::with_capacity(5);
+
+        for item in items {
+            if uniqued.len() < 5 {
+                uniqued.insert(item.guid.clone(), SearchSuggestion::from(item));
+            }
+        }
+
+        // TODO: the hash creates an inconsistent sort. it doesn't look like there is
+        // a way to set and get boosts so a lexical sort might be enough
+        Ok(uniqued.into_values().collect())
     }
 }
+
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AutocompleteItem {
+    guid: String,
+    name: String,
+    common_name: Option<String>,
+    matched_names: Vec<String>,
+}
+
+impl From<AutocompleteItem> for SearchSuggestion {
+    fn from(source: AutocompleteItem) -> Self {
+        Self {
+            guid: source.guid,
+            species_name: source.name,
+            common_name: source.common_name,
+            matched: source.matched_names.join(", "),
+        }
+    }
+}
+
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Fields {
-    #[serde(rename(deserialize = "speciesID"))]
-    species_id: Matches,
+    id: Matches,
 }
 
 
@@ -99,20 +135,19 @@ struct Group {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Results {
-    #[serde(rename(deserialize = "numFound"))]
+    #[serde(rename(deserialize = "totalRecords"))]
     total: usize,
-    #[serde(rename(deserialize = "docs"))]
-    records: Vec<SolrSearchItem>,
+    #[serde(rename(deserialize = "results"))]
+    records: Vec<AlaSearchItem>,
 }
 
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct SolrSearchItem {
+struct AlaSearchItem {
     id: String,
 
-    #[serde(rename(deserialize = "speciesID"))]
-    species_id: Option<String>,
+    guid: Option<String>,
 
     /// The scientific name given to this taxon
     scientific_name: Option<String>,
@@ -141,11 +176,11 @@ struct SolrSearchItem {
     identified_by: Option<Vec<String>>,
 }
 
-impl From<SolrSearchItem> for SearchItem {
-    fn from(source: SolrSearchItem) -> Self {
+impl From<AlaSearchItem> for SearchItem {
+    fn from(source: AlaSearchItem) -> Self {
         SearchItem {
             id: source.id,
-            species_uuid: source.species_id,
+            species_uuid: source.guid,
             genomic_data_records: Some(0),
             scientific_name: source.scientific_name,
             genus: source.genus,
