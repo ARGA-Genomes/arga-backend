@@ -86,6 +86,9 @@ impl Search {
     async fn suggestions(&self, ctx: &Context<'_>, query: String) -> Result<Vec<SearchSuggestion>, Error> {
         let state = ctx.data::<State>().unwrap();
         let suggestions = state.ala_provider.suggestions(&query).await.unwrap();
+
+        tracing::info!(value.suggestions = suggestions.len());
+
         Ok(suggestions)
     }
 }

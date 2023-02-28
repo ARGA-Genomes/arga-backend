@@ -1,7 +1,10 @@
 { pkgs, ... }:
 
 {
-  packages = [ pkgs.rust-analyzer ];
+  packages = with pkgs; [
+    rust-analyzer
+    protobuf
+  ];
   languages.rust.enable = true;
 
   #services.postgres.enable = true;
