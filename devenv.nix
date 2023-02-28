@@ -1,8 +1,6 @@
 { pkgs, ... }:
 
 {
-  env.RUST_LOG = "debug";
-
   packages = [ pkgs.rust-analyzer ];
   languages.rust.enable = true;
 

@@ -12,6 +12,7 @@ use async_graphql::extensions::Tracing;
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 
+use crate::features::Features;
 use crate::http::Context;
 use self::overview::Overview;
 use self::specimens::Specimens;

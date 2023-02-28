@@ -7,6 +7,8 @@ use axum::Router;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
+use crate::FeatureClient;
+use crate::features::Features;
 use crate::index::providers::ala::Ala;
 use crate::index::providers::solr::Solr;
 use crate::solr_client::SolrClient;
@@ -31,12 +33,15 @@ pub struct Config {
     pub frontend_host: String,
 }
 
+
 #[derive(Clone)]
 pub(crate) struct Context {
     pub config: Config,
     pub solr: SolrClient,
     pub provider: Solr,
     pub ala_provider: Ala,
+
+    pub features: FeatureClient,
 }
 
 pub async fn serve(config: Config, solr: SolrClient, provider: Solr) -> anyhow::Result<()> {
@@ -47,6 +52,7 @@ pub async fn serve(config: Config, solr: SolrClient, provider: Solr) -> anyhow::
         solr,
         provider,
         ala_provider: Ala::new(),
+        features: FeatureClient::new(),
     };
 
     let app = router(context)?;
