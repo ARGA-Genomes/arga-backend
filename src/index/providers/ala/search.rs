@@ -71,6 +71,7 @@ impl Searchable for Ala {
         })
     }
 
+    #[tracing::instrument(skip(self))]
     async fn suggestions(&self, query: &str) -> Result<Vec<SearchSuggestion>, Error> {
         let items = self.client.auto::<Vec<AutocompleteItem>>(query, "TAXON", 10).await?;
         let mut uniqued = HashMap::with_capacity(5);

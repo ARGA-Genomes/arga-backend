@@ -39,11 +39,17 @@ impl Query {
 }
 
 pub(crate) fn schema(context: Context) -> ArgaSchema {
-    Schema::build(Query, EmptyMutation, EmptySubscription)
+    let with_tracing = context.features.is_enabled(Features::OpenTelemetry);
+
+    let mut builder = Schema::build(Query, EmptyMutation, EmptySubscription)
         .data(context)
-        .extension(ErrorLogging)
-        .extension(Tracing)
-        .finish()
+        .extension(ErrorLogging);
+
+    if let Ok(true) = with_tracing {
+        builder = builder.extension(Tracing);
+    }
+
+    builder.finish()
 }
 
 async fn graphql_handler(

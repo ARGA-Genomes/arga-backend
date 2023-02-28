@@ -65,12 +65,14 @@ pub async fn serve(config: Config, solr: SolrClient, provider: Solr) -> anyhow::
 }
 
 fn router(context: Context) -> Result<Router, Error> {
+    let with_tracing = context.features.is_enabled(Features::OpenTelemetry);
+
     let host = context.config.frontend_host.clone();
     let origin = host
         .parse::<HeaderValue>()
         .map_err(|_| Error::Configuration(String::from("frontend_host"), host))?;
 
-    let router = Router::new()
+    let mut router = Router::new()
         .merge(health::router())
         .merge(search::router())
         .merge(graphql::router(context.clone()))
@@ -81,6 +83,10 @@ fn router(context: Context) -> Result<Router, Error> {
                 .allow_methods([Method::GET]),
         )
         .with_state(context);
+
+    if let Ok(true) = with_tracing {
+        router = router.layer(TraceLayer::new_for_http());
+    }
 
     Ok(router)
 }

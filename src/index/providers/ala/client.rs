@@ -44,6 +44,7 @@ impl AlaClient {
         Ok(json.search_results)
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn auto<T>(&self, query: &str, idx_type: &str, limit: usize) -> Result<T, Error>
         where T: DeserializeOwned + std::fmt::Debug
     {
@@ -58,8 +59,23 @@ impl AlaClient {
         let url = Url::parse_with_params(&base_url, params).unwrap();
         debug!(url = url.as_str());
 
-        let resp = self.client.get(url.as_str()).send().await?;
-        let json = resp.json::<AlaAutoCompleteResult<T>>().await?;
+        let json = self.get::<AlaAutoCompleteResult<T>>(url.as_str()).await?;
         Ok(json.auto_complete_list)
+    }
+
+
+    #[tracing::instrument(skip(self))]
+    async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T, Error> {
+        let resp = {
+            let span = tracing::span!(tracing::Level::TRACE, "http");
+            let _enter = span.enter();
+            self.client.get(url).send().await?
+        };
+        {
+            let span = tracing::span!(tracing::Level::TRACE, "json_parsing");
+            let _enter = span.enter();
+            let json = resp.json::<T>().await?;
+            Ok(json)
+        }
     }
 }
