@@ -1,5 +1,5 @@
 pub mod overview;
-pub mod specimens;
+// pub mod specimens;
 pub mod search;
 pub mod extensions;
 
@@ -12,9 +12,10 @@ use async_graphql::extensions::Tracing;
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 
+use crate::features::Features;
 use crate::http::Context;
 use self::overview::Overview;
-use self::specimens::Specimens;
+// use self::specimens::Specimens;
 use self::search::Search;
 use self::extensions::ErrorLogging;
 
@@ -29,20 +30,27 @@ impl Query {
     async fn overview(&self) -> Overview {
         Overview {}
     }
-    async fn specimens(&self) -> Specimens {
-        Specimens {}
-    }
+    // async fn specimens(&self) -> Specimens {
+    //     Specimens {}
+    // }
     async fn search(&self) -> Search {
         Search {}
     }
 }
 
 pub(crate) fn schema(context: Context) -> ArgaSchema {
-    Schema::build(Query, EmptyMutation, EmptySubscription)
+    let with_tracing = context.features.is_enabled(Features::OpenTelemetry);
+
+    let mut builder = Schema::build(Query, EmptyMutation, EmptySubscription)
         .data(context)
-        .extension(ErrorLogging)
-        // .extension(Tracing)
-        .finish()
+        .extension(ErrorLogging);
+
+    if let Ok(true) = with_tracing {
+        tracing::info!("Enabling graphql tracing extension");
+        builder = builder.extension(Tracing);
+    }
+
+    builder.finish()
 }
 
 async fn graphql_handler(

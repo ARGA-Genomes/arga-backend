@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList};
+use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SearchSuggestion};
 use super::{Ala, Error};
 
 
@@ -68,7 +70,45 @@ impl Searchable for Ala {
             groups,
         })
     }
+
+    #[tracing::instrument(skip(self))]
+    async fn suggestions(&self, query: &str) -> Result<Vec<SearchSuggestion>, Error> {
+        let items = self.client.auto::<Vec<AutocompleteItem>>(query, "TAXON", 10).await?;
+        let mut uniqued = HashMap::with_capacity(5);
+
+        for item in items {
+            if uniqued.len() < 5 {
+                uniqued.insert(item.guid.clone(), SearchSuggestion::from(item));
+            }
+        }
+
+        // TODO: the hash creates an inconsistent sort. it doesn't look like there is
+        // a way to set and get boosts so a lexical sort might be enough
+        Ok(uniqued.into_values().collect())
+    }
 }
+
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AutocompleteItem {
+    guid: String,
+    name: String,
+    common_name: Option<String>,
+    matched_names: Vec<String>,
+}
+
+impl From<AutocompleteItem> for SearchSuggestion {
+    fn from(source: AutocompleteItem) -> Self {
+        Self {
+            guid: source.guid,
+            species_name: source.name,
+            common_name: source.common_name,
+            matched: source.matched_names.join(", "),
+        }
+    }
+}
+
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]

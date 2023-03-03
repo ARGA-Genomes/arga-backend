@@ -3,6 +3,7 @@
 {
   packages = with pkgs; [
     rust-analyzer
+    protobuf
   ];
 
   languages.rust.enable = true;

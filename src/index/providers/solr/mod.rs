@@ -1,6 +1,7 @@
 pub mod client;
 pub mod filters;
 pub mod search;
+pub mod overview;
 
 use thiserror::Error;
 
