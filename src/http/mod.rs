@@ -43,7 +43,7 @@ pub(crate) struct Context {
     pub features: FeatureClient,
 }
 
-pub async fn serve(config: Config, provider: Solr) -> anyhow::Result<()> {
+pub async fn serve(config: Config, provider: Solr, db_provider: Database) -> anyhow::Result<()> {
     let addr = config.bind_address.clone();
 
     let context = Context {

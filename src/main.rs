@@ -51,7 +51,7 @@ async fn main() {
         frontend_host,
     };
 
-    http::serve(config, provider).await.expect("Failed to start server");
+    http::serve(config, provider, database).await.expect("Failed to start server");
 
     telemetry::shutdown();
 }

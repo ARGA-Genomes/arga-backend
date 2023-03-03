@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use sqlx::{Postgres, QueryBuilder, Row};
 
-use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, SpeciesList};
+use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, SpeciesList, SearchSuggestion};
 use super::{Database, Error};
 
 
@@ -85,6 +85,10 @@ WHERE taxonomic_status='accepted'
             total: 0,
             groups: vec![],
         })
+    }
+
+    async fn suggestions(&self, _query: &str) -> Result<Vec<SearchSuggestion>, Error> {
+        Ok(vec![])
     }
 }
 
