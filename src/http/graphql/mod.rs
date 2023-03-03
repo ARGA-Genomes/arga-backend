@@ -1,5 +1,5 @@
 pub mod overview;
-pub mod specimens;
+// pub mod specimens;
 pub mod search;
 pub mod extensions;
 
@@ -15,7 +15,7 @@ use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use crate::features::Features;
 use crate::http::Context;
 use self::overview::Overview;
-use self::specimens::Specimens;
+// use self::specimens::Specimens;
 use self::search::Search;
 use self::extensions::ErrorLogging;
 
@@ -30,9 +30,9 @@ impl Query {
     async fn overview(&self) -> Overview {
         Overview {}
     }
-    async fn specimens(&self) -> Specimens {
-        Specimens {}
-    }
+    // async fn specimens(&self) -> Specimens {
+    //     Specimens {}
+    // }
     async fn search(&self) -> Search {
         Search {}
     }
@@ -46,6 +46,7 @@ pub(crate) fn schema(context: Context) -> ArgaSchema {
         .extension(ErrorLogging);
 
     if let Ok(true) = with_tracing {
+        tracing::info!("Enabling graphql tracing extension");
         builder = builder.extension(Tracing);
     }
 
