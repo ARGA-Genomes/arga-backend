@@ -6,7 +6,7 @@ use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
 use crate::index::search::SearchFilterItem;
 use crate::index::search::SearchSuggestion;
-use crate::index::search::{Searchable, SearchResults};
+use crate::index::search::{Searchable, TaxaSearch, SearchResults};
 
 
 pub struct Search;
@@ -141,7 +141,8 @@ impl Search {
         tracing::info!(monotonic_counter.suggestions_made = 1);
 
         let state = ctx.data::<State>().unwrap();
-        let suggestions = state.ala_provider.suggestions(&query).await.unwrap();
+        // let suggestions = state.ala_provider.suggestions(&query).await.unwrap();
+        let suggestions = state.db_provider.suggestions(&query).await.unwrap();
 
         tracing::info!(value.suggestions = suggestions.len());
 

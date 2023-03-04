@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SearchSuggestion};
+use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SearchSuggestion, TaxaSearch};
 use super::{Ala, Error};
 
 
@@ -70,6 +70,12 @@ impl Searchable for Ala {
             groups,
         })
     }
+}
+
+
+#[async_trait]
+impl TaxaSearch for Ala {
+    type Error = Error;
 
     #[tracing::instrument(skip(self))]
     async fn suggestions(&self, query: &str) -> Result<Vec<SearchSuggestion>, Error> {

@@ -66,10 +66,6 @@ impl Searchable for Solr {
             groups,
         })
     }
-
-    async fn suggestions(&self, _query: &str) -> Result<Vec<SearchSuggestion>, Error> {
-        Ok(vec![])
-    }
 }
 
 #[derive(Debug, Deserialize)]

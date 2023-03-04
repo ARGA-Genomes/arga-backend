@@ -1,4 +1,5 @@
 pub mod search;
+pub mod species;
 
 use sqlx::PgPool;
 use thiserror::Error;

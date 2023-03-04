@@ -86,6 +86,17 @@ pub trait Searchable {
     async fn filtered(&self, filters: &Vec<SearchFilterItem>) -> Result<SearchResults, Self::Error>;
 
     async fn species(&self, filters: &Vec<SearchFilterItem>) -> Result<SpeciesList, Self::Error>;
+}
 
+/// Free text search for a species dataset.
+///
+/// Providers implementing this trait allow searching a species dataset
+/// based on their taxa. The order and specific algorithm used for the search
+/// is dependent on the provider.
+#[async_trait]
+pub trait TaxaSearch {
+    type Error;
+
+    /// Return search suggestions for autocomplete features.
     async fn suggestions(&self, query: &str) -> Result<Vec<SearchSuggestion>, Self::Error>;
 }

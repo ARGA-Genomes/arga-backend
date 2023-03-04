@@ -2,6 +2,7 @@ pub mod client;
 pub mod filters;
 pub mod search;
 pub mod overview;
+pub mod species;
 
 use thiserror::Error;
 

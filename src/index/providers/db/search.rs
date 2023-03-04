@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use sqlx::{Postgres, QueryBuilder, Row};
 
-use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, SpeciesList, SearchSuggestion};
+use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, SpeciesList, SearchSuggestion, TaxaSearch};
 use super::{Database, Error};
 
 
@@ -86,10 +86,6 @@ WHERE taxonomic_status='accepted'
             groups: vec![],
         })
     }
-
-    async fn suggestions(&self, _query: &str) -> Result<Vec<SearchSuggestion>, Error> {
-        Ok(vec![])
-    }
 }
 
 
@@ -131,5 +127,54 @@ impl From<Taxon> for SearchItem {
             recorded_by: None,
             identified_by: None,
         }
+    }
+}
+
+
+#[derive(Debug)]
+struct Suggestion {
+    id: Uuid,
+    scientific_name: Option<String>,
+    canonical_name: Option<String>,
+    matched: Option<String>,
+}
+
+impl From<Suggestion> for SearchSuggestion {
+    fn from(source: Suggestion) -> Self {
+        Self {
+            guid: source.id.to_string(),
+            species_name: source.scientific_name.unwrap_or_default(),
+            common_name: source.canonical_name,
+            matched: source.matched.unwrap_or_default(),
+        }
+    }
+}
+
+
+#[async_trait]
+impl TaxaSearch for Database {
+    type Error = Error;
+
+    #[tracing::instrument(skip(self))]
+    async fn suggestions(&self, query: &str) ->  Result<Vec<SearchSuggestion> ,Self::Error> {
+        if query.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let rows = sqlx::query_as!(Suggestion, r#"
+SELECT id,
+       scientific_name,
+       canonical_name,
+       scientific_name AS matched
+FROM taxa
+WHERE canonical_name ILIKE $1
+AND taxon_rank='species'
+ORDER BY scientific_name ASC
+LIMIT 5
+        "#, format!("%{query}%")).fetch_all(&self.pool).await?;
+
+        tracing::info!(?rows);
+        let suggestions = rows.into_iter().map(|r| SearchSuggestion::from(r)).collect();
+        Ok(suggestions)
     }
 }
