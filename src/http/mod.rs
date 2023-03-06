@@ -35,6 +35,14 @@ pub struct Config {
 
 
 #[derive(Clone)]
+pub struct Providers {
+    pub solr: Solr,
+    pub ala: Ala,
+    pub db: Database,
+}
+
+
+#[derive(Clone)]
 pub(crate) struct Context {
     pub config: Config,
     pub provider: Solr,

@@ -2,7 +2,6 @@ use tracing_subscriber::{ Registry, EnvFilter };
 use tracing_subscriber::prelude::*;
 
 use dotenvy::dotenv;
-use sqlx::postgres::PgPoolOptions;
 
 use arga_backend::http;
 use arga_backend::telemetry;
@@ -43,8 +42,7 @@ async fn main() {
     let provider = Solr::new(client);
 
     let db_host = std::env::var("DATABASE_URL").expect("No database url specified");
-    let pool = PgPoolOptions::new().max_connections(5).connect(&db_host).await.expect("can't connect to database");
-    let database = Database::new(pool);
+    let database = Database::connect(&db_host).await.expect("Failed to connect to the database");
 
     let config = http::Config {
         bind_address,

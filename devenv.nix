@@ -4,6 +4,7 @@
   packages = with pkgs; [
     rust-analyzer
     protobuf
+    diesel-cli
   ];
 
   languages.rust.enable = true;

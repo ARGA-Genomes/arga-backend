@@ -1,106 +1,29 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use sqlx::{Postgres, QueryBuilder, Row};
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
+use diesel::Queryable;
 
 use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, SpeciesList, SearchSuggestion, TaxaSearch};
 use super::{Database, Error};
 
 
-#[async_trait]
-impl Searchable for Database {
-    type Error = Error;
-
-    async fn filtered(&self, filters: &Vec<SearchFilterItem>) -> Result<SearchResults, Error> {
-        let mut builder: QueryBuilder<Postgres> = QueryBuilder::new(r#"
-SELECT id,
-       taxon_id,
-       scientific_name,
-       scientific_name_authorship,
-       canonical_name,
-       generic_name,
-       kingdom,
-       phylum,
-       class,
-       "order",
-       genus
-FROM taxa
-WHERE taxonomic_status='accepted'
-        "#);
-
-        for filter in filters {
-            match filter.field.as_str() {
-                "kingdom" => {
-                    builder.push("AND kingdom = ");
-                    builder.push_bind(filter.value.clone());
-                },
-                "phylum" => {
-                    builder.push("AND phylum = ");
-                    builder.push_bind(filter.value.clone());
-                },
-                "class" => {
-                    builder.push("AND class = ");
-                    builder.push_bind(filter.value.clone());
-                },
-                "order" => {
-                    builder.push("AND order = ");
-                    builder.push_bind(filter.value.clone());
-                },
-                "genus" => {
-                    builder.push("AND genus = ");
-                    builder.push_bind(filter.value.clone());
-                },
-                _ => {}
-            };
-        }
-
-        builder.push(" LIMIT 20");
-        let rows = builder.build().fetch_all(&self.pool).await?;
-
-        let mut items = Vec::with_capacity(rows.len());
-        for row in rows {
-            items.push(SearchItem::from(Taxon {
-                id: row.try_get("id")?,
-                taxon_id: row.try_get("taxon_id")?,
-                scientific_name: row.try_get("scientific_name")?,
-                scientific_name_authorship: row.try_get("scientific_name_authorship")?,
-                canonical_name: row.try_get("canonical_name")?,
-                generic_name: row.try_get("generic_name")?,
-                kingdom: row.try_get("kingdom")?,
-                phylum: row.try_get("phylum")?,
-                class: row.try_get("class")?,
-                order: row.try_get("order")?,
-                genus: row.try_get("genus")?,
-            }));
-        }
-
-        Ok(SearchResults {
-            total: items.len(),
-            records: items,
-        })
-    }
-
-    async fn species(&self, filters: &Vec<SearchFilterItem>) -> Result<SpeciesList, Error> {
-        Ok(SpeciesList {
-            total: 0,
-            groups: vec![],
-        })
-    }
-}
-
-
-#[derive(Debug)]
+#[derive(Queryable, Debug)]
 struct Taxon {
     id: Uuid,
     taxon_id: Option<i64>,
+
     scientific_name: Option<String>,
     scientific_name_authorship: Option<String>,
     canonical_name: Option<String>,
     generic_name: Option<String>,
+
     kingdom: Option<String>,
     phylum: Option<String>,
     class: Option<String>,
     order: Option<String>,
+    family: Option<String>,
     genus: Option<String>,
 }
 
@@ -131,21 +54,85 @@ impl From<Taxon> for SearchItem {
 }
 
 
-#[derive(Debug)]
+#[async_trait]
+impl Searchable for Database {
+    type Error = Error;
+
+    async fn filtered(&self, filters: &Vec<SearchFilterItem>) -> Result<SearchResults, Error> {
+        use crate::schema::taxa::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let mut query = taxa
+            .select((
+                id,
+                taxon_id,
+                scientific_name,
+                scientific_name_authorship,
+                canonical_name,
+                generic_name,
+                kingdom,
+                phylum,
+                class,
+                order,
+                family,
+                genus,
+            ))
+            .filter(taxonomic_status.eq("accepted"))
+            .limit(20)
+            .into_boxed();
+
+        // we mutate the query variable through the loop to build the proper
+        // filter but this is only possible because the query was boxed. this
+        // means the query cant be inlined by the compiler but the performance
+        // impact should be negligible
+        for filter in filters.into_iter() {
+            query = match filter.field.as_str() {
+                "kingdom" => query.filter(kingdom.eq(&filter.value)),
+                "phylum" => query.filter(phylum.eq(&filter.value)),
+                "class" => query.filter(class.eq(&filter.value)),
+                "order" => query.filter(order.eq(&filter.value)),
+                "family" => query.filter(family.eq(&filter.value)),
+                "genus" => query.filter(genus.eq(&filter.value)),
+                _ => query,
+            };
+        }
+
+        let rows = query.load::<Taxon>(&mut conn).await?;
+
+        let mut items = Vec::with_capacity(rows.len());
+        for row in rows {
+            items.push(SearchItem::from(row));
+        }
+
+        Ok(SearchResults {
+            total: items.len(),
+            records: items,
+        })
+    }
+
+    async fn species(&self, _filters: &Vec<SearchFilterItem>) -> Result<SpeciesList, Error> {
+        Ok(SpeciesList {
+            total: 0,
+            groups: vec![],
+        })
+    }
+}
+
+
+#[derive(Queryable, Debug)]
 struct Suggestion {
     id: Uuid,
     scientific_name: Option<String>,
     canonical_name: Option<String>,
-    matched: Option<String>,
 }
 
 impl From<Suggestion> for SearchSuggestion {
     fn from(source: Suggestion) -> Self {
         Self {
             guid: source.id.to_string(),
-            species_name: source.scientific_name.unwrap_or_default(),
+            species_name: source.scientific_name.clone().unwrap_or_default(),
             common_name: source.canonical_name,
-            matched: source.matched.unwrap_or_default(),
+            matched: source.scientific_name.unwrap_or_default(),
         }
     }
 }
@@ -157,24 +144,27 @@ impl TaxaSearch for Database {
 
     #[tracing::instrument(skip(self))]
     async fn suggestions(&self, query: &str) ->  Result<Vec<SearchSuggestion> ,Self::Error> {
+        use crate::schema::taxa::dsl::*;
+
         if query.is_empty() {
             return Ok(vec![]);
         }
 
-        let rows = sqlx::query_as!(Suggestion, r#"
-SELECT id,
-       scientific_name,
-       canonical_name,
-       scientific_name AS matched
-FROM taxa
-WHERE canonical_name ILIKE $1
-AND taxon_rank='species'
-ORDER BY scientific_name ASC
-LIMIT 5
-        "#, format!("%{query}%")).fetch_all(&self.pool).await?;
+        let mut conn = self.pool.get().await?;
 
-        tracing::info!(?rows);
-        let suggestions = rows.into_iter().map(|r| SearchSuggestion::from(r)).collect();
+        let rows = taxa
+            .select((
+                id,
+                scientific_name,
+                canonical_name,
+            ))
+            .filter(taxon_rank.eq("species"))
+            .filter(canonical_name.ilike(format!("%{query}%")))
+            .order(scientific_name.asc())
+            .limit(5)
+            .load::<Suggestion>(&mut conn).await?;
+
+        let suggestions = rows.into_iter().map(|r| r.into()).collect();
         Ok(suggestions)
     }
 }
