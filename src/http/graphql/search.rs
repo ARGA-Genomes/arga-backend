@@ -6,7 +6,7 @@ use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
 use crate::index::search::SearchFilterItem;
 use crate::index::search::SearchSuggestion;
-use crate::index::search::{Searchable, SearchResults};
+use crate::index::search::{Searchable, TaxaSearch, SearchResults};
 
 
 pub struct Search;
@@ -79,12 +79,73 @@ impl Search {
             record.genomic_data_records = Some(total_genomic_records);
         }
 
+
+        state.db_provider.species(&ala_filters).await.unwrap();
+
         Ok(ala_results)
     }
 
-    async fn suggestions(&self, ctx: &Context<'_>, query: String) -> Result<Vec<SearchSuggestion>, Error> {
+    async fn filtered2(
+        &self,
+        ctx: &Context<'_>,
+        kingdom: Option<String>,
+        phylum: Option<String>,
+        class: Option<String>,
+        family: Option<String>,
+        genus: Option<String>,
+    ) -> Result<SearchResults, Error> {
         let state = ctx.data::<State>().unwrap();
-        let suggestions = state.ala_provider.suggestions(&query).await.unwrap();
+
+        let mut db_filters = Vec::new();
+
+        if let Some(value) = kingdom {
+            db_filters.push(SearchFilterItem { field: "kingdom".into(), value });
+        }
+        if let Some(value) = phylum {
+            db_filters.push(SearchFilterItem { field: "phylum".into(), value });
+        }
+        if let Some(value) = class {
+            db_filters.push(SearchFilterItem { field: "class".into(), value });
+        }
+        if let Some(value) = family {
+            db_filters.push(SearchFilterItem { field: "family".into(), value });
+        }
+        if let Some(value) = genus {
+            db_filters.push(SearchFilterItem { field: "genus".into(), value });
+        }
+
+        // get a list of species from the database first. once we have that we can
+        // look for genomic data related to the species and enrich the search results
+        let mut db_results = state.db_provider.filtered(&db_filters).await.unwrap();
+
+        // use the same search filters in solr since the field names are the same
+        let solr_results = state.provider.species(&db_filters).await.unwrap();
+
+        for record in db_results.records.iter_mut() {
+            let mut total_genomic_records = 0;
+
+            for group in solr_results.groups.iter() {
+                if group.key == record.species {
+                    total_genomic_records += group.matches;
+                }
+            }
+
+            record.genomic_data_records = Some(total_genomic_records);
+        }
+
+        Ok(db_results)
+    }
+
+    #[tracing::instrument(skip(self, ctx))]
+    async fn suggestions(&self, ctx: &Context<'_>, query: String) -> Result<Vec<SearchSuggestion>, Error> {
+        tracing::info!(monotonic_counter.suggestions_made = 1);
+
+        let state = ctx.data::<State>().unwrap();
+        // let suggestions = state.ala_provider.suggestions(&query).await.unwrap();
+        let suggestions = state.db_provider.suggestions(&query).await.unwrap();
+
+        tracing::info!(value.suggestions = suggestions.len());
+
         Ok(suggestions)
     }
 }

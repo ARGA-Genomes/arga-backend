@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SearchSuggestion};
+use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SearchSuggestion, TaxaSearch};
 use super::{Ala, Error};
 
 
@@ -70,7 +70,14 @@ impl Searchable for Ala {
             groups,
         })
     }
+}
 
+
+#[async_trait]
+impl TaxaSearch for Ala {
+    type Error = Error;
+
+    #[tracing::instrument(skip(self))]
     async fn suggestions(&self, query: &str) -> Result<Vec<SearchSuggestion>, Error> {
         let items = self.client.auto::<Vec<AutocompleteItem>>(query, "TAXON", 10).await?;
         let mut uniqued = HashMap::with_capacity(5);
@@ -164,6 +171,7 @@ struct AlaSearchItem {
     /// The taxonomic class
     class: Option<String>,
 
+    species: Option<String>,
     species_group: Option<Vec<String>>,
     species_subgroup: Option<Vec<String>>,
     biome: Option<String>,
@@ -189,6 +197,7 @@ impl From<AlaSearchItem> for SearchItem {
             phylum: source.phylum,
             family: source.family,
             class: source.class,
+            species: source.species,
             species_group: source.species_group,
             species_subgroup: source.species_subgroup,
             biome: source.biome,

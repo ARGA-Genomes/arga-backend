@@ -41,7 +41,7 @@ impl Searchable for Solr {
             ("q", "*:*"),
             ("rows", "20"),
             ("group", "true"),
-            ("group.field", "speciesID"),
+            ("group.field", "species"),
         ];
 
         // craft a single filter by joining them all with OR since the default
@@ -53,7 +53,7 @@ impl Searchable for Solr {
         let results = self.client.select::<Fields>(&params).await?;
 
         let mut groups = Vec::new();
-        for group in results.species_id.groups.into_iter() {
+        for group in results.species.groups.into_iter() {
             groups.push(GroupedSearchItem {
                 key: group.group_value,
                 matches: group.doclist.total,
@@ -62,21 +62,16 @@ impl Searchable for Solr {
         }
 
         Ok(SpeciesList {
-            total: results.species_id.matches,
+            total: results.species.matches,
             groups,
         })
-    }
-
-    async fn suggestions(&self, _query: &str) -> Result<Vec<SearchSuggestion>, Error> {
-        Ok(vec![])
     }
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Fields {
-    #[serde(rename(deserialize = "speciesID"))]
-    species_id: Matches,
+    species: Matches,
 }
 
 
@@ -129,6 +124,7 @@ struct SolrSearchItem {
     /// The taxonomic class
     class: Option<String>,
 
+    species: Option<String>,
     species_group: Option<Vec<String>>,
     species_subgroup: Option<Vec<String>>,
     biome: Option<String>,
@@ -154,6 +150,7 @@ impl From<SolrSearchItem> for SearchItem {
             phylum: source.phylum,
             family: source.family,
             class: source.class,
+            species: source.species,
             species_group: source.species_group,
             species_subgroup: source.species_subgroup,
             biome: source.biome,

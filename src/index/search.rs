@@ -40,6 +40,7 @@ pub struct SearchItem {
     /// The taxonomic class
     pub class: Option<String>,
 
+    pub species: Option<String>,
     pub species_group: Option<Vec<String>>,
     pub species_subgroup: Option<Vec<String>>,
     pub biome: Option<String>,
@@ -85,6 +86,17 @@ pub trait Searchable {
     async fn filtered(&self, filters: &Vec<SearchFilterItem>) -> Result<SearchResults, Self::Error>;
 
     async fn species(&self, filters: &Vec<SearchFilterItem>) -> Result<SpeciesList, Self::Error>;
+}
 
+/// Free text search for a species dataset.
+///
+/// Providers implementing this trait allow searching a species dataset
+/// based on their taxa. The order and specific algorithm used for the search
+/// is dependent on the provider.
+#[async_trait]
+pub trait TaxaSearch {
+    type Error;
+
+    /// Return search suggestions for autocomplete features.
     async fn suggestions(&self, query: &str) -> Result<Vec<SearchSuggestion>, Self::Error>;
 }

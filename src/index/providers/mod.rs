@@ -1,3 +1,4 @@
+pub mod db;
 pub mod solr;
 pub mod ala;
 
