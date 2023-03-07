@@ -2,6 +2,7 @@ pub mod overview;
 // pub mod specimens;
 pub mod search;
 pub mod species;
+pub mod stats;
 pub mod extensions;
 
 use axum::{Extension, Router};
@@ -20,6 +21,7 @@ use self::overview::Overview;
 // use self::specimens::Specimens;
 use self::search::Search;
 use self::species::Species;
+use self::stats::Statistics;
 use self::extensions::ErrorLogging;
 
 
@@ -42,6 +44,10 @@ impl Query {
 
     async fn species(&self, taxon_uuid: String) -> Species {
         Species { taxon_uuid: Uuid::parse_str(&taxon_uuid).unwrap() }
+    }
+
+    async fn stats(&self) -> Statistics {
+        Statistics {}
     }
 }
 

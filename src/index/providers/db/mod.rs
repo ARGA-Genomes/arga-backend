@@ -1,6 +1,10 @@
 pub mod search;
 pub mod species;
+pub mod stats;
 
+use diesel::ConnectionResult;
+use futures::FutureExt;
+use futures::future::BoxFuture;
 use thiserror::Error;
 
 use diesel_async::AsyncPgConnection;
@@ -27,9 +31,33 @@ pub struct Database {
 
 impl Database {
     pub async fn connect(url: &str) -> Result<Database, Error> {
-        let config = AsyncDieselConnectionManager::<AsyncPgConnection>::new(url);
+        let config = AsyncDieselConnectionManager::<AsyncPgConnection>::new_with_setup(url, establish_tls_connection);
         let pool = Pool::builder().build(config).await?;
 
         Ok(Database { pool })
     }
+}
+
+
+fn establish_tls_connection(url: &str) -> BoxFuture<ConnectionResult<AsyncPgConnection>> {
+    (async {
+        let store = rustls::RootCertStore::empty();
+        let config = rustls::ClientConfig::builder()
+            .with_safe_defaults()
+            .with_root_certificates(store)
+            .with_no_client_auth();
+
+        let tls = tokio_postgres_rustls::MakeRustlsConnect::new(config);
+        let (client, connection) = tokio_postgres::connect(url, tls).await.map_err(|e| {
+            diesel::ConnectionError::BadConnection(e.to_string())
+        })?;
+
+        tokio::spawn(async move {
+            if let Err(e) = connection.await {
+                eprintln!("connection error: {}", e);
+            }
+        });
+
+        AsyncPgConnection::try_from(client).await
+    }).boxed()
 }
