@@ -62,7 +62,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
 
       - name: Build migrator image
-        id: build-image
+        id: build-migrator
         uses: redhat-actions/buildah-build@v2
         with:
           image: ${{ env.IMAGE_NAME }}-migrator
@@ -71,7 +71,7 @@ jobs:
             ./Containerfile.migrator
 
       - name: Push migrator to GitHub container registry
-        id: push-to-ghcr
+        id: push-migrator-to-ghcr
         uses: redhat-actions/push-to-registry@v2
         with:
           image: ${{ steps.build-image.outputs.image }}
