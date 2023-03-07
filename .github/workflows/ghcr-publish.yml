@@ -22,7 +22,6 @@ jobs:
 
 
   build:
-    needs: check
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -61,17 +60,40 @@ jobs:
           tags: ${{ steps.build-image.outputs.tags }}
           registry: ${{ env.REGISTRY }}
 
-      - name: Build migrator image
-        id: build-migrator
+
+  build_migrator:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    env:
+      REGISTRY: ghcr.io/arga-genomes
+      IMAGE_NAME: backend-migrator
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Log in to the GitHub container registry
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build container image
+        id: build-image
         uses: redhat-actions/buildah-build@v2
         with:
-          image: ${{ env.IMAGE_NAME }}-migrator
+          image: ${{ env.IMAGE_NAME }}
           tags: latest ${{ github.sha }}
           containerfiles: |
             ./Containerfile.migrator
 
-      - name: Push migrator to GitHub container registry
-        id: push-migrator-to-ghcr
+      - name: Push to GitHub container registry
+        id: push-to-ghcr
         uses: redhat-actions/push-to-registry@v2
         with:
           image: ${{ steps.build-image.outputs.image }}
@@ -80,7 +102,7 @@ jobs:
 
 
   notify-arga-ops:
-    needs: build
+    needs: [check, build, build_migrator]
     runs-on: ubuntu-latest
 
     env:
