@@ -1,0 +1,13 @@
+FROM rust:1.67
+LABEL org.opencontainers.image.source="https://github.com/ARGA-Genomes/arga-backend"
+LABEL org.opencontainers.image.description="A container image for running migration jobs"
+LABEL org.opencontainers.image.licenses="AGPL-3.0"
+
+WORKDIR /usr/src/arga-backend
+ENV DATABASE_URL=postgres://localhost/arga
+CMD ["diesel", "migration", "run"]
+
+COPY ./migrations ./migrations
+COPY ./diesel.toml .
+
+RUN cargo install diesel_cli --no-default-features --features "postgres"
