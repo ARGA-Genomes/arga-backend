@@ -107,7 +107,7 @@ jobs:
 
     env:
       registry: ghcr.io/arga-genomes
-      image_name: backend
+      image_names: "backend,backend-migrator"
       image_tag: ${{ github.sha }}
       actor: ${{ github.triggering_actor }}
       repository: ${{ github.repository }}
