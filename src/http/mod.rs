@@ -42,6 +42,7 @@ pub struct Providers {
 }
 
 
+/// The state made avaialbe to every request.
 #[derive(Clone)]
 pub(crate) struct Context {
     pub config: Config,
@@ -51,6 +52,10 @@ pub(crate) struct Context {
     pub features: FeatureClient,
 }
 
+/// Create the context and serve the API.
+///
+/// This will create the context based on the configuration
+/// and kick off the http server.
 pub async fn serve(config: Config, provider: Solr, db_provider: Database) -> anyhow::Result<()> {
     let addr = config.bind_address.clone();
 
@@ -71,6 +76,11 @@ pub async fn serve(config: Config, provider: Solr, db_provider: Database) -> any
         .context("error running HTTP server")
 }
 
+/// The root router.
+///
+/// Sets up the middleware and merges the REST and GraphQL API
+/// into the same namespace. The context present in every request
+/// is also moved here and cloned out to any sub-routers.
 fn router(context: Context) -> Result<Router, Error> {
     let with_tracing = context.features.is_enabled(Features::OpenTelemetry);
 

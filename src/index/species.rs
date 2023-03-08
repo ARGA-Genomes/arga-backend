@@ -4,9 +4,12 @@ use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 
+/// Taxonomic information of a species.
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
 pub struct Taxonomy {
+    /// The species name without authors.
     pub canonical_name: Option<String>,
+    /// The species name author.
     pub authorship: Option<String>,
 
     pub kingdom: Option<String>,
@@ -18,6 +21,11 @@ pub struct Taxonomy {
 }
 
 
+/// The distribution of a species in a specific locality.
+///
+/// A specific species rank taxon can have zero or more distributions
+/// associated with it. A distribution itself encapsulates the location,
+/// the threat status, and any remarks or notes about the distribution.
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
 pub struct Distribution {
     pub locality: Option<String>,
@@ -29,11 +37,17 @@ pub struct Distribution {
 }
 
 
+/// Get information about a particular species.
+///
+/// Providers implementing this trait can retrieve detailed information
+/// on a specific species.
 #[async_trait]
 pub trait Species {
     type Error;
 
+    /// Get taxonomic information for a specific species.
     async fn taxonomy(&self, taxon_uuid: Uuid) -> Result<Taxonomy, Self::Error>;
+    /// Get location and status details of a specific species.
     async fn distribution(&self, taxon_uuid: Uuid) -> Result<Vec<Distribution>, Self::Error>;
 }
 

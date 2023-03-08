@@ -14,6 +14,8 @@ use arga_backend::index::providers::db::Database;
 async fn main() {
     dotenv().ok();
 
+    // setup tracing with opentelemetry support. this allows us to use tracing macros
+    // for both logging and metrics
     let subscriber = Registry::default();
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("info,arga_backend=trace"));
 
@@ -30,13 +32,15 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer().pretty())
         .init();
 
-
+    // realistically will either be 0.0.0.0 or 127.0.0.1 depending on where it will run
     let bind_address = std::env::var("BIND_ADDRESS").expect("No binding address specified");
     let bind_address = bind_address.parse().expect("Failed to parse the binding address");
 
     // used for cors
     let frontend_host = std::env::var("FRONTEND_URL").expect("No frontend URL specified");
 
+    // because the entire backend is in a crate we instantiate providers and any other services
+    // here so that it is explicitly defined
     let solr_host = std::env::var("SOLR_URL").expect("No solr URL specified");
     let client = SolrClient::new(&solr_host);
     let provider = Solr::new(client);

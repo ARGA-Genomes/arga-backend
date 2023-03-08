@@ -18,7 +18,6 @@ use uuid::Uuid;
 use crate::features::Features;
 use crate::http::Context;
 use self::overview::Overview;
-// use self::specimens::Specimens;
 use self::search::Search;
 use self::species::Species;
 use self::stats::Statistics;
@@ -28,6 +27,9 @@ use self::extensions::ErrorLogging;
 pub type ArgaSchema = Schema<Query, EmptyMutation, EmptySubscription>;
 
 
+/// The starting point for any GraphQL query.
+///
+/// This encapsulates all functionality available from the ARGA service.
 pub struct Query;
 
 #[Object]
@@ -35,9 +37,7 @@ impl Query {
     async fn overview(&self) -> Overview {
         Overview {}
     }
-    // async fn specimens(&self) -> Specimens {
-    //     Specimens {}
-    // }
+
     async fn search(&self) -> Search {
         Search {}
     }
@@ -51,6 +51,11 @@ impl Query {
     }
 }
 
+/// The GraphQL API.
+///
+/// Defines the graphql resolvers and sets up the context
+/// and middleware. This is the entry point to our graphql api
+/// like the root router does for http requests.
 pub(crate) fn schema(context: Context) -> ArgaSchema {
     let with_tracing = context.features.is_enabled(Features::OpenTelemetry);
 
@@ -66,19 +71,19 @@ pub(crate) fn schema(context: Context) -> ArgaSchema {
     builder.finish()
 }
 
-async fn graphql_handler(
-    schema: Extension<ArgaSchema>,
-    req: GraphQLRequest,
-) -> GraphQLResponse {
+/// Handles graphql requests.
+async fn graphql_handler(schema: Extension<ArgaSchema>, req: GraphQLRequest) -> GraphQLResponse {
     schema.execute(req.into_inner()).await.into()
 }
 
-
+/// Adds the built-in graphql IDE when visiting with a browser.
+/// This will likely be disabled in the future in favour of postman/insomnia.
 async fn graphql_ide() -> impl IntoResponse {
     axum::response::Html(GraphiQLSource::build().endpoint("/api").finish())
 }
 
-
+/// The router enabling the graphql extension and passes
+/// requests to the handler.
 pub(crate) fn router(context: Context) -> Router<Context> {
     let schema = schema(context);
     Router::new()

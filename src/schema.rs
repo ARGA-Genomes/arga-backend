@@ -18,6 +18,23 @@ diesel::table! {
 }
 
 diesel::table! {
+    media (id) {
+        id -> Uuid,
+        media_id -> Nullable<Int8>,
+        media_type -> Nullable<Varchar>,
+        format -> Nullable<Varchar>,
+        identifier -> Nullable<Varchar>,
+        references -> Nullable<Varchar>,
+        created -> Nullable<Timestamptz>,
+        creator -> Nullable<Varchar>,
+        publisher -> Nullable<Varchar>,
+        license -> Nullable<Varchar>,
+        rights_holder -> Nullable<Varchar>,
+        catalog_number -> Nullable<Int8>,
+    }
+}
+
+diesel::table! {
     taxa (id) {
         id -> Uuid,
         taxon_id -> Nullable<Int8>,
@@ -48,5 +65,6 @@ diesel::table! {
 
 diesel::allow_tables_to_appear_in_same_query!(
     distribution,
+    media,
     taxa,
 );
