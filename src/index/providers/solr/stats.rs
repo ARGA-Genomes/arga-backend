@@ -10,21 +10,10 @@ impl GetGenusStats for Solr {
     type Error = Error;
 
     async fn genus_stats(&self, genus: &str) -> Result<GenusStats, Error> {
-        let filter = &format!("genus:{genus}");
-
-        let params = vec![
-            ("q", "*:*"),
-            ("rows", "0"),
-            ("fq", filter),
-            ("facet", "true"),
-            ("facet.pivot", "species"),
-        ];
-
-        tracing::debug!(?params);
-        let (_, facets) = self.client.select_faceted::<DataRecords, SpeciesFacet>(&params).await?;
-
+        let breakdown = self.species_breakdown(genus).await?;
         Ok(GenusStats {
-            total_species: facets.species.len() as i64,
+            // TODO: change the result struct to be usize so there isn't a potential overflow panic
+            total_species: breakdown.species.len() as i64,
         })
     }
 }
@@ -36,19 +25,41 @@ impl GetGenusBreakdown for Solr {
     async fn species_breakdown(&self, genus: &str) -> Result<GenusBreakdown, Error> {
         let filter = &format!("genus:{genus}");
 
+        // get all species that have a matched name. this filters
+        // out records that couldn't be matched by the name-matching service
         let params = vec![
             ("q", "*:*"),
             ("rows", "0"),
             ("fq", filter),
+            ("fq", r#"taxonRank:"species""#),
             ("facet", "true"),
-            ("facet.pivot", "species"),
+            ("facet.pivot", "scientificName"),
         ];
 
         tracing::debug!(?params);
-        let (_, facets) = self.client.select_faceted::<DataRecords, SpeciesFacet>(&params).await?;
+        let (_, mut facets) = self.client.select_faceted::<DataRecords, SpeciesFacet>(&params).await?;
+
+        // species that couldn't be name matched will appear in the index
+        // with a taxonRank of genus and a higherMatch type. this lets us
+        // combine unmatched species whilst still retaining the normalised species
+        // from the name matching service
+        let params = vec![
+            ("q", "*:*"),
+            ("rows", "0"),
+            ("fq", filter),
+            ("fq", r#"taxonRank:"genus""#),
+            ("fq", r#"matchType:"higherMatch""#),
+            ("facet", "true"),
+            ("facet.pivot", "raw_scientificName"),
+        ];
+
+        tracing::debug!(?params);
+        let (_, raw_facets) = self.client.select_faceted::<DataRecords, RawSpeciesFacet>(&params).await?;
+
+        facets.scientific_name.extend(raw_facets.scientific_name);
 
         Ok(GenusBreakdown {
-            species: facets.species.into_iter().map(|s| s.into()).collect(),
+            species: facets.scientific_name.into_iter().map(|s| s.into()).collect(),
         })
     }
 }
@@ -62,11 +73,20 @@ struct DataRecords {
 
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct SpeciesFacet {
-    species: Vec<Facet>,
+    scientific_name: Vec<Facet>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RawSpeciesFacet {
+    #[serde(rename(deserialize = "raw_scientificName"))]
+    scientific_name: Vec<Facet>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct Facet {
     field: String,
     value: String,

@@ -22,8 +22,8 @@ struct SolrFacetResult<T, R> {
 }
 
 #[derive(Deserialize)]
-struct FacetCounts<T> {
-    facet_pivot: T,
+struct FacetCounts<R> {
+    facet_pivot: R,
 }
 
 

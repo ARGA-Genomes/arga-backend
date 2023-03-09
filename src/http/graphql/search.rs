@@ -125,13 +125,17 @@ impl Search {
             let mut total_genomic_records = 0;
 
             for group in solr_results.groups.iter() {
-                if group.key == record.species {
+                if group.key.is_some() && group.key == record.species {
                     total_genomic_records += group.matches;
                 }
             }
 
             record.genomic_data_records = Some(total_genomic_records);
         }
+
+        db_results.records.sort_by(|a, b| {
+            b.genomic_data_records.cmp(&a.genomic_data_records)
+        });
 
         Ok(db_results)
     }
