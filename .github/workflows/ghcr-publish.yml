@@ -102,7 +102,7 @@ jobs:
 
 
   notify-arga-ops-migrator:
-    needs: [check, build, build_migrator]
+    needs: [check, build_migrator]
     runs-on: ubuntu-latest
 
     env:

@@ -31,7 +31,8 @@ pub struct Database {
 
 impl Database {
     pub async fn connect(url: &str) -> Result<Database, Error> {
-        let config = AsyncDieselConnectionManager::<AsyncPgConnection>::new_with_setup(url, establish_tls_connection);
+        let config = AsyncDieselConnectionManager::<AsyncPgConnection>::new(url);
+        // let config = AsyncDieselConnectionManager::<AsyncPgConnection>::new_with_setup(url, establish_tls_connection);
         let pool = Pool::builder().build(config).await?;
 
         Ok(Database { pool })
