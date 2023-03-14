@@ -5,7 +5,12 @@ use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
 use crate::index::search::SearchFilterItem;
+use crate::index::search::SearchFilterMethod;
+use crate::index::search::SearchItem;
 use crate::index::search::SearchSuggestion;
+use crate::index::search::SpeciesSearch;
+use crate::index::search::SpeciesSearchByCanonicalName;
+use crate::index::search::SpeciesSearchExcludingCanonicalName;
 use crate::index::search::{Searchable, TaxaSearch, SearchResults};
 
 
@@ -37,19 +42,19 @@ impl Search {
 
         // create search filters to narrow down the list in the ALA species endpoint
         if let Some(value) = kingdom {
-            ala_filters.push(SearchFilterItem { field: "kingdom_s".into(), value });
+            ala_filters.push(SearchFilterItem { field: "kingdom_s".into(), value, method: SearchFilterMethod::Include  });
         }
         if let Some(value) = phylum {
-            ala_filters.push(SearchFilterItem { field: "phylum_s".into(), value });
+            ala_filters.push(SearchFilterItem { field: "phylum_s".into(), value, method: SearchFilterMethod::Include  });
         }
         if let Some(value) = class {
-            ala_filters.push(SearchFilterItem { field: "class_s".into(), value });
+            ala_filters.push(SearchFilterItem { field: "class_s".into(), value, method: SearchFilterMethod::Include  });
         }
         if let Some(value) = family {
-            ala_filters.push(SearchFilterItem { field: "family_s".into(), value });
+            ala_filters.push(SearchFilterItem { field: "family_s".into(), value, method: SearchFilterMethod::Include  });
         }
         if let Some(value) = genus {
-            ala_filters.push(SearchFilterItem { field: "rk_genus".into(), value });
+            ala_filters.push(SearchFilterItem { field: "rk_genus".into(), value, method: SearchFilterMethod::Include  });
         }
 
         // get a list of species from the ALA species endpoint first. once we have that
@@ -61,7 +66,7 @@ impl Search {
         for record in &ala_results.records {
             if let Some(uuid) = &record.species_uuid {
                 let uuid = format!(r#"("{}")"#, uuid);
-                solr_filters.push(SearchFilterItem { field: "speciesID".into(), value: uuid });
+                solr_filters.push(SearchFilterItem { field: "speciesID".into(), value: uuid, method: SearchFilterMethod::Include  });
             }
         }
 
@@ -99,45 +104,59 @@ impl Search {
         let mut db_filters = Vec::new();
 
         if let Some(value) = kingdom {
-            db_filters.push(SearchFilterItem { field: "kingdom".into(), value });
+            db_filters.push(SearchFilterItem { field: "kingdom".into(), value, method: SearchFilterMethod::Include });
         }
         if let Some(value) = phylum {
-            db_filters.push(SearchFilterItem { field: "phylum".into(), value });
+            db_filters.push(SearchFilterItem { field: "phylum".into(), value, method: SearchFilterMethod::Include  });
         }
         if let Some(value) = class {
-            db_filters.push(SearchFilterItem { field: "class".into(), value });
+            db_filters.push(SearchFilterItem { field: "class".into(), value, method: SearchFilterMethod::Include  });
         }
         if let Some(value) = family {
-            db_filters.push(SearchFilterItem { field: "family".into(), value });
+            db_filters.push(SearchFilterItem { field: "family".into(), value, method: SearchFilterMethod::Include  });
         }
         if let Some(value) = genus {
-            db_filters.push(SearchFilterItem { field: "genus".into(), value });
+            db_filters.push(SearchFilterItem { field: "genus".into(), value, method: SearchFilterMethod::Include  });
         }
 
-        // get a list of species from the database first. once we have that we can
-        // look for genomic data related to the species and enrich the search results
-        let mut db_results = state.db_provider.filtered(&db_filters).await.unwrap();
+        // limit the results to 20 for pagination. this should become variable
+        // once a pagination system is more fleshed out
+        let mut results = Vec::with_capacity(21);
 
-        // use the same search filters in solr since the field names are the same
-        let solr_results = state.provider.species(&db_filters).await.unwrap();
+        // first get the data we do have from the solr index.
+        let solr_results = state.provider.search_species("", &db_filters).await.unwrap();
 
-        for record in db_results.records.iter_mut() {
-            let mut total_genomic_records = 0;
+        for record in solr_results.records.into_iter().take(21) {
+            results.push(SearchItem {
+                id: record.species_name.clone(),
+                genomic_data_records: Some(record.total_records),
+                scientific_name: Some(record.species_name.clone()),
+                canonical_name: Some(record.species_name),
+                ..SearchItem::default()
+            });
+        }
 
-            for group in solr_results.groups.iter() {
-                if group.key.is_some() && group.key == record.species {
-                    total_genomic_records += group.matches;
-                }
+        // get species from gbif backbone that don't have any genomic records
+        let db_results = state.db_provider.filtered(&db_filters).await.unwrap();
+
+        for mut record in db_results.records.into_iter() {
+            println!("{:?}", &record.canonical_name);
+            if let None = results.iter().find(|r| r.canonical_name == record.canonical_name) {
+                record.genomic_data_records = Some(0);
+                results.push(record);
             }
-
-            record.genomic_data_records = Some(total_genomic_records);
         }
 
-        db_results.records.sort_by(|a, b| {
+        // sort by the amount of the genomic records. the database results should be
+        // sorted by scientific name already so the secondary order should be by name
+        results.sort_by(|a, b| {
             b.genomic_data_records.cmp(&a.genomic_data_records)
         });
 
-        Ok(db_results)
+        Ok(SearchResults {
+            total: db_results.total,
+            records: results.into_iter().take(21).collect(),
+        })
     }
 
     #[tracing::instrument(skip(self, ctx))]

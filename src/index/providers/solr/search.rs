@@ -1,8 +1,103 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList};
+use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SpeciesSearchItem, SpeciesSearch, SpeciesSearchResult};
 use super::{Solr, Error};
+
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DataRecords {
+    #[serde(rename(deserialize = "numFound"))]
+    total: usize,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SpeciesFacet {
+    scientific_name: Vec<Facet>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RawSpeciesFacet {
+    #[serde(rename(deserialize = "raw_scientificName"))]
+    scientific_name: Vec<Facet>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Facet {
+    field: String,
+    value: String,
+    count: usize,
+}
+
+impl From<Facet> for SpeciesSearchItem {
+    fn from(source: Facet) -> Self {
+        Self {
+            species_name: source.value,
+            total_records: source.count,
+        }
+    }
+}
+
+#[async_trait]
+impl SpeciesSearch for Solr {
+    type Error = Error;
+
+    async fn search_species(&self, query: &str, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Error> {
+        let query = format!(r#"scientificName:"*{query}*""#);
+
+        // convert the filter items to a format that solr understands, specifically {key}:{value}
+        let filters = filters.iter().map(|filter| filter_to_solr_filter(filter)).collect::<Vec<String>>();
+
+        let mut params = vec![
+            // ("q", query.as_str()),
+            ("q", "*:*"),
+            ("facet", "true"),
+        ];
+
+        // having multiple `fq` params is the same as using AND
+        for filter in filters.iter() {
+            params.push(("fq", filter));
+        }
+
+        // first get species that have been matched by the name service
+        let matched_params = [vec![
+            ("fq", "taxonRank:species"),
+            ("fl", "scientificName"),
+            ("facet.pivot", "scientificName"),
+        ], params.clone()].concat();
+        tracing::debug!(?matched_params);
+        let (_records, matched_facets) = self.client.select_faceted::<DataRecords, SpeciesFacet>(&matched_params).await?;
+
+        // then we get all the species that could only be matched by genus
+        let unmatched_params = [vec![
+            ("fq", "matchType:higherMatch"),
+            ("fq", "taxonRank:genus"),
+            ("fl", "raw_scientificName"),
+            ("facet.pivot", "raw_scientificName"),
+        ], params].concat();
+        tracing::debug!(?unmatched_params);
+        let (_records, unmatched_facets) = self.client.select_faceted::<DataRecords, RawSpeciesFacet>(&unmatched_params).await?;
+
+        let total = matched_facets.scientific_name.len() + unmatched_facets.scientific_name.len();
+        let mut records = Vec::with_capacity(total);
+
+        // we don't worry about order here as that is for the consuming api to deal with
+        for facet in matched_facets.scientific_name.into_iter() {
+            records.push(SpeciesSearchItem::from(facet));
+        }
+        for facet in unmatched_facets.scientific_name.into_iter() {
+            records.push(SpeciesSearchItem::from(facet));
+        }
+
+        Ok(SpeciesSearchResult {
+            records,
+        })
+    }
+}
 
 
 #[async_trait]
@@ -143,7 +238,8 @@ impl From<SolrSearchItem> for SearchItem {
             id: source.id,
             species_uuid: source.species_id,
             genomic_data_records: Some(0),
-            scientific_name: source.scientific_name,
+            scientific_name: source.scientific_name.clone(),
+            canonical_name: source.scientific_name,
             genus: source.genus,
             subgenus: source.subgenus,
             kingdom: source.kingdom,

@@ -17,7 +17,7 @@ pub struct SpeciesList {
     pub groups: Vec<GroupedSearchItem>,
 }
 
-#[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
+#[derive(Clone, Debug, SimpleObject, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchItem {
     pub id: String,
@@ -25,8 +25,12 @@ pub struct SearchItem {
 
     pub genomic_data_records: Option<usize>,
 
-    /// The scientific name given to this taxon
+    /// The scientific name given to this species
     pub scientific_name: Option<String>,
+
+    /// The scientific name without authorship
+    pub canonical_name: Option<String>,
+
     /// The taxonomic genus
     pub genus: Option<String>,
     /// The taxonomic sub genus
@@ -66,6 +70,13 @@ pub struct GroupedSearchItem {
 pub struct SearchFilterItem {
     pub field: String,
     pub value: String,
+    pub method: SearchFilterMethod,
+}
+
+#[derive(Clone, Debug)]
+pub enum SearchFilterMethod {
+    Include,
+    Exclude,
 }
 
 
@@ -99,4 +110,36 @@ pub trait TaxaSearch {
 
     /// Return search suggestions for autocomplete features.
     async fn suggestions(&self, query: &str) -> Result<Vec<SearchSuggestion>, Self::Error>;
+}
+
+
+#[derive(Debug, Deserialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeciesSearchItem {
+    pub species_name: String,
+    pub total_records: usize,
+}
+
+#[derive(Debug, Deserialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeciesSearchResult {
+    pub records: Vec<SpeciesSearchItem>,
+}
+
+#[async_trait]
+pub trait SpeciesSearch {
+    type Error;
+    async fn search_species(&self, query: &str, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Self::Error>;
+}
+
+#[async_trait]
+pub trait SpeciesSearchByCanonicalName {
+    type Error;
+    async fn search_species_by_canonical_names(&self, names: Vec<String>) -> Result<SpeciesSearchResult, Self::Error>;
+}
+
+#[async_trait]
+pub trait SpeciesSearchExcludingCanonicalName {
+    type Error;
+    async fn search_species_excluding_canonical_names(&self, names: Vec<String>) -> Result<SpeciesSearchResult, Self::Error>;
 }

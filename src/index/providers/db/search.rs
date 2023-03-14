@@ -5,7 +5,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
 
-use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, SpeciesList, SearchSuggestion, TaxaSearch};
+use crate::{index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, SpeciesList, SearchSuggestion, TaxaSearch, SpeciesSearch, SpeciesSearchResult, SpeciesSearchItem, SpeciesSearchByCanonicalName, SearchFilterMethod, SpeciesSearchExcludingCanonicalName}, schema::taxa::canonical_name};
 use super::{Database, Error};
 
 
@@ -34,6 +34,7 @@ impl From<Taxon> for SearchItem {
             species_uuid: None,
             genomic_data_records: None,
             scientific_name: source.scientific_name,
+            canonical_name: source.canonical_name.clone(),
             genus: source.genus,
             subgenus: None,
             kingdom: source.kingdom,
@@ -77,8 +78,10 @@ impl Searchable for Database {
                 family,
                 genus,
             ))
+            .filter(taxon_rank.eq("species"))
             .filter(taxonomic_status.eq("accepted"))
-            .limit(20)
+            .order_by(canonical_name)
+            .limit(21)
             .into_boxed();
 
         // we mutate the query variable through the loop to build the proper
@@ -86,14 +89,25 @@ impl Searchable for Database {
         // means the query cant be inlined by the compiler but the performance
         // impact should be negligible
         for filter in filters.into_iter() {
-            query = match filter.field.as_str() {
-                "kingdom" => query.filter(kingdom.eq(&filter.value)),
-                "phylum" => query.filter(phylum.eq(&filter.value)),
-                "class" => query.filter(class.eq(&filter.value)),
-                "order" => query.filter(order.eq(&filter.value)),
-                "family" => query.filter(family.eq(&filter.value)),
-                "genus" => query.filter(genus.eq(&filter.value)),
-                _ => query,
+            query = match filter.method {
+                SearchFilterMethod::Include => match filter.field.as_str() {
+                    "kingdom" => query.filter(kingdom.eq(&filter.value)),
+                    "phylum" => query.filter(phylum.eq(&filter.value)),
+                    "class" => query.filter(class.eq(&filter.value)),
+                    "order" => query.filter(order.eq(&filter.value)),
+                    "family" => query.filter(family.eq(&filter.value)),
+                    "genus" => query.filter(genus.eq(&filter.value)),
+                    _ => query,
+                },
+                SearchFilterMethod::Exclude => match filter.field.as_str() {
+                    "kingdom" => query.filter(kingdom.ne(&filter.value)),
+                    "phylum" => query.filter(phylum.ne(&filter.value)),
+                    "class" => query.filter(class.ne(&filter.value)),
+                    "order" => query.filter(order.ne(&filter.value)),
+                    "family" => query.filter(family.ne(&filter.value)),
+                    "genus" => query.filter(genus.ne(&filter.value)),
+                    _ => query,
+                },
             };
         }
 
@@ -166,5 +180,71 @@ impl TaxaSearch for Database {
 
         let suggestions = rows.into_iter().map(|r| r.into()).collect();
         Ok(suggestions)
+    }
+}
+
+
+#[async_trait]
+impl SpeciesSearchByCanonicalName for Database {
+    type Error = Error;
+
+    async fn search_species_by_canonical_names(&self, names: Vec<String>) -> Result<SpeciesSearchResult, Error> {
+        use crate::schema::taxa::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let rows = taxa
+            .select(scientific_name)
+            .filter(taxon_rank.eq("species"))
+            .filter(taxonomic_status.eq("accepted"))
+            .filter(canonical_name.eq_any(names))
+            .order_by(canonical_name)
+            .load::<Option<String>>(&mut conn).await?;
+
+        let mut items = Vec::with_capacity(rows.len());
+        for row in rows {
+            if let Some(name) = row {
+                items.push(SpeciesSearchItem {
+                    species_name: name,
+                    total_records: 0,
+                });
+            }
+        }
+
+        Ok(SpeciesSearchResult {
+            records: items,
+        })
+    }
+}
+
+
+#[async_trait]
+impl SpeciesSearchExcludingCanonicalName for Database {
+    type Error = Error;
+
+    async fn search_species_excluding_canonical_names(&self, names: Vec<String>) -> Result<SpeciesSearchResult, Error> {
+        use crate::schema::taxa::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let rows = taxa
+            .select(scientific_name)
+            .filter(taxon_rank.eq("species"))
+            .filter(taxonomic_status.eq("accepted"))
+            .filter(canonical_name.ne_all(names))
+            .order_by(canonical_name)
+            .load::<Option<String>>(&mut conn).await?;
+
+        let mut items = Vec::with_capacity(rows.len());
+        for row in rows {
+            if let Some(name) = row {
+                items.push(SpeciesSearchItem {
+                    species_name: name,
+                    total_records: 0,
+                });
+            }
+        }
+
+        Ok(SpeciesSearchResult {
+            records: items,
+        })
     }
 }
