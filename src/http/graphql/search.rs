@@ -140,7 +140,6 @@ impl Search {
         let db_results = state.db_provider.filtered(&db_filters).await.unwrap();
 
         for mut record in db_results.records.into_iter() {
-            println!("{:?}", &record.canonical_name);
             if let None = results.iter().find(|r| r.canonical_name == record.canonical_name) {
                 record.genomic_data_records = Some(0);
                 results.push(record);

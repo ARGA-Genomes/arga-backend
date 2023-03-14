@@ -19,16 +19,16 @@ async fn main() {
     let subscriber = Registry::default();
     let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("info,arga_backend=trace"));
 
-    // let controller = telemetry::init_metrics().unwrap();
-    // let metrics =  tracing_opentelemetry::MetricsLayer::new(controller);
+    let controller = telemetry::init_metrics().unwrap();
+    let metrics =  tracing_opentelemetry::MetricsLayer::new(controller);
 
-    // let tracer = telemetry::init_tracer().unwrap();
-    // let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+    let tracer = telemetry::init_tracer().unwrap();
+    let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
 
     subscriber
         .with(env_filter)
-        // .with(opentelemetry)
-        // .with(metrics)
+        .with(opentelemetry)
+        .with(metrics)
         .with(tracing_subscriber::fmt::layer().pretty())
         .init();
 
