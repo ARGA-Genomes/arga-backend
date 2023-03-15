@@ -5,7 +5,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
 
-use crate::{index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, SpeciesList, SearchSuggestion, TaxaSearch, SpeciesSearch, SpeciesSearchResult, SpeciesSearchItem, SpeciesSearchByCanonicalName, SearchFilterMethod, SpeciesSearchExcludingCanonicalName, GenusSearchResult, GenusSearch, GenusSearchItem}, schema::taxa::canonical_name};
+use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, SpeciesList, SearchSuggestion, TaxaSearch, SpeciesSearch, SpeciesSearchResult, SpeciesSearchItem, SpeciesSearchByCanonicalName, SearchFilterMethod, SpeciesSearchExcludingCanonicalName, GenusSearchResult, GenusSearch, GenusSearchItem};
 use super::{Database, Error};
 
 

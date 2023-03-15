@@ -5,36 +5,7 @@ use diesel_async::RunQueryDsl;
 use diesel::Queryable;
 
 use crate::index::species::{self, GetSpecies, Taxonomy};
-use super::{Database, Error};
-
-
-#[derive(Queryable, Debug)]
-struct Taxon {
-    scientific_name_authorship: Option<String>,
-    canonical_name: Option<String>,
-    kingdom: Option<String>,
-    phylum: Option<String>,
-    class: Option<String>,
-    order: Option<String>,
-    family: Option<String>,
-    genus: Option<String>,
-}
-
-impl From<Taxon> for Taxonomy {
-    fn from(source: Taxon) -> Self {
-        Self {
-            canonical_name: source.canonical_name,
-            authorship: source.scientific_name_authorship,
-
-            kingdom: source.kingdom,
-            phylum: source.phylum,
-            class: source.class,
-            order: source.order,
-            family: source.family,
-            genus: source.genus,
-        }
-    }
-}
+use super::{Database, Error, Taxon};
 
 
 #[derive(Queryable, Debug)]
@@ -78,6 +49,7 @@ impl GetSpecies for Database {
                 family,
                 genus,
             ))
+            .filter(taxon_rank.eq("species"))
             .filter(canonical_name.eq(name))
             .first::<Taxon>(&mut conn).await?;
 

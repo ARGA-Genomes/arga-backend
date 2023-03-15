@@ -1,5 +1,7 @@
 pub mod overview;
 pub mod search;
+pub mod family;
+pub mod genus;
 pub mod species;
 pub mod stats;
 pub mod extensions;
@@ -17,6 +19,8 @@ use crate::features::Features;
 use crate::http::Context;
 use self::overview::Overview;
 use self::search::Search;
+use self::family::Family;
+use self::genus::Genus;
 use self::species::Species;
 use self::stats::Statistics;
 use self::extensions::ErrorLogging;
@@ -42,6 +46,14 @@ impl Query {
 
     async fn species(&self, canonical_name: String) -> Species {
         Species { canonical_name }
+    }
+
+    async fn family(&self, family: String) -> Family {
+        Family { family }
+    }
+
+    async fn genus(&self, genus: String) -> Genus {
+        Genus { genus }
     }
 
     async fn stats(&self) -> Statistics {

@@ -1,8 +1,10 @@
 pub mod search;
+pub mod family;
+pub mod genus;
 pub mod species;
 pub mod stats;
 
-use diesel::ConnectionResult;
+use diesel::{ConnectionResult, Queryable};
 use futures::FutureExt;
 use futures::future::BoxFuture;
 use thiserror::Error;
@@ -10,6 +12,8 @@ use thiserror::Error;
 use diesel_async::AsyncPgConnection;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::pooled_connection::bb8::Pool;
+
+use crate::index::Taxonomy;
 
 
 #[derive(Error, Debug)]
@@ -20,6 +24,35 @@ pub enum Error {
     Pool(#[from] diesel_async::pooled_connection::PoolError),
     #[error("internal database pool error")]
     GetPool(#[from] diesel_async::pooled_connection::bb8::RunError),
+}
+
+
+#[derive(Queryable, Debug)]
+struct Taxon {
+    scientific_name_authorship: Option<String>,
+    canonical_name: Option<String>,
+    kingdom: Option<String>,
+    phylum: Option<String>,
+    class: Option<String>,
+    order: Option<String>,
+    family: Option<String>,
+    genus: Option<String>,
+}
+
+impl From<Taxon> for Taxonomy {
+    fn from(source: Taxon) -> Self {
+        Self {
+            canonical_name: source.canonical_name,
+            authorship: source.scientific_name_authorship,
+
+            kingdom: source.kingdom,
+            phylum: source.phylum,
+            class: source.class,
+            order: source.order,
+            family: source.family,
+            genus: source.genus,
+        }
+    }
 }
 
 
