@@ -4,6 +4,8 @@ use serde::{Serialize, Deserialize};
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
+use crate::index::search::GenusSearch;
+use crate::index::search::GenusSearchItem;
 use crate::index::search::SearchFilterItem;
 use crate::index::search::SearchFilterMethod;
 use crate::index::search::SearchItem;
@@ -170,6 +172,23 @@ impl Search {
 
         Ok(suggestions)
     }
+
+
+    #[tracing::instrument(skip(self, ctx))]
+    async fn genus(
+        &self,
+        ctx: &Context<'_>,
+        kingdom: Option<String>,
+        phylum: Option<String>,
+        class: Option<String>,
+        family: Option<String>,
+    ) -> Result<Vec<GenusSearchItem>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let filters = create_filters(kingdom, phylum, class, family, None);
+        let results = state.db_provider.search_genus("", &filters).await.unwrap();
+
+        Ok(results.records)
+    }
 }
 
 
@@ -177,4 +196,33 @@ impl Search {
 pub struct FilterTypeResults {
     /// Filters to narrow down specimens by taxonomic rank
     pub taxonomy: TaxonomyFilters,
+}
+
+
+fn create_filters(
+    kingdom: Option<String>,
+    phylum: Option<String>,
+    class: Option<String>,
+    family: Option<String>,
+    genus: Option<String>,
+) -> Vec<SearchFilterItem> {
+    let mut filters = Vec::new();
+
+    if let Some(value) = kingdom {
+        filters.push(SearchFilterItem { field: "kingdom".into(), value, method: SearchFilterMethod::Include });
+    }
+    if let Some(value) = phylum {
+        filters.push(SearchFilterItem { field: "phylum".into(), value, method: SearchFilterMethod::Include  });
+    }
+    if let Some(value) = class {
+        filters.push(SearchFilterItem { field: "class".into(), value, method: SearchFilterMethod::Include  });
+    }
+    if let Some(value) = family {
+        filters.push(SearchFilterItem { field: "family".into(), value, method: SearchFilterMethod::Include  });
+    }
+    if let Some(value) = genus {
+        filters.push(SearchFilterItem { field: "genus".into(), value, method: SearchFilterMethod::Include  });
+    }
+
+    filters
 }

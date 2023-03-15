@@ -17,6 +17,7 @@ impl GetGenusStats for Database {
 
         let total_species: i64 = taxa
             .filter(genus.eq(genus_value))
+            .filter(taxon_rank.eq("species"))
             .filter(taxonomic_status.eq("accepted"))
             .count()
             .get_result(&mut conn)
@@ -39,6 +40,7 @@ impl GetFamilyStats for Database {
 
         let total_genera: i64 = taxa
             .filter(family.eq(family_value))
+            .filter(taxon_rank.eq("genus"))
             .filter(taxonomic_status.eq("accepted"))
             .count()
             .get_result(&mut conn)

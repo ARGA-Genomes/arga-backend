@@ -5,7 +5,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
 
-use crate::{index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, SpeciesList, SearchSuggestion, TaxaSearch, SpeciesSearch, SpeciesSearchResult, SpeciesSearchItem, SpeciesSearchByCanonicalName, SearchFilterMethod, SpeciesSearchExcludingCanonicalName}, schema::taxa::canonical_name};
+use crate::{index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, SpeciesList, SearchSuggestion, TaxaSearch, SpeciesSearch, SpeciesSearchResult, SpeciesSearchItem, SpeciesSearchByCanonicalName, SearchFilterMethod, SpeciesSearchExcludingCanonicalName, GenusSearchResult, GenusSearch, GenusSearchItem}, schema::taxa::canonical_name};
 use super::{Database, Error};
 
 
@@ -244,6 +244,71 @@ impl SpeciesSearchExcludingCanonicalName for Database {
         }
 
         Ok(SpeciesSearchResult {
+            records: items,
+        })
+    }
+}
+
+
+#[async_trait]
+impl GenusSearch for Database {
+    type Error = Error;
+
+    #[tracing::instrument(skip(self))]
+    async fn search_genus(&self, _query: &str, filters: &Vec<SearchFilterItem>) -> Result<GenusSearchResult, Self::Error> {
+        use diesel::dsl::count_star;
+        use crate::schema::taxa::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let mut query = taxa
+            .group_by(genus)
+            .select((genus, count_star()))
+            .filter(taxonomic_status.eq("accepted"))
+            .order_by(genus)
+            .limit(21)
+            .into_boxed();
+
+        // we mutate the query variable through the loop to build the proper
+        // filter but this is only possible because the query was boxed. this
+        // means the query cant be inlined by the compiler but the performance
+        // impact should be negligible
+        for filter in filters.into_iter() {
+            query = match filter.method {
+                SearchFilterMethod::Include => match filter.field.as_str() {
+                    "kingdom" => query.filter(kingdom.eq(&filter.value)),
+                    "phylum" => query.filter(phylum.eq(&filter.value)),
+                    "class" => query.filter(class.eq(&filter.value)),
+                    "order" => query.filter(order.eq(&filter.value)),
+                    "family" => query.filter(family.eq(&filter.value)),
+                    "genus" => query.filter(genus.eq(&filter.value)),
+                    _ => query,
+                },
+                SearchFilterMethod::Exclude => match filter.field.as_str() {
+                    "kingdom" => query.filter(kingdom.ne(&filter.value)),
+                    "phylum" => query.filter(phylum.ne(&filter.value)),
+                    "class" => query.filter(class.ne(&filter.value)),
+                    "order" => query.filter(order.ne(&filter.value)),
+                    "family" => query.filter(family.ne(&filter.value)),
+                    "genus" => query.filter(genus.ne(&filter.value)),
+                    _ => query,
+                },
+            };
+        }
+
+        tracing::debug!(query = %diesel::debug_query(&query));
+        let rows = query.load::<(Option<String>, i64)>(&mut conn).await?;
+
+        let mut items = Vec::with_capacity(rows.len());
+        for row in rows {
+            if let (Some(name), total) = row {
+                items.push(GenusSearchItem {
+                    genus_name: name,
+                    total_records: total as usize,
+                });
+            }
+        }
+
+        Ok(GenusSearchResult {
             records: items,
         })
     }

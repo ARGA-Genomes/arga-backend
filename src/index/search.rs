@@ -143,3 +143,23 @@ pub trait SpeciesSearchExcludingCanonicalName {
     type Error;
     async fn search_species_excluding_canonical_names(&self, names: Vec<String>) -> Result<SpeciesSearchResult, Self::Error>;
 }
+
+
+#[derive(Debug, Deserialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct GenusSearchItem {
+    pub genus_name: String,
+    pub total_records: usize,
+}
+
+#[derive(Debug, Deserialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct GenusSearchResult {
+    pub records: Vec<GenusSearchItem>,
+}
+
+#[async_trait]
+pub trait GenusSearch {
+    type Error;
+    async fn search_genus(&self, query: &str, filters: &Vec<SearchFilterItem>) -> Result<GenusSearchResult, Self::Error>;
+}
