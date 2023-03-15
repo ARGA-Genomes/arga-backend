@@ -1,7 +1,6 @@
 use async_graphql::SimpleObject;
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 
 
 /// Taxonomic information of a species.
@@ -42,18 +41,18 @@ pub struct Distribution {
 /// Providers implementing this trait can retrieve detailed information
 /// on a specific species.
 #[async_trait]
-pub trait Species {
+pub trait GetSpecies {
     type Error;
 
     /// Get taxonomic information for a specific species.
-    async fn taxonomy(&self, taxon_uuid: Uuid) -> Result<Taxonomy, Self::Error>;
+    async fn taxonomy(&self, canonical_name: &str) -> Result<Taxonomy, Self::Error>;
     /// Get location and status details of a specific species.
-    async fn distribution(&self, taxon_uuid: Uuid) -> Result<Vec<Distribution>, Self::Error>;
+    async fn distribution(&self, canonical_name: &str) -> Result<Vec<Distribution>, Self::Error>;
 }
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
-pub struct Specimen {
+pub struct GenomicData {
     pub canonical_name: Option<String>,
     pub r#type: Option<String>,
     pub data_resource: Option<String>,
@@ -69,8 +68,7 @@ pub struct Specimen {
 }
 
 #[async_trait]
-pub trait Specimens {
+pub trait GetGenomicData {
     type Error;
-
-    async fn specimens_by_canonical_name(&self, canonical_name: &str) -> Result<Vec<Specimen>, Self::Error>;
+    async fn genomic_data(&self, canonical_name: &str) -> Result<Vec<GenomicData>, Self::Error>;
 }

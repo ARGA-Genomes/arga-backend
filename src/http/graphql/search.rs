@@ -11,8 +11,7 @@ use crate::index::search::SearchFilterMethod;
 use crate::index::search::SearchItem;
 use crate::index::search::SearchSuggestion;
 use crate::index::search::SpeciesSearch;
-use crate::index::search::SpeciesSearchByCanonicalName;
-use crate::index::search::SpeciesSearchExcludingCanonicalName;
+use crate::index::search::SpeciesSearchItem;
 use crate::index::search::{Searchable, TaxaSearch, SearchResults};
 
 
@@ -186,6 +185,23 @@ impl Search {
         let state = ctx.data::<State>().unwrap();
         let filters = create_filters(kingdom, phylum, class, family, None);
         let results = state.db_provider.search_genus("", &filters).await.unwrap();
+
+        Ok(results.records)
+    }
+
+    #[tracing::instrument(skip(self, ctx))]
+    async fn species(
+        &self,
+        ctx: &Context<'_>,
+        kingdom: Option<String>,
+        phylum: Option<String>,
+        class: Option<String>,
+        family: Option<String>,
+        genus: Option<String>,
+    ) -> Result<Vec<SpeciesSearchItem>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let filters = create_filters(kingdom, phylum, class, family, genus);
+        let results = state.db_provider.search_species("", &filters).await.unwrap();
 
         Ok(results.records)
     }

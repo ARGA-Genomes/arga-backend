@@ -1,11 +1,10 @@
 use async_trait::async_trait;
-use uuid::Uuid;
 
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
 
-use crate::index::species::{self, Species, Taxonomy};
+use crate::index::species::{self, GetSpecies, Taxonomy};
 use super::{Database, Error};
 
 
@@ -61,10 +60,10 @@ impl From<Distribution> for species::Distribution {
 
 
 #[async_trait]
-impl Species for Database {
+impl GetSpecies for Database {
     type Error = Error;
 
-    async fn taxonomy(&self, taxon_uuid: Uuid) -> Result<Taxonomy, Error> {
+    async fn taxonomy(&self, name: &str) -> Result<Taxonomy, Error> {
         use crate::schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
@@ -79,14 +78,14 @@ impl Species for Database {
                 family,
                 genus,
             ))
-            .filter(id.eq(taxon_uuid))
+            .filter(canonical_name.eq(name))
             .first::<Taxon>(&mut conn).await?;
 
         Ok(Taxonomy::from(taxon))
     }
 
-    async fn distribution(&self, taxon_uuid: Uuid) -> Result<Vec<species::Distribution>, Error> {
-        use crate::schema::taxa::dsl::{taxa, id as taxa_id, taxon_id as taxa_taxon_id};
+    async fn distribution(&self, name: &str) -> Result<Vec<species::Distribution>, Error> {
+        use crate::schema::taxa::dsl::{taxa, canonical_name, taxon_id as taxa_taxon_id};
         use crate::schema::distribution::dsl::*;
         let mut conn = self.pool.get().await?;
 
@@ -99,7 +98,7 @@ impl Species for Database {
                 threat_status,
                 source,
             ))
-            .filter(taxa_id.eq(taxon_uuid))
+            .filter(canonical_name.eq(name))
             .load::<Distribution>(&mut conn).await?;
 
         let dist = rows.into_iter().map(|r| r.into()).collect();

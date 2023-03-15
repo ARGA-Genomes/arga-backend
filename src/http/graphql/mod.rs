@@ -1,5 +1,4 @@
 pub mod overview;
-// pub mod specimens;
 pub mod search;
 pub mod species;
 pub mod stats;
@@ -13,7 +12,6 @@ use async_graphql::{Object, EmptySubscription, EmptyMutation, Schema};
 use async_graphql::extensions::Tracing;
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-use uuid::Uuid;
 
 use crate::features::Features;
 use crate::http::Context;
@@ -42,8 +40,8 @@ impl Query {
         Search {}
     }
 
-    async fn species(&self, taxon_uuid: String) -> Species {
-        Species { taxon_uuid: Uuid::parse_str(&taxon_uuid).unwrap() }
+    async fn species(&self, canonical_name: String) -> Species {
+        Species { canonical_name }
     }
 
     async fn stats(&self) -> Statistics {
