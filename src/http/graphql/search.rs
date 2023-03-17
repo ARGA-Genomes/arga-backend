@@ -11,6 +11,7 @@ use crate::index::search::SearchFilterMethod;
 use crate::index::search::SearchItem;
 use crate::index::search::SearchSuggestion;
 use crate::index::search::SpeciesSearch;
+use crate::index::search::SpeciesSearchByCanonicalName;
 use crate::index::search::SpeciesSearchItem;
 use crate::index::search::{Searchable, TaxaSearch, SearchResults};
 
@@ -129,10 +130,10 @@ impl Search {
 
         for record in solr_results.records.into_iter().take(21) {
             results.push(SearchItem {
-                id: record.species_name.clone(),
+                id: record.canonical_name.clone().unwrap(),
                 genomic_data_records: Some(record.total_records),
-                scientific_name: Some(record.species_name.clone()),
-                canonical_name: Some(record.species_name),
+                scientific_name: record.scientific_name,
+                canonical_name: record.canonical_name,
                 ..SearchItem::default()
             });
         }
@@ -201,9 +202,66 @@ impl Search {
     ) -> Result<Vec<SpeciesSearchItem>, Error> {
         let state = ctx.data::<State>().unwrap();
         let filters = create_filters(kingdom, phylum, class, family, genus);
-        let results = state.db_provider.search_species("", &filters).await.unwrap();
 
-        Ok(results.records)
+        // limit the results for pagination. this should become variable
+        // once a pagination system is more fleshed out
+        let mut results = Vec::with_capacity(21);
+
+        // first get the data we do have from the solr index.
+        let solr_results = state.provider.search_species("", &filters).await.unwrap();
+
+        for record in solr_results.records.into_iter().take(21) {
+            results.push(record);
+        }
+
+        // get species from gbif backbone that don't have any genomic records
+        let db_results = state.db_provider.search_species("", &filters).await.unwrap();
+
+        for record in db_results.records.into_iter() {
+            // add the filler gbif record if we don't have enough records with data
+            if let None = results.iter().find(|r| r.canonical_name == record.canonical_name) {
+                results.push(record);
+            }
+        }
+
+        // sort by the amount of the genomic records. the database results should be
+        // sorted by scientific name already so the secondary order should be by name
+        results.sort_by(|a, b| {
+            b.total_records.cmp(&a.total_records)
+        });
+
+        Ok(results.into_iter().take(21).collect())
+    }
+
+    #[tracing::instrument(skip(self, ctx))]
+    async fn species_taxonomy_order(
+        &self,
+        ctx: &Context<'_>,
+        kingdom: Option<String>,
+        phylum: Option<String>,
+        class: Option<String>,
+        family: Option<String>,
+        genus: Option<String>,
+    ) -> Result<Vec<SpeciesSearchItem>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let filters = create_filters(kingdom, phylum, class, family, genus);
+
+        let mut results = state.db_provider.search_species("", &filters).await.unwrap();
+
+        let names = results.records.iter().map(|r| r.canonical_name.clone().unwrap()).collect();
+
+        // first get the data we do have from the solr index.
+        // let solr_results = state.provider.search_species("", &filters).await.unwrap();
+        let solr_results = state.provider.search_species_by_canonical_names(names).await.unwrap();
+
+        for mut record in results.records.iter_mut() {
+            // find the total amount of genomic records from the solr search
+            if let Some(solr_record) = solr_results.records.iter().find(|r| r.canonical_name == record.canonical_name) {
+                record.total_records = solr_record.total_records;
+            }
+        }
+
+        Ok(results.records.into_iter().take(21).collect())
     }
 }
 

@@ -116,7 +116,8 @@ pub trait TaxaSearch {
 #[derive(Debug, Deserialize, SimpleObject)]
 #[serde(rename_all = "camelCase")]
 pub struct SpeciesSearchItem {
-    pub species_name: String,
+    pub scientific_name: Option<String>,
+    pub canonical_name: Option<String>,
     pub total_records: usize,
 }
 

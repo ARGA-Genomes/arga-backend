@@ -5,7 +5,23 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
 
-use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, SpeciesList, SearchSuggestion, TaxaSearch, SpeciesSearch, SpeciesSearchResult, SpeciesSearchItem, SpeciesSearchByCanonicalName, SearchFilterMethod, SpeciesSearchExcludingCanonicalName, GenusSearchResult, GenusSearch, GenusSearchItem};
+use crate::index::search::{
+    Searchable,
+    SearchResults,
+    SearchFilterItem,
+    SearchItem,
+    SpeciesList,
+    SearchSuggestion,
+    TaxaSearch,
+    SpeciesSearch,
+    SpeciesSearchResult,
+    SpeciesSearchByCanonicalName,
+    SearchFilterMethod,
+    SpeciesSearchExcludingCanonicalName,
+    GenusSearchResult,
+    GenusSearch,
+    GenusSearchItem
+};
 use super::{Database, Error};
 
 
@@ -203,8 +219,9 @@ impl SpeciesSearchByCanonicalName for Database {
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
             if let Some(name) = row {
-                items.push(SpeciesSearchItem {
-                    species_name: name,
+                items.push(crate::index::search::SpeciesSearchItem {
+                    scientific_name: None,
+                    canonical_name: Some(name),
                     total_records: 0,
                 });
             }
@@ -236,8 +253,9 @@ impl SpeciesSearchExcludingCanonicalName for Database {
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
             if let Some(name) = row {
-                items.push(SpeciesSearchItem {
-                    species_name: name,
+                items.push(crate::index::search::SpeciesSearchItem {
+                    scientific_name: None,
+                    canonical_name: Some(name),
                     total_records: 0,
                 });
             }
@@ -264,6 +282,7 @@ impl GenusSearch for Database {
             .group_by(genus)
             .select((genus, count_star()))
             .filter(taxonomic_status.eq("accepted"))
+            .filter(taxon_rank.eq("genus"))
             .order_by(genus)
             .limit(21)
             .into_boxed();
@@ -321,15 +340,14 @@ impl SpeciesSearch for Database {
 
     #[tracing::instrument(skip(self))]
     async fn search_species(&self, _query: &str, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Self::Error> {
-        use diesel::dsl::count_star;
         use crate::schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let mut query = taxa
-            .group_by(canonical_name)
-            .select((canonical_name, count_star()))
+            .select((scientific_name, canonical_name))
             .filter(taxonomic_status.eq("accepted"))
-            .order_by(canonical_name)
+            .filter(taxon_rank.eq("species"))
+            .order_by(scientific_name)
             .limit(21)
             .into_boxed();
 
@@ -361,20 +379,31 @@ impl SpeciesSearch for Database {
         }
 
         tracing::debug!(query = %diesel::debug_query(&query));
-        let rows = query.load::<(Option<String>, i64)>(&mut conn).await?;
+        let rows = query.load::<SpeciesSearchItem>(&mut conn).await?;
 
         let mut items = Vec::with_capacity(rows.len());
         for row in rows {
-            if let (Some(name), total) = row {
-                items.push(SpeciesSearchItem {
-                    species_name: name,
-                    total_records: total as usize,
-                });
-            }
+            items.push(row.into());
         }
 
         Ok(SpeciesSearchResult {
             records: items,
         })
+    }
+}
+
+#[derive(Queryable, Debug)]
+struct SpeciesSearchItem {
+    scientific_name: Option<String>,
+    canonical_name: Option<String>,
+}
+
+impl From<SpeciesSearchItem> for crate::index::search::SpeciesSearchItem {
+    fn from(source: SpeciesSearchItem) -> Self {
+        Self {
+            scientific_name: source.scientific_name,
+            canonical_name: source.canonical_name,
+            total_records: 0,
+        }
     }
 }
