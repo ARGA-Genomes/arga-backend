@@ -1,19 +1,87 @@
+use argon2::{Argon2, PasswordHasher};
+use argon2::password_hash::SaltString;
+use argon2::password_hash::rand_core::OsRng;
+use axum_login::secrecy::{SecretString, ExposeSecret};
 use tracing_subscriber::{ Registry, EnvFilter };
 use tracing_subscriber::prelude::*;
 
 use dotenvy::dotenv;
+use clap::Parser;
+
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 
 use arga_backend::http;
 use arga_backend::telemetry;
+use arga_backend::schema;
 
 use arga_backend::index::providers::{Solr, SolrClient};
 use arga_backend::index::providers::db::Database;
+
+
+/// The ARGA backend
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+   #[command(subcommand)]
+   command: Option<Commands>,
+}
+
+#[derive(clap::Subcommand)]
+enum Commands {
+    /// Create a new admin user
+    CreateAdmin {
+        /// The full name of the new admin user
+        name: String,
+        /// The email address of the new admin user
+        email: String,
+        /// A generated and safe password for the new admin user
+        password: String,
+    },
+}
 
 
 #[tokio::main]
 async fn main() {
     dotenv().ok();
 
+    let cli = Cli::parse();
+
+    match &cli.command {
+        Some(Commands::CreateAdmin { name, email, password }) => {
+            let secret = SecretString::new(password.to_string());
+            create_admin(name, email, secret).await;
+        }
+        None => serve().await
+    }
+}
+
+
+async fn create_admin(name: &str, email: &str, password: SecretString) {
+    use schema::users::dsl as dsl;
+
+    let db_host = std::env::var("DATABASE_URL").expect("No database url specified");
+    let database = Database::connect(&db_host).await.expect("Failed to connect to the database");
+    let mut pool = database.pool.get().await.unwrap();
+
+    let argon2 = Argon2::default();
+    let salt = SaltString::generate(&mut OsRng);
+    let hash = argon2.hash_password(&password.expose_secret().as_bytes(), &salt).unwrap().to_string();
+
+    diesel::insert_into(dsl::users)
+        .values((
+            dsl::name.eq(name),
+            dsl::email.eq(email),
+            dsl::password_hash.eq(hash),
+            dsl::password_salt.eq(salt.to_string()),
+            dsl::user_role.eq("admin"),
+        ))
+        .execute(&mut pool)
+        .await.unwrap();
+}
+
+
+async fn serve() {
     // setup tracing with opentelemetry support. this allows us to use tracing macros
     // for both logging and metrics
     let subscriber = Registry::default();

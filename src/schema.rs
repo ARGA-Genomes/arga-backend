@@ -1,6 +1,21 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    descriptions (id) {
+        id -> Uuid,
+        taxon_id -> Nullable<Int8>,
+        #[sql_name = "type"]
+        type_ -> Nullable<Varchar>,
+        language -> Nullable<Varchar>,
+        description -> Nullable<Text>,
+        source -> Nullable<Varchar>,
+        creator -> Nullable<Varchar>,
+        contributor -> Nullable<Varchar>,
+        license -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     distribution (id) {
         id -> Uuid,
         taxon_id -> Nullable<Int8>,
@@ -35,6 +50,22 @@ diesel::table! {
 }
 
 diesel::table! {
+    media_observations (id) {
+        id -> Uuid,
+        media_id -> Nullable<Int8>,
+        scientific_name -> Nullable<Varchar>,
+        basis_of_record -> Nullable<Varchar>,
+        institution_code -> Nullable<Varchar>,
+        collection_code -> Nullable<Varchar>,
+        dataset_name -> Nullable<Varchar>,
+        captive -> Nullable<Varchar>,
+        event_date -> Nullable<Timestamptz>,
+        license -> Nullable<Varchar>,
+        rights_holder -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     taxa (id) {
         id -> Uuid,
         taxon_id -> Nullable<Int8>,
@@ -63,8 +94,68 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    types_and_specimen (id) {
+        id -> Uuid,
+        taxon_id -> Nullable<Int8>,
+        designation_type -> Nullable<Varchar>,
+        designated_by -> Nullable<Varchar>,
+        scientific_name -> Nullable<Varchar>,
+        taxon_rank -> Nullable<Varchar>,
+        source -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
+    user_taxa (id) {
+        id -> Uuid,
+        taxa_lists_id -> Uuid,
+        scientific_name -> Nullable<Varchar>,
+        scientific_name_authorship -> Nullable<Varchar>,
+        canonical_name -> Nullable<Varchar>,
+        specific_epithet -> Nullable<Varchar>,
+        infraspecific_epithet -> Nullable<Varchar>,
+        taxon_rank -> Nullable<Text>,
+        name_according_to -> Nullable<Text>,
+        name_published_in -> Nullable<Text>,
+        taxonomic_status -> Nullable<Varchar>,
+        taxon_remarks -> Nullable<Text>,
+        kingdom -> Nullable<Varchar>,
+        phylum -> Nullable<Varchar>,
+        class -> Nullable<Varchar>,
+        order -> Nullable<Varchar>,
+        family -> Nullable<Varchar>,
+        genus -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
+    user_taxa_lists (id) {
+        id -> Uuid,
+        name -> Varchar,
+        description -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    users (id) {
+        id -> Uuid,
+        name -> Varchar,
+        email -> Varchar,
+        user_role -> Varchar,
+        password_hash -> Varchar,
+        password_salt -> Varchar,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
+    descriptions,
     distribution,
     media,
+    media_observations,
     taxa,
+    types_and_specimen,
+    user_taxa,
+    user_taxa_lists,
+    users,
 );

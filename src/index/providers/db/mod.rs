@@ -3,6 +3,7 @@ pub mod family;
 pub mod genus;
 pub mod species;
 pub mod stats;
+pub mod models;
 
 use diesel::{ConnectionResult, Queryable};
 use futures::FutureExt;
@@ -58,7 +59,7 @@ impl From<Taxon> for Taxonomy {
 
 #[derive(Clone)]
 pub struct Database {
-    pool: Pool<AsyncPgConnection>,
+    pub pool: Pool<AsyncPgConnection>,
 }
 
 

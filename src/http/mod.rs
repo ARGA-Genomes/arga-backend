@@ -1,4 +1,5 @@
 use anyhow::Context as ErrorContext;
+use axum::extract::FromRef;
 use std::net::SocketAddr;
 
 use axum::http::{HeaderValue, Method};
@@ -16,6 +17,8 @@ use crate::index::providers::solr::Solr;
 pub mod error;
 pub mod graphql;
 pub mod health;
+pub mod admin;
+pub mod auth;
 
 use error::Error;
 
@@ -50,6 +53,12 @@ pub(crate) struct Context {
     pub ala_provider: Ala,
     pub db_provider: Database,
     pub features: FeatureClient,
+}
+
+impl FromRef<Context> for Database {
+    fn from_ref(state: &Context) -> Self {
+        state.db_provider.clone()
+    }
 }
 
 /// Create the context and serve the API.
@@ -92,6 +101,7 @@ fn router(context: Context) -> Result<Router, Error> {
     let mut router = Router::new()
         .merge(health::router())
         .merge(graphql::router(context.clone()))
+        .merge(admin::router(context.clone()))
         .layer(TraceLayer::new_for_http())
         .layer(
             CorsLayer::new()
