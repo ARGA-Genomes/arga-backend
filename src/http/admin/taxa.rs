@@ -288,17 +288,17 @@ async fn delete_user_taxon(
 /// The REST gateway for the admin backend for basic CRUD operations
 pub(crate) fn router() -> Router<Context> {
     Router::new()
-        .route("/admin/taxa", get(taxa))
-        .route("/admin/user_taxa", get(user_taxa_lists))
-        .route("/admin/user_taxa", post(create_user_taxa_list))
-        .route("/admin/user_taxa/:uuid", get(show_user_taxa_list))
-        .route("/admin/user_taxa/:uuid", put(update_user_taxa_list))
-        .route("/admin/user_taxa/:uuid", delete(delete_user_taxa_list))
-        .route("/admin/user_taxa/:uuid/items", get(user_taxa_items))
-        .route("/admin/user_taxa/:uuid/items", post(create_user_taxon))
-        .route("/admin/user_taxon/:uuid", get(show_user_taxon))
-        .route("/admin/user_taxon/:uuid", put(update_user_taxon))
-        .route("/admin/user_taxon/:uuid", delete(delete_user_taxon))
+        .route("/api/admin/taxa", get(taxa))
+        .route("/api/admin/user_taxa", get(user_taxa_lists))
+        .route("/api/admin/user_taxa", post(create_user_taxa_list))
+        .route("/api/admin/user_taxa/:uuid", get(show_user_taxa_list))
+        .route("/api/admin/user_taxa/:uuid", put(update_user_taxa_list))
+        .route("/api/admin/user_taxa/:uuid", delete(delete_user_taxa_list))
+        .route("/api/admin/user_taxa/:uuid/items", get(user_taxa_items))
+        .route("/api/admin/user_taxa/:uuid/items", post(create_user_taxon))
+        .route("/api/admin/user_taxon/:uuid", get(show_user_taxon))
+        .route("/api/admin/user_taxon/:uuid", put(update_user_taxon))
+        .route("/api/admin/user_taxon/:uuid", delete(delete_user_taxon))
 }
 
 

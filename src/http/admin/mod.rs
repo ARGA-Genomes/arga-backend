@@ -31,10 +31,10 @@ pub(crate) fn router(context: Context) -> Router<Context> {
 
 
     Router::new()
-        .route("/admin/logout", get(logout_handler))
+        .route("/api/admin/logout", get(logout_handler))
         .merge(taxa::router())
         .route_layer(RequireAuth::login())
-        .route("/admin/login", post(login_handler))
+        .route("/api/admin/login", post(login_handler))
         .layer(auth_layer)
         .layer(session_layer)
 }
