@@ -137,3 +137,49 @@ pub struct User {
     pub name: String,
     pub email: String,
 }
+
+
+
+#[derive(Clone, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::gnl)]
+pub struct ArgaTaxon {
+    id: Uuid,
+
+    // http://rs.tdwg.org/dwc/terms/scientificName
+    scientific_name: Option<String>,
+    // http://rs.tdwg.org/dwc/terms/scientificNameAuthorship
+    scientific_name_authorship: Option<String>,
+    // http://rs.gbif.org/terms/1.0/canonicalName
+    canonical_name: Option<String>,
+
+    // http://rs.tdwg.org/dwc/terms/specificEpithet
+    specific_epithet: Option<String>,
+    // http://rs.tdwg.org/dwc/terms/infraspecificEpithet
+    infraspecific_epithet: Option<String>,
+    // http://rs.tdwg.org/dwc/terms/taxonRank
+    taxon_rank: Option<String>,
+    // http://rs.tdwg.org/dwc/terms/nameAccordingTo
+    name_according_to: Option<String>,
+    // http://rs.tdwg.org/dwc/terms/namePublishedIn
+    name_published_in: Option<String>,
+    // http://rs.tdwg.org/dwc/terms/taxonomicStatus
+    taxonomic_status: Option<String>,
+    // http://rs.tdwg.org/dwc/terms/taxonRemarks
+    taxon_remarks: Option<String>,
+
+    // http://rs.tdwg.org/dwc/terms/kingdom
+    kingdom: Option<String>,
+    // http://rs.tdwg.org/dwc/terms/phylum
+    phylum: Option<String>,
+    // http://rs.tdwg.org/dwc/terms/class
+    class: Option<String>,
+    // http://rs.tdwg.org/dwc/terms/order
+    order: Option<String>,
+    // http://rs.tdwg.org/dwc/terms/family
+    family: Option<String>,
+    // http://rs.tdwg.org/dwc/terms/genus
+    genus: Option<String>,
+
+    source: Option<String>,
+    taxa_lists_id: Option<Uuid>,
+}

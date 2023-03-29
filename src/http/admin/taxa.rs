@@ -14,13 +14,13 @@ use crate::schema;
 use crate::http::Context;
 use crate::http::error::InternalError;
 use crate::index::providers::db::Database;
-use crate::index::providers::db::models::{Taxon, UserTaxaList, UserTaxon};
+use crate::index::providers::db::models::{UserTaxaList, UserTaxon, ArgaTaxon};
 
 
 #[derive(Debug, Serialize)]
 struct TaxaList {
     total: usize,
-    records: Vec<Taxon>,
+    records: Vec<ArgaTaxon>,
 }
 
 async fn taxa(
@@ -28,28 +28,46 @@ async fn taxa(
     State(db_provider): State<Database>,
 ) -> Result<Json<TaxaList>, InternalError>
 {
-    use schema::taxa::dsl::*;
+    use schema::gnl::dsl::*;
     let mut conn = db_provider.pool.get().await?;
 
+    // pagination
     let page = parse_int_param(&params, "page", 1);
     let page_size = parse_int_param(&params, "page_size", 20);
     let offset = (page - 1) * page_size;
 
-    let records = taxa
+    let mut query = gnl
         .filter(taxonomic_status.eq("accepted"))
         .filter(taxon_rank.eq("species"))
         .order_by(scientific_name)
         .offset(offset)
         .limit(page_size)
-        .load::<Taxon>(&mut conn)
-        .await?;
+        .into_boxed();
 
-    let total: i64 = taxa
+    let mut total = gnl
         .filter(taxonomic_status.eq("accepted"))
         .filter(taxon_rank.eq("species"))
-        .count()
-        .get_result(&mut conn)
-        .await?;
+        .into_boxed();
+
+    // filters
+    if let Some(filter_source) = params.get("source") {
+        query = query.filter(source.eq(filter_source));
+        total = total.filter(source.eq(filter_source));
+
+        match parse_uuid(&params, "taxa_lists_id") {
+            Some(list_uuid) => {
+                query = query.filter(taxa_lists_id.eq(list_uuid));
+                total = total.filter(taxa_lists_id.eq(list_uuid));
+            },
+            None => {
+                query = query.filter(taxa_lists_id.is_null());
+                total = total.filter(taxa_lists_id.is_null());
+            }
+        };
+    }
+
+    let records = query.load::<ArgaTaxon>(&mut conn).await?;
+    let total: i64 = total.count().get_result(&mut conn).await?;
 
     Ok(Json(TaxaList {
         total: total as usize,
@@ -305,4 +323,15 @@ pub(crate) fn router() -> Router<Context> {
 fn parse_int_param(params: &HashMap<String, String>, name: &str, default: i64) -> i64 {
     let val = params.get(name).map(|val| val.parse::<i64>().unwrap_or(default)).unwrap_or(default);
     if val <= 0 { 1 } else { val }
+}
+
+fn parse_uuid(params: &HashMap<String, String>, list_id: &str) -> Option<Uuid> {
+    if let Some(val) = params.get(list_id) {
+        match Uuid::parse_str(val) {
+            Ok(uuid) => Some(uuid),
+            Err(_) => None,
+        }
+    } else {
+        None
+    }
 }
