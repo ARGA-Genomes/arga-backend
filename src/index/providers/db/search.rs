@@ -174,7 +174,7 @@ impl TaxaSearch for Database {
 
     #[tracing::instrument(skip(self))]
     async fn suggestions(&self, query: &str) ->  Result<Vec<SearchSuggestion> ,Self::Error> {
-        use crate::schema::taxa::dsl::*;
+        use crate::schema::gnl::dsl::*;
 
         if query.is_empty() {
             return Ok(vec![]);
@@ -182,7 +182,7 @@ impl TaxaSearch for Database {
 
         let mut conn = self.pool.get().await?;
 
-        let rows = taxa
+        let rows = gnl
             .select((
                 id,
                 scientific_name,

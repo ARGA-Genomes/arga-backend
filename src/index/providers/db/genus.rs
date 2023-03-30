@@ -12,10 +12,10 @@ impl GetGenus for Database {
     type Error = Error;
 
     async fn taxonomy(&self, name: &str) -> Result<Taxonomy, Error> {
-        use crate::schema::taxa::dsl::*;
+        use crate::schema::gnl::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let taxon = taxa
+        let taxon = gnl
             .select((
                 scientific_name_authorship,
                 canonical_name,
