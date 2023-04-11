@@ -183,3 +183,92 @@ pub struct ArgaTaxon {
     source: Option<String>,
     taxa_lists_id: Option<Uuid>,
 }
+
+
+
+#[derive(Debug, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "crate::schema::sql_types::JobStatus"]
+pub enum JobStatus {
+    Pending,
+    Initialized,
+    Running,
+    Completed,
+    Failed,
+    Dead,
+}
+
+#[derive(Queryable, Debug, Deserialize)]
+#[diesel(table_name = schema::jobs)]
+pub struct Job {
+    pub id: Uuid,
+    pub status: JobStatus,
+    pub worker: String,
+    pub payload: Option<serde_json::Value>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+
+#[derive(Debug, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "crate::schema::sql_types::AttributeDataType"]
+pub enum AttributeDataType {
+    String,
+    Text,
+    Integer,
+    Boolean,
+    Timestamp,
+    Array,
+}
+
+pub enum AttributeDataValue {
+    String(String),
+    Text(String),
+    Integer(i64),
+    Boolean(bool),
+    Timestamp(chrono::DateTime<chrono::Utc>),
+    Array(Vec<String>),
+}
+
+#[derive(Debug, Queryable)]
+pub struct Attribute {
+    pub id: Uuid,
+    pub name: String,
+    pub data_type: AttributeDataType,
+    pub description: Option<String>,
+    pub reference_url: Option<String>,
+}
+
+pub trait AttributeParser {
+    fn parse(&self, value: &Attribute) -> Option<AttributeDataValue>;
+}
+
+
+#[derive(Debug, Queryable, Insertable)]
+#[diesel(table_name = schema::objects)]
+pub struct Object {
+    pub id: Uuid,
+    pub entity_id: Uuid,
+    pub attribute_id: Uuid,
+    pub value_id: Uuid,
+}
+
+#[derive(Debug, Queryable, Insertable)]
+#[diesel(table_name = schema::object_values_string)]
+pub struct ObjectValueString {
+    pub id: Uuid,
+    pub value: String,
+}
+
+#[derive(Debug, Queryable, Insertable)]
+#[diesel(table_name = schema::object_values_text)]
+pub struct ObjectValueText {
+    pub id: Uuid,
+    pub value: String,
+}
+
+#[derive(Debug, Queryable, Insertable)]
+#[diesel(table_name = schema::object_values_array)]
+pub struct ObjectValueArray {
+    pub id: Uuid,
+    pub value: Vec<String>,
+}
