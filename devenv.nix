@@ -5,6 +5,7 @@
     rust-analyzer
     protobuf
     diesel-cli
+    openssl
   ];
 
   languages.rust.enable = true;
