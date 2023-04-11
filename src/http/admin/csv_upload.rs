@@ -77,13 +77,21 @@ async fn queue_csv(
     use schema::jobs::dsl::*;
     let mut conn = db_provider.pool.get().await.unwrap();
 
+    if form.file.is_empty() {
+        return Err(Error::MissingParam("file".into()));
+    }
+    if form.name.is_empty() {
+        return Err(Error::MissingParam("name".into()));
+    }
+
+
     let import_data = ImportJobData {
         name: form.name,
         description: form.description,
         tmp_name: format!("arga_admin_{}", form.file),
     };
 
-    let record = diesel::insert_into(jobs)
+    diesel::insert_into(jobs)
         .values(&NewJob {
             worker: "import_csv".into(),
             payload: Some(import_data),
