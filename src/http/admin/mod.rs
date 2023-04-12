@@ -1,4 +1,6 @@
 mod taxa;
+mod attributes;
+mod csv_upload;
 
 use argon2::{PasswordHash, Argon2, PasswordVerifier};
 use axum::extract::State;
@@ -33,6 +35,8 @@ pub(crate) fn router(context: Context) -> Router<Context> {
     Router::new()
         .route("/api/admin/logout", get(logout_handler))
         .merge(taxa::router())
+        .merge(attributes::router())
+        .merge(csv_upload::router())
         .route_layer(RequireAuth::login())
         .route("/api/admin/login", post(login_handler))
         .layer(auth_layer)

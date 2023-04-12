@@ -210,7 +210,7 @@ pub struct Job {
 }
 
 
-#[derive(Debug, Deserialize, diesel_derive_enum::DbEnum)]
+#[derive(Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "crate::schema::sql_types::AttributeDataType"]
 pub enum AttributeDataType {
     String,
@@ -230,7 +230,7 @@ pub enum AttributeDataValue {
     Array(Vec<String>),
 }
 
-#[derive(Debug, Queryable)]
+#[derive(Debug, Queryable, Serialize, Deserialize)]
 pub struct Attribute {
     pub id: Uuid,
     pub name: String,

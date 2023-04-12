@@ -5,5 +5,6 @@ pub mod http;
 pub mod index;
 pub mod telemetry;
 
+pub mod workers;
 
 pub use features::FeatureClient;
