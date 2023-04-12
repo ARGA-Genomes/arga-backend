@@ -14,6 +14,7 @@ use diesel_async::RunQueryDsl;
 use arga_backend::http;
 use arga_backend::telemetry;
 use arga_backend::schema;
+use arga_backend::workers;
 
 use arga_backend::index::providers::{Solr, SolrClient};
 use arga_backend::index::providers::db::Database;
@@ -29,6 +30,10 @@ struct Cli {
 
 #[derive(clap::Subcommand)]
 enum Commands {
+    /// Run and manage worker processes
+    #[command(subcommand)]
+    Workers(workers::Command),
+
     /// Create a new admin user
     CreateAdmin {
         /// The full name of the new admin user
@@ -52,10 +57,10 @@ async fn main() {
             let secret = SecretString::new(password.to_string());
             create_admin(name, email, secret).await;
         }
-        None => serve().await
+        Some(Commands::Workers(command)) => workers::process_command(command),
+        None => serve().await,
     }
 }
-
 
 async fn create_admin(name: &str, email: &str, password: SecretString) {
     use schema::users::dsl as dsl;

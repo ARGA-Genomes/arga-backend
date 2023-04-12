@@ -10,6 +10,7 @@ use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 use crate::schema;
+use crate::schema_gnl;
 
 use crate::http::Context;
 use crate::http::error::InternalError;
@@ -28,7 +29,7 @@ async fn taxa(
     State(db_provider): State<Database>,
 ) -> Result<Json<TaxaList>, InternalError>
 {
-    use schema::gnl::dsl::*;
+    use schema_gnl::gnl::dsl::*;
     let mut conn = db_provider.pool.get().await?;
 
     // pagination

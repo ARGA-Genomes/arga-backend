@@ -3,6 +3,7 @@ use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 use crate::schema;
+use crate::schema_gnl;
 
 
 #[derive(Clone, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
@@ -90,43 +91,43 @@ pub struct UserTaxaList {
 #[derive(Clone, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::user_taxa)]
 pub struct UserTaxon {
-    id: Uuid,
-    taxa_lists_id: Uuid,
+    pub id: Uuid,
+    pub taxa_lists_id: Uuid,
 
     // http://rs.tdwg.org/dwc/terms/scientificName
-    scientific_name: Option<String>,
+    pub scientific_name: Option<String>,
     // http://rs.tdwg.org/dwc/terms/scientificNameAuthorship
-    scientific_name_authorship: Option<String>,
+    pub scientific_name_authorship: Option<String>,
     // http://rs.gbif.org/terms/1.0/canonicalName
-    canonical_name: Option<String>,
+    pub canonical_name: Option<String>,
 
     // http://rs.tdwg.org/dwc/terms/specificEpithet
-    specific_epithet: Option<String>,
+    pub specific_epithet: Option<String>,
     // http://rs.tdwg.org/dwc/terms/infraspecificEpithet
-    infraspecific_epithet: Option<String>,
+    pub infraspecific_epithet: Option<String>,
     // http://rs.tdwg.org/dwc/terms/taxonRank
-    taxon_rank: Option<String>,
+    pub taxon_rank: Option<String>,
     // http://rs.tdwg.org/dwc/terms/nameAccordingTo
-    name_according_to: Option<String>,
+    pub name_according_to: Option<String>,
     // http://rs.tdwg.org/dwc/terms/namePublishedIn
-    name_published_in: Option<String>,
+    pub name_published_in: Option<String>,
     // http://rs.tdwg.org/dwc/terms/taxonomicStatus
-    taxonomic_status: Option<String>,
+    pub taxonomic_status: Option<String>,
     // http://rs.tdwg.org/dwc/terms/taxonRemarks
-    taxon_remarks: Option<String>,
+    pub taxon_remarks: Option<String>,
 
     // http://rs.tdwg.org/dwc/terms/kingdom
-    kingdom: Option<String>,
+    pub kingdom: Option<String>,
     // http://rs.tdwg.org/dwc/terms/phylum
-    phylum: Option<String>,
+    pub phylum: Option<String>,
     // http://rs.tdwg.org/dwc/terms/class
-    class: Option<String>,
+    pub class: Option<String>,
     // http://rs.tdwg.org/dwc/terms/order
-    order: Option<String>,
+    pub order: Option<String>,
     // http://rs.tdwg.org/dwc/terms/family
-    family: Option<String>,
+    pub family: Option<String>,
     // http://rs.tdwg.org/dwc/terms/genus
-    genus: Option<String>,
+    pub genus: Option<String>,
 }
 
 
@@ -141,7 +142,7 @@ pub struct User {
 
 
 #[derive(Clone, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
-#[diesel(table_name = schema::gnl)]
+#[diesel(table_name = schema_gnl::gnl)]
 pub struct ArgaTaxon {
     id: Uuid,
 
@@ -182,4 +183,93 @@ pub struct ArgaTaxon {
 
     source: Option<String>,
     taxa_lists_id: Option<Uuid>,
+}
+
+
+
+#[derive(Debug, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "crate::schema::sql_types::JobStatus"]
+pub enum JobStatus {
+    Pending,
+    Initialized,
+    Running,
+    Completed,
+    Failed,
+    Dead,
+}
+
+#[derive(Queryable, Debug, Deserialize)]
+#[diesel(table_name = schema::jobs)]
+pub struct Job {
+    pub id: Uuid,
+    pub status: JobStatus,
+    pub worker: String,
+    pub payload: Option<serde_json::Value>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+
+#[derive(Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "crate::schema::sql_types::AttributeDataType"]
+pub enum AttributeDataType {
+    String,
+    Text,
+    Integer,
+    Boolean,
+    Timestamp,
+    Array,
+}
+
+pub enum AttributeDataValue {
+    String(String),
+    Text(String),
+    Integer(i64),
+    Boolean(bool),
+    Timestamp(chrono::DateTime<chrono::Utc>),
+    Array(Vec<String>),
+}
+
+#[derive(Debug, Queryable, Serialize, Deserialize)]
+pub struct Attribute {
+    pub id: Uuid,
+    pub name: String,
+    pub data_type: AttributeDataType,
+    pub description: Option<String>,
+    pub reference_url: Option<String>,
+}
+
+pub trait AttributeParser {
+    fn parse(&self, value: &Attribute) -> Option<AttributeDataValue>;
+}
+
+
+#[derive(Debug, Queryable, Insertable)]
+#[diesel(table_name = schema::objects)]
+pub struct Object {
+    pub id: Uuid,
+    pub entity_id: Uuid,
+    pub attribute_id: Uuid,
+    pub value_id: Uuid,
+}
+
+#[derive(Debug, Queryable, Insertable)]
+#[diesel(table_name = schema::object_values_string)]
+pub struct ObjectValueString {
+    pub id: Uuid,
+    pub value: String,
+}
+
+#[derive(Debug, Queryable, Insertable)]
+#[diesel(table_name = schema::object_values_text)]
+pub struct ObjectValueText {
+    pub id: Uuid,
+    pub value: String,
+}
+
+#[derive(Debug, Queryable, Insertable)]
+#[diesel(table_name = schema::object_values_array)]
+pub struct ObjectValueArray {
+    pub id: Uuid,
+    pub value: Vec<String>,
 }

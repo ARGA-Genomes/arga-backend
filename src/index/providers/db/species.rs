@@ -35,7 +35,7 @@ impl GetSpecies for Database {
     type Error = Error;
 
     async fn taxonomy(&self, name: &str) -> Result<Taxonomy, Error> {
-        use crate::schema::gnl::dsl::*;
+        use crate::schema_gnl::gnl::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let taxon = gnl
