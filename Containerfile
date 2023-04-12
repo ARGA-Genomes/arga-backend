@@ -4,7 +4,7 @@ LABEL org.opencontainers.image.description="A container image running the backen
 LABEL org.opencontainers.image.licenses="AGPL-3.0"
 
 WORKDIR /usr/src/arga-backend
-RUN apt-get update && apt-get install -y protobuf-compiler && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y protobuf-compiler libpq-dev && rm -rf /var/lib/apt/lists/*
 COPY . .
 RUN cargo install --path .
 
@@ -19,5 +19,5 @@ ENV BIND_ADDRESS=0.0.0.0:5000
 EXPOSE 5000
 CMD ["arga-backend"]
 
-RUN apt-get update && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libpq-dev && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/cargo/bin/arga-backend /usr/local/bin/arga-backend
