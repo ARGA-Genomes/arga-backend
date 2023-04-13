@@ -15,7 +15,7 @@ use crate::schema_gnl;
 use crate::http::Context;
 use crate::http::error::InternalError;
 use crate::index::providers::db::Database;
-use crate::index::providers::db::models::{UserTaxaList, UserTaxon, ArgaTaxon};
+use crate::index::providers::db::models::{UserTaxaList, UserTaxon, ArgaTaxon, AttributeDataType};
 
 
 #[derive(Debug, Serialize)]
@@ -38,16 +38,12 @@ async fn taxa(
     let offset = (page - 1) * page_size;
 
     let mut query = gnl
-        .filter(taxonomic_status.eq("accepted"))
-        .filter(taxon_rank.eq("species"))
         .order_by(scientific_name)
         .offset(offset)
         .limit(page_size)
         .into_boxed();
 
     let mut total = gnl
-        .filter(taxonomic_status.eq("accepted"))
-        .filter(taxon_rank.eq("species"))
         .into_boxed();
 
     // filters
@@ -67,6 +63,12 @@ async fn taxa(
         };
     }
 
+    if let Some(search) = params.get("q") {
+        let q = format!("%{search}%");
+        query = query.filter(canonical_name.ilike(q.clone()));
+        total = total.filter(canonical_name.ilike(q));
+    }
+
     let records = query.load::<ArgaTaxon>(&mut conn).await?;
     let total: i64 = total.count().get_result(&mut conn).await?;
 
@@ -74,6 +76,63 @@ async fn taxa(
         total: total as usize,
         records,
     }))
+}
+
+
+#[derive(Debug, Queryable, Serialize, Deserialize)]
+pub struct EntityAttribute<T> {
+    pub id: Uuid,
+    pub data_type: AttributeDataType,
+    pub name: String,
+    pub value: T,
+}
+
+
+async fn taxon(
+    Path(uuid): Path<Uuid>,
+    State(db_provider): State<Database>,
+) -> Result<Json<Vec<serde_json::Value>>, InternalError>
+{
+    let mut conn = db_provider.pool.get().await?;
+
+    // TODO: create a view with the EAV table joined and converting the value to json
+    // as this will be a common way to get attribute values
+    use schema::objects::dsl as objects;
+    use schema::attributes::dsl as attributes;
+    use schema::object_values_string::dsl as strings;
+    use schema::object_values_text::dsl as texts;
+    use schema::object_values_array::dsl as arrays;
+
+    let strings = objects::objects
+        .inner_join(attributes::attributes.on(objects::attribute_id.eq(attributes::id)))
+        .inner_join(strings::object_values_string.on(objects::value_id.eq(strings::id)))
+        .select((objects::id, attributes::data_type, attributes::name, strings::value))
+        .filter(objects::entity_id.eq(uuid))
+        .load::<EntityAttribute<String>>(&mut conn)
+        .await?;
+
+    let texts = objects::objects
+        .inner_join(attributes::attributes.on(objects::attribute_id.eq(attributes::id)))
+        .inner_join(texts::object_values_text.on(objects::value_id.eq(texts::id)))
+        .select((objects::id, attributes::data_type, attributes::name, texts::value))
+        .filter(objects::entity_id.eq(uuid))
+        .load::<EntityAttribute<String>>(&mut conn)
+        .await?;
+
+    let arrays = objects::objects
+        .inner_join(attributes::attributes.on(objects::attribute_id.eq(attributes::id)))
+        .inner_join(arrays::object_values_array.on(objects::value_id.eq(arrays::id)))
+        .select((objects::id, attributes::data_type, attributes::name, arrays::value))
+        .filter(objects::entity_id.eq(uuid))
+        .load::<EntityAttribute<Vec<Option<String>>>>(&mut conn)
+        .await?;
+
+    let mut attrs = Vec::new();
+    attrs.append(&mut strings.iter().map(|v| serde_json::json!(v)).collect());
+    attrs.append(&mut texts.iter().map(|v| serde_json::json!(v)).collect());
+    attrs.append(&mut arrays.iter().map(|v| serde_json::json!(v)).collect());
+
+    Ok(Json(attrs))
 }
 
 
@@ -308,6 +367,7 @@ async fn delete_user_taxon(
 pub(crate) fn router() -> Router<Context> {
     Router::new()
         .route("/api/admin/taxa", get(taxa))
+        .route("/api/admin/taxa/:uuid", get(taxon))
         .route("/api/admin/user_taxa", get(user_taxa_lists))
         .route("/api/admin/user_taxa", post(create_user_taxa_list))
         .route("/api/admin/user_taxa/:uuid", get(show_user_taxa_list))
