@@ -107,7 +107,7 @@ pub fn import(path: PathBuf, taxa_list: &UserTaxaList) -> Result<(), Error> {
 }
 
 pub fn read_file(file: PathBuf) -> PolarsResult<DataFrame> {
-    let tmp_path = std::env::var("ADMIN_TMP_UPLOAD_STORE").expect("No upload storage specified");
+    let tmp_path = std::env::var("ADMIN_TMP_UPLOAD_STORAGE").expect("No upload storage specified");
     let path = std::path::Path::new(&tmp_path).join(file);
     info!(?path, "Reading");
 
