@@ -273,3 +273,39 @@ pub struct ObjectValueArray {
     pub id: Uuid,
     pub value: Vec<String>,
 }
+
+
+#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::media)]
+pub struct Media {
+    id: Uuid,
+
+    media_id: Option<i64>,
+    media_type: Option<String>,
+    format: Option<String>,
+    identifier: Option<String>,
+    references: Option<String>,
+    created: Option<chrono::DateTime<chrono::Utc>>,
+    creator: Option<String>,
+    publisher: Option<String>,
+    license: Option<String>,
+    rights_holder: Option<String>,
+    catalog_number: Option<i64>,
+}
+
+#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::media_observations)]
+pub struct MediaObservation {
+    id: Uuid,
+
+    media_id: Option<i64>,
+    scientific_name: Option<String>,
+    basis_of_record: Option<String>,
+    institution_code: Option<String>,
+    collection_code: Option<String>,
+    dataset_name: Option<String>,
+    captive: Option<String>,
+    event_date: Option<chrono::DateTime<chrono::Utc>>,
+    license: Option<String>,
+    rights_holder: Option<String>,
+}
