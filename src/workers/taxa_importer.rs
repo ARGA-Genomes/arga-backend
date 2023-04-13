@@ -50,12 +50,13 @@ impl TaxaImporter {
     #[instrument]
     fn process(job: Job) {
         info!("Running taxa importer");
+        let tmp_path = std::env::var("ADMIN_TMP_UPLOAD_STORAGE").expect("No upload storage specified");
 
         if let Some(payload) = job.payload {
             match serde_json::from_value::<ImportJobData>(payload) {
                 Ok(data) => {
                     let taxa_list = create_taxa_list(&data.name, &data.description);
-                    let path = Path::new("/tmp").join(data.tmp_name);
+                    let path = Path::new(&tmp_path).join(data.tmp_name);
                     import(path, &taxa_list).unwrap();
                 }
                 Err(err) => {
@@ -107,9 +108,7 @@ pub fn import(path: PathBuf, taxa_list: &UserTaxaList) -> Result<(), Error> {
 }
 
 pub fn read_file(file: PathBuf) -> PolarsResult<DataFrame> {
-    let tmp_path = std::env::var("ADMIN_TMP_UPLOAD_STORAGE").expect("No upload storage specified");
-    let path = std::path::Path::new(&tmp_path).join(file);
-    info!(?path, "Reading");
+    info!(?file, "Reading");
 
     let schema_patch = Schema::from(
         vec![
@@ -118,7 +117,7 @@ pub fn read_file(file: PathBuf) -> PolarsResult<DataFrame> {
         ].into_iter(),
     );
 
-    let df = CsvReader::from_path(path)?
+    let df = CsvReader::from_path(file)?
         .has_header(true)
         .with_delimiter(b',')
         .with_dtypes(Some(Arc::new(schema_patch)))
