@@ -136,7 +136,8 @@ where
         futures::pin_mut!(reader);
 
         // create the file on the server
-        let path = std::path::Path::new("/tmp").join(path);
+        let tmp_path = std::env::var("ADMIN_TMP_UPLOAD_STORE").expect("No upload storage specified");
+        let path = std::path::Path::new(&tmp_path).join(path);
         let mut file = BufWriter::new(File::create(path).await?);
 
         tokio::io::copy(&mut reader, &mut file).await?;

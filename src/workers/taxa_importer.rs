@@ -107,7 +107,9 @@ pub fn import(path: PathBuf, taxa_list: &UserTaxaList) -> Result<(), Error> {
 }
 
 pub fn read_file(file: PathBuf) -> PolarsResult<DataFrame> {
-    info!(file = file.to_str(), "Reading");
+    let tmp_path = std::env::var("ADMIN_TMP_UPLOAD_STORE").expect("No upload storage specified");
+    let path = std::path::Path::new(&tmp_path).join(file);
+    info!(?path, "Reading");
 
     let schema_patch = Schema::from(
         vec![
@@ -116,7 +118,7 @@ pub fn read_file(file: PathBuf) -> PolarsResult<DataFrame> {
         ].into_iter(),
     );
 
-    let df = CsvReader::from_path(file)?
+    let df = CsvReader::from_path(path)?
         .has_header(true)
         .with_delimiter(b',')
         .with_dtypes(Some(Arc::new(schema_patch)))
