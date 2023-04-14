@@ -124,7 +124,7 @@ pub fn read_file(file: PathBuf) -> PolarsResult<DataFrame> {
         .with_quote_char(Some(b'"'))
         .finish()?
         .lazy()
-        .groupby(["canonicalName"])
+        .groupby(["scientificName"])
         .agg([col("*").first()])
         // .select(&[col("*")])
         .collect()?;
@@ -177,11 +177,17 @@ fn import_taxa(taxa_list: &UserTaxaList, df: &DataFrame, conn: &mut PgConnection
         // if this is a common field add it to the user taxon record,
         // otherwise use the EAv table to associate the value with the taxon
         match attribute.name.as_str() {
+            "scientificName" => for (idx, value) in series.iter().enumerate() {
+                rows[idx].scientific_name = parse_string(&value);
+            },
             "authority" => for (idx, value) in series.iter().enumerate() {
                 rows[idx].scientific_name_authorship = parse_string(&value);
             },
             "canonicalName" => for (idx, value) in series.iter().enumerate() {
                 rows[idx].canonical_name = parse_string(&value);
+            },
+            "kingdom" => for (idx, value) in series.iter().enumerate() {
+                rows[idx].kingdom = parse_string(&value);
             },
             "phylum" => for (idx, value) in series.iter().enumerate() {
                 rows[idx].phylum = parse_string(&value);
