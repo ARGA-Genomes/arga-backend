@@ -1,0 +1,1 @@
+ALTER TABLE user_taxa DROP CONSTRAINT user_taxa_taxa_lists_id_fkey

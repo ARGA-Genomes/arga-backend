@@ -21,3 +21,86 @@ diesel::table! {
         taxa_lists_id -> Nullable<Uuid>,
     }
 }
+
+diesel::table! {
+    eav (object_id) {
+        object_id -> Uuid,
+        entity_id -> Uuid,
+        attribute_id -> Uuid,
+        value_id -> Uuid,
+        name -> Varchar,
+        data_type -> Varchar,
+        value_string -> Nullable<Varchar>,
+        value_text -> Nullable<Text>,
+        value_integer -> Nullable<Int8>,
+        value_boolean -> Nullable<Bool>,
+        value_timestamp -> Nullable<Timestamptz>,
+        value_array -> Nullable<Array<Nullable<Varchar>>>,
+    }
+}
+
+diesel::table! {
+    eav_strings (object_id) {
+        object_id -> Uuid,
+        entity_id -> Uuid,
+        attribute_id -> Uuid,
+        value_id -> Uuid,
+        name -> Varchar,
+        value -> Varchar,
+    }
+}
+
+diesel::table! {
+    eav_text (object_id) {
+        object_id -> Uuid,
+        entity_id -> Uuid,
+        attribute_id -> Uuid,
+        value_id -> Uuid,
+        name -> Varchar,
+        value -> Text,
+    }
+}
+
+diesel::table! {
+    eav_integers (object_id) {
+        object_id -> Uuid,
+        entity_id -> Uuid,
+        attribute_id -> Uuid,
+        value_id -> Uuid,
+        name -> Varchar,
+        value -> Int8,
+    }
+}
+
+diesel::table! {
+    eav_booleans (object_id) {
+        object_id -> Uuid,
+        entity_id -> Uuid,
+        attribute_id -> Uuid,
+        value_id -> Uuid,
+        name -> Varchar,
+        value -> Bool,
+    }
+}
+
+diesel::table! {
+    eav_timestamps (object_id) {
+        object_id -> Uuid,
+        entity_id -> Uuid,
+        attribute_id -> Uuid,
+        value_id -> Uuid,
+        name -> Varchar,
+        value -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    eav_arrays (object_id) {
+        object_id -> Uuid,
+        entity_id -> Uuid,
+        attribute_id -> Uuid,
+        value_id -> Uuid,
+        name -> Varchar,
+        value -> Array<Nullable<Varchar>>,
+    }
+}

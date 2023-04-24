@@ -236,6 +236,8 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(user_taxa -> user_taxa_lists (taxa_lists_id));
+
 diesel::allow_tables_to_appear_in_same_query!(
     attributes,
     descriptions,

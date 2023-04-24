@@ -144,45 +144,45 @@ pub struct User {
 #[derive(Clone, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema_gnl::gnl)]
 pub struct ArgaTaxon {
-    id: Uuid,
+    pub id: Uuid,
 
     // http://rs.tdwg.org/dwc/terms/scientificName
-    scientific_name: Option<String>,
+    pub scientific_name: Option<String>,
     // http://rs.tdwg.org/dwc/terms/scientificNameAuthorship
-    scientific_name_authorship: Option<String>,
+    pub scientific_name_authorship: Option<String>,
     // http://rs.gbif.org/terms/1.0/canonicalName
-    canonical_name: Option<String>,
+    pub canonical_name: Option<String>,
 
     // http://rs.tdwg.org/dwc/terms/specificEpithet
-    specific_epithet: Option<String>,
+    pub specific_epithet: Option<String>,
     // http://rs.tdwg.org/dwc/terms/infraspecificEpithet
-    infraspecific_epithet: Option<String>,
+    pub infraspecific_epithet: Option<String>,
     // http://rs.tdwg.org/dwc/terms/taxonRank
-    taxon_rank: Option<String>,
+    pub taxon_rank: Option<String>,
     // http://rs.tdwg.org/dwc/terms/nameAccordingTo
-    name_according_to: Option<String>,
+    pub name_according_to: Option<String>,
     // http://rs.tdwg.org/dwc/terms/namePublishedIn
-    name_published_in: Option<String>,
+    pub name_published_in: Option<String>,
     // http://rs.tdwg.org/dwc/terms/taxonomicStatus
-    taxonomic_status: Option<String>,
+    pub taxonomic_status: Option<String>,
     // http://rs.tdwg.org/dwc/terms/taxonRemarks
-    taxon_remarks: Option<String>,
+    pub taxon_remarks: Option<String>,
 
     // http://rs.tdwg.org/dwc/terms/kingdom
-    kingdom: Option<String>,
+    pub kingdom: Option<String>,
     // http://rs.tdwg.org/dwc/terms/phylum
-    phylum: Option<String>,
+    pub phylum: Option<String>,
     // http://rs.tdwg.org/dwc/terms/class
-    class: Option<String>,
+    pub class: Option<String>,
     // http://rs.tdwg.org/dwc/terms/order
-    order: Option<String>,
+    pub order: Option<String>,
     // http://rs.tdwg.org/dwc/terms/family
-    family: Option<String>,
+    pub family: Option<String>,
     // http://rs.tdwg.org/dwc/terms/genus
-    genus: Option<String>,
+    pub genus: Option<String>,
 
-    source: Option<String>,
-    taxa_lists_id: Option<Uuid>,
+    pub source: Option<String>,
+    pub taxa_lists_id: Option<Uuid>,
 }
 
 
@@ -308,4 +308,17 @@ pub struct MediaObservation {
     event_date: Option<chrono::DateTime<chrono::Utc>>,
     license: Option<String>,
     rights_holder: Option<String>,
+}
+
+
+
+#[derive(Debug, Queryable)]
+#[diesel(table_name = schema_gnl::eav_strings)]
+pub struct ObjectString {
+    pub object_id: Uuid,
+    pub entity_id: Uuid,
+    pub attribute_id: Uuid,
+    pub value_id: Uuid,
+    pub name: String,
+    pub value: String,
 }
