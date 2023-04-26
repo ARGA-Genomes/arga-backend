@@ -6,7 +6,7 @@ use axum::routing::{get, post};
 
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::debug;
 use uuid::Uuid;
 
@@ -19,10 +19,16 @@ use crate::index::providers::db::Database;
 use crate::index::providers::db::models::{Media, ArgaTaxon, Attribute, ObjectValueString, Object, ObjectString};
 
 
+#[derive(Serialize, Debug)]
+struct MediaList {
+    total: usize,
+    records: Vec<Media>,
+}
+
 async fn media(
     Query(params): Query<HashMap<String, String>>,
     State(db_provider): State<Database>,
-) -> Result<Json<Vec<Media>>, InternalError>
+) -> Result<Json<MediaList>, InternalError>
 {
     use schema::media::dsl::*;
     use schema::media_observations::dsl as observations;
@@ -30,15 +36,30 @@ async fn media(
 
     let name = params.get("scientific_name").expect("must provide a scientific name parameter");
 
+    // pagination
+    let page = parse_int_param(&params, "page", 1);
+    let page_size = parse_int_param(&params, "page_size", 5);
+    let offset = (page - 1) * page_size;
+
     let records = media
         .inner_join(observations::media_observations.on(media_id.eq(observations::media_id)))
         .select(media::all_columns())
         .filter(observations::scientific_name.eq(name))
         .order(media_id.desc())
-        .limit(20)
+        .offset(offset)
+        .limit(page_size)
         .load::<Media>(&mut conn).await?;
 
-    Ok(Json(records))
+    let total: i64 = media
+        .inner_join(observations::media_observations.on(media_id.eq(observations::media_id)))
+        .filter(observations::scientific_name.eq(name))
+        .count()
+        .get_result(&mut conn).await?;
+
+    Ok(Json(MediaList {
+        total: total as usize,
+        records,
+    }))
 }
 
 
@@ -150,4 +171,10 @@ pub(crate) fn router() -> Router<Context> {
         .route("/api/admin/media", get(media))
         .route("/api/admin/media/main", get(main_media))
         .route("/api/admin/media/:uuid/main", post(upsert_main_media))
+}
+
+
+fn parse_int_param(params: &HashMap<String, String>, name: &str, default: i64) -> i64 {
+    let val = params.get(name).map(|val| val.parse::<i64>().unwrap_or(default)).unwrap_or(default);
+    if val <= 0 { 1 } else { val }
 }
