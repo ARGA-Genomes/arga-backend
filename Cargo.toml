@@ -22,6 +22,9 @@ dotenvy = "0.15.6"
 eyre = "0.6.8"
 flume = "0.10.14"
 futures = "0.3.26"
+geo-types = "0.7.9"
+geojson = "0.24.0"
+geozero = { version = "0.9.9", features = ["with-postgis-diesel", "with-geojson", "postgres-types", "with-postgis-postgres"] }
 heck = "0.4.1"
 hyper = "0.14.23"
 opentelemetry = { version = "0.18.0", features = ["metrics", "rt-tokio"] }

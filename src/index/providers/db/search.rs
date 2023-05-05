@@ -20,7 +20,7 @@ use crate::index::search::{
     SpeciesSearchExcludingCanonicalName,
     GenusSearchResult,
     GenusSearch,
-    GenusSearchItem
+    GenusSearchItem, SpeciesSearchWithRegion
 };
 use super::{Database, Error};
 
@@ -204,11 +204,11 @@ impl TaxaSearch for Database {
 impl SpeciesSearchByCanonicalName for Database {
     type Error = Error;
 
-    async fn search_species_by_canonical_names(&self, names: Vec<String>) -> Result<SpeciesSearchResult, Error> {
-        use crate::schema::taxa::dsl::*;
+    async fn search_species_by_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Error> {
+        use crate::schema_gnl::gnl::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let rows = taxa
+        let rows = gnl
             .select(scientific_name)
             .filter(taxon_rank.eq("species"))
             .filter(taxonomic_status.eq("accepted"))
@@ -223,6 +223,7 @@ impl SpeciesSearchByCanonicalName for Database {
                     scientific_name: None,
                     canonical_name: Some(name),
                     total_records: 0,
+                    total_genomic_records: None,
                 });
             }
         }
@@ -238,7 +239,7 @@ impl SpeciesSearchByCanonicalName for Database {
 impl SpeciesSearchExcludingCanonicalName for Database {
     type Error = Error;
 
-    async fn search_species_excluding_canonical_names(&self, names: Vec<String>) -> Result<SpeciesSearchResult, Error> {
+    async fn search_species_excluding_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Error> {
         use crate::schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
@@ -257,6 +258,7 @@ impl SpeciesSearchExcludingCanonicalName for Database {
                     scientific_name: None,
                     canonical_name: Some(name),
                     total_records: 0,
+                    total_genomic_records: None,
                 });
             }
         }
@@ -340,15 +342,84 @@ impl SpeciesSearch for Database {
 
     #[tracing::instrument(skip(self))]
     async fn search_species(&self, _query: &str, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Self::Error> {
-        use crate::schema::taxa::dsl::*;
+        use crate::schema_gnl::gnl::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let mut query = taxa
+        let mut query = gnl
             .select((scientific_name, canonical_name))
             .filter(taxonomic_status.eq("accepted"))
             .filter(taxon_rank.eq("species"))
             .order_by(scientific_name)
             .limit(21)
+            .into_boxed();
+
+        // we mutate the query variable through the loop to build the proper
+        // filter but this is only possible because the query was boxed. this
+        // means the query cant be inlined by the compiler but the performance
+        // impact should be negligible
+        for filter in filters.into_iter() {
+            query = match filter.method {
+                SearchFilterMethod::Include => match filter.field.as_str() {
+                    "kingdom" => query.filter(kingdom.eq(&filter.value)),
+                    "phylum" => query.filter(phylum.eq(&filter.value)),
+                    "class" => query.filter(class.eq(&filter.value)),
+                    "order" => query.filter(order.eq(&filter.value)),
+                    "family" => query.filter(family.eq(&filter.value)),
+                    "genus" => query.filter(genus.eq(&filter.value)),
+                    _ => query,
+                },
+                SearchFilterMethod::Exclude => match filter.field.as_str() {
+                    "kingdom" => query.filter(kingdom.ne(&filter.value)),
+                    "phylum" => query.filter(phylum.ne(&filter.value)),
+                    "class" => query.filter(class.ne(&filter.value)),
+                    "order" => query.filter(order.ne(&filter.value)),
+                    "family" => query.filter(family.ne(&filter.value)),
+                    "genus" => query.filter(genus.ne(&filter.value)),
+                    _ => query,
+                },
+            };
+        }
+
+        tracing::debug!(query = %diesel::debug_query(&query));
+        let rows = query.load::<SpeciesSearchItem>(&mut conn).await?;
+
+        let mut items = Vec::with_capacity(rows.len());
+        for row in rows {
+            items.push(row.into());
+        }
+
+        Ok(SpeciesSearchResult {
+            records: items,
+        })
+    }
+}
+
+#[async_trait]
+impl SpeciesSearchWithRegion for Database {
+    type Error = Error;
+
+    #[tracing::instrument(skip(self))]
+    async fn search_species_with_region(
+        &self,
+        region: &str,
+        filters: &Vec<SearchFilterItem>,
+        offset: i64,
+        limit: i64,
+    ) -> Result<SpeciesSearchResult, Self::Error>
+    {
+        use crate::schema_gnl::gnl::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        use crate::schema_gnl::eav_arrays::dsl::*;
+
+        let mut query = gnl
+            .inner_join(eav_arrays.on(entity_id.eq(id)))
+            .select((scientific_name, canonical_name))
+            .filter(name.eq("ibraRegions"))
+            .filter(value.contains(vec![region]))
+            .order_by(canonical_name)
+            .offset(offset)
+            .limit(limit)
             .into_boxed();
 
         // we mutate the query variable through the loop to build the proper
@@ -404,6 +475,7 @@ impl From<SpeciesSearchItem> for crate::index::search::SpeciesSearchItem {
             scientific_name: source.scientific_name,
             canonical_name: source.canonical_name,
             total_records: 0,
+            total_genomic_records: None,
         }
     }
 }

@@ -4,6 +4,7 @@ pub mod family;
 pub mod genus;
 pub mod species;
 pub mod stats;
+pub mod maps;
 pub mod extensions;
 
 use axum::{Extension, Router};
@@ -23,6 +24,7 @@ use self::family::Family;
 use self::genus::Genus;
 use self::species::Species;
 use self::stats::Statistics;
+use self::maps::Maps;
 use self::extensions::ErrorLogging;
 
 
@@ -58,6 +60,10 @@ impl Query {
 
     async fn stats(&self) -> Statistics {
         Statistics {}
+    }
+
+    async fn maps(&self, tolerance: Option<f32>) -> Maps {
+        Maps { tolerance }
     }
 }
 

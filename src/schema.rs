@@ -6,6 +6,10 @@ pub mod sql_types {
     pub struct AttributeDataType;
 
     #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "geometry"))]
+    pub struct Geometry;
+
+    #[derive(diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "job_status"))]
     pub struct JobStatus;
 }
@@ -52,6 +56,27 @@ diesel::table! {
         occurrence_status -> Nullable<Varchar>,
         threat_status -> Nullable<Varchar>,
         source -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::Geometry;
+
+    ibra (ogc_fid) {
+        ogc_fid -> Int4,
+        reg_code_7 -> Nullable<Varchar>,
+        reg_name_7 -> Nullable<Varchar>,
+        hectares -> Nullable<Float8>,
+        sq_km -> Nullable<Float8>,
+        rec_id -> Nullable<Int4>,
+        reg_code_6 -> Nullable<Varchar>,
+        reg_name_6 -> Nullable<Varchar>,
+        reg_no_61 -> Nullable<Float8>,
+        feat_id -> Nullable<Varchar>,
+        shape_leng -> Nullable<Float8>,
+        shape_area -> Nullable<Float8>,
+        wkb_geometry -> Nullable<Geometry>,
     }
 }
 
@@ -154,6 +179,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    spatial_ref_sys (srid) {
+        srid -> Int4,
+        auth_name -> Nullable<Varchar>,
+        auth_srid -> Nullable<Int4>,
+        srtext -> Nullable<Varchar>,
+        proj4text -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     taxa (id) {
         id -> Uuid,
         taxon_id -> Nullable<Int8>,
@@ -236,12 +271,15 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(objects -> attributes (attribute_id));
+diesel::joinable!(objects -> user_taxa (entity_id));
 diesel::joinable!(user_taxa -> user_taxa_lists (taxa_lists_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     attributes,
     descriptions,
     distribution,
+    ibra,
     jobs,
     media,
     media_observations,
@@ -252,6 +290,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     object_values_text,
     object_values_timestamp,
     objects,
+    spatial_ref_sys,
     taxa,
     types_and_specimen,
     user_taxa,

@@ -104,3 +104,15 @@ diesel::table! {
         value -> Array<Nullable<Varchar>>,
     }
 }
+
+
+diesel::allow_tables_to_appear_in_same_query!(
+    gnl,
+    eav,
+    eav_strings,
+    eav_text,
+    eav_integers,
+    eav_booleans,
+    eav_timestamps,
+    eav_arrays,
+);

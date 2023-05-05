@@ -4,6 +4,7 @@ use serde::{Serialize, Deserialize};
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
+use crate::index::search::DNASearchByCanonicalName;
 use crate::index::search::GenusSearch;
 use crate::index::search::GenusSearchItem;
 use crate::index::search::SearchFilterItem;
@@ -13,6 +14,7 @@ use crate::index::search::SearchSuggestion;
 use crate::index::search::SpeciesSearch;
 use crate::index::search::SpeciesSearchByCanonicalName;
 use crate::index::search::SpeciesSearchItem;
+use crate::index::search::SpeciesSearchWithRegion;
 use crate::index::search::{Searchable, TaxaSearch, SearchResults};
 
 
@@ -184,7 +186,7 @@ impl Search {
         family: Option<String>,
     ) -> Result<Vec<GenusSearchItem>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let filters = create_filters(kingdom, phylum, class, family, None);
+        let filters = create_filters(kingdom, phylum, class, family, None, None);
         let results = state.db_provider.search_genus("", &filters).await.unwrap();
 
         Ok(results.records)
@@ -201,7 +203,7 @@ impl Search {
         genus: Option<String>,
     ) -> Result<Vec<SpeciesSearchItem>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let filters = create_filters(kingdom, phylum, class, family, genus);
+        let filters = create_filters(kingdom, phylum, class, family, genus, None);
 
         // limit the results for pagination. this should become variable
         // once a pagination system is more fleshed out
@@ -242,9 +244,10 @@ impl Search {
         class: Option<String>,
         family: Option<String>,
         genus: Option<String>,
-    ) -> Result<Vec<SpeciesSearchItem>, Error> {
+    ) -> Result<Vec<SpeciesSearchItem>, Error>
+    {
         let state = ctx.data::<State>().unwrap();
-        let filters = create_filters(kingdom, phylum, class, family, genus);
+        let filters = create_filters(kingdom, phylum, class, family, genus, None);
 
         let mut results = state.db_provider.search_species("", &filters).await.unwrap();
 
@@ -252,7 +255,7 @@ impl Search {
 
         // first get the data we do have from the solr index.
         // let solr_results = state.provider.search_species("", &filters).await.unwrap();
-        let solr_results = state.provider.search_species_by_canonical_names(names).await.unwrap();
+        let solr_results = state.provider.search_species_by_canonical_names(&names).await.unwrap();
 
         for mut record in results.records.iter_mut() {
             // find the total amount of genomic records from the solr search
@@ -262,6 +265,50 @@ impl Search {
         }
 
         Ok(results.records.into_iter().take(21).collect())
+    }
+
+
+    #[tracing::instrument(skip(self, ctx))]
+    async fn species_by_region(
+        &self,
+        ctx: &Context<'_>,
+        ibra_region: String,
+        offset: i64,
+        limit: i64,
+        kingdom: Option<String>,
+        phylum: Option<String>,
+        class: Option<String>,
+        family: Option<String>,
+        genus: Option<String>,
+    ) -> Result<Vec<SpeciesSearchItem>, Error>
+    {
+        let state = ctx.data::<State>().unwrap();
+        let filters = create_filters(kingdom, phylum, class, family, genus, None);
+
+        let mut results = state.db_provider.search_species_with_region(&ibra_region, &filters, offset, limit).await.unwrap();
+
+        let names = results.records.iter().map(|r| r.canonical_name.clone().unwrap()).collect();
+
+        // first get the data we do have from the solr index.
+        // let solr_results = state.provider.search_species("", &filters).await.unwrap();
+        let solr_results = state.provider.search_species_by_canonical_names(&names).await.unwrap();
+
+        for mut record in results.records.iter_mut() {
+            // find the total amount of genomic records from the solr search
+            if let Some(solr_record) = solr_results.records.iter().find(|r| r.canonical_name == record.canonical_name) {
+                record.total_records = solr_record.total_records;
+            }
+        }
+
+        let dna_results = state.provider.search_dna_by_canonical_names(&names).await.unwrap();
+        for mut record in results.records.iter_mut() {
+            // find the total amount of dna records from the solr search
+            if let Some(solr_record) = dna_results.records.iter().find(|r| r.canonical_name == record.canonical_name) {
+                record.total_genomic_records = Some(solr_record.total_records);
+            }
+        }
+
+        Ok(results.records)
     }
 }
 
@@ -279,6 +326,7 @@ fn create_filters(
     class: Option<String>,
     family: Option<String>,
     genus: Option<String>,
+    ibra_region: Option<String>,
 ) -> Vec<SearchFilterItem> {
     let mut filters = Vec::new();
 
@@ -286,16 +334,19 @@ fn create_filters(
         filters.push(SearchFilterItem { field: "kingdom".into(), value, method: SearchFilterMethod::Include });
     }
     if let Some(value) = phylum {
-        filters.push(SearchFilterItem { field: "phylum".into(), value, method: SearchFilterMethod::Include  });
+        filters.push(SearchFilterItem { field: "phylum".into(), value, method: SearchFilterMethod::Include });
     }
     if let Some(value) = class {
-        filters.push(SearchFilterItem { field: "class".into(), value, method: SearchFilterMethod::Include  });
+        filters.push(SearchFilterItem { field: "class".into(), value, method: SearchFilterMethod::Include });
     }
     if let Some(value) = family {
-        filters.push(SearchFilterItem { field: "family".into(), value, method: SearchFilterMethod::Include  });
+        filters.push(SearchFilterItem { field: "family".into(), value, method: SearchFilterMethod::Include });
     }
     if let Some(value) = genus {
-        filters.push(SearchFilterItem { field: "genus".into(), value, method: SearchFilterMethod::Include  });
+        filters.push(SearchFilterItem { field: "genus".into(), value, method: SearchFilterMethod::Include });
+    }
+    if let Some(value) = ibra_region {
+        filters.push(SearchFilterItem { field: "ibra_region".into(), value, method: SearchFilterMethod::Include })
     }
 
     filters

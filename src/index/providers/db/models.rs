@@ -278,19 +278,19 @@ pub struct ObjectValueArray {
 #[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::media)]
 pub struct Media {
-    id: Uuid,
+    pub id: Uuid,
 
-    media_id: Option<i64>,
-    media_type: Option<String>,
-    format: Option<String>,
-    identifier: Option<String>,
-    references: Option<String>,
-    created: Option<chrono::DateTime<chrono::Utc>>,
-    creator: Option<String>,
-    publisher: Option<String>,
-    license: Option<String>,
-    rights_holder: Option<String>,
-    catalog_number: Option<i64>,
+    pub media_id: Option<i64>,
+    pub media_type: Option<String>,
+    pub format: Option<String>,
+    pub identifier: Option<String>,
+    pub references: Option<String>,
+    pub created: Option<chrono::DateTime<chrono::Utc>>,
+    pub creator: Option<String>,
+    pub publisher: Option<String>,
+    pub license: Option<String>,
+    pub rights_holder: Option<String>,
+    pub catalog_number: Option<i64>,
 }
 
 #[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
@@ -321,4 +321,15 @@ pub struct ObjectString {
     pub value_id: Uuid,
     pub name: String,
     pub value: String,
+}
+
+#[derive(Debug, Queryable)]
+#[diesel(table_name = schema_gnl::eav_arrays)]
+pub struct ObjectArray {
+    pub object_id: Uuid,
+    pub entity_id: Uuid,
+    pub attribute_id: Uuid,
+    pub value_id: Uuid,
+    pub name: String,
+    pub value: Vec<String>,
 }

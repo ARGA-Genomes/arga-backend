@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SpeciesSearchItem, SpeciesSearch, SpeciesSearchResult, SpeciesSearchByCanonicalName};
+use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SpeciesSearchItem, SpeciesSearch, SpeciesSearchResult, SpeciesSearchByCanonicalName, DNASearchByCanonicalName};
 use super::{Solr, Error};
 
 
@@ -39,6 +39,7 @@ impl From<Facet> for SpeciesSearchItem {
             scientific_name: None,
             canonical_name: Some(source.value),
             total_records: source.count,
+            total_genomic_records: None,
         }
     }
 }
@@ -271,7 +272,7 @@ fn filter_to_solr_filter(filter: &SearchFilterItem) -> String {
 impl SpeciesSearchByCanonicalName for Solr {
     type Error = Error;
 
-    async fn search_species_by_canonical_names(&self, names: Vec<String>) -> Result<SpeciesSearchResult, Error> {
+    async fn search_species_by_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Error> {
         // craft a single filter by joining them all with OR since the default
         // will treat it as an AND query
         let names = names.into_iter().map(|name| format!("\"{name}\"")).collect::<Vec<String>>();
@@ -297,6 +298,62 @@ impl SpeciesSearchByCanonicalName for Solr {
             ("facet", "true"),
             ("fq", "matchType:higherMatch"),
             ("fq", "taxonRank:genus"),
+            ("fq", &filters),
+            ("fl", "raw_scientificName"),
+            ("facet.pivot", "raw_scientificName"),
+        ];
+        tracing::debug!(?unmatched_params);
+        let (_records, unmatched_facets) = self.client.select_faceted::<DataRecords, RawSpeciesFacet>(&unmatched_params).await?;
+
+        let total = matched_facets.scientific_name.len() + unmatched_facets.scientific_name.len();
+        let mut records = Vec::with_capacity(total);
+
+        // we don't worry about order here as that is for the consuming api to deal with
+        for facet in matched_facets.scientific_name.into_iter() {
+            records.push(SpeciesSearchItem::from(facet));
+        }
+        for facet in unmatched_facets.scientific_name.into_iter() {
+            records.push(SpeciesSearchItem::from(facet));
+        }
+
+        Ok(SpeciesSearchResult {
+            records,
+        })
+    }
+}
+
+#[async_trait]
+impl DNASearchByCanonicalName for Solr {
+    type Error = Error;
+
+    async fn search_dna_by_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Error> {
+        // craft a single filter by joining them all with OR since the default
+        // will treat it as an AND query
+        let names = names.into_iter().map(|name| format!("\"{name}\"")).collect::<Vec<String>>();
+        let joined_names = names.join(" OR ");
+
+        // first get species that have been matched by the name service
+        let filters = format!("scientificName:{joined_names}");
+        let matched_params = vec![
+            ("q", "*:*"),
+            ("facet", "true"),
+            ("fq", "taxonRank:species"),
+            ("fq", "contentTypes:GenomicDNA"),
+            ("fq", &filters),
+            ("fl", "scientificName"),
+            ("facet.pivot", "scientificName"),
+        ];
+        tracing::debug!(?matched_params);
+        let (_records, matched_facets) = self.client.select_faceted::<DataRecords, SpeciesFacet>(&matched_params).await?;
+
+        // then we get all the species that could only be matched by genus
+        let filters = format!("raw_scientificName:{joined_names}");
+        let unmatched_params = vec![
+            ("q", "*:*"),
+            ("facet", "true"),
+            ("fq", "matchType:higherMatch"),
+            ("fq", "taxonRank:genus"),
+            ("fq", "contentTypes:GenomicDNA"),
             ("fq", &filters),
             ("fl", "raw_scientificName"),
             ("facet.pivot", "raw_scientificName"),

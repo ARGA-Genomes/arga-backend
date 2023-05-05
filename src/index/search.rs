@@ -119,6 +119,7 @@ pub struct SpeciesSearchItem {
     pub scientific_name: Option<String>,
     pub canonical_name: Option<String>,
     pub total_records: usize,
+    pub total_genomic_records: Option<usize>,
 }
 
 #[derive(Debug, Deserialize, SimpleObject)]
@@ -136,13 +137,25 @@ pub trait SpeciesSearch {
 #[async_trait]
 pub trait SpeciesSearchByCanonicalName {
     type Error;
-    async fn search_species_by_canonical_names(&self, names: Vec<String>) -> Result<SpeciesSearchResult, Self::Error>;
+    async fn search_species_by_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Self::Error>;
 }
 
 #[async_trait]
 pub trait SpeciesSearchExcludingCanonicalName {
     type Error;
-    async fn search_species_excluding_canonical_names(&self, names: Vec<String>) -> Result<SpeciesSearchResult, Self::Error>;
+    async fn search_species_excluding_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Self::Error>;
+}
+
+#[async_trait]
+pub trait SpeciesSearchWithRegion {
+    type Error;
+    async fn search_species_with_region(&self, region: &str, filters: &Vec<SearchFilterItem>, offset: i64, limit: i64) -> Result<SpeciesSearchResult, Self::Error>;
+}
+
+#[async_trait]
+pub trait DNASearchByCanonicalName {
+    type Error;
+    async fn search_dna_by_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Self::Error>;
 }
 
 

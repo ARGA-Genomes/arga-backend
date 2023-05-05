@@ -20,7 +20,6 @@ pub struct Distribution {
     pub source: Option<String>,
 }
 
-
 /// Get information about a particular species.
 ///
 /// Providers implementing this trait can retrieve detailed information
@@ -33,6 +32,31 @@ pub trait GetSpecies {
     async fn taxonomy(&self, canonical_name: &str) -> Result<Taxonomy, Self::Error>;
     /// Get location and status details of a specific species.
     async fn distribution(&self, canonical_name: &str) -> Result<Vec<Distribution>, Self::Error>;
+}
+
+
+/// A region that a species inhabit.
+///
+/// Regions are less granular than a distribution and serves to more
+/// clearly identify geographic locations inhabited by a particular species.
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize, SimpleObject)]
+pub struct Region {
+    pub name: String,
+}
+
+/// Get region information about a particular species.
+///
+/// Providers implementing this trait can retrieve detailed information
+/// about where a species geographically inhabit.
+#[async_trait]
+pub trait GetRegions {
+    type Error;
+
+    /// Get the IBRA regions for the specified species.
+    async fn ibra(&self, canonical_name: &str) -> Result<Vec<Region>, Self::Error>;
+
+    /// Get the IMCRA regions for the specified species.
+    async fn imcra(&self, canonical_name: &str) -> Result<Vec<Region>, Self::Error>;
 }
 
 
@@ -56,4 +80,27 @@ pub struct GenomicData {
 pub trait GetGenomicData {
     type Error;
     async fn genomic_data(&self, canonical_name: &str) -> Result<Vec<GenomicData>, Self::Error>;
+}
+
+
+/// A region that a species inhabit.
+///
+/// Regions are less granular than a distribution and serves to more
+/// clearly identify geographic locations inhabited by a particular species.
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize, SimpleObject)]
+pub struct Photo {
+    pub url: String,
+    pub publisher: Option<String>,
+    pub license: Option<String>,
+    pub rights_holder: Option<String>,
+    pub reference_url: Option<String>,
+}
+
+/// Get media metadata for a specific taxon.
+#[async_trait]
+pub trait GetMedia {
+    type Error;
+
+    /// Get media photos assigned to the species taxon.
+    async fn photos(&self, canonical_name: &str) -> Result<Vec<Photo>, Self::Error>;
 }
