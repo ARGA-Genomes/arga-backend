@@ -369,6 +369,7 @@ impl Search {
             match result {
                 FullTextSearchItem::Taxon(item) => {
                     if let Some(record) = record_map.get(&item.scientific_name) {
+                        item.scientific_name_authorship = record.scientific_name_authorship.clone();
                         item.canonical_name = record.canonical_name.clone();
                         item.rank = record.taxon_rank.clone();
                         item.taxonomic_status = record.taxonomic_status.clone();
@@ -382,6 +383,8 @@ impl Search {
         // get the solr full text search results
         let solr_results = state.provider.full_text(&query).await?;
         results.records.extend(solr_results.records);
+
+        results.records.sort_by(|a, b| b.partial_cmp(a).unwrap());
 
         Ok(results)
     }

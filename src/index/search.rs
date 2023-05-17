@@ -197,6 +197,7 @@ pub enum FullTextType {
 #[serde(rename_all = "camelCase")]
 pub struct TaxonItem {
     pub scientific_name: String,
+    pub scientific_name_authorship: Option<String>,
     pub canonical_name: Option<String>,
     pub rank: Option<String>,
     pub taxonomic_status: Option<String>,
@@ -232,4 +233,30 @@ pub struct FullTextSearchResult {
 pub trait FullTextSearch {
     type Error;
     async fn full_text(&self, query: &str) -> Result<FullTextSearchResult, Self::Error>;
+}
+
+
+impl PartialOrd for FullTextSearchItem {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        let score = match self {
+            FullTextSearchItem::Taxon(item) => item.score,
+            FullTextSearchItem::WholeGenomeSequence(item) => item.score,
+        };
+
+        match other {
+            FullTextSearchItem::Taxon(item) => score.partial_cmp(&item.score),
+            FullTextSearchItem::WholeGenomeSequence(item) => score.partial_cmp(&item.score),
+        }
+    }
+}
+
+
+impl PartialEq for FullTextSearchItem {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Taxon(l0), Self::Taxon(r0)) => l0.score == r0.score,
+            (Self::WholeGenomeSequence(l0), Self::WholeGenomeSequence(r0)) => l0.score == r0.score,
+            _ => false,
+        }
+    }
 }

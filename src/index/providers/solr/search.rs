@@ -432,7 +432,7 @@ impl FullTextSearch for Solr {
         for group in results.scientific_name.groups.into_iter() {
             let item = WholeGenomeSequenceItem {
                 scientific_name: group.group_value.unwrap_or_default(),
-                score: group.doclist.max_score,
+                score: group.doclist.max_score * 10.0, // artificial boost to match taxon scores
                 sequences: group.doclist.total,
                 r#type: FullTextType::WholeGenomeSequence,
             };

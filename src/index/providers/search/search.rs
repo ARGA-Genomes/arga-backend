@@ -37,6 +37,7 @@ impl FullTextSearch for SearchIndex {
 
             records.push(FullTextSearchItem::Taxon(TaxonItem {
                 scientific_name: scientific_name.unwrap_or_default().to_string(),
+                scientific_name_authorship: None,
                 canonical_name: canonical_name.map(|v| v.to_string()),
                 rank: None,
                 taxonomic_status: None,
