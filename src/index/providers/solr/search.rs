@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SpeciesSearchItem, SpeciesSearch, SpeciesSearchResult, SpeciesSearchByCanonicalName, DNASearchByCanonicalName};
+use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SpeciesSearchItem, SpeciesSearch, SpeciesSearchResult, SpeciesSearchByCanonicalName, DNASearchByCanonicalName, FullTextSearch, FullTextSearchResult, FullTextSearchItem, WholeGenomeSequenceItem, FullTextType};
 use super::{Solr, Error};
 
 
@@ -375,6 +375,72 @@ impl DNASearchByCanonicalName for Solr {
         }
 
         Ok(SpeciesSearchResult {
+            records,
+        })
+    }
+}
+
+
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FullTextResponse {
+    scientific_name: FullTextMatches,
+}
+
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FullTextMatches {
+    groups: Vec<FullTextGroup>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FullTextGroup {
+    group_value: Option<String>,
+    doclist: FullTextResults,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FullTextResults {
+    #[serde(rename(deserialize = "numFound"))]
+    total: usize,
+    max_score: f32,
+}
+
+
+#[async_trait]
+impl FullTextSearch for Solr {
+    type Error = Error;
+
+    async fn full_text(&self, query: &str) -> Result<FullTextSearchResult, Self::Error> {
+        let params = vec![
+            ("q", query),
+            ("rows", "20"),
+            ("group", "true"),
+            ("group.field", "scientificName"),
+            ("group.limit", "0"),
+            ("fl", "score"),
+        ];
+
+        tracing::debug!(?params);
+        let results = self.client.select::<FullTextResponse>(&params).await?;
+
+        let mut records = Vec::new();
+        for group in results.scientific_name.groups.into_iter() {
+            let item = WholeGenomeSequenceItem {
+                scientific_name: group.group_value.unwrap_or_default(),
+                score: group.doclist.max_score,
+                sequences: group.doclist.total,
+                r#type: FullTextType::WholeGenomeSequence,
+            };
+
+            records.push(FullTextSearchItem::WholeGenomeSequence(item));
+        }
+
+        Ok(FullTextSearchResult {
             records,
         })
     }

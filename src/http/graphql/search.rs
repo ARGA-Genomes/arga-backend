@@ -345,6 +345,7 @@ impl Search {
         for record in &results.records {
             match record {
                 FullTextSearchItem::Taxon(item) => names.push(item.scientific_name.clone()),
+                _ => {},
             }
         }
 
@@ -373,8 +374,14 @@ impl Search {
                         item.taxonomic_status = record.taxonomic_status.clone();
                     }
                 }
-            }
+                _ => {}
+            };
         }
+
+
+        // get the solr full text search results
+        let solr_results = state.provider.full_text(&query).await?;
+        results.records.extend(solr_results.records);
 
         Ok(results)
     }

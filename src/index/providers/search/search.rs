@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use polars::prelude::IntoVec;
 use tantivy::{query::QueryParser, collector::TopDocs, TantivyError};
 
-use crate::index::search::{FullTextSearch, FullTextSearchResult, FullTextSearchItem, TaxonItem};
+use crate::index::search::{FullTextSearch, FullTextSearchResult, FullTextSearchItem, TaxonItem, FullTextType};
 
 use super::SearchIndex;
 
@@ -42,6 +42,7 @@ impl FullTextSearch for SearchIndex {
                 taxonomic_status: None,
                 common_names,
                 score,
+                r#type: FullTextType::Taxon,
             }));
         }
 

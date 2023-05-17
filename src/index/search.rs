@@ -1,5 +1,5 @@
 use axum::async_trait;
-use async_graphql::{SimpleObject, Union};
+use async_graphql::{SimpleObject, Union, Enum};
 use serde::{Serialize, Deserialize};
 
 use super::providers::db::models::ArgaTaxon;
@@ -187,6 +187,11 @@ pub trait GenusSearch {
 }
 
 
+#[derive(Debug, Deserialize, PartialEq, Eq, Clone, Copy, Enum)]
+pub enum FullTextType {
+    Taxon,
+    WholeGenomeSequence,
+}
 
 #[derive(Debug, Deserialize, SimpleObject)]
 #[serde(rename_all = "camelCase")]
@@ -197,12 +202,23 @@ pub struct TaxonItem {
     pub taxonomic_status: Option<String>,
     pub common_names: Vec<String>,
     pub score: f32,
+    pub r#type: FullTextType,
+}
+
+#[derive(Debug, Deserialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct WholeGenomeSequenceItem {
+    pub scientific_name: String,
+    pub sequences: usize,
+    pub score: f32,
+    pub r#type: FullTextType,
 }
 
 
 #[derive(Debug, Union, Deserialize)]
 pub enum FullTextSearchItem {
     Taxon(TaxonItem),
+    WholeGenomeSequence(WholeGenomeSequenceItem)
 }
 
 
