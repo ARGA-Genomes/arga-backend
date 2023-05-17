@@ -1,6 +1,8 @@
 use axum::async_trait;
-use async_graphql::SimpleObject;
+use async_graphql::{SimpleObject, Union};
 use serde::{Serialize, Deserialize};
+
+use super::providers::db::models::ArgaTaxon;
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
@@ -131,7 +133,7 @@ pub struct SpeciesSearchResult {
 #[async_trait]
 pub trait SpeciesSearch {
     type Error;
-    async fn search_species(&self, query: &str, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Self::Error>;
+    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Self::Error>;
 }
 
 #[async_trait]
@@ -149,7 +151,13 @@ pub trait SpeciesSearchExcludingCanonicalName {
 #[async_trait]
 pub trait SpeciesSearchWithRegion {
     type Error;
-    async fn search_species_with_region(&self, region: &str, filters: &Vec<SearchFilterItem>, offset: i64, limit: i64) -> Result<SpeciesSearchResult, Self::Error>;
+    async fn search_species_with_region(
+        &self,
+        region: &Vec<String>,
+        filters: &Vec<SearchFilterItem>,
+        offset: i64,
+        limit: i64
+    ) -> Result<Vec<ArgaTaxon>, Self::Error>;
 }
 
 #[async_trait]
@@ -176,4 +184,36 @@ pub struct GenusSearchResult {
 pub trait GenusSearch {
     type Error;
     async fn search_genus(&self, query: &str, filters: &Vec<SearchFilterItem>) -> Result<GenusSearchResult, Self::Error>;
+}
+
+
+
+#[derive(Debug, Deserialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct TaxonItem {
+    pub scientific_name: String,
+    pub canonical_name: Option<String>,
+    pub rank: Option<String>,
+    pub taxonomic_status: Option<String>,
+    pub common_names: Vec<String>,
+    pub score: f32,
+}
+
+
+#[derive(Debug, Union, Deserialize)]
+pub enum FullTextSearchItem {
+    Taxon(TaxonItem),
+}
+
+
+#[derive(Debug, Deserialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct FullTextSearchResult {
+    pub records: Vec<FullTextSearchItem>,
+}
+
+#[async_trait]
+pub trait FullTextSearch {
+    type Error;
+    async fn full_text(&self, query: &str) -> Result<FullTextSearchResult, Self::Error>;
 }

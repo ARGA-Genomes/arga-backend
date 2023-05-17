@@ -75,7 +75,7 @@ impl Database {
 }
 
 
-fn establish_tls_connection(url: &str) -> BoxFuture<ConnectionResult<AsyncPgConnection>> {
+fn _establish_tls_connection(url: &str) -> BoxFuture<ConnectionResult<AsyncPgConnection>> {
     (async {
         let store = rustls::RootCertStore::empty();
         let config = rustls::ClientConfig::builder()

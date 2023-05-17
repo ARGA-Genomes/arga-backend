@@ -22,6 +22,9 @@ pub enum Error {
 
     #[error("an error occurred with the database service")]
     Database(#[from] crate::index::providers::db::Error),
+
+    #[error("an error occurred with the search index service")]
+    SearchIndex(#[from] crate::index::providers::search::Error),
 }
 
 
@@ -35,6 +38,7 @@ impl Error {
             Error::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Solr(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::SearchIndex(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -57,6 +61,9 @@ impl IntoResponse for Error {
             },
             Error::Database(err) => {
                 error!(?err, "Database error");
+            },
+            Error::SearchIndex(err) => {
+                error!(?err, "Search index error");
             },
 
             _ => {}

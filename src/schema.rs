@@ -128,6 +128,32 @@ diesel::table! {
 }
 
 diesel::table! {
+    name_properties (id) {
+        id -> Uuid,
+        entity_id -> Uuid,
+        attribute_id -> Uuid,
+        value_id -> Int8,
+    }
+}
+
+diesel::table! {
+    name_vernacular_names (name_id, vernacular_name_id) {
+        name_id -> Uuid,
+        vernacular_name_id -> Int8,
+    }
+}
+
+diesel::table! {
+    names (id) {
+        id -> Uuid,
+        scientific_name -> Varchar,
+        canonical_name -> Nullable<Varchar>,
+        authorship -> Nullable<Varchar>,
+        rank -> Varchar,
+    }
+}
+
+diesel::table! {
     object_values_array (id) {
         id -> Uuid,
         value -> Array<Nullable<Text>>,
@@ -175,6 +201,13 @@ diesel::table! {
         entity_id -> Uuid,
         attribute_id -> Uuid,
         value_id -> Uuid,
+    }
+}
+
+diesel::table! {
+    properties_string (id) {
+        id -> Int8,
+        value -> Varchar,
     }
 }
 
@@ -271,9 +304,30 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(objects -> attributes (attribute_id));
-diesel::joinable!(objects -> user_taxa (entity_id));
+diesel::table! {
+    vernacular_name_properties (id) {
+        id -> Int8,
+        entity_id -> Int8,
+        attribute_id -> Uuid,
+        value_id -> Int8,
+    }
+}
+
+diesel::table! {
+    vernacular_names (id) {
+        id -> Int8,
+        vernacular_name -> Varchar,
+        language -> Nullable<Varchar>,
+    }
+}
+
+diesel::joinable!(name_properties -> attributes (attribute_id));
+diesel::joinable!(name_properties -> names (entity_id));
+diesel::joinable!(name_vernacular_names -> names (name_id));
+diesel::joinable!(name_vernacular_names -> vernacular_names (vernacular_name_id));
 diesel::joinable!(user_taxa -> user_taxa_lists (taxa_lists_id));
+diesel::joinable!(vernacular_name_properties -> attributes (attribute_id));
+diesel::joinable!(vernacular_name_properties -> vernacular_names (entity_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     attributes,
@@ -283,6 +337,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     jobs,
     media,
     media_observations,
+    name_properties,
+    name_vernacular_names,
+    names,
     object_values_array,
     object_values_boolean,
     object_values_integer,
@@ -290,10 +347,13 @@ diesel::allow_tables_to_appear_in_same_query!(
     object_values_text,
     object_values_timestamp,
     objects,
+    properties_string,
     spatial_ref_sys,
     taxa,
     types_and_specimen,
     user_taxa,
     user_taxa_lists,
     users,
+    vernacular_name_properties,
+    vernacular_names,
 );

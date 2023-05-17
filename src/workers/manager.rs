@@ -11,7 +11,7 @@ use super::tokio_bridge::TokioHandle;
 
 pub struct Manager {
     interval: Duration,
-    store: ActorOwn<PostgresStore>,
+    _store: ActorOwn<PostgresStore>,
     poller: ActorOwn<JobPoller>,
     allocator: ActorOwn<Allocator>,
 }
@@ -26,7 +26,7 @@ impl Manager {
 
         Some(Self {
             interval,
-            store,
+            _store: store,
             poller,
             allocator,
         })

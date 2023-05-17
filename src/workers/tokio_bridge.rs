@@ -8,6 +8,7 @@ pub struct Sender<T> {
 }
 
 impl<T> Sender<T> {
+    #[allow(dead_code)]
     pub fn send(&self, value: T) -> Result<(), flume::SendError<T>> {
         self.tx.send(value)?;
         self.waker.wake();

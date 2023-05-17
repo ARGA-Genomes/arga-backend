@@ -9,7 +9,7 @@ use super::{Solr, Error};
 #[serde(rename_all = "camelCase")]
 struct DataRecords {
     #[serde(rename(deserialize = "numFound"))]
-    total: usize,
+    _total: usize,
 }
 
 #[derive(Debug, Deserialize)]
@@ -28,7 +28,7 @@ struct RawSpeciesFacet {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Facet {
-    field: String,
+    _field: String,
     value: String,
     count: usize,
 }
@@ -48,8 +48,8 @@ impl From<Facet> for SpeciesSearchItem {
 impl SpeciesSearch for Solr {
     type Error = Error;
 
-    async fn search_species(&self, query: &str, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Error> {
-        let _query = format!(r#"scientificName:"*{query}*""#);
+    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Error> {
+        let _query = format!(r#"scientificName:"*{}*""#, query.unwrap_or_default());
 
         // convert the filter items to a format that solr understands, specifically {key}:{value}
         let filters = filters.iter().map(|filter| filter_to_solr_filter(filter)).collect::<Vec<String>>();
@@ -339,6 +339,7 @@ impl DNASearchByCanonicalName for Solr {
             ("facet", "true"),
             ("fq", "taxonRank:species"),
             ("fq", "contentTypes:GenomicDNA"),
+            ("fq", r#"dataProviderName:"Barcode of Life""#),
             ("fq", &filters),
             ("fl", "scientificName"),
             ("facet.pivot", "scientificName"),
@@ -354,6 +355,7 @@ impl DNASearchByCanonicalName for Solr {
             ("fq", "matchType:higherMatch"),
             ("fq", "taxonRank:genus"),
             ("fq", "contentTypes:GenomicDNA"),
+            ("fq", r#"dataProviderName:"Barcode of Life""#),
             ("fq", &filters),
             ("fl", "raw_scientificName"),
             ("facet.pivot", "raw_scientificName"),

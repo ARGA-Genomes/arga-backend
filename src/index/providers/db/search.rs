@@ -5,7 +5,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
 
-use crate::index::search::{
+use crate::index::{search::{
     Searchable,
     SearchResults,
     SearchFilterItem,
@@ -21,25 +21,25 @@ use crate::index::search::{
     GenusSearchResult,
     GenusSearch,
     GenusSearchItem, SpeciesSearchWithRegion
-};
+}, providers::db::models::ArgaTaxon};
 use super::{Database, Error};
 
 
 #[derive(Queryable, Debug)]
 struct Taxon {
     id: Uuid,
-    taxon_id: Option<i64>,
+    _taxon_id: Option<i64>,
 
     scientific_name: Option<String>,
-    scientific_name_authorship: Option<String>,
+    _scientific_name_authorship: Option<String>,
     canonical_name: Option<String>,
-    generic_name: Option<String>,
+    _generic_name: Option<String>,
 
     kingdom: Option<String>,
     phylum: Option<String>,
     class: Option<String>,
     order: Option<String>,
-    family: Option<String>,
+    _family: Option<String>,
     genus: Option<String>,
 }
 
@@ -152,7 +152,7 @@ impl Searchable for Database {
 #[derive(Queryable, Debug)]
 struct Suggestion {
     id: Uuid,
-    scientific_name: Option<String>,
+    scientific_name: String,
     canonical_name: Option<String>,
 }
 
@@ -160,9 +160,9 @@ impl From<Suggestion> for SearchSuggestion {
     fn from(source: Suggestion) -> Self {
         Self {
             guid: source.id.to_string(),
-            species_name: source.scientific_name.clone().unwrap_or_default(),
+            species_name: source.scientific_name.clone(),
             common_name: source.canonical_name,
-            matched: source.scientific_name.unwrap_or_default(),
+            matched: source.scientific_name.clone(),
         }
     }
 }
@@ -174,25 +174,23 @@ impl TaxaSearch for Database {
 
     #[tracing::instrument(skip(self))]
     async fn suggestions(&self, query: &str) ->  Result<Vec<SearchSuggestion> ,Self::Error> {
-        use crate::schema_gnl::gnl::dsl::*;
+        use crate::schema::names::dsl::*;
 
         if query.is_empty() {
             return Ok(vec![]);
         }
 
         let mut conn = self.pool.get().await?;
-
-        let rows = gnl
+        let rows = names
             .select((
                 id,
                 scientific_name,
                 canonical_name,
             ))
-            .filter(taxon_rank.eq("species"))
-            .filter(canonical_name.ilike(format!("%{query}%")))
-            .order(scientific_name.asc())
             .limit(5)
-            .load::<Suggestion>(&mut conn).await?;
+            .order_by(scientific_name.distance(query))
+            .load::<Suggestion>(&mut conn)
+            .await?;
 
         let suggestions = rows.into_iter().map(|r| r.into()).collect();
         Ok(suggestions)
@@ -341,7 +339,7 @@ impl SpeciesSearch for Database {
     type Error = Error;
 
     #[tracing::instrument(skip(self))]
-    async fn search_species(&self, _query: &str, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Self::Error> {
+    async fn search_species(&self, q: Option<String>, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Self::Error> {
         use crate::schema_gnl::gnl::dsl::*;
         let mut conn = self.pool.get().await?;
 
@@ -352,6 +350,11 @@ impl SpeciesSearch for Database {
             .order_by(scientific_name)
             .limit(21)
             .into_boxed();
+
+        if let Some(q) = q {
+            let q = format!("%{}%", q);
+            query = query.filter(scientific_name.ilike(q))
+        }
 
         // we mutate the query variable through the loop to build the proper
         // filter but this is only possible because the query was boxed. this
@@ -401,11 +404,11 @@ impl SpeciesSearchWithRegion for Database {
     #[tracing::instrument(skip(self))]
     async fn search_species_with_region(
         &self,
-        region: &str,
+        region: &Vec<String>,
         filters: &Vec<SearchFilterItem>,
         offset: i64,
         limit: i64,
-    ) -> Result<SpeciesSearchResult, Self::Error>
+    ) -> Result<Vec<ArgaTaxon>, Self::Error>
     {
         use crate::schema_gnl::gnl::dsl::*;
         let mut conn = self.pool.get().await?;
@@ -414,9 +417,9 @@ impl SpeciesSearchWithRegion for Database {
 
         let mut query = gnl
             .inner_join(eav_arrays.on(entity_id.eq(id)))
-            .select((scientific_name, canonical_name))
-            .filter(name.eq("ibraRegions"))
-            .filter(value.contains(vec![region]))
+            .select(crate::schema_gnl::gnl::all_columns)
+            .filter(name.eq_any(vec!["ibraRegions", "imcraRegions"]))
+            .filter(value.overlaps_with(region))
             .order_by(canonical_name)
             .offset(offset)
             .limit(limit)
@@ -450,16 +453,9 @@ impl SpeciesSearchWithRegion for Database {
         }
 
         tracing::debug!(query = %diesel::debug_query(&query));
-        let rows = query.load::<SpeciesSearchItem>(&mut conn).await?;
+        let rows = query.load::<ArgaTaxon>(&mut conn).await?;
 
-        let mut items = Vec::with_capacity(rows.len());
-        for row in rows {
-            items.push(row.into());
-        }
-
-        Ok(SpeciesSearchResult {
-            records: items,
-        })
+        Ok(rows)
     }
 }
 
@@ -479,3 +475,38 @@ impl From<SpeciesSearchItem> for crate::index::search::SpeciesSearchItem {
         }
     }
 }
+
+
+
+// Diesel extensions for postgres trigrams
+use diesel::sql_types::{Float, Varchar, Nullable};
+use diesel::expression::{AsExpression, Expression};
+
+sql_function! {
+    fn word_similarity(x: Varchar, y: Varchar) -> Float;
+}
+
+use diesel::pg::Pg;
+use diesel::sql_types::*;
+
+diesel::infix_operator!(Similar, " % ", Bool, backend: Pg);
+diesel::infix_operator!(WordSimilar, " <% ", Bool, backend: Pg);
+diesel::infix_operator!(WordSimilarComm, " %> ", Bool, backend: Pg);
+diesel::infix_operator!(Distance, " <-> ", Float, backend: Pg);
+diesel::infix_operator!(WordDistance, " <<-> ", Float, backend: Pg);
+diesel::infix_operator!(WordDistanceComm, " <->> ", Float, backend: Pg);
+
+
+pub trait TrgmQueryExtensions: Expression + Sized {
+  fn distance<T: AsExpression<Text>>(self, other: T) -> WordDistanceComm<Self, T::Expression> {
+    WordDistanceComm::new(self, other.as_expression())
+  }
+}
+
+
+pub trait TrgmQueryExtensionsInner {}
+
+impl TrgmQueryExtensionsInner for Text {}
+impl TrgmQueryExtensionsInner for Nullable<Text> {}
+
+impl<U: TrgmQueryExtensionsInner, T: Expression<SqlType = U>> TrgmQueryExtensions for T {}

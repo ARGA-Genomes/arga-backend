@@ -15,6 +15,7 @@ use arga_backend::http;
 use arga_backend::telemetry;
 use arga_backend::schema;
 use arga_backend::workers;
+use arga_backend::search;
 
 use arga_backend::index::providers::{Solr, SolrClient};
 use arga_backend::index::providers::db::Database;
@@ -33,6 +34,10 @@ enum Commands {
     /// Run and manage worker processes
     #[command(subcommand)]
     Workers(workers::Command),
+
+    /// Run and manage the search index
+    #[command(subcommand)]
+    Search(search::Command),
 
     /// Create a new admin user
     CreateAdmin {
@@ -58,6 +63,7 @@ async fn main() {
             create_admin(name, email, secret).await;
         }
         Some(Commands::Workers(command)) => workers::process_command(command),
+        Some(Commands::Search(command)) => search::process_command(command).await,
         None => serve().await,
     }
 }

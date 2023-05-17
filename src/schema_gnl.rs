@@ -105,6 +105,18 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    common_names (id) {
+        id -> Uuid,
+        vernacular_name -> Varchar,
+        vernacular_language -> Nullable<Varchar>,
+        scientific_name -> Varchar,
+        scientific_name_authorship -> Nullable<Varchar>,
+        canonical_name -> Nullable<Varchar>,
+        rank -> Nullable<Varchar>,
+    }
+}
+
 
 diesel::allow_tables_to_appear_in_same_query!(
     gnl,
@@ -115,4 +127,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     eav_booleans,
     eav_timestamps,
     eav_arrays,
+    common_names,
 );

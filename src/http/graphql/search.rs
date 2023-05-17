@@ -1,10 +1,18 @@
+use std::collections::HashMap;
+
 use async_graphql::*;
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use serde::{Serialize, Deserialize};
 
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
+use crate::index::providers::db::models::ArgaTaxon;
 use crate::index::search::DNASearchByCanonicalName;
+use crate::index::search::FullTextSearch;
+use crate::index::search::FullTextSearchItem;
+use crate::index::search::FullTextSearchResult;
 use crate::index::search::GenusSearch;
 use crate::index::search::GenusSearchItem;
 use crate::index::search::SearchFilterItem;
@@ -128,7 +136,7 @@ impl Search {
         let mut results = Vec::with_capacity(21);
 
         // first get the data we do have from the solr index.
-        let solr_results = state.provider.search_species("", &db_filters).await.unwrap();
+        let solr_results = state.provider.search_species(None, &db_filters).await.unwrap();
 
         for record in solr_results.records.into_iter().take(21) {
             results.push(SearchItem {
@@ -210,14 +218,14 @@ impl Search {
         let mut results = Vec::with_capacity(21);
 
         // first get the data we do have from the solr index.
-        let solr_results = state.provider.search_species("", &filters).await.unwrap();
+        let solr_results = state.provider.search_species(None, &filters).await.unwrap();
 
         for record in solr_results.records.into_iter().take(21) {
             results.push(record);
         }
 
         // get species from gbif backbone that don't have any genomic records
-        let db_results = state.db_provider.search_species("", &filters).await.unwrap();
+        let db_results = state.db_provider.search_species(None, &filters).await.unwrap();
 
         for record in db_results.records.into_iter() {
             // add the filler gbif record if we don't have enough records with data
@@ -239,6 +247,7 @@ impl Search {
     async fn species_taxonomy_order(
         &self,
         ctx: &Context<'_>,
+        q: Option<String>,
         kingdom: Option<String>,
         phylum: Option<String>,
         class: Option<String>,
@@ -249,9 +258,20 @@ impl Search {
         let state = ctx.data::<State>().unwrap();
         let filters = create_filters(kingdom, phylum, class, family, genus, None);
 
-        let mut results = state.db_provider.search_species("", &filters).await.unwrap();
+        let mut results = state.db_provider.search_species(q, &filters).await.unwrap();
 
-        let names = results.records.iter().map(|r| r.canonical_name.clone().unwrap()).collect();
+        let names = results
+            .records
+            .iter()
+            .map(|r|
+                 match &r.canonical_name {
+                     Some(name) => name.clone(),
+                     None => match &r.scientific_name {
+                         Some(name) => name.clone(),
+                         None => String::default(),
+                     },
+                 }
+            ).collect();
 
         // first get the data we do have from the solr index.
         // let solr_results = state.provider.search_species("", &filters).await.unwrap();
@@ -272,7 +292,7 @@ impl Search {
     async fn species_by_region(
         &self,
         ctx: &Context<'_>,
-        ibra_region: String,
+        ibra_region: Vec<String>,
         offset: i64,
         limit: i64,
         kingdom: Option<String>,
@@ -280,20 +300,22 @@ impl Search {
         class: Option<String>,
         family: Option<String>,
         genus: Option<String>,
-    ) -> Result<Vec<SpeciesSearchItem>, Error>
+    ) -> Result<Vec<SpeciesSummaryResult>, Error>
     {
         let state = ctx.data::<State>().unwrap();
         let filters = create_filters(kingdom, phylum, class, family, genus, None);
 
-        let mut results = state.db_provider.search_species_with_region(&ibra_region, &filters, offset, limit).await.unwrap();
+        let results = state.db_provider.search_species_with_region(&ibra_region, &filters, offset, limit).await.unwrap();
+        let mut results: Vec<SpeciesSummaryResult> = results.into_iter().map(|v| v.into()).collect();
 
-        let names = results.records.iter().map(|r| r.canonical_name.clone().unwrap()).collect();
+        results.dedup_by(|a, b| a.canonical_name == b.canonical_name);
+        let names = results.iter().map(|r| r.canonical_name.clone().unwrap()).collect();
 
         // first get the data we do have from the solr index.
         // let solr_results = state.provider.search_species("", &filters).await.unwrap();
         let solr_results = state.provider.search_species_by_canonical_names(&names).await.unwrap();
 
-        for mut record in results.records.iter_mut() {
+        for mut record in results.iter_mut() {
             // find the total amount of genomic records from the solr search
             if let Some(solr_record) = solr_results.records.iter().find(|r| r.canonical_name == record.canonical_name) {
                 record.total_records = solr_record.total_records;
@@ -301,14 +323,91 @@ impl Search {
         }
 
         let dna_results = state.provider.search_dna_by_canonical_names(&names).await.unwrap();
-        for mut record in results.records.iter_mut() {
+        for mut record in results.iter_mut() {
             // find the total amount of dna records from the solr search
             if let Some(solr_record) = dna_results.records.iter().find(|r| r.canonical_name == record.canonical_name) {
-                record.total_genomic_records = Some(solr_record.total_records);
+                record.total_barcodes = solr_record.total_records;
             }
         }
 
-        Ok(results.records)
+        Ok(results)
+    }
+
+
+    #[tracing::instrument(skip(self, ctx))]
+    async fn full_text(&self, ctx: &Context<'_>, query: String) -> Result<FullTextSearchResult, Error>
+    {
+        let state = ctx.data::<State>().unwrap();
+        let mut results = state.search.full_text(&query).await?;
+
+        // get the taxon names to enrich the result data with
+        let mut names = Vec::with_capacity(results.records.len());
+        for record in &results.records {
+            match record {
+                FullTextSearchItem::Taxon(item) => names.push(item.scientific_name.clone()),
+            }
+        }
+
+        // match the results against the ARGA GNL
+        use crate::schema_gnl::gnl::dsl::*;
+        let mut conn = state.db_provider.pool.get().await.unwrap();
+
+        let rows = gnl
+            .filter(scientific_name.eq_any(names))
+            .load::<ArgaTaxon>(&mut conn).await.unwrap();
+
+        let mut record_map: HashMap<String, ArgaTaxon> = HashMap::new();
+        for row in rows {
+            if let Some(name) = &row.scientific_name {
+                record_map.insert(name.clone(), row);
+            }
+        }
+
+
+        for result in results.records.iter_mut() {
+            match result {
+                FullTextSearchItem::Taxon(item) => {
+                    if let Some(record) = record_map.get(&item.scientific_name) {
+                        item.canonical_name = record.canonical_name.clone();
+                        item.rank = record.taxon_rank.clone();
+                        item.taxonomic_status = record.taxonomic_status.clone();
+                    }
+                }
+            }
+        }
+
+        Ok(results)
+    }
+}
+
+#[derive(Debug, Serialize, SimpleObject)]
+pub struct SpeciesSummaryResult {
+    pub scientific_name: Option<String>,
+    pub canonical_name: Option<String>,
+    pub kingdom: Option<String>,
+    pub phylum: Option<String>,
+    pub class: Option<String>,
+    pub order: Option<String>,
+    pub family: Option<String>,
+    pub genus: Option<String>,
+    pub total_records: usize,
+    pub total_barcodes: usize,
+}
+
+impl From<ArgaTaxon> for SpeciesSummaryResult {
+    fn from(value: ArgaTaxon) -> Self {
+        SpeciesSummaryResult {
+            scientific_name: value.scientific_name,
+            canonical_name: value.canonical_name,
+            kingdom: value.kingdom,
+            phylum: value.phylum,
+            class: value.class,
+            order: value.order,
+            family: value.family,
+            genus: value.genus,
+            total_records: 0,
+            total_barcodes: 0,
+        }
     }
 }
 

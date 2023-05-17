@@ -8,7 +8,6 @@ use diesel_async::RunQueryDsl;
 use diesel::{Queryable, AsExpression, FromSqlRow};
 use diesel::deserialize::{self, FromSql};
 use diesel::pg::Pg;
-use polars::export::num::ToPrimitive;
 use crate::schema::sql_types::Geometry;
 
 use crate::index::maps::{self, RegionGeometry};

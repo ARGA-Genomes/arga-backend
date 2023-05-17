@@ -6,5 +6,6 @@ pub mod index;
 pub mod telemetry;
 
 pub mod workers;
+pub mod search;
 
 pub use features::FeatureClient;

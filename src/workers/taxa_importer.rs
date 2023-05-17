@@ -36,7 +36,7 @@ impl TaxaImporter {
         self.thread.send(job);
     }
 
-    fn recv(&mut self, _cx: CX![], job: Job) {
+    fn recv(&mut self, _cx: CX![], _job: Job) {
 
     }
 
@@ -110,12 +110,10 @@ pub fn import(path: PathBuf, taxa_list: &UserTaxaList) -> Result<(), Error> {
 pub fn read_file(file: PathBuf) -> PolarsResult<DataFrame> {
     info!(?file, "Reading");
 
-    let schema_patch = Schema::from(
-        vec![
-            Field::new("year", DataType::Utf8),
-            Field::new("basionymYear", DataType::Utf8),
-        ].into_iter(),
-    );
+    let schema_patch = Schema::from_iter(vec![
+        Field::new("year", DataType::Utf8),
+        Field::new("basionymYear", DataType::Utf8),
+    ]);
 
     let df = CsvReader::from_path(file)?
         .has_header(true)

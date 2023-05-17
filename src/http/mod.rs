@@ -12,6 +12,7 @@ use crate::FeatureClient;
 use crate::features::Features;
 use crate::index::providers::ala::Ala;
 use crate::index::providers::db::Database;
+use crate::index::providers::search::SearchIndex;
 use crate::index::providers::solr::Solr;
 
 pub mod error;
@@ -52,6 +53,7 @@ pub(crate) struct Context {
     pub provider: Solr,
     pub ala_provider: Ala,
     pub db_provider: Database,
+    pub search: SearchIndex,
     pub features: FeatureClient,
 }
 
@@ -65,13 +67,19 @@ impl FromRef<Context> for Database {
 ///
 /// This will create the context based on the configuration
 /// and kick off the http server.
-pub async fn serve(config: Config, provider: Solr, db_provider: Database) -> anyhow::Result<()> {
+pub async fn serve(
+    config: Config,
+    provider: Solr,
+    db_provider: Database,
+) -> anyhow::Result<()>
+{
     let addr = config.bind_address.clone();
 
     let context = Context {
         config,
         provider,
         db_provider,
+        search: SearchIndex::open()?,
         ala_provider: Ala::new(),
         features: FeatureClient::new(),
     };

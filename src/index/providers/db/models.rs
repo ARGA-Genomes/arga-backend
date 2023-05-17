@@ -311,7 +311,6 @@ pub struct MediaObservation {
 }
 
 
-
 #[derive(Debug, Queryable)]
 #[diesel(table_name = schema_gnl::eav_strings)]
 pub struct ObjectString {
@@ -332,4 +331,27 @@ pub struct ObjectArray {
     pub value_id: Uuid,
     pub name: String,
     pub value: Vec<String>,
+}
+
+
+#[derive(Clone, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::names)]
+pub struct Name {
+    pub id: Uuid,
+    pub scientific_name: String,
+    pub canonical_name: Option<String>,
+    pub authorship: Option<String>,
+    pub rank: String,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema_gnl::common_names)]
+pub struct CommonName {
+    pub id: Uuid,
+    pub vernacular_name: String,
+    pub vernacular_language: Option<String>,
+    pub scientific_name: String,
+    pub scientific_name_authorship: Option<String>,
+    pub canonical_name: Option<String>,
+    pub rank: Option<String>,
 }

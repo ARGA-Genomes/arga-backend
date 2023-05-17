@@ -20,14 +20,14 @@ use super::{Solr, Error};
 #[serde(rename_all = "camelCase")]
 struct DataRecords {
     #[serde(rename(deserialize = "numFound"))]
-    total: usize,
+    _total: usize,
 }
 
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Facet {
-    field: String,
+    _field: String,
     value: String,
     count: usize,
 }
@@ -145,7 +145,7 @@ impl GetFamilyBreakdown for Solr {
         ];
 
         tracing::debug!(?params);
-        let (_, mut facets) = self.client.select_faceted::<DataRecords, GenusFacet>(&params).await?;
+        let (_, facets) = self.client.select_faceted::<DataRecords, GenusFacet>(&params).await?;
 
         Ok(FamilyBreakdown {
             genera: facets.scientific_name.into_iter().map(|s| s.into()).collect(),
