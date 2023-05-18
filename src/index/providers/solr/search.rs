@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SpeciesSearchItem, SpeciesSearch, SpeciesSearchResult, SpeciesSearchByCanonicalName, DNASearchByCanonicalName, FullTextSearch, FullTextSearchResult, FullTextSearchItem, WholeGenomeSequenceItem, FullTextType};
+use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SpeciesSearchItem, SpeciesSearch, SpeciesSearchResult, SpeciesSearchByCanonicalName, DNASearchByCanonicalName, FullTextSearch, FullTextSearchResult, FullTextSearchItem, GenomeSequenceItem, FullTextType};
 use super::{Solr, Error};
 
 
@@ -416,7 +416,7 @@ impl FullTextSearch for Solr {
     type Error = Error;
 
     async fn full_text(&self, query: &str) -> Result<FullTextSearchResult, Self::Error> {
-        let params = vec![
+        let base_params = vec![
             ("q", query),
             ("rows", "20"),
             ("group", "true"),
@@ -425,19 +425,52 @@ impl FullTextSearch for Solr {
             ("fl", "score"),
         ];
 
+        let mut params = base_params.clone();
+        params.push(("fq", "dataResourceName:*RefSeq*"));
         tracing::debug!(?params);
-        let results = self.client.select::<FullTextResponse>(&params).await?;
+        let reference_genomes = self.client.select::<FullTextResponse>(&params).await?;
+
+        let mut params = base_params.clone();
+        params.push(("fq", r#"dynamicProperties_ncbi_genome_rep:"Full""#));
+        tracing::debug!(?params);
+        let whole_genomes = self.client.select::<FullTextResponse>(&params).await?;
+
+        let mut params = base_params.clone();
+        params.push(("fq", r#"dynamicProperties_ncbi_genome_rep:"Partial""#));
+        tracing::debug!(?params);
+        let partial_genomes = self.client.select::<FullTextResponse>(&params).await?;
 
         let mut records = Vec::new();
-        for group in results.scientific_name.groups.into_iter() {
-            let item = WholeGenomeSequenceItem {
+
+        for group in reference_genomes.scientific_name.groups.into_iter() {
+            let item = GenomeSequenceItem {
                 scientific_name: group.group_value.unwrap_or_default(),
-                score: group.doclist.max_score * 10.0, // artificial boost to match taxon scores
+                score: group.doclist.max_score * 8.0, // artificial boost to match taxon scores
+                sequences: group.doclist.total,
+                r#type: FullTextType::ReferenceGenomeSequence,
+            };
+
+            records.push(FullTextSearchItem::GenomeSequence(item));
+        }
+        for group in whole_genomes.scientific_name.groups.into_iter() {
+            let item = GenomeSequenceItem {
+                scientific_name: group.group_value.unwrap_or_default(),
+                score: group.doclist.max_score * 8.0, // artificial boost to match taxon scores
                 sequences: group.doclist.total,
                 r#type: FullTextType::WholeGenomeSequence,
             };
 
-            records.push(FullTextSearchItem::WholeGenomeSequence(item));
+            records.push(FullTextSearchItem::GenomeSequence(item));
+        }
+        for group in partial_genomes.scientific_name.groups.into_iter() {
+            let item = GenomeSequenceItem {
+                scientific_name: group.group_value.unwrap_or_default(),
+                score: group.doclist.max_score * 8.0, // artificial boost to match taxon scores
+                sequences: group.doclist.total,
+                r#type: FullTextType::PartialGenomeSequence,
+            };
+
+            records.push(FullTextSearchItem::GenomeSequence(item));
         }
 
         Ok(FullTextSearchResult {
