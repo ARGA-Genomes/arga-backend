@@ -13,6 +13,7 @@ use crate::index::search::DNASearchByCanonicalName;
 use crate::index::search::FullTextSearch;
 use crate::index::search::FullTextSearchItem;
 use crate::index::search::FullTextSearchResult;
+use crate::index::search::FullTextType;
 use crate::index::search::GenusSearch;
 use crate::index::search::GenusSearchItem;
 use crate::index::search::SearchFilterItem;
@@ -334,11 +335,17 @@ impl Search {
     }
 
 
-    #[tracing::instrument(skip(self, ctx))]
-    async fn full_text(&self, ctx: &Context<'_>, query: String) -> Result<FullTextSearchResult, Error>
+    async fn full_text(&self, ctx: &Context<'_>, query: String, data_type: Option<String>) -> Result<FullTextSearchResult, Error>
     {
+        let data_type = data_type.unwrap_or("all".to_string());
+
         let state = ctx.data::<State>().unwrap();
-        let mut results = state.search.full_text(&query).await?;
+        let mut results = FullTextSearchResult::default();
+
+        if data_type == "all" || data_type == "species" {
+            let db_results = state.search.full_text(&query).await?;
+            results.records.extend(db_results.records);
+        };
 
         // get the taxon names to enrich the result data with
         let mut names = Vec::with_capacity(results.records.len());
@@ -364,7 +371,7 @@ impl Search {
             }
         }
 
-
+        // enrich the results with the gnl data
         for result in results.records.iter_mut() {
             match result {
                 FullTextSearchItem::Taxon(item) => {
@@ -379,11 +386,34 @@ impl Search {
             };
         }
 
+        // if we are only searching for species shortcut the request
+        if data_type == "species" {
+            return Ok(results);
+        }
+
 
         // get the solr full text search results
         let solr_results = state.provider.full_text(&query).await?;
         results.records.extend(solr_results.records);
 
+        // filter out the sequence types that wasn't requested
+        results.records = results.records.into_iter().filter(|record| {
+            data_type == "all" || data_type == match record {
+                FullTextSearchItem::Taxon(_) => "species", // should already be filtered out if not 'all'
+                FullTextSearchItem::GenomeSequence(item) => {
+                    match item.r#type {
+                        FullTextType::Taxon => "species",
+                        FullTextType::ReferenceGenomeSequence => "whole_genomes",
+                        FullTextType::WholeGenomeSequence => "whole_genomes",
+                        FullTextType::PartialGenomeSequence => "partial_genomes",
+                        FullTextType::UnknownGenomeSequence => "unknown_genomes",
+                        FullTextType::Barcode => "barcodes",
+                    }
+                },
+            }
+        }).collect();
+
+        // mix the results from multiple sources and rank them by the search score
         results.records.sort_by(|a, b| b.partial_cmp(a).unwrap());
 
         Ok(results)

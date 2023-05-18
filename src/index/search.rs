@@ -227,7 +227,7 @@ pub enum FullTextSearchItem {
 }
 
 
-#[derive(Debug, Deserialize, SimpleObject)]
+#[derive(Debug, Deserialize, SimpleObject, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct FullTextSearchResult {
     pub records: Vec<FullTextSearchItem>,
