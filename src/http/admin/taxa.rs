@@ -4,7 +4,9 @@ use axum::extract::{State, Query, Path};
 use axum::{Json, Router};
 use axum::routing::{get, post, delete, put};
 
+use diesel::pg::Pg;
 use diesel::prelude::*;
+use diesel::query_builder::{BoxedSelectStatement, FromClause};
 use diesel_async::RunQueryDsl;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
@@ -222,7 +224,35 @@ async fn delete_user_taxa_list(
 ) -> Result<Json<UserTaxaList>, InternalError>
 {
     use schema::user_taxa_lists::dsl::*;
+    use schema::user_taxa::dsl as user_taxa;
+    use schema::object_values_string as obj_strings;
+    use schema::object_values_text as obj_text;
+    use schema::object_values_integer as obj_integers;
+    use schema::object_values_boolean as obj_booleans;
+    use schema::object_values_timestamp as obj_timestamps;
+    use schema::object_values_array as obj_arrays;
+    use schema::objects as obj;
+
     let mut conn = db_provider.pool.get().await?;
+
+
+    // delete all the values associated with taxa on the taxa list
+    diesel::delete(obj_strings::table).filter(obj_strings::id.eq_any(with_taxa_list(&uuid))).execute(&mut conn).await?;
+    diesel::delete(obj_text::table).filter(obj_text::id.eq_any(with_taxa_list(&uuid))).execute(&mut conn).await?;
+    diesel::delete(obj_integers::table).filter(obj_integers::id.eq_any(with_taxa_list(&uuid))).execute(&mut conn).await?;
+    diesel::delete(obj_booleans::table).filter(obj_booleans::id.eq_any(with_taxa_list(&uuid))).execute(&mut conn).await?;
+    diesel::delete(obj_timestamps::table).filter(obj_timestamps::id.eq_any(with_taxa_list(&uuid))).execute(&mut conn).await?;
+    diesel::delete(obj_arrays::table).filter(obj_arrays::id.eq_any(with_taxa_list(&uuid))).execute(&mut conn).await?;
+
+    // delete the taxon object through table eav entries
+    use schema_gnl::user_taxa_objects::dsl::{user_taxa_objects, object_id, taxa_lists_id};
+    let list_objects = user_taxa_objects.select(object_id).filter(taxa_lists_id.eq(uuid)).into_boxed();
+    diesel::delete(obj::table).filter(obj::id.eq_any(list_objects)).execute(&mut conn).await?;
+
+    diesel::delete(user_taxa::user_taxa)
+        .filter(user_taxa::taxa_lists_id.eq(uuid))
+        .execute(&mut conn)
+        .await?;
 
     let record = diesel::delete(user_taxa_lists)
         .filter(id.eq(uuid))
@@ -231,6 +261,13 @@ async fn delete_user_taxa_list(
 
     Ok(Json(record))
 }
+
+
+fn with_taxa_list(uuid: &Uuid) -> BoxedSelectStatement<diesel::sql_types::Uuid, FromClause<schema_gnl::user_taxa_objects::table>, Pg> {
+    use schema_gnl::user_taxa_objects::dsl::*;
+    user_taxa_objects.select(value_id).filter(taxa_lists_id.eq(uuid)).into_boxed()
+}
+
 
 
 #[derive(Debug, Serialize)]
@@ -351,8 +388,28 @@ async fn delete_user_taxon(
 ) -> Result<Json<UserTaxon>, InternalError>
 {
     use schema::user_taxa::dsl::*;
+    use schema::object_values_string as obj_strings;
+    use schema::object_values_text as obj_text;
+    use schema::object_values_integer as obj_integers;
+    use schema::object_values_boolean as obj_booleans;
+    use schema::object_values_timestamp as obj_timestamps;
+    use schema::object_values_array as obj_arrays;
+    use schema::objects as obj;
+
     let mut conn = db_provider.pool.get().await?;
 
+    // delete all the values associated with the taxon
+    diesel::delete(obj_strings::table).filter(obj_strings::id.eq_any(with_taxon(&uuid))).execute(&mut conn).await?;
+    diesel::delete(obj_text::table).filter(obj_text::id.eq_any(with_taxon(&uuid))).execute(&mut conn).await?;
+    diesel::delete(obj_integers::table).filter(obj_integers::id.eq_any(with_taxon(&uuid))).execute(&mut conn).await?;
+    diesel::delete(obj_booleans::table).filter(obj_booleans::id.eq_any(with_taxon(&uuid))).execute(&mut conn).await?;
+    diesel::delete(obj_timestamps::table).filter(obj_timestamps::id.eq_any(with_taxon(&uuid))).execute(&mut conn).await?;
+    diesel::delete(obj_arrays::table).filter(obj_arrays::id.eq_any(with_taxon(&uuid))).execute(&mut conn).await?;
+
+    // delete the taxon object through table eav entries
+    diesel::delete(obj::table).filter(obj::entity_id.eq(uuid)).execute(&mut conn).await?;
+
+    // delete the user taxon
     let record = diesel::delete(user_taxa)
         .filter(id.eq(uuid))
         .get_result(&mut conn)
@@ -361,6 +418,11 @@ async fn delete_user_taxon(
     Ok(Json(record))
 }
 
+
+fn with_taxon(uuid: &Uuid) -> BoxedSelectStatement<diesel::sql_types::Uuid, FromClause<schema::objects::table>, Pg> {
+    use schema::objects::dsl::*;
+    objects.select(value_id).filter(entity_id.eq(uuid)).into_boxed()
+}
 
 
 /// The REST gateway for the admin backend for basic CRUD operations

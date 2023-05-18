@@ -106,6 +106,23 @@ diesel::table! {
 }
 
 diesel::table! {
+    user_taxa_objects (object_id) {
+        object_id -> Uuid,
+        entity_id -> Uuid,
+        attribute_id -> Uuid,
+        value_id -> Uuid,
+        attribute_name -> Varchar,
+        data_type -> Varchar,
+        taxa_lists_id -> Nullable<Uuid>,
+        scientific_name -> Nullable<Varchar>,
+        scientific_name_authorship -> Nullable<Varchar>,
+        canonical_name -> Nullable<Varchar>,
+        taxon_rank -> Nullable<Text>,
+        taxonomic_status -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     common_names (id) {
         id -> Uuid,
         vernacular_name -> Varchar,
