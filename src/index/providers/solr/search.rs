@@ -440,6 +440,16 @@ impl FullTextSearch for Solr {
         tracing::debug!(?params);
         let partial_genomes = self.client.select::<FullTextResponse>(&params).await?;
 
+        let mut params = base_params.clone();
+        params.push(("fq", r#"dataResourceName:"BPA Genomic Sequence Data""#));
+        tracing::debug!(?params);
+        let unknown_genomes = self.client.select::<FullTextResponse>(&params).await?;
+
+        let mut params = base_params.clone();
+        params.push(("fq", r#"dataProviderName:"Barcode of Life""#));
+        tracing::debug!(?params);
+        let barcodes = self.client.select::<FullTextResponse>(&params).await?;
+
         let mut records = Vec::new();
 
         for group in reference_genomes.scientific_name.groups.into_iter() {
@@ -468,6 +478,26 @@ impl FullTextSearch for Solr {
                 score: group.doclist.max_score * 8.0, // artificial boost to match taxon scores
                 sequences: group.doclist.total,
                 r#type: FullTextType::PartialGenomeSequence,
+            };
+
+            records.push(FullTextSearchItem::GenomeSequence(item));
+        }
+        for group in unknown_genomes.scientific_name.groups.into_iter() {
+            let item = GenomeSequenceItem {
+                scientific_name: group.group_value.unwrap_or_default(),
+                score: group.doclist.max_score * 8.0, // artificial boost to match taxon scores
+                sequences: group.doclist.total,
+                r#type: FullTextType::UnknownGenomeSequence,
+            };
+
+            records.push(FullTextSearchItem::GenomeSequence(item));
+        }
+        for group in barcodes.scientific_name.groups.into_iter() {
+            let item = GenomeSequenceItem {
+                scientific_name: group.group_value.unwrap_or_default(),
+                score: group.doclist.max_score * 8.0, // artificial boost to match taxon scores
+                sequences: group.doclist.total,
+                r#type: FullTextType::Barcode,
             };
 
             records.push(FullTextSearchItem::GenomeSequence(item));

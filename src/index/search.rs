@@ -193,6 +193,8 @@ pub enum FullTextType {
     ReferenceGenomeSequence,
     WholeGenomeSequence,
     PartialGenomeSequence,
+    UnknownGenomeSequence,
+    Barcode,
 }
 
 #[derive(Debug, Deserialize, SimpleObject)]
