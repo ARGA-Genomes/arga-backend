@@ -93,6 +93,7 @@ pub struct UserTaxaList {
 pub struct UserTaxon {
     pub id: Uuid,
     pub taxa_lists_id: Uuid,
+    pub name_id: Uuid,
 
     // http://rs.tdwg.org/dwc/terms/scientificName
     pub scientific_name: Option<String>,
@@ -354,4 +355,34 @@ pub struct CommonName {
     pub scientific_name_authorship: Option<String>,
     pub canonical_name: Option<String>,
     pub rank: Option<String>,
+}
+
+
+#[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "crate::schema::sql_types::RegionType"]
+pub enum RegionType {
+    Ibra,
+    Imcra,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::regions)]
+pub struct Regions {
+    pub id: Uuid,
+    pub name_id: Uuid,
+    pub region_type: RegionType,
+    pub values: Vec<String>,
+}
+
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::taxon_photos)]
+pub struct TaxonPhoto {
+    pub id: Uuid,
+    pub name_id: Uuid,
+    pub url: String,
+    pub source: Option<String>,
+    pub publisher: Option<String>,
+    pub license: Option<String>,
+    pub rights_holder: Option<String>,
 }

@@ -44,6 +44,7 @@ struct Taxon {
 impl From<Taxon> for Taxonomy {
     fn from(source: Taxon) -> Self {
         Self {
+            scientific_name: "".to_string(),
             canonical_name: source.canonical_name,
             authorship: source.scientific_name_authorship,
 

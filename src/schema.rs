@@ -12,6 +12,10 @@ pub mod sql_types {
     #[derive(diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "job_status"))]
     pub struct JobStatus;
+
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "region_type"))]
+    pub struct RegionType;
 }
 
 diesel::table! {
@@ -24,21 +28,6 @@ diesel::table! {
         data_type -> AttributeDataType,
         description -> Nullable<Text>,
         reference_url -> Nullable<Varchar>,
-    }
-}
-
-diesel::table! {
-    descriptions (id) {
-        id -> Uuid,
-        taxon_id -> Nullable<Int8>,
-        #[sql_name = "type"]
-        type_ -> Nullable<Varchar>,
-        language -> Nullable<Varchar>,
-        description -> Nullable<Text>,
-        source -> Nullable<Varchar>,
-        creator -> Nullable<Varchar>,
-        contributor -> Nullable<Varchar>,
-        license -> Nullable<Varchar>,
     }
 }
 
@@ -128,15 +117,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    name_properties (id) {
-        id -> Uuid,
-        entity_id -> Uuid,
-        attribute_id -> Uuid,
-        value_id -> Int8,
-    }
-}
-
-diesel::table! {
     name_vernacular_names (name_id, vernacular_name_id) {
         name_id -> Uuid,
         vernacular_name_id -> Int8,
@@ -205,9 +185,14 @@ diesel::table! {
 }
 
 diesel::table! {
-    properties_string (id) {
-        id -> Int8,
-        value -> Varchar,
+    use diesel::sql_types::*;
+    use super::sql_types::RegionType;
+
+    regions (id) {
+        id -> Uuid,
+        name_id -> Uuid,
+        region_type -> RegionType,
+        values -> Array<Nullable<Text>>,
     }
 }
 
@@ -251,6 +236,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    taxon_photos (id) {
+        id -> Uuid,
+        name_id -> Uuid,
+        url -> Varchar,
+        source -> Nullable<Varchar>,
+        publisher -> Nullable<Varchar>,
+        license -> Nullable<Varchar>,
+        rights_holder -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     types_and_specimen (id) {
         id -> Uuid,
         taxon_id -> Nullable<Int8>,
@@ -266,6 +263,7 @@ diesel::table! {
     user_taxa (id) {
         id -> Uuid,
         taxa_lists_id -> Uuid,
+        name_id -> Uuid,
         scientific_name -> Nullable<Varchar>,
         scientific_name_authorship -> Nullable<Varchar>,
         canonical_name -> Nullable<Varchar>,
@@ -305,15 +303,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    vernacular_name_properties (id) {
-        id -> Int8,
-        entity_id -> Int8,
-        attribute_id -> Uuid,
-        value_id -> Int8,
-    }
-}
-
-diesel::table! {
     vernacular_names (id) {
         id -> Int8,
         vernacular_name -> Varchar,
@@ -321,23 +310,20 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(name_properties -> attributes (attribute_id));
-diesel::joinable!(name_properties -> names (entity_id));
 diesel::joinable!(name_vernacular_names -> names (name_id));
 diesel::joinable!(name_vernacular_names -> vernacular_names (vernacular_name_id));
+diesel::joinable!(regions -> names (name_id));
+diesel::joinable!(taxon_photos -> names (name_id));
+diesel::joinable!(user_taxa -> names (name_id));
 diesel::joinable!(user_taxa -> user_taxa_lists (taxa_lists_id));
-diesel::joinable!(vernacular_name_properties -> attributes (attribute_id));
-diesel::joinable!(vernacular_name_properties -> vernacular_names (entity_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     attributes,
-    descriptions,
     distribution,
     ibra,
     jobs,
     media,
     media_observations,
-    name_properties,
     name_vernacular_names,
     names,
     object_values_array,
@@ -347,13 +333,13 @@ diesel::allow_tables_to_appear_in_same_query!(
     object_values_text,
     object_values_timestamp,
     objects,
-    properties_string,
+    regions,
     spatial_ref_sys,
     taxa,
+    taxon_photos,
     types_and_specimen,
     user_taxa,
     user_taxa_lists,
     users,
-    vernacular_name_properties,
     vernacular_names,
 );

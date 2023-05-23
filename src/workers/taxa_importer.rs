@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::collections::HashMap;
 
 use diesel::*;
 use polars::prelude::*;
@@ -7,7 +8,18 @@ use stakker::*;
 use tracing::{instrument, info, error};
 use uuid::Uuid;
 
-use crate::{index::providers::db::models::{Job, UserTaxon, UserTaxaList, Attribute, Object, ObjectValueString, AttributeParser, AttributeDataValue, AttributeDataType, ObjectValueArray, ObjectValueText}, schema};
+use crate::index::providers::db::models::{
+    Job,
+    UserTaxon,
+    UserTaxaList,
+    Attribute,
+    AttributeParser,
+    AttributeDataValue,
+    AttributeDataType,
+    Name,
+    Regions, RegionType,
+};
+use crate::schema;
 
 
 pub struct TaxaImporter {
@@ -47,7 +59,7 @@ impl TaxaImporter {
         cx.stop();
     }
 
-    #[instrument]
+    // #[instrument]
     fn process(job: Job) {
         info!("Running taxa importer");
         let tmp_path = std::env::var("ADMIN_TMP_UPLOAD_STORAGE").expect("No upload storage specified");
@@ -102,7 +114,9 @@ pub fn import(path: PathBuf, taxa_list: &UserTaxaList) -> Result<(), Error> {
     info!("Establishing database connection");
     let conn = &mut establish_connection();
 
-    import_taxa(taxa_list, &read_file(path)?, conn)?;
+    import_names(&read_file(path.clone())?, conn)?;
+    import_taxa(taxa_list, &read_file(path.clone())?, conn)?;
+    import_regions(&read_file(path.clone())?, conn)?;
 
     Ok(())
 }
@@ -148,6 +162,70 @@ fn find_attributes(names: &Vec<&str>, conn: &mut PgConnection) -> Result<Vec<Att
 
 
 #[instrument(skip(df, conn))]
+fn import_names(df: &DataFrame, conn: &mut PgConnection) -> Result<(), Error> {
+    info!(height = df.height(), "Transforming");
+
+    let mut rows = Vec::with_capacity(df.height());
+    for _ in 0..df.height() {
+        rows.push(Name {
+            id: Uuid::new_v4(),
+            ..Default::default()
+        });
+    }
+
+    // The scientific name field is mandatory for all taxa imports because we
+    // maintain a unique table of names that we associate other info with. this approach
+    // allows us to associate multiple sources with a unique name that gets used in the real world
+    let series = df.column("scientificName")?;
+    for (idx, value) in series.iter().enumerate() {
+        rows[idx].scientific_name = parse_string(&value).expect("scientificName is mandatory")
+    }
+
+    // set the optional fields for the name data. it wont overwrite existing names
+    // but new names will prserve these values indefinitely
+    let attr_names = df.get_column_names();
+    let attributes = find_attributes(&attr_names, conn)?;
+
+    for attribute in &attributes {
+        let series = df.column(&attribute.name)?;
+        info!(name = attribute.name, "Enumerating column");
+
+        match attribute.name.as_str() {
+            "authority" => for (idx, value) in series.iter().enumerate() {
+                rows[idx].authorship = parse_string(&value);
+            },
+            "canonicalName" => for (idx, value) in series.iter().enumerate() {
+                rows[idx].canonical_name = parse_string(&value);
+            },
+            "rank" => for (idx, value) in series.iter().enumerate() {
+                rows[idx].rank = parse_string(&value).unwrap_or("unranked".to_string());
+            },
+            _ => {}
+        }
+    }
+
+    info!(total=rows.len(), "Importing taxa names");
+    use schema::names::dsl::*;
+
+    let mut total = 0;
+    for chunk in rows.chunks(10_000) {
+        info!(rows = chunk.len(), "Inserting into global names list");
+
+        let inserted_rows = diesel::insert_into(names)
+            .values(chunk)
+            .on_conflict_do_nothing()
+            .execute(conn)?;
+
+        info!(inserted_rows, "Inserted into global names list");
+        total += inserted_rows;
+    }
+
+    info!(total, "Finished importing taxa names");
+    Ok(())
+}
+
+
+#[instrument(skip(df, conn))]
 fn import_taxa(taxa_list: &UserTaxaList, df: &DataFrame, conn: &mut PgConnection) -> Result<(), Error> {
     info!(height = df.height(), "Transforming");
 
@@ -160,11 +238,6 @@ fn import_taxa(taxa_list: &UserTaxaList, df: &DataFrame, conn: &mut PgConnection
         });
     }
 
-    let mut objects = Vec::new();
-    let mut object_strings = Vec::new();
-    let mut object_texts = Vec::new();
-    let mut object_arrays = Vec::new();
-
     let attr_names = df.get_column_names();
     let attributes = find_attributes(&attr_names, conn)?;
 
@@ -172,8 +245,6 @@ fn import_taxa(taxa_list: &UserTaxaList, df: &DataFrame, conn: &mut PgConnection
         let series = df.column(&attribute.name)?;
         info!(name = attribute.name, "Enumerating column");
 
-        // if this is a common field add it to the user taxon record,
-        // otherwise use the EAv table to associate the value with the taxon
         match attribute.name.as_str() {
             "scientificName" => for (idx, value) in series.iter().enumerate() {
                 rows[idx].scientific_name = parse_string(&value);
@@ -202,103 +273,38 @@ fn import_taxa(taxa_list: &UserTaxaList, df: &DataFrame, conn: &mut PgConnection
             "genus" => for (idx, value) in series.iter().enumerate() {
                 rows[idx].genus = parse_string(&value);
             },
-            _ => for (idx, value) in series.iter().enumerate() {
-                let value_uuid = match value.parse(&attribute) {
-                    Some(AttributeDataValue::String(value)) => {
-                        if value.len() > 255 {
-                            panic!("value too long: {} - {}", attribute.name, value);
-                        }
+            _ => {},
+        }
+    }
 
-                        let value = ObjectValueString {
-                            id: Uuid::new_v4(),
-                            value,
-                        };
+    info!(rows = rows.len(), "Importing common taxa fields");
+    use schema::user_taxa::dsl::user_taxa;
+    use schema::names;
 
-                        let uuid = value.id;
-                        object_strings.push(value);
-                        Some(uuid)
-                    },
-                    Some(AttributeDataValue::Text(value)) => {
-                        let value = ObjectValueText {
-                            id: Uuid::new_v4(),
-                            value,
-                        };
+    let mut total = 0;
+    for chunk in rows.chunks_mut(1000) {
+        let mut id_map: HashMap<String, Uuid> = HashMap::new();
+        let all_names: Vec<String> = chunk.iter().map(|row| row.scientific_name.clone().unwrap()).collect();
 
-                        let uuid = value.id;
-                        object_texts.push(value);
-                        Some(uuid)
-                    },
-                    Some(AttributeDataValue::Array(value)) => {
-                        let value = ObjectValueArray {
-                            id: Uuid::new_v4(),
-                            value,
-                        };
+        let results = names::table
+            .select((names::id, names::scientific_name))
+            .filter(names::scientific_name.eq_any(all_names))
+            .load::<(Uuid, String)>(conn)?;
 
-                        let uuid = value.id;
-                        object_arrays.push(value);
-                        Some(uuid)
-                    },
+        for (uuid, name) in results {
+            id_map.insert(name, uuid);
+        }
 
-                    _ => { None },
-                };
-
-                if let Some(uuid) = value_uuid {
-                    objects.push(Object {
-                        id: Uuid::new_v4(),
-                        entity_id: rows[idx].id,
-                        attribute_id: attribute.id,
-                        value_id: uuid,
-                    });
-
-                }
+        for row in chunk.iter_mut() {
+            if let Some(name) = &row.scientific_name {
+                row.name_id = id_map.get(name).expect("Cannot find name id").clone();
             }
         }
+
+        total += diesel::insert_into(user_taxa).values(chunk.to_vec()).execute(conn)?;
     }
 
-    info!("Importing common taxa fields");
-    use schema::user_taxa::dsl::user_taxa;
-    for chunk in rows.chunks(1000) {
-        if let Err(err) = diesel::insert_into(user_taxa).values(chunk).execute(conn) {
-            error!(?err, "Could not insert rows");
-            panic!();
-        }
-    }
-
-    info!("Importing taxa attribute strings");
-    use schema::object_values_string::dsl::object_values_string;
-    for chunk in object_strings.chunks(1000) {
-        if let Err(err) = diesel::insert_into(object_values_string).values(chunk).execute(conn) {
-            error!(?err, "Could not insert rows");
-            panic!();
-        }
-    }
-    info!("Importing taxa attribute text");
-    use schema::object_values_text::dsl::object_values_text;
-    for chunk in object_texts.chunks(1000) {
-        if let Err(err) = diesel::insert_into(object_values_text).values(chunk).execute(conn) {
-            error!(?err, "Could not insert rows");
-            panic!();
-        }
-    }
-    info!("Importing taxa attribute arrays");
-    use schema::object_values_array::dsl::object_values_array;
-    for chunk in object_arrays.chunks(1000) {
-        if let Err(err) = diesel::insert_into(object_values_array).values(chunk).execute(conn) {
-            error!(?err, "Could not insert rows");
-            panic!();
-        }
-    }
-    info!("Importing taxa attribute objects");
-    use schema::objects::dsl::objects as objects_table;
-    for chunk in objects.chunks(1000) {
-        if let Err(err) = diesel::insert_into(objects_table).values(chunk).execute(conn) {
-            error!(?err, "Could not insert rows");
-            panic!();
-        }
-    }
-
-    info!(rows = rows.len(), "Imported");
-
+    info!(total, "Finished importing common taxa fields");
     Ok(())
 }
 
@@ -329,6 +335,101 @@ impl AttributeParser for AnyValue<'_> {
             },
         }
     }
+}
+
+
+#[derive(Default)]
+struct RegionImport {
+    scientific_name: String,
+    ibra: Option<Vec<String>>,
+    imcra: Option<Vec<String>>,
+}
+
+#[instrument(skip(df, conn))]
+fn import_regions(df: &DataFrame, conn: &mut PgConnection) -> Result<(), Error> {
+    info!(height = df.height(), "Transforming");
+
+    let mut rows = Vec::with_capacity(df.height());
+    for _ in 0..df.height() {
+        rows.push(RegionImport::default());
+    }
+
+    let series = df.column("scientificName")?;
+    for (idx, value) in series.iter().enumerate() {
+        rows[idx].scientific_name = parse_string(&value).expect("scientificName is mandatory")
+    }
+
+    // set the optional fields for the name data. it wont overwrite existing names
+    // but new names will prserve these values indefinitely
+    let attr_names = df.get_column_names();
+    let attributes = find_attributes(&attr_names, conn)?;
+
+    for attribute in &attributes {
+        let series = df.column(&attribute.name)?;
+        info!(name = attribute.name, "Enumerating column");
+
+        match attribute.name.as_str() {
+            "ibraRegions" => for (idx, value) in series.iter().enumerate() {
+                rows[idx].ibra = parse_array(&value);
+            },
+            "imcraRegions" => for (idx, value) in series.iter().enumerate() {
+                rows[idx].imcra = parse_array(&value);
+            },
+            _ => {}
+        }
+    }
+
+    info!(total=rows.len(), "Importing regions");
+    use schema::{regions, names};
+
+    let mut total = 0;
+    for chunk in rows.chunks(10_000) {
+        info!(rows = chunk.len(), "Inserting into regions");
+
+        let mut id_map: HashMap<String, Uuid> = HashMap::new();
+        let all_names: Vec<&String> = rows.iter().map(|row| &row.scientific_name).collect();
+
+        let results = names::table
+            .select((names::id, names::scientific_name))
+            .filter(names::scientific_name.eq_any(all_names))
+            .load::<(Uuid, String)>(conn)?;
+
+        for (uuid, name) in results {
+            id_map.insert(name, uuid);
+        }
+
+        let mut values = Vec::new();
+        for row in chunk {
+            if let Some(uuid) = id_map.get(&row.scientific_name) {
+                if let Some(value) = &row.ibra {
+                    values.push(Regions {
+                        id: Uuid::new_v4(),
+                        name_id: uuid.clone(),
+                        region_type: RegionType::Ibra,
+                        values: value.clone(),
+                    });
+                }
+                if let Some(value) = &row.imcra {
+                    values.push(Regions {
+                        id: Uuid::new_v4(),
+                        name_id: uuid.clone(),
+                        region_type: RegionType::Imcra,
+                        values: value.clone(),
+                    });
+                }
+            }
+        }
+
+        let inserted_rows = diesel::insert_into(regions::table)
+            .values(values)
+            .execute(conn)?;
+
+        info!(inserted_rows, "Inserted into regions");
+        total += inserted_rows;
+    }
+
+    info!(total, "Finished importing regions");
+    Ok(())
 }
 
 

@@ -14,8 +14,10 @@ use serde::{Serialize, Deserialize};
 
 
 /// Taxonomic information of a species.
-#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject, Default)]
 pub struct Taxonomy {
+    /// The species scientific name.
+    pub scientific_name: String,
     /// The species name without authors.
     pub canonical_name: Option<String>,
     /// The species name author.

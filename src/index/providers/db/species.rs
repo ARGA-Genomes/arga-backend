@@ -3,11 +3,10 @@ use async_trait::async_trait;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
-use uuid::Uuid;
 
 use crate::index::species::{self, GetSpecies, Taxonomy, GetRegions, GetMedia};
-use crate::index::providers::db::models::Media;
-use super::{Database, Error, Taxon};
+use crate::index::providers::db::models::{Name, UserTaxon, RegionType, TaxonPhoto};
+use super::{Database, Error};
 
 
 #[derive(Queryable, Debug)]
@@ -37,25 +36,37 @@ impl GetSpecies for Database {
     type Error = Error;
 
     async fn taxonomy(&self, name: &str) -> Result<Taxonomy, Error> {
-        use crate::schema_gnl::gnl::dsl::*;
+        use crate::schema::names::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let taxon = gnl
-            .select((
-                scientific_name_authorship,
-                canonical_name,
-                kingdom,
-                phylum,
-                class,
-                order,
-                family,
-                genus,
-            ))
-            .filter(taxon_rank.eq("species"))
+        let name = names
             .filter(canonical_name.eq(name))
-            .first::<Taxon>(&mut conn).await?;
+            .filter(rank.eq("species"))
+            .first::<Name>(&mut conn).await?;
 
-        Ok(Taxonomy::from(taxon))
+        let mut taxonomy = Taxonomy {
+            scientific_name: name.scientific_name,
+            canonical_name: name.canonical_name,
+            authorship: name.authorship,
+            ..Default::default()
+        };
+
+        use crate::schema::user_taxa;
+        let taxa = user_taxa::table
+            .filter(user_taxa::name_id.eq(name.id))
+            .load::<UserTaxon>(&mut conn)
+            .await?;
+
+        for taxon in taxa {
+            taxonomy.kingdom = taxon.kingdom;
+            taxonomy.phylum = taxon.phylum;
+            taxonomy.class = taxon.class;
+            taxonomy.order = taxon.order;
+            taxonomy.family = taxon.family;
+            taxonomy.genus = taxon.genus;
+        }
+
+        Ok(taxonomy)
     }
 
     async fn distribution(&self, name: &str) -> Result<Vec<species::Distribution>, Error> {
@@ -81,20 +92,20 @@ impl GetSpecies for Database {
 }
 
 
+
 #[async_trait]
 impl GetRegions for Database {
     type Error = Error;
 
     async fn ibra(&self, name: &str) -> Result<Vec<species::Region>, Error> {
-        use crate::schema_gnl::eav_arrays::dsl::{eav_arrays, entity_id, value, name as attr};
-        use crate::schema_gnl::gnl::dsl::*;
+        use crate::schema::{names, regions};
         let mut conn = self.pool.get().await?;
 
-        let regions = eav_arrays
-            .inner_join(gnl.on(entity_id.eq(id)))
-            .select(value)
-            .filter(attr.eq("ibraRegions"))
-            .filter(canonical_name.eq(name))
+        let regions = regions::table
+            .inner_join(names::table)
+            .select(regions::values)
+            .filter(names::canonical_name.eq(name))
+            .filter(regions::region_type.eq(RegionType::Ibra))
             .load::<Vec<Option<String>>>(&mut conn)
             .await?;
 
@@ -113,15 +124,14 @@ impl GetRegions for Database {
     }
 
     async fn imcra(&self, name: &str) -> Result<Vec<species::Region>, Error> {
-        use crate::schema_gnl::eav_arrays::dsl::{eav_arrays, entity_id, value, name as attr};
-        use crate::schema_gnl::gnl::dsl::*;
+        use crate::schema::{names, regions};
         let mut conn = self.pool.get().await?;
 
-        let regions = eav_arrays
-            .inner_join(gnl.on(entity_id.eq(id)))
-            .select(value)
-            .filter(attr.eq("imcraRegions"))
-            .filter(canonical_name.eq(name))
+        let regions = regions::table
+            .inner_join(names::table)
+            .select(regions::values)
+            .filter(names::canonical_name.eq(name))
+            .filter(regions::region_type.eq(RegionType::Imcra))
             .load::<Vec<Option<String>>>(&mut conn)
             .await?;
 
@@ -146,37 +156,25 @@ impl GetMedia for Database {
     type Error = Error;
 
     async fn photos(&self, name: &str) -> Result<Vec<species::Photo>, Error> {
-        use crate::schema_gnl::eav_strings::dsl::{eav_strings, entity_id, value, name as attr};
-        use crate::schema_gnl::gnl::dsl::{gnl, canonical_name, id as gnl_id};
+        use crate::schema::{names, taxon_photos};
         let mut conn = self.pool.get().await?;
 
-        let uuids = eav_strings
-            .inner_join(gnl.on(entity_id.eq(gnl_id)))
-            .select(value)
-            .filter(attr.eq("curatedMainImage"))
-            .filter(canonical_name.eq(name))
-            .load::<String>(&mut conn)
-            .await?;
-
-        let uuids = uuids.iter().map(|uuid| Uuid::parse_str(uuid).unwrap()).collect::<Vec<Uuid>>();
-
-        use crate::schema::media::dsl::*;
-        let records = media
-            .filter(id.eq_any(uuids))
-            .load::<Media>(&mut conn)
+        let records = taxon_photos::table
+            .select(taxon_photos::all_columns)
+            .inner_join(names::table)
+            .filter(names::canonical_name.eq(name))
+            .load::<TaxonPhoto>(&mut conn)
             .await?;
 
         let mut photos = Vec::with_capacity(records.len());
         for record in records {
-            if let Some(url) = record.identifier {
-                photos.push(species::Photo {
-                    url,
-                    publisher: record.publisher,
-                    license: record.license,
-                    rights_holder: record.rights_holder,
-                    reference_url: record.references,
-                })
-            }
+            photos.push(species::Photo {
+                url: record.url,
+                publisher: record.publisher,
+                license: record.license,
+                rights_holder: record.rights_holder,
+                reference_url: record.source,
+            });
         }
 
         Ok(photos)
