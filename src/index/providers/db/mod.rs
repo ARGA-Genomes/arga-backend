@@ -15,6 +15,7 @@ use diesel_async::AsyncPgConnection;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::pooled_connection::bb8::Pool;
 
+use crate::http::Error as HttpError;
 use crate::index::Taxonomy;
 
 
@@ -26,6 +27,22 @@ pub enum Error {
     Pool(#[from] diesel_async::pooled_connection::PoolError),
     #[error("internal database pool error")]
     GetPool(#[from] diesel_async::pooled_connection::bb8::RunError),
+}
+
+impl From<diesel::result::Error> for HttpError {
+    fn from(err: diesel::result::Error) -> Self {
+        HttpError::Database(Error::Connection(err))
+    }
+}
+impl From<diesel_async::pooled_connection::PoolError> for HttpError {
+    fn from(err: diesel_async::pooled_connection::PoolError) -> Self {
+        HttpError::Database(Error::Pool(err))
+    }
+}
+impl From<diesel_async::pooled_connection::bb8::RunError> for HttpError {
+    fn from(err: diesel_async::pooled_connection::bb8::RunError) -> Self {
+        HttpError::Database(Error::GetPool(err))
+    }
 }
 
 

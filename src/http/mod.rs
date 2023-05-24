@@ -21,7 +21,7 @@ pub mod health;
 pub mod admin;
 pub mod auth;
 
-use error::Error;
+pub use error::Error;
 
 
 #[derive(Clone)]

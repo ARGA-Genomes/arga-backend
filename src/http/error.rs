@@ -8,6 +8,9 @@ pub enum Error {
     #[error("missing the '{0}' parameter in the request")]
     MissingParam(String),
 
+    #[error("the resource '{0}' could not found")]
+    NotFound(String),
+
     #[error("invalid configuration value for {0}. value = {1}")]
     Configuration(String, String),
 
@@ -32,6 +35,7 @@ impl Error {
     fn status_code(&self) -> StatusCode {
         match self {
             Error::MissingParam(_) => StatusCode::BAD_REQUEST,
+            Error::NotFound(_) => StatusCode::NOT_FOUND,
 
             Error::Configuration(_, _) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Authentication => StatusCode::INTERNAL_SERVER_ERROR,

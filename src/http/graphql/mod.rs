@@ -11,13 +11,14 @@ use axum::{Extension, Router};
 use axum::response::IntoResponse;
 use axum::routing::get;
 
-use async_graphql::{Object, EmptySubscription, EmptyMutation, Schema};
+use async_graphql::{Object, EmptySubscription, EmptyMutation, Schema, Context};
 use async_graphql::extensions::Tracing;
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 
+
 use crate::features::Features;
-use crate::http::Context;
+use crate::http::Context as State;
 use self::overview::Overview;
 use self::search::Search;
 use self::family::Family;
@@ -26,6 +27,8 @@ use self::species::Species;
 use self::stats::Statistics;
 use self::maps::Maps;
 use self::extensions::ErrorLogging;
+
+use super::error::Error;
 
 
 pub type ArgaSchema = Schema<Query, EmptyMutation, EmptySubscription>;
@@ -46,8 +49,9 @@ impl Query {
         Search {}
     }
 
-    async fn species(&self, canonical_name: String) -> Species {
-        Species { canonical_name }
+    async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<Species, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Species::new(&state.db_provider, canonical_name).await
     }
 
     async fn family(&self, family: String) -> Family {
@@ -72,11 +76,11 @@ impl Query {
 /// Defines the graphql resolvers and sets up the context
 /// and middleware. This is the entry point to our graphql api
 /// like the root router does for http requests.
-pub(crate) fn schema(context: Context) -> ArgaSchema {
-    let with_tracing = context.features.is_enabled(Features::OpenTelemetry);
+pub(crate) fn schema(state: State) -> ArgaSchema {
+    let with_tracing = state.features.is_enabled(Features::OpenTelemetry);
 
     let mut builder = Schema::build(Query, EmptyMutation, EmptySubscription)
-        .data(context)
+        .data(state)
         .extension(ErrorLogging);
 
     if let Ok(true) = with_tracing {
@@ -100,8 +104,8 @@ async fn graphql_ide() -> impl IntoResponse {
 
 /// The router enabling the graphql extension and passes
 /// requests to the handler.
-pub(crate) fn router(context: Context) -> Router<Context> {
-    let schema = schema(context);
+pub(crate) fn router(state: State) -> Router<State> {
+    let schema = schema(state);
     Router::new()
         .route("/api", get(graphql_ide).post(graphql_handler))
         .layer(Extension(schema))

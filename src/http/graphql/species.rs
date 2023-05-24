@@ -5,16 +5,41 @@ use tracing::instrument;
 use crate::http::Error;
 use crate::http::Context as State;
 
+use crate::index::providers::db::Database;
 use crate::index::species::{Taxonomy, Distribution, GenomicData, Region, Photo};
 use crate::index::species::{GetSpecies, GetGenomicData, GetRegions, GetMedia};
+
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
+
+use crate::index::providers::db::models::Name as ArgaName;
 
 
 pub struct Species {
     pub canonical_name: String,
+    pub name: ArgaName,
 }
 
 #[Object]
 impl Species {
+    #[graphql(skip)]
+    pub async fn new(db: &Database, canonical_name: String) -> Result<Species, Error> {
+        use crate::schema::names;
+        let mut conn = db.pool.get().await?;
+
+        let name = names::table
+            .filter(names::canonical_name.eq(&canonical_name))
+            .filter(names::rank.eq("species"))
+            .get_result::<ArgaName>(&mut conn)
+            .await;
+
+        if let Err(diesel::result::Error::NotFound) = name {
+            return Err(Error::NotFound(canonical_name));
+        }
+
+        Ok(Species { canonical_name, name: name? })
+    }
+
     #[instrument(skip(self, ctx))]
     async fn taxonomy(&self, ctx: &Context<'_>) -> Result<Taxonomy, Error> {
         let state = ctx.data::<State>().unwrap();
