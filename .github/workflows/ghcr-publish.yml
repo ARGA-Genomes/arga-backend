@@ -55,14 +55,14 @@ jobs:
       - name: Build
         run: cargo install --path .
 
-      # - name: Build container image
-      #   id: build-image
-      #   uses: redhat-actions/buildah-build@v2
-      #   with:
-      #     image: ${{ env.IMAGE_NAME }}
-      #     tags: latest ${{ github.sha }}
-      #     containerfiles: |
-      #       ./Containerfile
+      - name: Build container image
+        id: build-image
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          tags: latest ${{ github.sha }}
+          containerfiles: |
+            ./Containerfile
 
       # - name: Push to GitHub container registry
       #   id: push-to-ghcr
