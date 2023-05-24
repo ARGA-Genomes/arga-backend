@@ -35,19 +35,13 @@ impl From<Distribution> for species::Distribution {
 impl GetSpecies for Database {
     type Error = Error;
 
-    async fn taxonomy(&self, name: &str) -> Result<Taxonomy, Error> {
-        use crate::schema::names::dsl::*;
+    async fn taxonomy(&self, name: &Name) -> Result<Taxonomy, Error> {
         let mut conn = self.pool.get().await?;
 
-        let name = names
-            .filter(canonical_name.eq(name))
-            .filter(rank.eq("species"))
-            .first::<Name>(&mut conn).await?;
-
         let mut taxonomy = Taxonomy {
-            scientific_name: name.scientific_name,
-            canonical_name: name.canonical_name,
-            authorship: name.authorship,
+            scientific_name: name.scientific_name.clone(),
+            canonical_name: name.canonical_name.clone(),
+            authorship: name.authorship.clone(),
             ..Default::default()
         };
 
@@ -97,14 +91,13 @@ impl GetSpecies for Database {
 impl GetRegions for Database {
     type Error = Error;
 
-    async fn ibra(&self, name: &str) -> Result<Vec<species::Region>, Error> {
-        use crate::schema::{names, regions};
+    async fn ibra(&self, name: &Name) -> Result<Vec<species::Region>, Error> {
+        use crate::schema::regions;
         let mut conn = self.pool.get().await?;
 
         let regions = regions::table
-            .inner_join(names::table)
             .select(regions::values)
-            .filter(names::canonical_name.eq(name))
+            .filter(regions::name_id.eq(name.id))
             .filter(regions::region_type.eq(RegionType::Ibra))
             .load::<Vec<Option<String>>>(&mut conn)
             .await?;
@@ -123,14 +116,13 @@ impl GetRegions for Database {
         Ok(filtered)
     }
 
-    async fn imcra(&self, name: &str) -> Result<Vec<species::Region>, Error> {
-        use crate::schema::{names, regions};
+    async fn imcra(&self, name: &Name) -> Result<Vec<species::Region>, Error> {
+        use crate::schema::regions;
         let mut conn = self.pool.get().await?;
 
         let regions = regions::table
-            .inner_join(names::table)
             .select(regions::values)
-            .filter(names::canonical_name.eq(name))
+            .filter(regions::name_id.eq(name.id))
             .filter(regions::region_type.eq(RegionType::Imcra))
             .load::<Vec<Option<String>>>(&mut conn)
             .await?;
@@ -155,14 +147,12 @@ impl GetRegions for Database {
 impl GetMedia for Database {
     type Error = Error;
 
-    async fn photos(&self, name: &str) -> Result<Vec<species::Photo>, Error> {
-        use crate::schema::{names, taxon_photos};
+    async fn photos(&self, name: &Name) -> Result<Vec<species::Photo>, Error> {
+        use crate::schema::taxon_photos::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let records = taxon_photos::table
-            .select(taxon_photos::all_columns)
-            .inner_join(names::table)
-            .filter(names::canonical_name.eq(name))
+        let records = taxon_photos
+            .filter(name_id.eq(name.id))
             .load::<TaxonPhoto>(&mut conn)
             .await?;
 

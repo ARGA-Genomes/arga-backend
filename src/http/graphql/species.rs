@@ -43,7 +43,7 @@ impl Species {
     #[instrument(skip(self, ctx))]
     async fn taxonomy(&self, ctx: &Context<'_>) -> Result<Taxonomy, Error> {
         let state = ctx.data::<State>().unwrap();
-        let taxonomy = state.db_provider.taxonomy(&self.canonical_name).await?;
+        let taxonomy = state.db_provider.taxonomy(&self.name).await?;
 
         Ok(taxonomy)
     }
@@ -58,13 +58,13 @@ impl Species {
 
     #[instrument(skip(self, _ctx))]
     async fn regions(&self, _ctx: &Context<'_>) -> Regions {
-        Regions { canonical_name: self.canonical_name.clone() }
+        Regions { name: self.name.clone() }
     }
 
     #[instrument(skip(self, ctx))]
     async fn data(&self, ctx: &Context<'_>) -> Result<Vec<GenomicData>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let taxonomy = state.db_provider.taxonomy(&self.canonical_name).await?;
+        let taxonomy = state.db_provider.taxonomy(&self.name).await?;
 
         let data = if let Some(canonical_name) = taxonomy.canonical_name {
             state.provider.genomic_data(&canonical_name).await?
@@ -78,14 +78,14 @@ impl Species {
     #[instrument(skip(self, ctx))]
     async fn photos(&self, ctx: &Context<'_>) -> Result<Vec<Photo>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let photos = state.db_provider.photos(&self.canonical_name).await?;
+        let photos = state.db_provider.photos(&self.name).await?;
         Ok(photos)
     }
 }
 
 
 pub struct Regions {
-    canonical_name: String,
+    name: ArgaName,
 }
 
 #[Object]
@@ -93,14 +93,14 @@ impl Regions {
     #[instrument(skip(self, ctx))]
     async fn ibra(&self, ctx: &Context<'_>) -> Result<Vec<Region>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let regions = state.db_provider.ibra(&self.canonical_name).await?;
+        let regions = state.db_provider.ibra(&self.name).await?;
         Ok(regions)
     }
 
     #[instrument(skip(self, ctx))]
     async fn imcra(&self, ctx: &Context<'_>) -> Result<Vec<Region>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let regions = state.db_provider.imcra(&self.canonical_name).await?;
+        let regions = state.db_provider.imcra(&self.name).await?;
         Ok(regions)
     }
 }

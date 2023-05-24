@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 
 pub use super::Taxonomy;
+use super::providers::db::models::Name;
 
 
 /// The distribution of a species in a specific locality.
@@ -29,7 +30,7 @@ pub trait GetSpecies {
     type Error;
 
     /// Get taxonomic information for a specific species.
-    async fn taxonomy(&self, canonical_name: &str) -> Result<Taxonomy, Self::Error>;
+    async fn taxonomy(&self, name: &Name) -> Result<Taxonomy, Self::Error>;
     /// Get location and status details of a specific species.
     async fn distribution(&self, canonical_name: &str) -> Result<Vec<Distribution>, Self::Error>;
 }
@@ -53,10 +54,10 @@ pub trait GetRegions {
     type Error;
 
     /// Get the IBRA regions for the specified species.
-    async fn ibra(&self, canonical_name: &str) -> Result<Vec<Region>, Self::Error>;
+    async fn ibra(&self, name: &Name) -> Result<Vec<Region>, Self::Error>;
 
     /// Get the IMCRA regions for the specified species.
-    async fn imcra(&self, canonical_name: &str) -> Result<Vec<Region>, Self::Error>;
+    async fn imcra(&self, name: &Name) -> Result<Vec<Region>, Self::Error>;
 }
 
 
@@ -102,5 +103,5 @@ pub trait GetMedia {
     type Error;
 
     /// Get media photos assigned to the species taxon.
-    async fn photos(&self, canonical_name: &str) -> Result<Vec<Photo>, Self::Error>;
+    async fn photos(&self, name: &Name) -> Result<Vec<Photo>, Self::Error>;
 }
