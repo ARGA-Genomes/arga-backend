@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
+use tracing::{instrument, info};
 
 use crate::index::species::{self, GetSpecies, Taxonomy, GetRegions, GetMedia};
 use crate::index::providers::db::models::{Name, UserTaxon, RegionType, TaxonPhoto};
@@ -35,7 +36,9 @@ impl From<Distribution> for species::Distribution {
 impl GetSpecies for Database {
     type Error = Error;
 
+    #[instrument(skip(self))]
     async fn taxonomy(&self, name: &Name) -> Result<Taxonomy, Error> {
+        info!(?name, "getting taxonomy details");
         let mut conn = self.pool.get().await?;
 
         let mut taxonomy = Taxonomy {

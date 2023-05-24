@@ -17,16 +17,17 @@ pub enum Error {
     #[error("an authentication error occurred")]
     Authentication,
 
-    #[error("an internal server error occurred")]
+    #[error(transparent)]
     Internal(#[from] anyhow::Error),
 
-    #[error("an error occurred with the solr search service")]
+    #[error(transparent)]
     Solr(#[from] crate::index::providers::solr::Error),
 
-    #[error("an error occurred with the database service")]
+    // #[error("an error occurred with the database service")]
+    #[error(transparent)]
     Database(#[from] crate::index::providers::db::Error),
 
-    #[error("an error occurred with the search index service")]
+    #[error(transparent)]
     SearchIndex(#[from] crate::index::providers::search::Error),
 }
 

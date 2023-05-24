@@ -27,7 +27,8 @@ impl Extension for ErrorLoggingExtension {
     ) -> ServerResult<Option<Value>> {
         let fut = next.run(ctx, info).inspect_err(|err| {
             tracing::error!(
-                target: "async_graphql::graphql",
+                target: "arga_backend::http",
+                message = %err,
                 error = ?err,
             );
         });

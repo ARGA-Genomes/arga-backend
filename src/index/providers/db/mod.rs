@@ -21,11 +21,11 @@ use crate::index::Taxonomy;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("internal database error")]
+    #[error(transparent)]
     Connection(#[from] diesel::result::Error),
-    #[error("internal database pool error")]
+    #[error(transparent)]
     Pool(#[from] diesel_async::pooled_connection::PoolError),
-    #[error("internal database pool error")]
+    #[error(transparent)]
     GetPool(#[from] diesel_async::pooled_connection::bb8::RunError),
 }
 

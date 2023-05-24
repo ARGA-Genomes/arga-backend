@@ -8,7 +8,7 @@ use client::AlaClient;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("internal request error")]
+    #[error(transparent)]
     Request(#[from] reqwest::Error),
 }
 
