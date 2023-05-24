@@ -38,7 +38,6 @@ impl GetSpecies for Database {
 
     #[instrument(skip(self))]
     async fn taxonomy(&self, name: &Name) -> Result<Taxonomy, Error> {
-        info!(?name, "getting taxonomy details");
         let mut conn = self.pool.get().await?;
 
         let mut taxonomy = Taxonomy {
