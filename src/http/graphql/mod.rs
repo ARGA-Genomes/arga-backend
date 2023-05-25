@@ -5,6 +5,7 @@ pub mod genus;
 pub mod species;
 pub mod stats;
 pub mod maps;
+pub mod lists;
 pub mod extensions;
 
 use axum::{Extension, Router};
@@ -26,6 +27,7 @@ use self::genus::Genus;
 use self::species::Species;
 use self::stats::Statistics;
 use self::maps::Maps;
+use self::lists::Lists;
 use self::extensions::ErrorLogging;
 
 use super::error::Error;
@@ -68,6 +70,11 @@ impl Query {
 
     async fn maps(&self, tolerance: Option<f32>) -> Maps {
         Maps { tolerance }
+    }
+
+    async fn lists(&self, ctx: &Context<'_>, name: String) -> Result<Lists, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Lists::new(&state.db_provider, name).await
     }
 }
 

@@ -7,6 +7,7 @@ pub mod family;
 pub mod species;
 pub mod stats;
 pub mod maps;
+pub mod lists;
 
 
 use async_graphql::SimpleObject;

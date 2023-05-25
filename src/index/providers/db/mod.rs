@@ -4,6 +4,7 @@ pub mod genus;
 pub mod species;
 pub mod stats;
 pub mod maps;
+pub mod lists;
 pub mod models;
 
 use diesel::{ConnectionResult, Queryable};

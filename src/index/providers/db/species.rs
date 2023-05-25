@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
-use tracing::{instrument, info};
+use tracing::instrument;
 
 use crate::index::species::{self, GetSpecies, Taxonomy, GetRegions, GetMedia};
 use crate::index::providers::db::models::{Name, UserTaxon, RegionType, TaxonPhoto};
