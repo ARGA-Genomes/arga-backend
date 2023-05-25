@@ -10,4 +10,4 @@ EXPOSE 5000
 CMD ["arga-backend"]
 
 RUN apt-get update && apt-get install -y libpq-dev && rm -rf /var/lib/apt/lists/*
-COPY /home/runner/.cargo/bin/arga-backend /usr/local/bin/arga-backend
+COPY ./target/release/arga-backend /usr/local/bin/arga-backend
