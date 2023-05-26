@@ -74,7 +74,13 @@ pub struct GenomicData {
     pub accession: Option<String>,
     pub accession_uri: Option<String>,
     pub refseq_category: Option<String>,
+    pub coordinates: Option<GeoCoordinates>,
+}
 
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
+pub struct GeoCoordinates {
+    pub latitude: f32,
+    pub longitude: f32,
 }
 
 #[async_trait]

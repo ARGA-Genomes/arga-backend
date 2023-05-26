@@ -1,7 +1,10 @@
+use tracing::warn;
+
 use async_trait::async_trait;
+use polars::prelude::IntoVec;
 use serde::Deserialize;
 
-use crate::index::species::{GetGenomicData, GenomicData};
+use crate::index::species::{GetGenomicData, GenomicData, GeoCoordinates};
 use super::{Solr, Error};
 
 
@@ -55,10 +58,27 @@ struct SolrData {
     accession_uri: Option<String>,
     #[serde(rename(deserialize = "dynamicProperties_ncbi_refseq_category"))]
     refseq_category: Option<String>,
+
+    #[serde(rename(deserialize = "lat_long"))]
+    lat_long: Option<String>,
 }
 
 impl From<SolrData> for GenomicData {
     fn from(source: SolrData) -> Self {
+        // coordinates are indexed as a string so we parse it and convert
+        // to an f32 tuple for easier consumption
+        let coordinates = match source.lat_long {
+            None => None,
+            // log parse failures but dont consider it a request error
+            Some(value) => match parse_coordinates(&value) {
+                Ok(coordinates) => coordinates,
+                Err(error) => {
+                    warn!(value, ?error, "failed to parse lat lng");
+                    None
+                }
+            }
+        };
+
         Self {
             canonical_name: source.raw_scientific_name,
             r#type: source.basis_of_record,
@@ -70,6 +90,20 @@ impl From<SolrData> for GenomicData {
             accession: source.accession,
             accession_uri: source.accession_uri,
             refseq_category: source.refseq_category,
+            coordinates,
         }
+    }
+}
+
+fn parse_coordinates(value: &str) -> Result<Option<GeoCoordinates>, anyhow::Error> {
+    let coordinates: Vec<String> = value.split(",").into_vec();
+
+    if coordinates.len() == 2 {
+        Ok(Some(GeoCoordinates {
+            latitude: coordinates[0].parse::<f32>()?,
+            longitude: coordinates[1].parse::<f32>()?,
+        }))
+    } else {
+        Ok(None)
     }
 }
