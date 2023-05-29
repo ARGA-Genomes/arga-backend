@@ -65,6 +65,7 @@ struct NewJob {
 #[derive(Debug, Deserialize)]
 struct QueueForm {
     name: String,
+    worker: Option<String>,
     description: Option<String>,
     file: String,
 }
@@ -93,7 +94,7 @@ async fn queue_csv(
 
     diesel::insert_into(jobs)
         .values(&NewJob {
-            worker: "import_csv".into(),
+            worker: form.worker.unwrap_or("import_csv".to_string()),
             payload: Some(import_data),
         })
         .execute(&mut conn)
