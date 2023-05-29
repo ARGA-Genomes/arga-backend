@@ -6,7 +6,7 @@ LABEL org.opencontainers.image.licenses="AGPL-3.0"
 WORKDIR /usr/src/arga-backend
 RUN apt-get update && apt-get install -y protobuf-compiler libpq-dev && rm -rf /var/lib/apt/lists/*
 COPY . .
-RUN cargo install --path .
+RUN cargo install --path . --locked
 
 FROM debian:bullseye-slim
 LABEL org.opencontainers.image.source="https://github.com/ARGA-Genomes/arga-backend"
