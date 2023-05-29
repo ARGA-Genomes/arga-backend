@@ -8,22 +8,22 @@ use crate::index::lists::{GetListNames, GetListTaxa, GetListPhotos};
 use crate::index::providers::db::models::UserTaxon;
 
 use super::{Database, Error};
-use super::models::{UserTaxaList, Name, TaxonPhoto};
+use super::models::{NameList, Name, TaxonPhoto};
 
 
 #[async_trait]
 impl GetListNames for Database {
     type Error = Error;
 
-    async fn list_names(&self, list: &UserTaxaList) -> Result<Vec<Name>, Self::Error> {
+    async fn list_names(&self, list: &NameList) -> Result<Vec<Name>, Self::Error> {
         use crate::schema::names;
-        use crate::schema::user_taxa;
+        use crate::schema::conservation_statuses;
         let mut conn = self.pool.get().await?;
 
-        let records = user_taxa::table
+        let records = conservation_statuses::table
             .inner_join(names::table)
             .select(names::all_columns)
-            .filter(user_taxa::taxa_lists_id.eq(list.id))
+            .filter(conservation_statuses::list_id.eq(list.id))
             .order_by(names::scientific_name)
             .limit(20)
             .load::<Name>(&mut conn)

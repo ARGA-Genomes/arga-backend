@@ -14,6 +14,10 @@ pub mod sql_types {
     pub struct JobStatus;
 
     #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "name_list_type"))]
+    pub struct NameListType;
+
+    #[derive(diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "region_type"))]
     pub struct RegionType;
 }
@@ -28,6 +32,17 @@ diesel::table! {
         data_type -> AttributeDataType,
         description -> Nullable<Text>,
         reference_url -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
+    conservation_statuses (id) {
+        id -> Uuid,
+        list_id -> Uuid,
+        name_id -> Uuid,
+        status -> Varchar,
+        state -> Nullable<Varchar>,
+        source -> Nullable<Varchar>,
     }
 }
 
@@ -113,6 +128,18 @@ diesel::table! {
         event_date -> Nullable<Timestamptz>,
         license -> Nullable<Varchar>,
         rights_holder -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::NameListType;
+
+    name_lists (id) {
+        id -> Uuid,
+        list_type -> NameListType,
+        name -> Varchar,
+        description -> Nullable<Text>,
     }
 }
 
@@ -310,6 +337,8 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(conservation_statuses -> name_lists (list_id));
+diesel::joinable!(conservation_statuses -> names (name_id));
 diesel::joinable!(name_vernacular_names -> names (name_id));
 diesel::joinable!(name_vernacular_names -> vernacular_names (vernacular_name_id));
 diesel::joinable!(regions -> names (name_id));
@@ -319,11 +348,13 @@ diesel::joinable!(user_taxa -> user_taxa_lists (taxa_lists_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     attributes,
+    conservation_statuses,
     distribution,
     ibra,
     jobs,
     media,
     media_observations,
+    name_lists,
     name_vernacular_names,
     names,
     object_values_array,

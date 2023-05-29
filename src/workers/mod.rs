@@ -1,6 +1,7 @@
 mod manager;
-mod taxa_importer;
 mod tokio_bridge;
+mod taxa_importer;
+mod conservation_status_importer;
 
 use std::time::{Instant, Duration};
 

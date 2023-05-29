@@ -16,15 +16,19 @@ use crate::index::Taxonomy;
 use crate::index::lists::GetListNames;
 use crate::index::lists::GetListPhotos;
 use crate::index::lists::GetListTaxa;
+use crate::index::lists::ListDataSummary;
 use crate::index::providers::db::Database;
+use crate::index::providers::db::models::NameList;
 use crate::index::providers::db::models::TaxonPhoto;
-use crate::index::providers::db::models::{UserTaxaList, Name as ArgaName};
+use crate::index::providers::db::models::Name as ArgaName;
+use crate::index::stats::GetSpeciesStats;
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
 pub struct ListSpecies {
     pub taxonomy: Taxonomy,
     pub photo: Option<SpeciesPhoto>,
+    pub data_summary: ListDataSummary,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
@@ -49,7 +53,7 @@ impl From<TaxonPhoto> for SpeciesPhoto {
 }
 
 pub struct Lists {
-    pub list: UserTaxaList,
+    pub list: NameList,
     pub names: Vec<ArgaName>,
 }
 
@@ -57,12 +61,12 @@ pub struct Lists {
 impl Lists {
     #[graphql(skip)]
     pub async fn new(db: &Database, name: String) -> Result<Lists, Error> {
-        use crate::schema::user_taxa_lists as lists;
+        use crate::schema::name_lists as lists;
         let mut conn = db.pool.get().await?;
 
         let list = lists::table
             .filter(lists::name.eq(&name))
-            .get_result::<UserTaxaList>(&mut conn)
+            .get_result::<NameList>(&mut conn)
             .await;
 
         if let Err(diesel::result::Error::NotFound) = list {
@@ -81,6 +85,9 @@ impl Lists {
 
         let mut species: HashMap<Uuid, ListSpecies> = HashMap::new();
 
+        // get the taxonomic information for all the names associated with the list
+        // we also stub out the ListSpecies struct to make the rest of the data
+        // association easier by mapping the name uuid to a final struct output
         let taxa = state.db_provider.list_taxa(&self.names).await?;
         for taxon in taxa {
             let taxonomy = Taxonomy {
@@ -98,9 +105,11 @@ impl Lists {
             species.insert(taxon.name_id, ListSpecies {
                 taxonomy,
                 photo: None,
+                data_summary: ListDataSummary::default(),
             });
         }
 
+        // assign the photo associated with the name
         let photos = state.db_provider.list_photos(&self.names).await?;
         for photo in photos.into_iter() {
             if let Some(item) = species.get_mut(&photo.name_id) {
@@ -108,6 +117,20 @@ impl Lists {
             }
         }
 
+        // assign the data summary associated with the name
+        let stats = state.provider.species_stats(&self.names).await?;
+        for stat in stats.into_iter() {
+            if let Some(item) = species.get_mut(&stat.name.id) {
+                item.data_summary = ListDataSummary {
+                    whole_genomes: stat.whole_genomes,
+                    mitogenomes: stat.mitogenomes,
+                    barcodes: stat.barcodes,
+                    other: stat.total - stat.whole_genomes - stat.mitogenomes - stat.barcodes,
+                }
+            }
+        }
+
+        // sort by name and output the combined species data
         let mut species: Vec<ListSpecies> = species.into_values().collect();
         species.sort_by(|a, b| a.taxonomy.scientific_name.cmp(&b.taxonomy.scientific_name));
         Ok(species)

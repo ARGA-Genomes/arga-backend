@@ -2,6 +2,35 @@ use async_trait::async_trait;
 use async_graphql::SimpleObject;
 use serde::{Serialize, Deserialize};
 
+use super::providers::db::models::Name;
+
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeciesStats {
+    /// The name that the statistics are associated with
+    pub name: Name,
+    /// The total amount of genomic data associated with the species
+    pub total: usize,
+    /// The total amount of whole genomes available, including reference sequences
+    pub whole_genomes: usize,
+    /// The total amount of mitogenomes available
+    pub mitogenomes: usize,
+    /// The total amount of barcodes avaialble
+    pub barcodes: usize,
+}
+
+/// Gets stats for a specific genus.
+///
+/// Providers implementing this trait will calculate both simple
+/// and detailed statistics about a genus.
+#[async_trait]
+pub trait GetSpeciesStats {
+    type Error;
+    async fn species_stats(&self, species: &Vec<Name>) -> Result<Vec<SpeciesStats>, Self::Error>;
+}
+
+
 
 #[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

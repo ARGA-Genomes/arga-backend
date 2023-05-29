@@ -386,3 +386,32 @@ pub struct TaxonPhoto {
     pub license: Option<String>,
     pub rights_holder: Option<String>,
 }
+
+
+#[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "crate::schema::sql_types::NameListType"]
+pub enum NameListType {
+    Regions,
+    ConservationStatus,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::name_lists)]
+pub struct NameList {
+    pub id: Uuid,
+    pub list_type: NameListType,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::conservation_statuses)]
+pub struct ConservationStatus {
+    pub id: Uuid,
+    pub list_id: Uuid,
+    pub name_id: Uuid,
+    pub status: String,
+    pub state: Option<String>,
+    pub source: Option<String>,
+}
