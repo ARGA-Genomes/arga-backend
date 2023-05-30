@@ -20,6 +20,7 @@ use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 
 use crate::features::Features;
 use crate::http::Context as State;
+use crate::index::lists::{Filters, Pagination};
 use self::overview::Overview;
 use self::search::Search;
 use self::family::Family;
@@ -27,7 +28,7 @@ use self::genus::Genus;
 use self::species::Species;
 use self::stats::Statistics;
 use self::maps::Maps;
-use self::lists::Lists;
+use self::lists::{Lists, FilterItem};
 use self::extensions::ErrorLogging;
 
 use super::error::Error;
@@ -72,9 +73,26 @@ impl Query {
         Maps { tolerance }
     }
 
-    async fn lists(&self, ctx: &Context<'_>, name: String) -> Result<Lists, Error> {
+    async fn lists(
+        &self,
+        ctx: &Context<'_>,
+        name: String,
+        filters: Option<Vec<FilterItem>>,
+        pagination: Option<Pagination>,
+    ) -> Result<Lists, Error>
+    {
         let state = ctx.data::<State>().unwrap();
-        Lists::new(&state.db_provider, name).await
+
+        let filters = match filters {
+            Some(items) => Filters {
+                items: items.into_iter().map(|item| item.into()).collect(),
+            },
+            None => Filters::default(),
+        };
+
+        let pagination = pagination.unwrap_or_else(|| Pagination { page: 1, page_size: 20 });
+
+        Lists::new(&state.db_provider, name, filters, pagination).await
     }
 }
 

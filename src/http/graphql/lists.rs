@@ -13,15 +13,55 @@ use uuid::Uuid;
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::Taxonomy;
+use crate::index::lists::Filters;
 use crate::index::lists::GetListNames;
 use crate::index::lists::GetListPhotos;
+use crate::index::lists::GetListStats;
 use crate::index::lists::GetListTaxa;
 use crate::index::lists::ListDataSummary;
+use crate::index::lists::ListStats;
+use crate::index::lists::Pagination;
 use crate::index::providers::db::Database;
 use crate::index::providers::db::models::NameList;
 use crate::index::providers::db::models::TaxonPhoto;
 use crate::index::providers::db::models::Name as ArgaName;
 use crate::index::stats::GetSpeciesStats;
+
+use crate::index::lists;
+
+
+#[derive(Debug, Enum, Eq, PartialEq, Copy, Clone)]
+pub enum FilterType {
+    Kingdom,
+    Phylum,
+}
+
+#[derive(Debug, Enum, Eq, PartialEq, Copy, Clone)]
+pub enum FilterAction {
+    Include,
+    Exclude,
+}
+
+#[derive(Debug, InputObject)]
+pub struct FilterItem {
+    filter: FilterType,
+    action: FilterAction,
+    value: String,
+}
+
+impl From<FilterItem> for lists::FilterItem {
+    fn from(item: FilterItem) -> Self {
+        let filter = match item.filter {
+            FilterType::Kingdom => lists::Filter::Kingdom(item.value),
+            FilterType::Phylum => lists::Filter::Phylum(item.value),
+        };
+
+        match item.action {
+            FilterAction::Include => lists::FilterItem::Include(filter),
+            FilterAction::Exclude => lists::FilterItem::Exclude(filter),
+        }
+    }
+}
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
@@ -52,15 +92,23 @@ impl From<TaxonPhoto> for SpeciesPhoto {
     }
 }
 
+
 pub struct Lists {
     pub list: NameList,
     pub names: Vec<ArgaName>,
+    pub filters: Filters,
 }
 
 #[Object]
 impl Lists {
     #[graphql(skip)]
-    pub async fn new(db: &Database, name: String) -> Result<Lists, Error> {
+    pub async fn new(
+        db: &Database,
+        name: String,
+        filters: Filters,
+        pagination: Pagination
+    ) -> Result<Lists, Error>
+    {
         use crate::schema::name_lists as lists;
         let mut conn = db.pool.get().await?;
 
@@ -74,9 +122,9 @@ impl Lists {
         }
 
         let list = list?;
-        let names = db.list_names(&list).await?;
+        let names = db.list_names(&list, &filters, &pagination).await?;
 
-        Ok(Lists { list, names })
+        Ok(Lists { list, names, filters })
     }
 
     #[instrument(skip(self, ctx))]
@@ -134,5 +182,12 @@ impl Lists {
         let mut species: Vec<ListSpecies> = species.into_values().collect();
         species.sort_by(|a, b| a.taxonomy.scientific_name.cmp(&b.taxonomy.scientific_name));
         Ok(species)
+    }
+
+    #[instrument(skip(self, ctx))]
+    async fn stats(&self, ctx: &Context<'_>) -> Result<ListStats, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let stats = state.db_provider.list_stats(&self.list, &self.filters).await?;
+        Ok(stats)
     }
 }

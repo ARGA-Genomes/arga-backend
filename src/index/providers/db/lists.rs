@@ -1,31 +1,59 @@
 use async_trait::async_trait;
 
 use diesel::prelude::*;
+use diesel::sql_types::{Text, Nullable};
 use diesel_async::RunQueryDsl;
+use tracing::{instrument, debug};
 use uuid::Uuid;
 
-use crate::index::lists::{GetListNames, GetListTaxa, GetListPhotos};
+use crate::index::lists::{GetListNames, GetListTaxa, GetListPhotos, Filters, Filter, FilterItem, Pagination, GetListStats, ListStats};
 use crate::index::providers::db::models::UserTaxon;
 
 use super::{Database, Error};
 use super::models::{NameList, Name, TaxonPhoto};
 
 
+sql_function!(fn lower(x: Nullable<Text>) -> Nullable<Text>);
+
+
 #[async_trait]
 impl GetListNames for Database {
     type Error = Error;
 
-    async fn list_names(&self, list: &NameList) -> Result<Vec<Name>, Self::Error> {
+    #[instrument(skip(self))]
+    async fn list_names(&self, list: &NameList, filters: &Filters, pagination: &Pagination) -> Result<Vec<Name>, Self::Error> {
         use crate::schema::names;
+        use crate::schema::user_taxa as taxa;
         use crate::schema::conservation_statuses;
         let mut conn = self.pool.get().await?;
 
-        let records = conservation_statuses::table
+        let offset = pagination.page_size * (pagination.page - 1);
+
+        let mut query = conservation_statuses::table
             .inner_join(names::table)
+            .inner_join(taxa::table.on(taxa::name_id.eq(names::id)))
             .select(names::all_columns)
             .filter(conservation_statuses::list_id.eq(list.id))
             .order_by(names::scientific_name)
-            .limit(20)
+            .offset(offset)
+            .limit(pagination.page_size)
+            .into_boxed();
+
+        for item in filters.items.iter() {
+            query = match item {
+                FilterItem::Include(filter) => match filter {
+                    Filter::Kingdom(value) => query.filter(lower(taxa::kingdom).eq(value.to_lowercase())),
+                    Filter::Phylum(value) => query.filter(lower(taxa::phylum).eq(value.to_lowercase())),
+                },
+                FilterItem::Exclude(filter) => match filter {
+                    Filter::Kingdom(value) => query.filter(lower(taxa::kingdom).ne(value.to_lowercase())),
+                    Filter::Phylum(value) => query.filter(lower(taxa::phylum).ne(value.to_lowercase())),
+                },
+            };
+        }
+
+        debug!("Getting filtered names");
+        let records = query
             .load::<Name>(&mut conn)
             .await?;
 
@@ -68,5 +96,45 @@ impl GetListPhotos for Database {
             .await?;
 
         Ok(photos)
+    }
+}
+
+
+#[async_trait]
+impl GetListStats for Database {
+    type Error = Error;
+
+    async fn list_stats(&self, list: &NameList, filters: &Filters) -> Result<ListStats, Self::Error> {
+        use crate::schema::names;
+        use crate::schema::user_taxa as taxa;
+        use crate::schema::conservation_statuses;
+        let mut conn = self.pool.get().await?;
+
+        let mut query = conservation_statuses::table
+            .inner_join(names::table)
+            .inner_join(taxa::table.on(taxa::name_id.eq(names::id)))
+            .select(diesel::dsl::count_star())
+            .filter(conservation_statuses::list_id.eq(list.id))
+            .into_boxed();
+
+        for item in filters.items.iter() {
+            query = match item {
+                FilterItem::Include(filter) => match filter {
+                    Filter::Kingdom(value) => query.filter(lower(taxa::kingdom).eq(value.to_lowercase())),
+                    Filter::Phylum(value) => query.filter(lower(taxa::phylum).eq(value.to_lowercase())),
+                },
+                FilterItem::Exclude(filter) => match filter {
+                    Filter::Kingdom(value) => query.filter(lower(taxa::kingdom).ne(value.to_lowercase())),
+                    Filter::Phylum(value) => query.filter(lower(taxa::phylum).ne(value.to_lowercase())),
+                },
+            };
+        }
+
+        debug!("Getting filtered names");
+        let total_records: i64 = query.get_result(&mut conn).await?;
+
+        Ok(ListStats {
+            total_records: total_records as usize,
+        })
     }
 }
