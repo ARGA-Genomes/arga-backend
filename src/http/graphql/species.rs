@@ -6,6 +6,8 @@ use crate::http::Error;
 use crate::http::Context as State;
 
 use crate::index::providers::db::Database;
+use crate::index::species::GetSpecimens;
+use crate::index::species::Specimen;
 use crate::index::species::{Taxonomy, Distribution, GenomicData, Region, Photo};
 use crate::index::species::{GetSpecies, GetGenomicData, GetRegions, GetMedia};
 
@@ -80,6 +82,13 @@ impl Species {
         let state = ctx.data::<State>().unwrap();
         let photos = state.db_provider.photos(&self.name).await?;
         Ok(photos)
+    }
+
+    #[instrument(skip(self, ctx))]
+    async fn specimens(&self, ctx: &Context<'_>) -> Result<Vec<Specimen>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let specimens = state.db_provider.specimens(&self.name).await?;
+        Ok(specimens)
     }
 }
 

@@ -90,10 +90,10 @@ pub trait GetGenomicData {
 }
 
 
-/// A region that a species inhabit.
+/// A photo of a verified species.
 ///
-/// Regions are less granular than a distribution and serves to more
-/// clearly identify geographic locations inhabited by a particular species.
+/// Photos are either links to external sources or from our own saved
+/// store. Either way they should all have a license and attribution.
 #[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize, SimpleObject)]
 pub struct Photo {
     pub url: String,
@@ -110,4 +110,27 @@ pub trait GetMedia {
 
     /// Get media photos assigned to the species taxon.
     async fn photos(&self, name: &Name) -> Result<Vec<Photo>, Self::Error>;
+}
+
+
+/// A specimen of a specific species.
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
+pub struct Specimen {
+    pub type_status: String,
+    pub institution_name: Option<String>,
+    pub organism_id: Option<String>,
+    pub locality: Option<String>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub details: Option<String>,
+    pub remarks: Option<String>,
+}
+
+/// Get specimens of a specific species.
+#[async_trait]
+pub trait GetSpecimens {
+    type Error;
+
+    /// Get media photos assigned to the species taxon.
+    async fn specimens(&self, name: &Name) -> Result<Vec<Specimen>, Self::Error>;
 }

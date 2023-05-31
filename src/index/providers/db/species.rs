@@ -5,8 +5,8 @@ use diesel_async::RunQueryDsl;
 use diesel::Queryable;
 use tracing::instrument;
 
-use crate::index::species::{self, GetSpecies, Taxonomy, GetRegions, GetMedia};
-use crate::index::providers::db::models::{Name, UserTaxon, RegionType, TaxonPhoto};
+use crate::index::species::{self, GetSpecies, Taxonomy, GetRegions, GetMedia, GetSpecimens};
+use crate::index::providers::db::models::{Name, UserTaxon, RegionType, TaxonPhoto, Specimen};
 use super::{Database, Error};
 
 
@@ -170,5 +170,37 @@ impl GetMedia for Database {
         }
 
         Ok(photos)
+    }
+}
+
+
+#[async_trait]
+impl GetSpecimens for Database {
+    type Error = Error;
+
+    async fn specimens(&self, name: &Name) -> Result<Vec<species::Specimen>, Error> {
+        use crate::schema::specimens::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let records = specimens
+            .filter(name_id.eq(name.id))
+            .load::<Specimen>(&mut conn)
+            .await?;
+
+        let mut results = Vec::with_capacity(records.len());
+        for record in records {
+            results.push(species::Specimen {
+                type_status: record.type_status,
+                institution_name: record.institution_name,
+                organism_id: record.organism_id,
+                locality: record.locality,
+                latitude: record.latitude,
+                longitude: record.longitude,
+                details: record.details,
+                remarks: record.remarks,
+            });
+        }
+
+        Ok(results)
     }
 }
