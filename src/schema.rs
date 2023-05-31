@@ -234,6 +234,22 @@ diesel::table! {
 }
 
 diesel::table! {
+    specimens (id) {
+        id -> Uuid,
+        list_id -> Uuid,
+        name_id -> Uuid,
+        type_status -> Varchar,
+        institution_name -> Nullable<Varchar>,
+        organism_id -> Nullable<Varchar>,
+        locality -> Nullable<Varchar>,
+        latitude -> Nullable<Float8>,
+        longitude -> Nullable<Float8>,
+        details -> Nullable<Varchar>,
+        remarks -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     taxa (id) {
         id -> Uuid,
         taxon_id -> Nullable<Int8>,
@@ -342,6 +358,8 @@ diesel::joinable!(conservation_statuses -> names (name_id));
 diesel::joinable!(name_vernacular_names -> names (name_id));
 diesel::joinable!(name_vernacular_names -> vernacular_names (vernacular_name_id));
 diesel::joinable!(regions -> names (name_id));
+diesel::joinable!(specimens -> name_lists (list_id));
+diesel::joinable!(specimens -> names (name_id));
 diesel::joinable!(taxon_photos -> names (name_id));
 diesel::joinable!(user_taxa -> names (name_id));
 diesel::joinable!(user_taxa -> user_taxa_lists (taxa_lists_id));
@@ -366,6 +384,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     objects,
     regions,
     spatial_ref_sys,
+    specimens,
     taxa,
     taxon_photos,
     types_and_specimen,

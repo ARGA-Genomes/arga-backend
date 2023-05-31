@@ -393,6 +393,7 @@ pub struct TaxonPhoto {
 pub enum NameListType {
     Regions,
     ConservationStatus,
+    Specimen,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -414,4 +415,21 @@ pub struct ConservationStatus {
     pub status: String,
     pub state: Option<String>,
     pub source: Option<String>,
+}
+
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::specimens)]
+pub struct Specimen {
+    pub id: Uuid,
+    pub list_id: Uuid,
+    pub name_id: Uuid,
+    pub type_status: String,
+    pub institution_name: Option<String>,
+    pub organism_id: Option<String>,
+    pub locality: Option<String>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub details: Option<String>,
+    pub remarks: Option<String>,
 }

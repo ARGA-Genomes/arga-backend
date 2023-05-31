@@ -7,6 +7,7 @@ use crate::index::providers::db::models::{Job, JobStatus};
 
 use super::taxa_importer::TaxaImporter;
 use super::conservation_status_importer::ConservationStatusImporter;
+use super::specimen_importer::SpecimenImporter;
 use super::tokio_bridge::TokioHandle;
 
 
@@ -130,6 +131,7 @@ pub struct Allocator {
 
     taxa_importer: ActorOwn<TaxaImporter>,
     conservation_status_importer: ActorOwn<ConservationStatusImporter>,
+    specimen_importer: ActorOwn<SpecimenImporter>,
 }
 
 impl Allocator {
@@ -147,6 +149,7 @@ impl Allocator {
 
             taxa_importer: actor!(cx, TaxaImporter::init(), ret_nop!()),
             conservation_status_importer: actor!(cx, ConservationStatusImporter::init(), ret_nop!()),
+            specimen_importer: actor!(cx, SpecimenImporter::init(), ret_nop!()),
         })
     }
 
@@ -159,6 +162,7 @@ impl Allocator {
             let ret = match job.worker.as_str() {
                 "import_csv" => ret_some_to!([self.taxa_importer], import() as (Job)),
                 "import_conservation_status" => ret_some_to!([self.conservation_status_importer], import() as (Job)),
+                "import_specimen" => ret_some_to!([self.specimen_importer], import() as (Job)),
                 _ => panic!("Unknown job worker: {}", job.worker)
             };
 
