@@ -9,6 +9,24 @@ pub struct Overview;
 
 #[Object]
 impl Overview {
+    /// Returns the amount of genomic records for animals in the index
+    async fn animals(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.provider.total(OverviewCategory::Animals).await?)
+    }
+
+    /// Returns the amount of genomic records for plants in the index
+    async fn plants(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.provider.total(OverviewCategory::Plants).await?)
+    }
+
+    /// Returns the amount of genomic records for fungi in the index
+    async fn fungi(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.provider.total(OverviewCategory::Fungi).await?)
+    }
+
     /// Returns the amount of bacteria specimens in the index
     async fn bacteria(&self, ctx: &Context<'_>) -> Result<usize, Error> {
         let state = ctx.data::<State>().unwrap();

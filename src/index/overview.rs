@@ -3,6 +3,9 @@ use async_trait::async_trait;
 
 #[derive(Debug)]
 pub enum OverviewCategory {
+    Animals,
+    Plants,
+    Fungi,
     AgriculturalAndPest,
     MarineAndAquaculture,
     AllSpecies,

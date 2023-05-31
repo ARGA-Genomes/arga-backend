@@ -11,6 +11,9 @@ impl Overview for Solr {
 
     async fn total(&self, category: OverviewCategory) -> Result<usize, Error> {
         let query = match category {
+            OverviewCategory::Animals => "kingdom:Animalia",
+            OverviewCategory::Plants => "kingdom:Plantae",
+            OverviewCategory::Fungi => "kingdom:Fungi",
             OverviewCategory::AgriculturalAndPest => "*:*",
             OverviewCategory::MarineAndAquaculture => r#"biome:"MARINE""#,
             OverviewCategory::AllSpecies => "*:*",
