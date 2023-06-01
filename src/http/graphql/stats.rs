@@ -7,18 +7,43 @@ use tracing::instrument;
 use crate::http::Error;
 use crate::http::Context as State;
 
+use crate::index::names::GetNames;
 use crate::index::stats::FamilyBreakdownItem;
 use crate::index::stats::GenusBreakdownItem;
 use crate::index::stats::GetFamilyBreakdown;
 use crate::index::stats::GetFamilyStats;
 use crate::index::stats::GetGenusBreakdown;
 use crate::index::stats::GetGenusStats;
+use crate::index::stats::GetSpeciesStats;
 
 
 pub struct Statistics;
 
 #[Object]
 impl Statistics {
+    #[instrument(skip(self, ctx))]
+    async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<SpeciesStatistics, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let names = state.db_provider.find_by_canonical_name(&canonical_name).await?;
+
+        if names.is_empty() {
+            return Err(Error::NotFound(canonical_name));
+        }
+
+        let solr_stats = state.provider.species_stats(&names).await?;
+
+        // combine the stats for all species matching the canonical name
+        let mut stats = SpeciesStatistics::default();
+        for stat in solr_stats {
+            stats.total += stat.total;
+            stats.whole_genomes += stat.whole_genomes;
+            stats.mitogenomes += stat.mitogenomes;
+            stats.barcodes += stat.barcodes;
+        }
+
+        Ok(stats)
+    }
+
     #[instrument(skip(self, ctx))]
     async fn genus(&self, ctx: &Context<'_>, genus: String) -> Result<GenusStatistics, Error> {
         let state = ctx.data::<State>().unwrap();
@@ -46,6 +71,20 @@ impl Statistics {
             breakdown: solr_breakdown.genera,
         })
     }
+}
+
+
+#[derive(Clone, Debug, Default, SimpleObject, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SpeciesStatistics {
+    /// The total amount of genomic data
+    pub total: usize,
+    /// The total amount of whole genomes available
+    pub whole_genomes: usize,
+    /// The total amount of mitogenomes available
+    pub mitogenomes: usize,
+    /// The total amount of barcodes available
+    pub barcodes: usize,
 }
 
 
