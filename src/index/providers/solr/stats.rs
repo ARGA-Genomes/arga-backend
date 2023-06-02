@@ -32,7 +32,7 @@ struct Facet {
     _field: String,
     value: String,
     count: usize,
-    queries: HashMap<String, usize>,
+    queries: Option<HashMap<String, usize>>,
 }
 
 const QUERY_WHOLE_GENOMES: &str = r#"{!tag=q1}dynamicProperties_ncbi_genome_rep:"Full""#;
@@ -84,13 +84,15 @@ impl GetSpeciesStats for Solr {
         let mut stats = Vec::with_capacity(names.len());
         for facet in facets.scientific_name {
             if let Some(name) = name_map.get(&facet.value) {
-                stats.push(SpeciesStats {
-                    name: name.clone().to_owned(),
-                    total: facet.count,
-                    whole_genomes: *facet.queries.get(QUERY_WHOLE_GENOMES).unwrap_or(&0),
-                    barcodes: *facet.queries.get(QUERY_BARCODES).unwrap_or(&0),
-                    mitogenomes: 0,
-                });
+                if let Some(queries) = facet.queries {
+                    stats.push(SpeciesStats {
+                        name: name.clone().to_owned(),
+                        total: facet.count,
+                        whole_genomes: *queries.get(QUERY_WHOLE_GENOMES).unwrap_or(&0),
+                        barcodes: *queries.get(QUERY_BARCODES).unwrap_or(&0),
+                        mitogenomes: 0,
+                    });
+                }
             }
         }
 
