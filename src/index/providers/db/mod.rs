@@ -73,6 +73,7 @@ impl From<Taxon> for Taxonomy {
             order: source.order,
             family: source.family,
             genus: source.genus,
+            vernacular_group: None,
         }
     }
 }

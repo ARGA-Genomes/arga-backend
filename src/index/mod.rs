@@ -31,4 +31,6 @@ pub struct Taxonomy {
     pub order: Option<String>,
     pub family: Option<String>,
     pub genus: Option<String>,
+
+    pub vernacular_group: Option<String>,
 }

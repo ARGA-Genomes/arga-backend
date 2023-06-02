@@ -61,6 +61,33 @@ impl GetSpecies for Database {
             taxonomy.order = taxon.order;
             taxonomy.family = taxon.family;
             taxonomy.genus = taxon.genus;
+
+            taxonomy.vernacular_group = match taxonomy.kingdom.as_ref().map(|k| k.as_str()) {
+                Some("Archaea") => Some("bacteria".into()),
+                Some("Bacteria") => Some("bacteria".into()),
+                Some("Protozoa") => Some("protists and other unicellular organisms".into()),
+                Some("Fungi") => Some("mushrooms and other fungi".into()),
+                Some("Animalia") => match taxonomy.phylum.as_ref().map(|k| k.as_str()) {
+                    Some("Mollusca") => Some("molluscs".into()),
+                    Some("Arthropoda") => match taxonomy.class.as_ref().map(|k| k.as_str()) {
+                        Some("Insecta") => Some("insects".into()),
+                        _ => None,
+                    }
+                    Some("Chordata") => match taxonomy.class.as_ref().map(|k| k.as_str()) {
+                        Some("Amphibia") => Some("frogs and other amphibians".into()),
+                        Some("Aves") => Some("birds".into()),
+                        Some("Mammalia") => Some("mammals".into()),
+                        _ => None,
+                    }
+                    _ => None,
+                }
+                Some("Chromista") => Some("seaweeds and other algae".into()),
+                Some("Plantae") => match taxonomy.phylum.as_ref().map(|k| k.as_str()) {
+                    Some("Rhodophyta") => Some("seaweeds and other algae".into()),
+                    _ => Some("higher plants".into()),
+                }
+                _ => None,
+            }
         }
 
         Ok(taxonomy)

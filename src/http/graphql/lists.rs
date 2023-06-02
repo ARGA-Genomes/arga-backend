@@ -148,6 +148,7 @@ impl Lists {
                 order: taxon.order,
                 family: taxon.family,
                 genus: taxon.genus,
+                vernacular_group: None,
             };
 
             species.insert(taxon.name_id, ListSpecies {

@@ -14,7 +14,7 @@ use tower_http::limit::RequestBodyLimitLayer;
 use futures::{Stream, TryStreamExt};
 use tokio::{fs::File, io::BufWriter};
 use tokio_util::io::StreamReader;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::http::Context;
 use crate::http::error::Error;
@@ -92,6 +92,7 @@ async fn queue_csv(
         tmp_name: format!("arga_admin_{}", form.file),
     };
 
+    info!(?import_data, "Queueing import job");
     diesel::insert_into(jobs)
         .values(&NewJob {
             worker: form.worker.unwrap_or("import_csv".to_string()),
