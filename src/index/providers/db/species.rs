@@ -5,8 +5,9 @@ use diesel_async::RunQueryDsl;
 use diesel::Queryable;
 use tracing::instrument;
 
-use crate::index::species::{self, GetSpecies, Taxonomy, GetRegions, GetMedia, GetSpecimens};
+use crate::index::species::{self, GetSpecies, Taxonomy, GetRegions, GetMedia, GetSpecimens, GetConservationStatus};
 use crate::index::providers::db::models::{Name, UserTaxon, RegionType, TaxonPhoto, Specimen};
+use super::models::ConservationStatus;
 use super::{Database, Error};
 
 
@@ -202,5 +203,34 @@ impl GetSpecimens for Database {
         }
 
         Ok(results)
+    }
+}
+
+
+#[async_trait]
+impl GetConservationStatus for Database {
+    type Error = Error;
+
+    async fn conservation_status(&self, name: &Name) -> Result<Vec<species::ConservationStatus>, Error> {
+        use crate::schema::conservation_statuses::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let records = conservation_statuses
+            .filter(name_id.eq(name.id))
+            .load::<ConservationStatus>(&mut conn)
+            .await?;
+
+        let records = records.into_iter().map(|r| r.into()).collect();
+        Ok(records)
+    }
+}
+
+impl From<ConservationStatus> for species::ConservationStatus {
+    fn from(value: ConservationStatus) -> Self {
+        Self {
+            status: value.status,
+            state: value.state,
+            source: value.source,
+        }
     }
 }

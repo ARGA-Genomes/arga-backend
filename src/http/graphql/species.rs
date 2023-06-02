@@ -6,6 +6,8 @@ use crate::http::Error;
 use crate::http::Context as State;
 
 use crate::index::providers::db::Database;
+use crate::index::species::ConservationStatus;
+use crate::index::species::GetConservationStatus;
 use crate::index::species::GetSpecimens;
 use crate::index::species::Specimen;
 use crate::index::species::{Taxonomy, Distribution, GenomicData, Region, Photo};
@@ -20,6 +22,7 @@ use crate::index::providers::db::models::Name as ArgaName;
 pub struct Species {
     pub canonical_name: String,
     pub name: ArgaName,
+    pub all_names: Vec<ArgaName>,
 }
 
 #[Object]
@@ -29,17 +32,18 @@ impl Species {
         use crate::schema::names;
         let mut conn = db.pool.get().await?;
 
-        let name = names::table
+        let names = names::table
             .filter(names::canonical_name.eq(&canonical_name))
-            .filter(names::rank.eq("species"))
-            .get_result::<ArgaName>(&mut conn)
+            // .filter(names::rank.eq("species"))
+            .load::<ArgaName>(&mut conn)
             .await;
 
-        if let Err(diesel::result::Error::NotFound) = name {
+        if let Err(diesel::result::Error::NotFound) = names {
             return Err(Error::NotFound(canonical_name));
         }
+        let names = names?;
 
-        Ok(Species { canonical_name, name: name? })
+        Ok(Species { canonical_name, name: names[0].clone(), all_names: names })
     }
 
     #[instrument(skip(self, ctx))]
@@ -89,6 +93,19 @@ impl Species {
         let state = ctx.data::<State>().unwrap();
         let specimens = state.db_provider.specimens(&self.name).await?;
         Ok(specimens)
+    }
+
+    #[instrument(skip(self, ctx))]
+    async fn conservation(&self, ctx: &Context<'_>) -> Result<Vec<ConservationStatus>> {
+        let state = ctx.data::<State>().unwrap();
+
+        let mut statuses = Vec::new();
+        for name in &self.all_names {
+            let records = state.db_provider.conservation_status(name).await?;
+            statuses.extend(records);
+        }
+
+        Ok(statuses)
     }
 }
 

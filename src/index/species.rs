@@ -131,6 +131,24 @@ pub struct Specimen {
 pub trait GetSpecimens {
     type Error;
 
-    /// Get media photos assigned to the species taxon.
+    /// Get specimens related to the species taxon.
     async fn specimens(&self, name: &Name) -> Result<Vec<Specimen>, Self::Error>;
+}
+
+
+/// Conservation statuses of a specific species.
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
+pub struct ConservationStatus {
+    pub status: String,
+    pub state: Option<String>,
+    pub source: Option<String>,
+}
+
+/// Get the conservation status of a specific species.
+#[async_trait]
+pub trait GetConservationStatus {
+    type Error;
+
+    /// Get all conservation statuses assigned to the species.
+    async fn conservation_status(&self, name: &Name) -> Result<Vec<ConservationStatus>, Self::Error>;
 }
