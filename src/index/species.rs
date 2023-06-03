@@ -152,3 +152,39 @@ pub trait GetConservationStatus {
     /// Get all conservation statuses assigned to the species.
     async fn conservation_status(&self, name: &Name) -> Result<Vec<ConservationStatus>, Self::Error>;
 }
+
+
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
+pub struct WholeGenome {
+    pub r#type: Option<String>,
+    pub data_resource: Option<String>,
+    pub recorded_by: Option<Vec<String>>,
+    pub license: Option<String>,
+    pub provenance: Option<String>,
+    pub event_date: Option<String>,
+    pub occurrence_year: Option<Vec<String>>,
+    pub other_catalog_numbers: Option<Vec<String>>,
+
+    pub accession: Option<String>,
+    pub accession_uri: Option<String>,
+    pub refseq_category: Option<String>,
+    pub coordinates: Option<GeoCoordinates>,
+
+    pub ncbi_nuccore: Option<String>,
+    pub ncbi_bioproject: Option<String>,
+    pub ncbi_biosample: Option<String>,
+    pub mixs_0000005: Option<String>,
+    pub mixs_0000029: Option<String>,
+    pub mixs_0000026: Option<String>,
+
+    pub paired_asm_comp: Option<String>,
+
+    pub raw_recorded_by: Option<String>,
+    pub ncbi_release_type: Option<String>,
+}
+
+#[async_trait]
+pub trait GetWholeGenomes {
+    type Error;
+    async fn whole_genomes(&self, names: &Vec<Name>) -> Result<Vec<WholeGenome>, Self::Error>;
+}
