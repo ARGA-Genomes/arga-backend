@@ -50,6 +50,7 @@ struct WholeGenomeResults {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct WholeGenomeData {
+    id: String,
     basis_of_record: Option<String>,
     data_resource_name: Option<String>,
     recorded_by: Option<Vec<String>>,
@@ -108,6 +109,7 @@ impl From<WholeGenomeData> for WholeGenome {
         };
 
         Self {
+            id: source.id,
             r#type: source.basis_of_record,
             data_resource: source.data_resource_name,
             recorded_by: source.recorded_by,

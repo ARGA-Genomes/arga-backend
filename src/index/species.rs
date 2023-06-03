@@ -156,6 +156,7 @@ pub trait GetConservationStatus {
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
 pub struct WholeGenome {
+    pub id: String,
     pub r#type: Option<String>,
     pub data_resource: Option<String>,
     pub recorded_by: Option<Vec<String>>,
