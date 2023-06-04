@@ -6,6 +6,7 @@ pub mod species;
 pub mod stats;
 pub mod maps;
 pub mod lists;
+pub mod traces;
 pub mod extensions;
 
 use axum::{Extension, Router};
@@ -30,6 +31,7 @@ use self::stats::Statistics;
 use self::maps::Maps;
 use self::lists::{Lists, FilterItem};
 use self::extensions::ErrorLogging;
+use self::traces::Traces;
 
 use super::error::Error;
 
@@ -93,6 +95,11 @@ impl Query {
         let pagination = pagination.unwrap_or_else(|| Pagination { page: 1, page_size: 20 });
 
         Lists::new(&state.db_provider, name, filters, pagination).await
+    }
+
+    async fn traces(&self, uuid: String) -> Traces {
+        let uuid = uuid::Uuid::parse_str(&uuid).unwrap();
+        Traces { uuid }
     }
 }
 
