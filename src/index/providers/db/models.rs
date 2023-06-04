@@ -433,3 +433,41 @@ pub struct Specimen {
     pub details: Option<String>,
     pub remarks: Option<String>,
 }
+
+
+// postgres arrays allows nulls to be entered into an array
+// so diesel will treat it as an array of optional numbers.
+// we shorten the type here for readability
+pub type IntArray = Vec<Option<i32>>;
+
+#[derive(Clone, Queryable, Debug, Serialize, Deserialize)]
+pub struct TraceFile {
+    pub id: Uuid,
+    pub name_id: Uuid,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+
+    pub metadata: serde_json::Value,
+
+    pub peak_locations_user: Option<IntArray>,
+    pub peak_locations_basecaller: Option<IntArray>,
+    pub quality_values_user: Option<IntArray>,
+    pub quality_values_basecaller: Option<IntArray>,
+    pub sequences_user: Option<IntArray>,
+    pub sequences_basecaller: Option<IntArray>,
+
+    pub measurements_voltage: Option<IntArray>,
+    pub measurements_current: Option<IntArray>,
+    pub measurements_power: Option<IntArray>,
+    pub measurements_temperature: Option<IntArray>,
+
+    pub analyzed_g: Option<IntArray>,
+    pub analyzed_a: Option<IntArray>,
+    pub analyzed_t: Option<IntArray>,
+    pub analyzed_c: Option<IntArray>,
+
+    pub raw_g: Option<IntArray>,
+    pub raw_a: Option<IntArray>,
+    pub raw_t: Option<IntArray>,
+    pub raw_c: Option<IntArray>,
+}

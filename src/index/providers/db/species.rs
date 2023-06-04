@@ -4,9 +4,10 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
 use tracing::instrument;
+use uuid::Uuid;
 
-use crate::index::species::{self, GetSpecies, Taxonomy, GetRegions, GetMedia, GetSpecimens, GetConservationStatus};
-use crate::index::providers::db::models::{Name, UserTaxon, RegionType, TaxonPhoto, Specimen};
+use crate::index::species::{self, GetSpecies, Taxonomy, GetRegions, GetMedia, GetSpecimens, GetConservationStatus, GetTraceFiles};
+use crate::index::providers::db::models::{Name, UserTaxon, RegionType, TaxonPhoto, Specimen, TraceFile};
 use super::models::ConservationStatus;
 use super::{Database, Error};
 
@@ -260,4 +261,61 @@ impl From<ConservationStatus> for species::ConservationStatus {
             source: value.source,
         }
     }
+}
+
+
+#[async_trait]
+impl GetTraceFiles for Database {
+    type Error = Error;
+
+    async fn trace_files(&self, names: &Vec<Name>) -> Result<Vec<species::TraceFile>, Error> {
+        use crate::schema::trace_files::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
+
+        let records = trace_files
+            .filter(name_id.eq_any(name_ids))
+            .load::<TraceFile>(&mut conn)
+            .await?;
+
+        let records = records.into_iter().map(|r| r.into()).collect();
+        Ok(records)
+    }
+}
+
+impl From<TraceFile> for species::TraceFile {
+    fn from(value: TraceFile) -> Self {
+        Self {
+            id: value.id.to_string(),
+            metadata: value.metadata,
+
+            peak_locations_user: value.peak_locations_user.map(from_int_array),
+            peak_locations_basecaller: value.peak_locations_basecaller.map(from_int_array),
+            quality_values_user: value.quality_values_user.map(from_int_array),
+            quality_values_basecaller: value.quality_values_basecaller.map(from_int_array),
+            sequences_user: value.sequences_user.map(from_int_array),
+            sequences_basecaller: value.sequences_basecaller.map(from_int_array),
+
+            measurements_voltage: value.measurements_voltage.map(from_int_array),
+            measurements_current: value.measurements_current.map(from_int_array),
+            measurements_power: value.measurements_power.map(from_int_array),
+            measurements_temperature: value.measurements_temperature.map(from_int_array),
+
+            analyzed_g: value.analyzed_g.map(from_int_array),
+            analyzed_a: value.analyzed_a.map(from_int_array),
+            analyzed_t: value.analyzed_t.map(from_int_array),
+            analyzed_c: value.analyzed_c.map(from_int_array),
+
+            raw_g: value.raw_g.map(from_int_array),
+            raw_a: value.raw_a.map(from_int_array),
+            raw_t: value.raw_t.map(from_int_array),
+            raw_c: value.raw_c.map(from_int_array),
+
+        }
+    }
+}
+
+fn from_int_array(values: Vec<Option<i32>>) -> Vec<i32> {
+    values.into_iter().map(|v| v.unwrap_or_default()).collect()
 }

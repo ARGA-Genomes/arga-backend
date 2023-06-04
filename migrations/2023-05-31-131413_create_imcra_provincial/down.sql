@@ -1,0 +1,2 @@
+DROP INDEX imcra_provincial_wkb_geometry_geom_idx;
+DROP TABLE imcra_provincial;

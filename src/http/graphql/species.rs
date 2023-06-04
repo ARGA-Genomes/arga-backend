@@ -9,8 +9,10 @@ use crate::index::providers::db::Database;
 use crate::index::species::ConservationStatus;
 use crate::index::species::GetConservationStatus;
 use crate::index::species::GetSpecimens;
+use crate::index::species::GetTraceFiles;
 use crate::index::species::GetWholeGenomes;
 use crate::index::species::Specimen;
+use crate::index::species::TraceFile;
 use crate::index::species::WholeGenome;
 use crate::index::species::{Taxonomy, Distribution, GenomicData, Region, Photo};
 use crate::index::species::{GetSpecies, GetGenomicData, GetRegions, GetMedia};
@@ -114,6 +116,13 @@ impl Species {
     async fn whole_genomes(&self, ctx: &Context<'_>) -> Result<Vec<WholeGenome>, Error> {
         let state = ctx.data::<State>().unwrap();
         let records = state.provider.whole_genomes(&self.all_names).await?;
+        Ok(records)
+    }
+
+    #[instrument(skip(self, ctx))]
+    async fn trace_files(&self, ctx: &Context<'_>) -> Result<Vec<TraceFile>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let records = state.db_provider.trace_files(&self.all_names).await?;
         Ok(records)
     }
 }

@@ -86,6 +86,20 @@ diesel::table! {
 
 diesel::table! {
     use diesel::sql_types::*;
+    use super::sql_types::Geometry;
+
+    imcra_provincial (ogc_fid) {
+        ogc_fid -> Int4,
+        pb_name -> Nullable<Varchar>,
+        pb_num -> Nullable<Int4>,
+        water_type -> Nullable<Varchar>,
+        area_km2 -> Nullable<Float8>,
+        wkb_geometry -> Nullable<Geometry>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
     use super::sql_types::JobStatus;
 
     jobs (id) {
@@ -291,6 +305,34 @@ diesel::table! {
 }
 
 diesel::table! {
+    trace_files (id) {
+        id -> Uuid,
+        name_id -> Uuid,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        metadata -> Jsonb,
+        peak_locations_user -> Nullable<Array<Nullable<Int4>>>,
+        peak_locations_basecaller -> Nullable<Array<Nullable<Int4>>>,
+        quality_values_user -> Nullable<Array<Nullable<Int4>>>,
+        quality_values_basecaller -> Nullable<Array<Nullable<Int4>>>,
+        sequences_user -> Nullable<Array<Nullable<Int4>>>,
+        sequences_basecaller -> Nullable<Array<Nullable<Int4>>>,
+        measurements_voltage -> Nullable<Array<Nullable<Int4>>>,
+        measurements_current -> Nullable<Array<Nullable<Int4>>>,
+        measurements_power -> Nullable<Array<Nullable<Int4>>>,
+        measurements_temperature -> Nullable<Array<Nullable<Int4>>>,
+        analyzed_g -> Nullable<Array<Nullable<Int4>>>,
+        analyzed_a -> Nullable<Array<Nullable<Int4>>>,
+        analyzed_t -> Nullable<Array<Nullable<Int4>>>,
+        analyzed_c -> Nullable<Array<Nullable<Int4>>>,
+        raw_g -> Nullable<Array<Nullable<Int4>>>,
+        raw_a -> Nullable<Array<Nullable<Int4>>>,
+        raw_t -> Nullable<Array<Nullable<Int4>>>,
+        raw_c -> Nullable<Array<Nullable<Int4>>>,
+    }
+}
+
+diesel::table! {
     types_and_specimen (id) {
         id -> Uuid,
         taxon_id -> Nullable<Int8>,
@@ -361,6 +403,7 @@ diesel::joinable!(regions -> names (name_id));
 diesel::joinable!(specimens -> name_lists (list_id));
 diesel::joinable!(specimens -> names (name_id));
 diesel::joinable!(taxon_photos -> names (name_id));
+diesel::joinable!(trace_files -> names (name_id));
 diesel::joinable!(user_taxa -> names (name_id));
 diesel::joinable!(user_taxa -> user_taxa_lists (taxa_lists_id));
 
@@ -387,6 +430,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     specimens,
     taxa,
     taxon_photos,
+    trace_files,
     types_and_specimen,
     user_taxa,
     user_taxa_lists,

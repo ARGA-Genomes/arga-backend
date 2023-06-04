@@ -189,3 +189,38 @@ pub trait GetWholeGenomes {
     type Error;
     async fn whole_genomes(&self, names: &Vec<Name>) -> Result<Vec<WholeGenome>, Self::Error>;
 }
+
+
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
+pub struct TraceFile {
+    pub id: String,
+    pub metadata: serde_json::Value,
+
+    pub peak_locations_user: Option<Vec<i32>>,
+    pub peak_locations_basecaller: Option<Vec<i32>>,
+    pub quality_values_user: Option<Vec<i32>>,
+    pub quality_values_basecaller: Option<Vec<i32>>,
+    pub sequences_user: Option<Vec<i32>>,
+    pub sequences_basecaller: Option<Vec<i32>>,
+
+    pub measurements_voltage: Option<Vec<i32>>,
+    pub measurements_current: Option<Vec<i32>>,
+    pub measurements_power: Option<Vec<i32>>,
+    pub measurements_temperature: Option<Vec<i32>>,
+
+    pub analyzed_g: Option<Vec<i32>>,
+    pub analyzed_a: Option<Vec<i32>>,
+    pub analyzed_t: Option<Vec<i32>>,
+    pub analyzed_c: Option<Vec<i32>>,
+
+    pub raw_g: Option<Vec<i32>>,
+    pub raw_a: Option<Vec<i32>>,
+    pub raw_t: Option<Vec<i32>>,
+    pub raw_c: Option<Vec<i32>>,
+}
+
+#[async_trait]
+pub trait GetTraceFiles {
+    type Error;
+    async fn trace_files(&self, names: &Vec<Name>) -> Result<Vec<TraceFile>, Self::Error>;
+}
