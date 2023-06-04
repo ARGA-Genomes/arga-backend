@@ -75,6 +75,15 @@ pub struct GenomicData {
     pub accession_uri: Option<String>,
     pub refseq_category: Option<String>,
     pub coordinates: Option<GeoCoordinates>,
+    pub associated_sequences: Option<AssociatedSequences>
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
+pub struct AssociatedSequences {
+    pub sequence_id: String,
+    pub genbank_accession: String,
+    pub markercode: String,
+    pub nucleotides: String
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]

@@ -3,8 +3,9 @@ use tracing::warn;
 use async_trait::async_trait;
 use polars::prelude::IntoVec;
 use serde::Deserialize;
+use serde_json::Value;
 
-use crate::index::{species::{GetGenomicData, GenomicData, GeoCoordinates, GetWholeGenomes, WholeGenome}, providers::db::models::Name};
+use crate::index::{species::{GetGenomicData, GenomicData, GeoCoordinates, GetWholeGenomes, WholeGenome, AssociatedSequences}, providers::db::models::Name};
 use super::{Solr, Error};
 
 
@@ -189,6 +190,9 @@ struct SolrData {
 
     #[serde(rename(deserialize = "lat_long"))]
     lat_long: Option<String>,
+
+    #[serde(rename(deserialize = "associatedSequences"))]
+    associatedSequences: Option<String>,
 }
 
 impl From<SolrData> for GenomicData {
@@ -230,6 +234,24 @@ fn parse_coordinates(value: &str) -> Result<Option<GeoCoordinates>, anyhow::Erro
         Ok(Some(GeoCoordinates {
             latitude: coordinates[0].parse::<f32>()?,
             longitude: coordinates[1].parse::<f32>()?,
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+fn parse_associatedSequences(value: &str) -> Result<Option<AssociatedSequences>, anyhow::Error> {
+
+    let associated_sequences_json: Value = serde_json::from_str(value)?;
+
+    let x = associated_sequences_json.replace(r#"'"#, r#"""#);
+
+    if x () {
+        Ok(Some(AssociatedSequences {
+            sequence_id: x[0]["sequenceID"].to_string(),
+            genbank_accession: x[0]["genbank_accession"].to_string(),
+            markercode: x[0]["markercode"].to_string(),
+            nucleotides: x[0]["nucleotides"].to_string(),
         }))
     } else {
         Ok(None)
