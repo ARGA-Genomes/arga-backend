@@ -36,27 +36,19 @@ pub struct Config {
 }
 
 
-#[derive(Clone)]
-pub struct Providers {
-    pub solr: Solr,
-    pub ala: Ala,
-    pub db: Database,
-}
-
-
 /// The state made avaialbe to every request.
 #[derive(Clone)]
 pub(crate) struct Context {
     pub config: Config,
-    pub provider: Solr,
-    pub ala_provider: Ala,
-    pub db_provider: Database,
+    pub database: Database,
+    pub solr: Solr,
+    pub ala: Ala,
     pub search: SearchIndex,
 }
 
 impl FromRef<Context> for Database {
     fn from_ref(state: &Context) -> Self {
-        state.db_provider.clone()
+        state.database.clone()
     }
 }
 
@@ -66,18 +58,18 @@ impl FromRef<Context> for Database {
 /// and kick off the http server.
 pub async fn serve(
     config: Config,
-    provider: Solr,
-    db_provider: Database,
+    database: Database,
+    solr: Solr,
 ) -> anyhow::Result<()>
 {
     let addr = config.bind_address.clone();
 
     let context = Context {
         config,
-        provider,
-        db_provider,
+        database,
+        solr,
+        ala: Ala::new(),
         search: SearchIndex::open()?,
-        ala_provider: Ala::new(),
     };
 
     let app = router(context)?;

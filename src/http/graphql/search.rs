@@ -38,7 +38,7 @@ pub struct Search;
 impl Search {
     async fn filters(&self, ctx: &Context<'_>) -> Result<FilterTypeResults, Error> {
         let state = ctx.data::<State>().unwrap();
-        let taxonomy = state.provider.taxonomy_filters().await.unwrap();
+        let taxonomy = state.solr.taxonomy_filters().await.unwrap();
 
         Ok(FilterTypeResults {
             taxonomy,
@@ -77,7 +77,7 @@ impl Search {
 
         // get a list of species from the ALA species endpoint first. once we have that
         // look for exact matches by id in the ARGA index to determine if it has any genomic data
-        let mut ala_results = state.ala_provider.filtered(&ala_filters).await.unwrap();
+        let mut ala_results = state.ala.filtered(&ala_filters).await.unwrap();
 
         // create a solr filter that specifically looks for the ids found in the ALA index
         let mut solr_filters = Vec::with_capacity(ala_results.records.len());
@@ -88,7 +88,7 @@ impl Search {
             }
         }
 
-        let results = state.provider.species(&solr_filters).await.unwrap();
+        let results = state.solr.species(&solr_filters).await.unwrap();
 
         for record in ala_results.records.iter_mut() {
             let mut total_genomic_records = 0;
@@ -103,7 +103,7 @@ impl Search {
         }
 
 
-        state.db_provider.species(&ala_filters).await.unwrap();
+        state.database.species(&ala_filters).await.unwrap();
 
         Ok(ala_results)
     }
@@ -142,7 +142,7 @@ impl Search {
         let mut results = Vec::with_capacity(21);
 
         // first get the data we do have from the solr index.
-        let solr_results = state.provider.search_species(None, &db_filters).await.unwrap();
+        let solr_results = state.solr.search_species(None, &db_filters).await.unwrap();
 
         for record in solr_results.records.into_iter().take(21) {
             results.push(SearchItem {
@@ -155,7 +155,7 @@ impl Search {
         }
 
         // get species from gbif backbone that don't have any genomic records
-        let db_results = state.db_provider.filtered(&db_filters).await.unwrap();
+        let db_results = state.database.filtered(&db_filters).await.unwrap();
 
         for mut record in db_results.records.into_iter() {
             if let None = results.iter().find(|r| r.canonical_name == record.canonical_name) {
@@ -182,7 +182,7 @@ impl Search {
 
         let state = ctx.data::<State>().unwrap();
         // let suggestions = state.ala_provider.suggestions(&query).await.unwrap();
-        let suggestions = state.db_provider.suggestions(&query).await.unwrap();
+        let suggestions = state.database.suggestions(&query).await.unwrap();
 
         tracing::info!(value.suggestions = suggestions.len());
 
@@ -201,7 +201,7 @@ impl Search {
     ) -> Result<Vec<GenusSearchItem>, Error> {
         let state = ctx.data::<State>().unwrap();
         let filters = create_filters(kingdom, phylum, class, family, None, None);
-        let results = state.db_provider.search_genus("", &filters).await.unwrap();
+        let results = state.database.search_genus("", &filters).await.unwrap();
 
         Ok(results.records)
     }
@@ -224,14 +224,14 @@ impl Search {
         let mut results = Vec::with_capacity(21);
 
         // first get the data we do have from the solr index.
-        let solr_results = state.provider.search_species(None, &filters).await.unwrap();
+        let solr_results = state.solr.search_species(None, &filters).await?;
 
         for record in solr_results.records.into_iter().take(21) {
             results.push(record);
         }
 
         // get species from gbif backbone that don't have any genomic records
-        let db_results = state.db_provider.search_species(None, &filters).await.unwrap();
+        let db_results = state.database.search_species(None, &filters).await?;
 
         for record in db_results.records.into_iter() {
             // add the filler gbif record if we don't have enough records with data
@@ -264,7 +264,7 @@ impl Search {
         let state = ctx.data::<State>().unwrap();
         let filters = create_filters(kingdom, phylum, class, family, genus, None);
 
-        let mut results = state.db_provider.search_species(q, &filters).await.unwrap();
+        let mut results = state.database.search_species(q, &filters).await?;
 
         let names = results
             .records
@@ -281,7 +281,7 @@ impl Search {
 
         // first get the data we do have from the solr index.
         // let solr_results = state.provider.search_species("", &filters).await.unwrap();
-        let solr_results = state.provider.search_species_by_canonical_names(&names).await.unwrap();
+        let solr_results = state.solr.search_species_by_canonical_names(&names).await?;
 
         for mut record in results.records.iter_mut() {
             // find the total amount of genomic records from the solr search
@@ -311,7 +311,7 @@ impl Search {
         let state = ctx.data::<State>().unwrap();
         let filters = create_filters(kingdom, phylum, class, family, genus, None);
 
-        let results = state.db_provider.search_species_with_region(&ibra_region, &filters, offset, limit).await.unwrap();
+        let results = state.database.search_species_with_region(&ibra_region, &filters, offset, limit).await?;
         let mut results: Vec<SpeciesSummaryResult> = results.into_iter().map(|v| v.into()).collect();
 
         results.dedup_by(|a, b| a.canonical_name == b.canonical_name);
@@ -319,7 +319,7 @@ impl Search {
 
         // first get the data we do have from the solr index.
         // let solr_results = state.provider.search_species("", &filters).await.unwrap();
-        let solr_results = state.provider.search_species_by_canonical_names(&names).await.unwrap();
+        let solr_results = state.solr.search_species_by_canonical_names(&names).await?;
 
         for mut record in results.iter_mut() {
             // find the total amount of genomic records from the solr search
@@ -328,7 +328,7 @@ impl Search {
             }
         }
 
-        let dna_results = state.provider.search_dna_by_canonical_names(&names).await.unwrap();
+        let dna_results = state.solr.search_dna_by_canonical_names(&names).await?;
         for mut record in results.iter_mut() {
             // find the total amount of dna records from the solr search
             if let Some(solr_record) = dna_results.records.iter().find(|r| r.canonical_name == record.canonical_name) {
@@ -363,11 +363,11 @@ impl Search {
 
         // match the results against the ARGA GNL
         use schema_gnl::gnl::dsl::*;
-        let mut conn = state.db_provider.pool.get().await.unwrap();
+        let mut conn = state.database.pool.get().await?;
 
         let rows = gnl
             .filter(scientific_name.eq_any(names))
-            .load::<ArgaTaxon>(&mut conn).await.unwrap();
+            .load::<ArgaTaxon>(&mut conn).await?;
 
         let mut record_map: HashMap<String, ArgaTaxon> = HashMap::new();
         for row in rows {
@@ -398,7 +398,7 @@ impl Search {
 
 
         // get the solr full text search results
-        let solr_results = state.provider.full_text(&query).await?;
+        let solr_results = state.solr.full_text(&query).await?;
         results.records.extend(solr_results.records);
 
         // filter out the sequence types that wasn't requested

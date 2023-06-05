@@ -59,7 +59,7 @@ impl Species {
     #[instrument(skip(self, ctx))]
     async fn taxonomy(&self, ctx: &Context<'_>) -> Result<Taxonomy, Error> {
         let state = ctx.data::<State>().unwrap();
-        let taxonomy = state.db_provider.taxonomy(&self.name).await?;
+        let taxonomy = state.database.taxonomy(&self.name).await?;
 
         Ok(taxonomy)
     }
@@ -67,7 +67,7 @@ impl Species {
     #[instrument(skip(self, ctx))]
     async fn distribution(&self, ctx: &Context<'_>) -> Result<Vec<Distribution>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let distribution = state.db_provider.distribution(&self.canonical_name).await?;
+        let distribution = state.database.distribution(&self.canonical_name).await?;
 
         Ok(distribution)
     }
@@ -80,10 +80,10 @@ impl Species {
     #[instrument(skip(self, ctx))]
     async fn data(&self, ctx: &Context<'_>) -> Result<Vec<GenomicData>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let taxonomy = state.db_provider.taxonomy(&self.name).await?;
+        let taxonomy = state.database.taxonomy(&self.name).await?;
 
         let data = if let Some(canonical_name) = taxonomy.canonical_name {
-            state.provider.genomic_data(&canonical_name).await?
+            state.solr.genomic_data(&canonical_name).await?
         } else {
             vec![]
         };
@@ -94,14 +94,14 @@ impl Species {
     #[instrument(skip(self, ctx))]
     async fn photos(&self, ctx: &Context<'_>) -> Result<Vec<Photo>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let photos = state.db_provider.photos(&self.name).await?;
+        let photos = state.database.photos(&self.name).await?;
         Ok(photos)
     }
 
     #[instrument(skip(self, ctx))]
     async fn specimens(&self, ctx: &Context<'_>) -> Result<Vec<Specimen>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let specimens = state.db_provider.specimens(&self.name).await?;
+        let specimens = state.database.specimens(&self.name).await?;
         Ok(specimens)
     }
 
@@ -111,7 +111,7 @@ impl Species {
 
         let mut statuses = Vec::new();
         for name in &self.all_names {
-            let records = state.db_provider.conservation_status(name).await?;
+            let records = state.database.conservation_status(name).await?;
             statuses.extend(records);
         }
 
@@ -121,14 +121,14 @@ impl Species {
     #[instrument(skip(self, ctx))]
     async fn whole_genomes(&self, ctx: &Context<'_>) -> Result<Vec<WholeGenome>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let records = state.provider.whole_genomes(&self.all_names).await?;
+        let records = state.solr.whole_genomes(&self.all_names).await?;
         Ok(records)
     }
 
     #[instrument(skip(self, ctx))]
     async fn trace_files(&self, ctx: &Context<'_>) -> Result<Vec<TraceFile>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let records = state.db_provider.trace_files(&self.all_names).await?;
+        let records = state.database.trace_files(&self.all_names).await?;
         Ok(records)
     }
 }
@@ -143,14 +143,14 @@ impl Regions {
     #[instrument(skip(self, ctx))]
     async fn ibra(&self, ctx: &Context<'_>) -> Result<Vec<Region>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let regions = state.db_provider.ibra(&self.name).await?;
+        let regions = state.database.ibra(&self.name).await?;
         Ok(regions)
     }
 
     #[instrument(skip(self, ctx))]
     async fn imcra(&self, ctx: &Context<'_>) -> Result<Vec<Region>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let regions = state.db_provider.imcra(&self.name).await?;
+        let regions = state.database.imcra(&self.name).await?;
         Ok(regions)
     }
 }

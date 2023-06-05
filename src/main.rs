@@ -91,7 +91,7 @@ async fn serve() {
     // here so that it is explicitly defined
     let solr_host = std::env::var("SOLR_URL").expect("No solr URL specified");
     let client = SolrClient::new(&solr_host);
-    let provider = Solr::new(client);
+    let solr = Solr::new(client);
 
     let db_host = std::env::var("DATABASE_URL").expect("No database url specified");
     let database = Database::connect(&db_host).await.expect("Failed to connect to the database");
@@ -101,7 +101,7 @@ async fn serve() {
         frontend_host,
     };
 
-    http::serve(config, provider, database).await.expect("Failed to start server");
+    http::serve(config, database, solr).await.expect("Failed to start server");
 
     telemetry::shutdown();
 }

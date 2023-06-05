@@ -126,7 +126,7 @@ impl Lists {
         // get the taxonomic information for all the names associated with the list
         // we also stub out the ListSpecies struct to make the rest of the data
         // association easier by mapping the name uuid to a final struct output
-        let taxa = state.db_provider.list_taxa(&self.names).await?;
+        let taxa = state.database.list_taxa(&self.names).await?;
         for taxon in taxa {
             let taxonomy = Taxonomy {
                 scientific_name: taxon.scientific_name.unwrap(),
@@ -149,7 +149,7 @@ impl Lists {
         }
 
         // assign the photo associated with the name
-        let photos = state.db_provider.list_photos(&self.names).await?;
+        let photos = state.database.list_photos(&self.names).await?;
         for photo in photos.into_iter() {
             if let Some(item) = species.get_mut(&photo.name_id) {
                 item.photo = Some(photo.into());
@@ -157,7 +157,7 @@ impl Lists {
         }
 
         // assign the data summary associated with the name
-        let stats = state.provider.species_stats(&self.names).await?;
+        let stats = state.solr.species_stats(&self.names).await?;
         for stat in stats.into_iter() {
             if let Some(item) = species.get_mut(&stat.name.id) {
                 item.data_summary = ListDataSummary {
@@ -178,7 +178,7 @@ impl Lists {
     #[instrument(skip(self, ctx))]
     async fn stats(&self, ctx: &Context<'_>) -> Result<ListStats, Error> {
         let state = ctx.data::<State>().unwrap();
-        let stats = state.db_provider.list_stats(&self.list, &self.filters).await?;
+        let stats = state.database.list_stats(&self.list, &self.filters).await?;
         Ok(stats)
     }
 }

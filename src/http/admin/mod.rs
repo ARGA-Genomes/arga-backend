@@ -30,7 +30,7 @@ pub(crate) fn router(context: Context) -> Router<Context> {
     let session_store = MemoryStore::new();
     let session_layer = SessionLayer::new(session_store, &secret[..]);
 
-    let user_store = DatabaseUserStore::new(context.db_provider.pool.clone());
+    let user_store = DatabaseUserStore::new(context.database.pool.clone());
     let auth_layer = AuthLayer::new(user_store, &secret[..]);
 
 

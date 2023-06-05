@@ -55,7 +55,7 @@ impl Query {
 
     async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<Species, Error> {
         let state = ctx.data::<State>().unwrap();
-        Species::new(&state.db_provider, canonical_name).await
+        Species::new(&state.database, canonical_name).await
     }
 
     async fn family(&self, family: String) -> Family {
@@ -93,7 +93,7 @@ impl Query {
 
         let pagination = pagination.unwrap_or_else(|| Pagination { page: 1, page_size: 20 });
 
-        Lists::new(&state.db_provider, name, filters, pagination).await
+        Lists::new(&state.database, name, filters, pagination).await
     }
 
     async fn traces(&self, uuid: String) -> Traces {

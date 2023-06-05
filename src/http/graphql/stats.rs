@@ -18,13 +18,13 @@ impl Statistics {
     #[instrument(skip(self, ctx))]
     async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<SpeciesStatistics, Error> {
         let state = ctx.data::<State>().unwrap();
-        let names = state.db_provider.find_by_canonical_name(&canonical_name).await?;
+        let names = state.database.find_by_canonical_name(&canonical_name).await?;
 
         if names.is_empty() {
             return Err(Error::NotFound(canonical_name));
         }
 
-        let solr_stats = state.provider.species_stats(&names).await?;
+        let solr_stats = state.solr.species_stats(&names).await?;
 
         // combine the stats for all species matching the canonical name
         let mut stats = SpeciesStatistics::default();
@@ -41,9 +41,9 @@ impl Statistics {
     #[instrument(skip(self, ctx))]
     async fn genus(&self, ctx: &Context<'_>, genus: String) -> Result<GenusStatistics, Error> {
         let state = ctx.data::<State>().unwrap();
-        let db_stats = state.db_provider.genus_stats(&genus).await.unwrap();
-        let solr_stats = state.provider.genus_stats(&genus).await.unwrap();
-        let solr_breakdown = state.provider.genus_breakdown(&genus).await.unwrap();
+        let db_stats = state.database.genus_stats(&genus).await.unwrap();
+        let solr_stats = state.solr.genus_stats(&genus).await.unwrap();
+        let solr_breakdown = state.solr.genus_breakdown(&genus).await.unwrap();
 
         Ok(GenusStatistics {
             total_species: db_stats.total_species,
@@ -55,9 +55,9 @@ impl Statistics {
     #[instrument(skip(self, ctx))]
     async fn family(&self, ctx: &Context<'_>, family: String) -> Result<FamilyStatistics, Error> {
         let state = ctx.data::<State>().unwrap();
-        let db_stats = state.db_provider.family_stats(&family).await.unwrap();
-        let solr_stats = state.provider.family_stats(&family).await.unwrap();
-        let solr_breakdown = state.provider.family_breakdown(&family).await.unwrap();
+        let db_stats = state.database.family_stats(&family).await.unwrap();
+        let solr_stats = state.solr.family_stats(&family).await.unwrap();
+        let solr_breakdown = state.solr.family_breakdown(&family).await.unwrap();
 
         Ok(FamilyStatistics {
             total_genera: db_stats.total_genera,

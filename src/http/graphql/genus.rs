@@ -17,7 +17,7 @@ impl Genus {
     #[instrument(skip(self, ctx))]
     async fn taxonomy(&self, ctx: &Context<'_>) -> Result<Taxonomy, Error> {
         let state = ctx.data::<State>().unwrap();
-        let taxonomy = state.db_provider.taxonomy(&self.genus).await.unwrap();
+        let taxonomy = state.database.taxonomy(&self.genus).await.unwrap();
 
         Ok(taxonomy)
     }

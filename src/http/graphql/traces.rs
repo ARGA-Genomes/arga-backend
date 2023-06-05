@@ -30,7 +30,7 @@ impl Traces {
     #[instrument(skip(self, ctx))]
     async fn analyzed(&self, ctx: &Context<'_>) -> Result<Analyzed, Error> {
         let state = ctx.data::<State>().unwrap();
-        let mut conn = state.db_provider.pool.get().await?;
+        let mut conn = state.database.pool.get().await?;
 
         use schema::trace_files::dsl::*;
         let trace = trace_files.filter(id.eq(self.uuid)).get_result::<TraceFile>(&mut conn).await?;
