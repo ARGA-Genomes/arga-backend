@@ -2,8 +2,7 @@ use diesel::{Queryable, Insertable};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
-use crate::schema;
-use crate::schema_gnl;
+use super::{schema, schema_gnl};
 
 
 #[derive(Clone, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
@@ -189,7 +188,7 @@ pub struct ArgaTaxon {
 
 
 #[derive(Debug, Deserialize, diesel_derive_enum::DbEnum)]
-#[ExistingTypePath = "crate::schema::sql_types::JobStatus"]
+#[ExistingTypePath = "schema::sql_types::JobStatus"]
 pub enum JobStatus {
     Pending,
     Initialized,
@@ -212,7 +211,7 @@ pub struct Job {
 
 
 #[derive(Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
-#[ExistingTypePath = "crate::schema::sql_types::AttributeDataType"]
+#[ExistingTypePath = "schema::sql_types::AttributeDataType"]
 pub enum AttributeDataType {
     String,
     Text,
@@ -359,7 +358,7 @@ pub struct CommonName {
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
-#[ExistingTypePath = "crate::schema::sql_types::RegionType"]
+#[ExistingTypePath = "schema::sql_types::RegionType"]
 pub enum RegionType {
     Ibra,
     Imcra,
@@ -389,7 +388,7 @@ pub struct TaxonPhoto {
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
-#[ExistingTypePath = "crate::schema::sql_types::NameListType"]
+#[ExistingTypePath = "schema::sql_types::NameListType"]
 pub enum NameListType {
     Regions,
     ConservationStatus,

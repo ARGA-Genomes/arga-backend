@@ -8,13 +8,7 @@ use crate::http::Error;
 use crate::http::Context as State;
 
 use crate::index::names::GetNames;
-use crate::index::stats::FamilyBreakdownItem;
-use crate::index::stats::GenusBreakdownItem;
-use crate::index::stats::GetFamilyBreakdown;
-use crate::index::stats::GetFamilyStats;
-use crate::index::stats::GetGenusBreakdown;
-use crate::index::stats::GetGenusStats;
-use crate::index::stats::GetSpeciesStats;
+use crate::index::stats::{FamilyBreakdownItem, GenusBreakdownItem, GetFamilyBreakdown, GetFamilyStats, GetGenusBreakdown, GetGenusStats, GetSpeciesStats};
 
 
 pub struct Statistics;

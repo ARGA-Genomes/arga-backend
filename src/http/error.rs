@@ -25,7 +25,7 @@ pub enum Error {
 
     // #[error("an error occurred with the database service")]
     #[error(transparent)]
-    Database(#[from] crate::index::providers::db::Error),
+    Database(#[from] crate::database::Error),
 
     #[error(transparent)]
     SearchIndex(#[from] crate::index::providers::search::Error),

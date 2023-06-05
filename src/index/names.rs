@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 
-use super::providers::db::models::Name;
+use crate::database::models::Name;
 
 
 #[async_trait]

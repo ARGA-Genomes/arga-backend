@@ -67,6 +67,30 @@ diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::Geometry;
 
+    historical_bushfires (objectid) {
+        objectid -> Int4,
+        fire_id -> Nullable<Varchar>,
+        fire_name -> Nullable<Varchar>,
+        ignition_date -> Nullable<Timestamptz>,
+        capture_date -> Nullable<Timestamptz>,
+        extinguish_date -> Nullable<Timestamptz>,
+        fire_type -> Nullable<Varchar>,
+        ignition_cause -> Nullable<Varchar>,
+        capt_method -> Nullable<Varchar>,
+        area_ha -> Nullable<Float8>,
+        perim_km -> Nullable<Float8>,
+        state -> Nullable<Varchar>,
+        agency -> Nullable<Varchar>,
+        shape_length -> Nullable<Float8>,
+        shape_area -> Nullable<Float8>,
+        shape -> Nullable<Geometry>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::Geometry;
+
     ibra (ogc_fid) {
         ogc_fid -> Int4,
         reg_code_7 -> Nullable<Varchar>,
@@ -411,7 +435,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     attributes,
     conservation_statuses,
     distribution,
+    historical_bushfires,
     ibra,
+    imcra_provincial,
     jobs,
     media,
     media_observations,

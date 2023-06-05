@@ -6,8 +6,7 @@ use axum_login::secrecy::{SecretString, ExposeSecret};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
-use arga_backend::schema;
-use arga_backend::index::providers::db::Database;
+use arga_backend::database::{schema, Database};
 
 
 /// Create a new admin user

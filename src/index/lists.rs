@@ -2,7 +2,7 @@ use async_graphql::{SimpleObject, InputObject};
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 
-use super::providers::db::models::{NameList, Name, TaxonPhoto, UserTaxon};
+use crate::database::models::{NameList, Name, TaxonPhoto, UserTaxon};
 
 
 #[derive(Debug)]

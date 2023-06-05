@@ -1,3 +1,6 @@
+pub mod schema;
+pub mod schema_gnl;
+
 pub mod search;
 pub mod family;
 pub mod genus;

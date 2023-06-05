@@ -1,26 +1,32 @@
 use async_graphql::*;
-
 use tracing::instrument;
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 
 use crate::http::Error;
 use crate::http::Context as State;
 
-use crate::index::providers::db::Database;
-use crate::index::species::ConservationStatus;
-use crate::index::species::GetConservationStatus;
-use crate::index::species::GetSpecimens;
-use crate::index::species::GetTraceFiles;
-use crate::index::species::GetWholeGenomes;
-use crate::index::species::Specimen;
-use crate::index::species::TraceFile;
-use crate::index::species::WholeGenome;
-use crate::index::species::{Taxonomy, Distribution, GenomicData, Region, Photo};
-use crate::index::species::{GetSpecies, GetGenomicData, GetRegions, GetMedia};
-
-use diesel::prelude::*;
-use diesel_async::RunQueryDsl;
-
-use crate::index::providers::db::models::Name as ArgaName;
+use crate::index::species::{
+    ConservationStatus,
+    GetConservationStatus,
+    GetSpecimens,
+    GetTraceFiles,
+    GetWholeGenomes,
+    Specimen,
+    TraceFile,
+    WholeGenome,
+    Taxonomy,
+    Distribution,
+    GenomicData,
+    Region,
+    Photo,
+    GetSpecies,
+    GetGenomicData,
+    GetRegions,
+    GetMedia,
+};
+use crate::database::{schema, Database};
+use crate::database::models::Name as ArgaName;
 
 
 pub struct Species {
@@ -33,7 +39,7 @@ pub struct Species {
 impl Species {
     #[graphql(skip)]
     pub async fn new(db: &Database, canonical_name: String) -> Result<Species, Error> {
-        use crate::schema::names;
+        use schema::names;
         let mut conn = db.pool.get().await?;
 
         let names = names::table

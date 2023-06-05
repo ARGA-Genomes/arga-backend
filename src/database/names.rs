@@ -7,7 +7,7 @@ use tracing::instrument;
 
 use crate::index::names::GetNames;
 
-use super::{Database, Error};
+use super::{schema, Database, Error};
 use super::models::Name;
 
 
@@ -20,7 +20,7 @@ impl GetNames for Database {
 
     #[instrument(skip(self))]
     async fn find_by_canonical_name(&self, name: &str) -> Result<Vec<Name>, Self::Error> {
-        use crate::schema::names::dsl::*;
+        use schema::names::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let records = names
@@ -34,7 +34,7 @@ impl GetNames for Database {
 
     #[instrument(skip(self))]
     async fn find_by_scientific_name(&self, name: &str) -> Result<Name, Self::Error> {
-        use crate::schema::names::dsl::*;
+        use schema::names::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let name = names

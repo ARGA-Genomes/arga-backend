@@ -7,10 +7,9 @@ use tracing::{instrument, debug};
 use uuid::Uuid;
 
 use crate::index::lists::{GetListNames, GetListTaxa, GetListPhotos, Filters, Filter, FilterItem, Pagination, GetListStats, ListStats};
-use crate::index::providers::db::models::UserTaxon;
 
-use super::{Database, Error};
-use super::models::{NameList, Name, TaxonPhoto};
+use super::{schema, Database, Error};
+use super::models::{NameList, Name, UserTaxon, TaxonPhoto};
 
 
 sql_function!(fn lower(x: Nullable<Text>) -> Nullable<Text>);
@@ -22,9 +21,9 @@ impl GetListNames for Database {
 
     #[instrument(skip(self))]
     async fn list_names(&self, list: &NameList, filters: &Filters, pagination: &Pagination) -> Result<Vec<Name>, Self::Error> {
-        use crate::schema::names;
-        use crate::schema::user_taxa as taxa;
-        use crate::schema::conservation_statuses;
+        use schema::names;
+        use schema::user_taxa as taxa;
+        use schema::conservation_statuses;
         let mut conn = self.pool.get().await?;
 
         let offset = pagination.page_size * (pagination.page - 1);
@@ -66,7 +65,7 @@ impl GetListTaxa for Database {
     type Error = Error;
 
     async fn list_taxa(&self, list: &Vec<Name>) -> Result<Vec<UserTaxon>, Self::Error> {
-        use crate::schema::user_taxa::dsl::*;
+        use schema::user_taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let name_ids: Vec<Uuid> = list.iter().map(|n| n.id).collect();
@@ -85,7 +84,7 @@ impl GetListPhotos for Database {
     type Error = Error;
 
     async fn list_photos(&self, list: &Vec<Name>) -> Result<Vec<TaxonPhoto>, Self::Error> {
-        use crate::schema::taxon_photos::dsl::*;
+        use schema::taxon_photos::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let name_ids: Vec<Uuid> = list.iter().map(|n| n.id).collect();
@@ -105,9 +104,9 @@ impl GetListStats for Database {
     type Error = Error;
 
     async fn list_stats(&self, list: &NameList, filters: &Filters) -> Result<ListStats, Self::Error> {
-        use crate::schema::names;
-        use crate::schema::user_taxa as taxa;
-        use crate::schema::conservation_statuses;
+        use schema::names;
+        use schema::user_taxa as taxa;
+        use schema::conservation_statuses;
         let mut conn = self.pool.get().await?;
 
         let mut query = conservation_statuses::table

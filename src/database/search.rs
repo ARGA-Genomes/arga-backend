@@ -5,7 +5,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
 
-use crate::index::{search::{
+use crate::index::search::{
     Searchable,
     SearchResults,
     SearchFilterItem,
@@ -21,8 +21,9 @@ use crate::index::{search::{
     GenusSearchResult,
     GenusSearch,
     GenusSearchItem, SpeciesSearchWithRegion
-}, providers::db::models::ArgaTaxon};
-use super::{Database, Error};
+};
+use super::{schema, schema_gnl, Database, Error};
+use super::models::ArgaTaxon;
 
 
 #[derive(Queryable, Debug)]
@@ -76,7 +77,7 @@ impl Searchable for Database {
     type Error = Error;
 
     async fn filtered(&self, filters: &Vec<SearchFilterItem>) -> Result<SearchResults, Error> {
-        use crate::schema::taxa::dsl::*;
+        use schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let mut query = taxa
@@ -174,7 +175,7 @@ impl TaxaSearch for Database {
 
     #[tracing::instrument(skip(self))]
     async fn suggestions(&self, query: &str) ->  Result<Vec<SearchSuggestion> ,Self::Error> {
-        use crate::schema::names::dsl::*;
+        use schema::names::dsl::*;
 
         if query.is_empty() {
             return Ok(vec![]);
@@ -203,7 +204,7 @@ impl SpeciesSearchByCanonicalName for Database {
     type Error = Error;
 
     async fn search_species_by_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Error> {
-        use crate::schema_gnl::gnl::dsl::*;
+        use schema_gnl::gnl::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let rows = gnl
@@ -238,7 +239,7 @@ impl SpeciesSearchExcludingCanonicalName for Database {
     type Error = Error;
 
     async fn search_species_excluding_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Error> {
-        use crate::schema::taxa::dsl::*;
+        use schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let rows = taxa
@@ -275,7 +276,7 @@ impl GenusSearch for Database {
     #[tracing::instrument(skip(self))]
     async fn search_genus(&self, _query: &str, filters: &Vec<SearchFilterItem>) -> Result<GenusSearchResult, Self::Error> {
         use diesel::dsl::count_star;
-        use crate::schema::taxa::dsl::*;
+        use schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let mut query = taxa
@@ -340,7 +341,7 @@ impl SpeciesSearch for Database {
 
     #[tracing::instrument(skip(self))]
     async fn search_species(&self, q: Option<String>, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Self::Error> {
-        use crate::schema_gnl::gnl::dsl::*;
+        use schema_gnl::gnl::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let mut query = gnl
@@ -410,14 +411,14 @@ impl SpeciesSearchWithRegion for Database {
         limit: i64,
     ) -> Result<Vec<ArgaTaxon>, Self::Error>
     {
-        use crate::schema_gnl::gnl::dsl::*;
+        use schema_gnl::gnl::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        use crate::schema_gnl::eav_arrays::dsl::*;
+        use schema_gnl::eav_arrays::dsl::*;
 
         let mut query = gnl
             .inner_join(eav_arrays.on(entity_id.eq(id)))
-            .select(crate::schema_gnl::gnl::all_columns)
+            .select(schema_gnl::gnl::all_columns)
             .filter(name.eq_any(vec!["ibraRegions", "imcraRegions"]))
             .filter(value.overlaps_with(region))
             .order_by(canonical_name)

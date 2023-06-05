@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
 use crate::index::family::{GetFamily, Taxonomy};
-use super::{Database, Error, Taxon};
+use super::{schema_gnl, Database, Error, Taxon};
 
 
 #[async_trait]
@@ -12,7 +12,7 @@ impl GetFamily for Database {
     type Error = Error;
 
     async fn taxonomy(&self, name: &str) -> Result<Taxonomy, Error> {
-        use crate::schema_gnl::gnl::dsl::*;
+        use schema_gnl::gnl::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let taxon = gnl

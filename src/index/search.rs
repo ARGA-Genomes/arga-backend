@@ -2,7 +2,7 @@ use axum::async_trait;
 use async_graphql::{SimpleObject, Union, Enum};
 use serde::{Serialize, Deserialize};
 
-use super::providers::db::models::ArgaTaxon;
+use crate::database::models::ArgaTaxon;
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]

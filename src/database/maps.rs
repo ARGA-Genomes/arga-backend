@@ -8,10 +8,10 @@ use diesel_async::RunQueryDsl;
 use diesel::{Queryable, AsExpression, FromSqlRow};
 use diesel::deserialize::{self, FromSql};
 use diesel::pg::Pg;
-use crate::schema::sql_types::Geometry;
+use super::schema::sql_types::Geometry;
 
 use crate::index::maps::{self, RegionGeometry};
-use super::{Database, Error};
+use super::{schema, Database, Error};
 
 
 // geometry ST_Simplify(geometry geomA, float tolerance, boolean preserveCollapsed);
@@ -51,7 +51,7 @@ impl maps::GetGeometry for Database {
     type Error = Error;
 
     async fn map_ibra(&self, regions: &Vec<String>, tolerance: &Option<f32>) -> Result<Vec<maps::RegionGeometry>, Error> {
-        use crate::schema::ibra::dsl::*;
+        use schema::ibra::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let query = match tolerance {

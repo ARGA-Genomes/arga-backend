@@ -4,7 +4,8 @@ use async_trait::async_trait;
 use polars::prelude::IntoVec;
 use serde::Deserialize;
 
-use crate::index::{species::{GetGenomicData, GenomicData, GeoCoordinates, GetWholeGenomes, WholeGenome}, providers::db::models::Name};
+use crate::index::species::{GetGenomicData, GenomicData, GeoCoordinates, GetWholeGenomes, WholeGenome};
+use crate::database::models::Name;
 use super::{Solr, Error};
 
 

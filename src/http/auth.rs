@@ -9,7 +9,7 @@ use diesel_async::pooled_connection::bb8::Pool;
 use tracing::instrument;
 use uuid::Uuid;
 
-use crate::schema;
+use crate::database::schema;
 
 
 pub type AuthContext = axum_login::extractors::AuthContext<User, DatabaseUserStore, Role>;

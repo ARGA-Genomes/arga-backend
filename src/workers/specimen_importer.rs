@@ -8,8 +8,8 @@ use stakker::*;
 use tracing::{instrument, info, error};
 use uuid::Uuid;
 
-use crate::index::providers::db::models::{ Job, NameList, NameListType, Specimen };
-use crate::schema;
+use crate::database::schema;
+use crate::database::models::{Job, NameList, NameListType, Specimen};
 
 
 pub struct SpecimenImporter {

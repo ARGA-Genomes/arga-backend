@@ -8,23 +8,28 @@ use serde::{Serialize, Deserialize};
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
-use crate::index::providers::db::models::ArgaTaxon;
-use crate::index::search::DNASearchByCanonicalName;
-use crate::index::search::FullTextSearch;
-use crate::index::search::FullTextSearchItem;
-use crate::index::search::FullTextSearchResult;
-use crate::index::search::FullTextType;
-use crate::index::search::GenusSearch;
-use crate::index::search::GenusSearchItem;
-use crate::index::search::SearchFilterItem;
-use crate::index::search::SearchFilterMethod;
-use crate::index::search::SearchItem;
-use crate::index::search::SearchSuggestion;
-use crate::index::search::SpeciesSearch;
-use crate::index::search::SpeciesSearchByCanonicalName;
-use crate::index::search::SpeciesSearchItem;
-use crate::index::search::SpeciesSearchWithRegion;
-use crate::index::search::{Searchable, TaxaSearch, SearchResults};
+use crate::index::search::{
+    DNASearchByCanonicalName,
+    FullTextSearch,
+    FullTextSearchItem,
+    FullTextSearchResult,
+    FullTextType,
+    GenusSearch,
+    GenusSearchItem,
+    SearchFilterItem,
+    SearchFilterMethod,
+    SearchItem,
+    SearchSuggestion,
+    SpeciesSearch,
+    SpeciesSearchByCanonicalName,
+    SpeciesSearchItem,
+    SpeciesSearchWithRegion,
+    Searchable,
+    TaxaSearch,
+    SearchResults
+};
+use crate::database::schema_gnl;
+use crate::database::models::ArgaTaxon;
 
 
 pub struct Search;
@@ -357,7 +362,7 @@ impl Search {
         }
 
         // match the results against the ARGA GNL
-        use crate::schema_gnl::gnl::dsl::*;
+        use schema_gnl::gnl::dsl::*;
         let mut conn = state.db_provider.pool.get().await.unwrap();
 
         let rows = gnl

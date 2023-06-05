@@ -7,12 +7,10 @@ use diesel_async::RunQueryDsl;
 use serde::Serialize;
 use uuid::Uuid;
 
-use crate::schema;
-
 use crate::http::Context;
 use crate::http::error::InternalError;
-use crate::index::providers::db::Database;
-use crate::index::providers::db::models::NameList;
+use crate::database::{schema, Database};
+use crate::database::models::NameList;
 
 
 #[derive(Debug, Serialize)]

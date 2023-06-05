@@ -13,21 +13,11 @@ use uuid::Uuid;
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::Taxonomy;
-use crate::index::lists::Filters;
-use crate::index::lists::GetListNames;
-use crate::index::lists::GetListPhotos;
-use crate::index::lists::GetListStats;
-use crate::index::lists::GetListTaxa;
-use crate::index::lists::ListDataSummary;
-use crate::index::lists::ListStats;
-use crate::index::lists::Pagination;
-use crate::index::providers::db::Database;
-use crate::index::providers::db::models::NameList;
-use crate::index::providers::db::models::TaxonPhoto;
-use crate::index::providers::db::models::Name as ArgaName;
-use crate::index::stats::GetSpeciesStats;
-
 use crate::index::lists;
+use crate::index::lists::{Filters, GetListNames, GetListPhotos, GetListStats, GetListTaxa, ListDataSummary, ListStats, Pagination};
+use crate::index::stats::GetSpeciesStats;
+use crate::database::{schema, Database};
+use crate::database::models::{NameList, TaxonPhoto, Name as ArgaName};
 
 
 #[derive(Debug, Enum, Eq, PartialEq, Copy, Clone)]
@@ -109,7 +99,7 @@ impl Lists {
         pagination: Pagination
     ) -> Result<Lists, Error>
     {
-        use crate::schema::name_lists as lists;
+        use schema::name_lists as lists;
         let mut conn = db.pool.get().await?;
 
         let list = lists::table

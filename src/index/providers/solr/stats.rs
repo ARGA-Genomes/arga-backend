@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use async_trait::async_trait;
 use serde::Deserialize;
 
-use crate::index::{stats::{
+use crate::index::stats::{
     GetGenusStats,
     GenusStats,
     GenusBreakdown,
@@ -13,8 +13,11 @@ use crate::index::{stats::{
     FamilyStats,
     FamilyBreakdown,
     GetFamilyBreakdown,
-    FamilyBreakdownItem, GetSpeciesStats, SpeciesStats
-}, providers::db::models::Name};
+    FamilyBreakdownItem,
+    GetSpeciesStats,
+    SpeciesStats,
+};
+use crate::database::models::Name;
 use super::{Solr, Error};
 
 

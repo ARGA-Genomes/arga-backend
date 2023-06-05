@@ -3,7 +3,8 @@ use std::time::Duration;
 use stakker::*;
 use tracing::{info, instrument};
 
-use crate::index::providers::db::models::{Job, JobStatus};
+use crate::database::schema;
+use crate::database::models::{Job, JobStatus};
 
 use super::taxa_importer::TaxaImporter;
 use super::conservation_status_importer::ConservationStatusImporter;
@@ -111,7 +112,7 @@ impl JobPoller {
         let pool = self.pool.clone();
 
         self.handle.spawn_ret(ret, cx, || async move {
-            use crate::schema::jobs::dsl::*;
+            use schema::jobs::dsl::*;
             let mut conn = pool.get().await.unwrap();
 
             jobs
@@ -168,7 +169,7 @@ impl Allocator {
 
             // update the status so that it is only allocated to one worker
             self.handle.spawn_ret(ret, cx, move || async move {
-                use crate::schema::jobs::dsl::*;
+                use schema::jobs::dsl::*;
                 let mut conn = pool.get().await.unwrap();
 
                 diesel::update(jobs)

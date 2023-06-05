@@ -9,9 +9,8 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::FeatureClient;
-use crate::features::Features;
+use crate::database::Database;
 use crate::index::providers::ala::Ala;
-use crate::index::providers::db::Database;
 use crate::index::providers::search::SearchIndex;
 use crate::index::providers::solr::Solr;
 
@@ -99,14 +98,12 @@ pub async fn serve(
 /// into the same namespace. The context present in every request
 /// is also moved here and cloned out to any sub-routers.
 fn router(context: Context) -> Result<Router, Error> {
-    let with_tracing = context.features.is_enabled(Features::OpenTelemetry);
-
     let host = context.config.frontend_host.clone();
     let origin = host
         .parse::<HeaderValue>()
         .map_err(|_| Error::Configuration(String::from("frontend_host"), host))?;
 
-    let mut router = Router::new()
+    let router = Router::new()
         .merge(health::router())
         .merge(graphql::router(context.clone()))
         .merge(admin::router(context.clone()))
@@ -117,11 +114,6 @@ fn router(context: Context) -> Result<Router, Error> {
                 .allow_methods([Method::GET]),
         )
         .with_state(context);
-
-    if let Ok(true) = with_tracing {
-        tracing::info!("Enabling axum tracing layer");
-        router = router.layer(TraceLayer::new_for_http());
-    }
 
     Ok(router)
 }

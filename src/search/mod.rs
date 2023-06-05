@@ -7,16 +7,16 @@ use diesel_async::RunQueryDsl;
 
 use tantivy::{doc, Index};
 
-use crate::index::providers::db::Database;
-use crate::index::providers::db::models;
-use crate::index::providers::db::models::Name;
 use crate::index::providers::search::SearchIndex;
+use crate::database::{schema, schema_gnl, Database};
+use crate::database::models::{Name, CommonName};
 
 
 #[derive(clap::Subcommand)]
 pub enum Command {
     /// Create the search index
     Create,
+    Reindex,
 }
 
 pub async fn process_command(command: &Command) {
@@ -24,6 +24,7 @@ pub async fn process_command(command: &Command) {
 
     match command {
         Command::Create => create().await.unwrap(),
+        Command::Reindex => reindex().await.unwrap(),
     }
 }
 
@@ -85,9 +86,22 @@ pub async fn create() -> tantivy::Result<()> {
     Ok(())
 }
 
+
+pub async fn reindex() -> tantivy::Result<()> {
+    let schema = SearchIndex::schema()?;
+    let index = Index::create_in_dir(".index", schema.clone())?;
+
+    let mut index_writer = index.writer(500_000_000)?;
+    index_writer.delete_all_documents()?;
+    index_writer.commit()?;
+
+    Ok(())
+}
+
+
 async fn get_names(db: &Database) -> Vec<Name> {
     let mut conn = db.pool.get().await.unwrap();
-    use crate::schema::names::dsl::*;
+    use schema::names::dsl::*;
 
     names
         .order_by(scientific_name)
@@ -96,9 +110,9 @@ async fn get_names(db: &Database) -> Vec<Name> {
         .unwrap()
 }
 
-async fn get_vernacular_names(db: &Database, names: &[Name]) -> Vec<models::CommonName> {
+async fn get_vernacular_names(db: &Database, names: &[Name]) -> Vec<CommonName> {
     let mut conn = db.pool.get().await.unwrap();
-    use crate::schema_gnl::common_names::dsl::*;
+    use schema_gnl::common_names::dsl::*;
 
     let names: Vec<&String> = names.iter().map(|name| &name.scientific_name).collect();
 
@@ -107,7 +121,7 @@ async fn get_vernacular_names(db: &Database, names: &[Name]) -> Vec<models::Comm
         .filter(scientific_name.eq_any(&names))
         .filter(vernacular_language.is_null())
         .order_by((vernacular_name, scientific_name))
-        .load::<models::CommonName>(&mut conn)
+        .load::<CommonName>(&mut conn)
         .await
         .unwrap()
 }

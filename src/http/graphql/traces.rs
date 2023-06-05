@@ -1,15 +1,15 @@
 use async_graphql::*;
-
 use tracing::instrument;
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::http::Error;
 use crate::http::Context as State;
 
-use crate::index::providers::db::models::TraceFile;
+use crate::database::models::TraceFile;
+use crate::database::schema;
 
-use diesel::prelude::*;
-use diesel_async::RunQueryDsl;
 
 
 #[derive(Clone, Debug, SimpleObject)]
@@ -32,7 +32,7 @@ impl Traces {
         let state = ctx.data::<State>().unwrap();
         let mut conn = state.db_provider.pool.get().await?;
 
-        use crate::schema::trace_files::dsl::*;
+        use schema::trace_files::dsl::*;
         let trace = trace_files.filter(id.eq(self.uuid)).get_result::<TraceFile>(&mut conn).await?;
 
         Ok(Analyzed {

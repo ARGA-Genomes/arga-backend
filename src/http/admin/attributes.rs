@@ -9,12 +9,10 @@ use diesel_async::RunQueryDsl;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
-use crate::schema;
-
 use crate::http::Context;
 use crate::http::error::InternalError;
-use crate::index::providers::db::Database;
-use crate::index::providers::db::models::{Attribute, AttributeDataType};
+use crate::database::{schema, Database};
+use crate::database::models::{Attribute, AttributeDataType};
 
 
 #[derive(Debug, Serialize)]

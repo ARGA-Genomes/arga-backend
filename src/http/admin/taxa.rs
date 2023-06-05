@@ -11,13 +11,11 @@ use diesel_async::RunQueryDsl;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
-use crate::schema;
-use crate::schema_gnl;
 
 use crate::http::Context;
 use crate::http::error::InternalError;
-use crate::index::providers::db::Database;
-use crate::index::providers::db::models::{UserTaxaList, UserTaxon, ArgaTaxon, AttributeDataType};
+use crate::database::{schema, schema_gnl, Database};
+use crate::database::models::{UserTaxaList, UserTaxon, ArgaTaxon, AttributeDataType};
 
 
 #[derive(Debug, Serialize)]

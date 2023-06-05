@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use async_graphql::SimpleObject;
 use serde::{Serialize, Deserialize};
 
-use super::providers::db::models::Name;
+use crate::database::models::Name;
 
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

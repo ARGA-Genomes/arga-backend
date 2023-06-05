@@ -10,7 +10,7 @@ use arga_backend::workers;
 use arga_backend::search;
 
 use arga_backend::index::providers::{Solr, SolrClient};
-use arga_backend::index::providers::db::Database;
+use arga_backend::database::Database;
 
 mod tasks;
 

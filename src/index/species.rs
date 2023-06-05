@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 
 pub use super::Taxonomy;
-use super::providers::db::models::Name;
+use crate::database::models::Name;
 
 
 /// The distribution of a species in a specific locality.

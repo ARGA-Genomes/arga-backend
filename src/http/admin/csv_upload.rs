@@ -18,8 +18,7 @@ use tracing::{debug, info};
 
 use crate::http::Context;
 use crate::http::error::Error;
-use crate::index::providers::db::Database;
-use crate::schema;
+use crate::database::{schema, Database};
 
 
 /// The REST gateway for the admin backend for basic CRUD operations

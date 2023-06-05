@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
 use crate::index::stats::{GetGenusStats, GenusStats, FamilyStats, GetFamilyStats};
-use super::{Database, Error};
+use super::{schema, Database, Error};
 
 
 #[async_trait]
@@ -12,7 +12,7 @@ impl GetGenusStats for Database {
     type Error = Error;
 
     async fn genus_stats(&self, genus_value: &str) -> Result<GenusStats, Error> {
-        use crate::schema::taxa::dsl::*;
+        use schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let total_species: i64 = taxa
@@ -35,7 +35,7 @@ impl GetFamilyStats for Database {
     type Error = Error;
 
     async fn family_stats(&self, family_value: &str) -> Result<FamilyStats, Error> {
-        use crate::schema::taxa::dsl::*;
+        use schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let total_genera: i64 = taxa

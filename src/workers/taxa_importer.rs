@@ -8,7 +8,8 @@ use stakker::*;
 use tracing::{instrument, info, error};
 use uuid::Uuid;
 
-use crate::index::providers::db::models::{
+use crate::database::schema;
+use crate::database::models::{
     Job,
     UserTaxon,
     UserTaxaList,
@@ -19,7 +20,6 @@ use crate::index::providers::db::models::{
     Name,
     Regions, RegionType,
 };
-use crate::schema;
 
 
 pub struct TaxaImporter {

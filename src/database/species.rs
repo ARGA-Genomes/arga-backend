@@ -7,9 +7,8 @@ use tracing::instrument;
 use uuid::Uuid;
 
 use crate::index::species::{self, GetSpecies, Taxonomy, GetRegions, GetMedia, GetSpecimens, GetConservationStatus, GetTraceFiles};
-use crate::index::providers::db::models::{Name, UserTaxon, RegionType, TaxonPhoto, Specimen, TraceFile};
-use super::models::ConservationStatus;
-use super::{Database, Error};
+use super::{schema, Database, Error};
+use super::models::{Name, UserTaxon, RegionType, TaxonPhoto, Specimen, TraceFile, ConservationStatus};
 
 
 #[derive(Queryable, Debug)]
@@ -49,7 +48,7 @@ impl GetSpecies for Database {
             ..Default::default()
         };
 
-        use crate::schema::user_taxa;
+        use schema::user_taxa;
         let taxa = user_taxa::table
             .filter(user_taxa::name_id.eq(name.id))
             .load::<UserTaxon>(&mut conn)
@@ -95,8 +94,8 @@ impl GetSpecies for Database {
     }
 
     async fn distribution(&self, name: &str) -> Result<Vec<species::Distribution>, Error> {
-        use crate::schema::taxa::dsl::{taxa, canonical_name, taxon_id as taxa_taxon_id};
-        use crate::schema::distribution::dsl::*;
+        use schema::taxa::dsl::{taxa, canonical_name, taxon_id as taxa_taxon_id};
+        use schema::distribution::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let rows = distribution
@@ -123,7 +122,7 @@ impl GetRegions for Database {
     type Error = Error;
 
     async fn ibra(&self, name: &Name) -> Result<Vec<species::Region>, Error> {
-        use crate::schema::regions;
+        use schema::regions;
         let mut conn = self.pool.get().await?;
 
         let regions = regions::table
@@ -148,7 +147,7 @@ impl GetRegions for Database {
     }
 
     async fn imcra(&self, name: &Name) -> Result<Vec<species::Region>, Error> {
-        use crate::schema::regions;
+        use schema::regions;
         let mut conn = self.pool.get().await?;
 
         let regions = regions::table
@@ -179,7 +178,7 @@ impl GetMedia for Database {
     type Error = Error;
 
     async fn photos(&self, name: &Name) -> Result<Vec<species::Photo>, Error> {
-        use crate::schema::taxon_photos::dsl::*;
+        use schema::taxon_photos::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let records = taxon_photos
@@ -208,7 +207,7 @@ impl GetSpecimens for Database {
     type Error = Error;
 
     async fn specimens(&self, name: &Name) -> Result<Vec<species::Specimen>, Error> {
-        use crate::schema::specimens::dsl::*;
+        use schema::specimens::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let records = specimens
@@ -240,7 +239,7 @@ impl GetConservationStatus for Database {
     type Error = Error;
 
     async fn conservation_status(&self, name: &Name) -> Result<Vec<species::ConservationStatus>, Error> {
-        use crate::schema::conservation_statuses::dsl::*;
+        use schema::conservation_statuses::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let records = conservation_statuses
@@ -269,7 +268,7 @@ impl GetTraceFiles for Database {
     type Error = Error;
 
     async fn trace_files(&self, names: &Vec<Name>) -> Result<Vec<species::TraceFile>, Error> {
-        use crate::schema::trace_files::dsl::*;
+        use schema::trace_files::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();

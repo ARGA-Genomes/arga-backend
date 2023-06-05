@@ -10,12 +10,11 @@ use serde::{Deserialize, Serialize};
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::schema;
 
 use crate::http::Context;
 use crate::http::error::InternalError;
-use crate::index::providers::db::Database;
-use crate::index::providers::db::models::{Media, Name, TaxonPhoto};
+use crate::database::{schema, Database};
+use crate::database::models::{Media, Name, TaxonPhoto};
 
 
 #[derive(Serialize, Debug)]

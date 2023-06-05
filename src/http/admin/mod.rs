@@ -18,8 +18,8 @@ use diesel_async::RunQueryDsl;
 use tracing::instrument;
 
 use crate::http::{Context, error};
-use crate::index::providers::db::{Database, models};
-use crate::schema;
+use crate::database::{schema, models, Database};
+
 use super::auth::{AuthContext, AuthLayer, DatabaseUserStore, User, RequireAuth};
 
 
