@@ -60,25 +60,44 @@ async fn main() {
 }
 
 
-/// Start the HTTP server
-async fn serve() {
+fn start_tracing() {
     // setup tracing with opentelemetry support. this allows us to use tracing macros
     // for both logging and metrics
     let subscriber = Registry::default();
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("info,arga_backend=trace"));
 
-    let controller = telemetry::init_metrics().unwrap();
-    let metrics =  tracing_opentelemetry::MetricsLayer::new(controller);
+    if let Ok(endpoint) = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT") {
+        println!("Starting trace logger with telemetry collector at: {}", endpoint);
 
-    let tracer = telemetry::init_tracer().unwrap();
-    let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+        let controller = telemetry::init_metrics().expect("Failed to initialise telemetry metrics");
+        let metrics =  tracing_opentelemetry::MetricsLayer::new(controller);
 
-    subscriber
-        .with(env_filter)
-        .with(opentelemetry)
-        .with(metrics)
-        .with(tracing_subscriber::fmt::layer().pretty())
-        .init();
+        let tracer = telemetry::init_tracer().expect("Failed to initialise telemetry tracer");
+        let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
+        let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("info"));
+
+        subscriber
+            .with(env_filter)
+            .with(opentelemetry)
+            .with(metrics)
+            .init();
+    }
+    else {
+        println!("Starting debug trace logger for stdout");
+
+        let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("info,arga_backend=debug"));
+
+        subscriber
+            .with(env_filter)
+            .with(tracing_subscriber::fmt::layer().pretty())
+            .init();
+    }
+}
+
+
+/// Start the HTTP server
+async fn serve() {
+    start_tracing();
 
     // realistically will either be 0.0.0.0 or 127.0.0.1 depending on where it will run
     let bind_address = std::env::var("BIND_ADDRESS").expect("No binding address specified");
