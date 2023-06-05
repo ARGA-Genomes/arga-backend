@@ -19,7 +19,6 @@ use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 
 
-use crate::features::Features;
 use crate::http::Context as State;
 use crate::index::lists::{Filters, Pagination};
 use self::overview::Overview;
@@ -109,18 +108,11 @@ impl Query {
 /// and middleware. This is the entry point to our graphql api
 /// like the root router does for http requests.
 pub(crate) fn schema(state: State) -> ArgaSchema {
-    let with_tracing = state.features.is_enabled(Features::OpenTelemetry);
-
-    let mut builder = Schema::build(Query, EmptyMutation, EmptySubscription)
+    Schema::build(Query, EmptyMutation, EmptySubscription)
         .data(state)
-        .extension(ErrorLogging);
-
-    if let Ok(true) = with_tracing {
-        tracing::info!("Enabling graphql tracing extension");
-        builder = builder.extension(Tracing);
-    }
-
-    builder.finish()
+        .extension(ErrorLogging)
+        .extension(Tracing)
+        .finish()
 }
 
 /// Handles graphql requests.

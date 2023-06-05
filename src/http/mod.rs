@@ -8,7 +8,6 @@ use axum::Router;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
-use crate::FeatureClient;
 use crate::database::Database;
 use crate::index::providers::ala::Ala;
 use crate::index::providers::search::SearchIndex;
@@ -53,7 +52,6 @@ pub(crate) struct Context {
     pub ala_provider: Ala,
     pub db_provider: Database,
     pub search: SearchIndex,
-    pub features: FeatureClient,
 }
 
 impl FromRef<Context> for Database {
@@ -80,7 +78,6 @@ pub async fn serve(
         db_provider,
         search: SearchIndex::open()?,
         ala_provider: Ala::new(),
-        features: FeatureClient::new(),
     };
 
     let app = router(context)?;
