@@ -80,7 +80,7 @@ pub struct GenomicData {
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
 pub struct AssociatedSequences {
-    pub sequence_id: String,
+    pub sequenceID: String,
     pub genbank_accession: String,
     pub markercode: String,
     pub nucleotides: String

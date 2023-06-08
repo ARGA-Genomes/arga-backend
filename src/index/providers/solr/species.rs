@@ -3,7 +3,6 @@ use tracing::warn;
 use async_trait::async_trait;
 use polars::prelude::IntoVec;
 use serde::Deserialize;
-use serde_json::Value;
 
 use crate::index::{species::{GetGenomicData, GenomicData, GeoCoordinates, GetWholeGenomes, WholeGenome, AssociatedSequences}, providers::db::models::Name};
 use super::{Solr, Error};
@@ -192,7 +191,7 @@ struct SolrData {
     lat_long: Option<String>,
 
     #[serde(rename(deserialize = "associatedSequences"))]
-    associatedSequences: Option<String>,
+    associated_sequences: Option<String>,
 }
 
 impl From<SolrData> for GenomicData {
@@ -211,6 +210,17 @@ impl From<SolrData> for GenomicData {
             }
         };
 
+        let associated_sequences = match source.associated_sequences {
+            None => None,
+            Some(value) => match parse_associated_sequences(&value) {
+                Ok(associated_sequences) => associated_sequences,
+                Err(error) => {
+                    warn!(value, ?error, "failed to parse");
+                    None
+                }
+            }
+        };
+
         Self {
             canonical_name: source.raw_scientific_name,
             r#type: source.basis_of_record,
@@ -223,6 +233,7 @@ impl From<SolrData> for GenomicData {
             accession_uri: source.accession_uri,
             refseq_category: source.refseq_category,
             coordinates,
+            associated_sequences
         }
     }
 }
@@ -240,20 +251,25 @@ fn parse_coordinates(value: &str) -> Result<Option<GeoCoordinates>, anyhow::Erro
     }
 }
 
-fn parse_associatedSequences(value: &str) -> Result<Option<AssociatedSequences>, anyhow::Error> {
+fn parse_associated_sequences(value: &str) -> Result<Option<AssociatedSequences>, anyhow::Error> {
 
-    let associated_sequences_json: Value = serde_json::from_str(value)?;
+    if value.contains("sequenceID") {
 
-    let x = associated_sequences_json.replace(r#"'"#, r#"""#);
+        let json_string = value.replace(r#"'"#, r#"""#);
+        let list: [AssociatedSequences;1] = serde_json::from_str(&*json_string)?;
+        let associated_sequences = list[0].clone();
 
-    if x () {
-        Ok(Some(AssociatedSequences {
-            sequence_id: x[0]["sequenceID"].to_string(),
-            genbank_accession: x[0]["genbank_accession"].to_string(),
-            markercode: x[0]["markercode"].to_string(),
-            nucleotides: x[0]["nucleotides"].to_string(),
-        }))
-    } else {
+        if !json_string.is_empty() {
+            Ok(Some(AssociatedSequences {
+                sequenceID: associated_sequences.sequenceID,
+                genbank_accession: associated_sequences.genbank_accession,
+                markercode: associated_sequences.markercode,
+                nucleotides: associated_sequences.nucleotides,
+            }))
+        } else {
+            Ok(None)
+        }
+    }else {
         Ok(None)
     }
 }
