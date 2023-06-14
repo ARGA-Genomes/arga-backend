@@ -13,24 +13,62 @@ use super::{Solr, Error};
 impl GetWholeGenomes for Solr {
     type Error = Error;
 
-    async fn whole_genomes(&self, names: &Vec<Name>) -> Result<Vec<WholeGenome>, Error> {
-        // craft a single filter by joining them all with OR since the default
-        // will treat it as an AND query
-        let names = names.into_iter().map(|name| {
-            format!("\"{}\"", name.canonical_name.clone().unwrap_or_else(|| name.scientific_name.clone()))
-        }).collect::<Vec<String>>();
-        let joined_names = names.join(" OR ");
-
-        let filter = &format!("scientificName:{joined_names}");
+    async fn full_genomes(&self, names: &Vec<Name>) -> Result<Vec<WholeGenome>, Error> {
+        let filter = names_into_filter(&names);
+        let filter = format!("scientificName:{filter}");
 
         // get all species that have a matched name. this filters
         // out records that couldn't be matched by the name-matching service
         let params = vec![
             ("q", "*:*"),
             ("rows", "20"),
-            ("fq", filter),
+            ("fq", &filter),
             ("fq", "taxonRank:species"),
             ("fq", r#"dynamicProperties_ncbi_genome_rep:"Full""#),
+            ("fq", r#"dataResourceName:"NCBI Genome Genbank""#),
+        ];
+
+        tracing::debug!(?params);
+        let results = self.client.select::<WholeGenomeResults>(&params).await?;
+        let records = results.records.into_iter().map(|s| s.into()).collect();
+
+        Ok(records)
+    }
+
+    async fn partial_genomes(&self, names: &Vec<Name>) -> Result<Vec<WholeGenome>, Error> {
+        let filter = names_into_filter(&names);
+        let filter = format!("scientificName:{filter}");
+
+        // get all species that have a matched name. this filters
+        // out records that couldn't be matched by the name-matching service
+        let params = vec![
+            ("q", "*:*"),
+            ("rows", "20"),
+            ("fq", &filter),
+            ("fq", "taxonRank:species"),
+            ("fq", r#"dynamicProperties_ncbi_genome_rep:"Partial""#),
+        ];
+
+        tracing::debug!(?params);
+        let results = self.client.select::<WholeGenomeResults>(&params).await?;
+        let records = results.records.into_iter().map(|s| s.into()).collect();
+
+        Ok(records)
+    }
+
+    async fn reference_genomes(&self, names: &Vec<Name>) -> Result<Vec<WholeGenome>, Error> {
+        let filter = names_into_filter(&names);
+        let filter = format!("scientificName:{filter}");
+
+        // get all species that have a matched name. this filters
+        // out records that couldn't be matched by the name-matching service
+        let params = vec![
+            ("q", "*:*"),
+            ("rows", "20"),
+            ("fq", &filter),
+            ("fq", "taxonRank:species"),
+            ("fq", r#"dataResourceName:"NCBI Genome RefSeq""#),
+            // ("fq", r#"dynamicProperties_ncbi_genome_rep:"Full" OR dynamicProperties_ncbi_genome_rep:"Partial""#),
         ];
 
         tracing::debug!(?params);
@@ -52,7 +90,6 @@ struct WholeGenomeResults {
 #[serde(rename_all = "camelCase")]
 struct WholeGenomeData {
     id: String,
-    basis_of_record: Option<String>,
     data_resource_name: Option<String>,
     recorded_by: Option<Vec<String>>,
     license: Option<String>,
@@ -89,6 +126,9 @@ struct WholeGenomeData {
     #[serde(rename(deserialize = "dynamicProperties_ncbi_release_type"))]
     ncbi_release_type: Option<String>,
 
+    #[serde(rename(deserialize = "dynamicProperties_ncbi_genome_rep"))]
+    ncbi_sequence_type: Option<String>,
+
     #[serde(rename(deserialize = "lat_long"))]
     lat_long: Option<String>,
 }
@@ -110,8 +150,10 @@ impl From<WholeGenomeData> for WholeGenome {
         };
 
         Self {
+            is_reference_sequence: source.refseq_category == Some("representative genome".to_string()),
+
             id: source.id,
-            r#type: source.basis_of_record,
+            r#type: source.ncbi_sequence_type,
             data_resource: source.data_resource_name,
             recorded_by: source.recorded_by,
             license: source.license,
@@ -273,4 +315,14 @@ fn parse_associated_sequences(value: &str) -> Result<Option<AssociatedSequences>
     }else {
         Ok(None)
     }
+}
+
+
+fn names_into_filter(names: &Vec<Name>) -> String {
+    // craft a single filter by joining them all with OR since the default
+    // will treat it as an AND query
+    let names = names.into_iter().map(|name| {
+        format!("\"{}\"", name.canonical_name.clone().unwrap_or_else(|| name.scientific_name.clone()))
+    }).collect::<Vec<String>>();
+    names.join(" OR ")
 }

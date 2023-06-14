@@ -191,12 +191,16 @@ pub struct WholeGenome {
 
     pub raw_recorded_by: Option<String>,
     pub ncbi_release_type: Option<String>,
+
+    pub is_reference_sequence: bool,
 }
 
 #[async_trait]
 pub trait GetWholeGenomes {
     type Error;
-    async fn whole_genomes(&self, names: &Vec<Name>) -> Result<Vec<WholeGenome>, Self::Error>;
+    async fn full_genomes(&self, names: &Vec<Name>) -> Result<Vec<WholeGenome>, Self::Error>;
+    async fn partial_genomes(&self, names: &Vec<Name>) -> Result<Vec<WholeGenome>, Self::Error>;
+    async fn reference_genomes(&self, names: &Vec<Name>) -> Result<Vec<WholeGenome>, Self::Error>;
 }
 
 

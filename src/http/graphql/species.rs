@@ -121,7 +121,12 @@ impl Species {
     #[instrument(skip(self, ctx))]
     async fn whole_genomes(&self, ctx: &Context<'_>) -> Result<Vec<WholeGenome>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let records = state.solr.whole_genomes(&self.all_names).await?;
+        let mut records = state.solr.reference_genomes(&self.all_names).await?;
+        let full = state.solr.full_genomes(&self.all_names).await?;
+        let partial = state.solr.partial_genomes(&self.all_names).await?;
+
+        records.extend(full);
+        records.extend(partial);
         Ok(records)
     }
 
