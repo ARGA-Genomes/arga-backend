@@ -85,6 +85,7 @@ pub struct UserTaxaList {
     pub id: Uuid,
     pub name: String,
     pub description: Option<String>,
+    pub priority: i32,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]

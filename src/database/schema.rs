@@ -397,6 +397,7 @@ diesel::table! {
         id -> Uuid,
         name -> Varchar,
         description -> Nullable<Text>,
+        priority -> Int4,
     }
 }
 

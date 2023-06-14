@@ -39,58 +39,64 @@ impl GetSpecies for Database {
 
     #[instrument(skip(self))]
     async fn taxonomy(&self, name: &Name) -> Result<Taxonomy, Error> {
+        use schema::{user_taxa, user_taxa_lists};
         let mut conn = self.pool.get().await?;
 
-        let mut taxonomy = Taxonomy {
-            scientific_name: name.scientific_name.clone(),
-            canonical_name: name.canonical_name.clone(),
-            authorship: name.authorship.clone(),
-            ..Default::default()
-        };
-
-        use schema::user_taxa;
-        let taxa = user_taxa::table
+        let taxon = user_taxa::table
+            .inner_join(user_taxa_lists::table)
+            .select(user_taxa::all_columns)
             .filter(user_taxa::name_id.eq(name.id))
+            .order(user_taxa_lists::priority)
+            .first::<UserTaxon>(&mut conn)
+            .await?;
+
+        let taxonomy = Taxonomy {
+            vernacular_group: derive_vernacular_group(&taxon),
+            scientific_name: taxon.scientific_name.unwrap_or_else(|| name.scientific_name.clone()),
+            canonical_name: taxon.canonical_name,
+            authorship: taxon.scientific_name_authorship,
+            kingdom: taxon.kingdom,
+            phylum: taxon.phylum,
+            class: taxon.class,
+            order: taxon.order,
+            family: taxon.family,
+            genus: taxon.genus,
+        };
+        Ok(taxonomy)
+    }
+
+    #[instrument(skip(self))]
+    async fn taxa(&self, names: &Vec<Name>) -> Result<Vec<Taxonomy>, Error> {
+        use schema::{user_taxa, user_taxa_lists};
+        let mut conn = self.pool.get().await?;
+
+        let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
+
+        let records = user_taxa::table
+            .inner_join(user_taxa_lists::table)
+            .select(user_taxa::all_columns)
+            .filter(user_taxa::name_id.eq_any(name_ids))
+            .order(user_taxa_lists::priority)
             .load::<UserTaxon>(&mut conn)
             .await?;
 
-        for taxon in taxa {
-            taxonomy.kingdom = taxon.kingdom;
-            taxonomy.phylum = taxon.phylum;
-            taxonomy.class = taxon.class;
-            taxonomy.order = taxon.order;
-            taxonomy.family = taxon.family;
-            taxonomy.genus = taxon.genus;
-
-            taxonomy.vernacular_group = match taxonomy.kingdom.as_ref().map(|k| k.as_str()) {
-                Some("Archaea") => Some("bacteria".into()),
-                Some("Bacteria") => Some("bacteria".into()),
-                Some("Protozoa") => Some("protists and other unicellular organisms".into()),
-                Some("Fungi") => Some("mushrooms and other fungi".into()),
-                Some("Animalia") => match taxonomy.phylum.as_ref().map(|k| k.as_str()) {
-                    Some("Mollusca") => Some("molluscs".into()),
-                    Some("Arthropoda") => match taxonomy.class.as_ref().map(|k| k.as_str()) {
-                        Some("Insecta") => Some("insects".into()),
-                        _ => None,
-                    }
-                    Some("Chordata") => match taxonomy.class.as_ref().map(|k| k.as_str()) {
-                        Some("Amphibia") => Some("frogs and other amphibians".into()),
-                        Some("Aves") => Some("birds".into()),
-                        Some("Mammalia") => Some("mammals".into()),
-                        _ => None,
-                    }
-                    _ => None,
-                }
-                Some("Chromista") => Some("seaweeds and other algae".into()),
-                Some("Plantae") => match taxonomy.phylum.as_ref().map(|k| k.as_str()) {
-                    Some("Rhodophyta") => Some("seaweeds and other algae".into()),
-                    _ => Some("higher plants".into()),
-                }
-                _ => None,
-            }
+        let mut taxa = Vec::with_capacity(records.len());
+        for taxon in records {
+            taxa.push(Taxonomy {
+                vernacular_group: derive_vernacular_group(&taxon),
+                scientific_name: taxon.scientific_name.unwrap_or_default(),
+                canonical_name: taxon.canonical_name,
+                authorship: taxon.scientific_name_authorship,
+                kingdom: taxon.kingdom,
+                phylum: taxon.phylum,
+                class: taxon.class,
+                order: taxon.order,
+                family: taxon.family,
+                genus: taxon.genus,
+            })
         }
 
-        Ok(taxonomy)
+        Ok(taxa)
     }
 
     async fn distribution(&self, name: &str) -> Result<Vec<species::Distribution>, Error> {
@@ -317,4 +323,34 @@ impl From<TraceFile> for species::TraceFile {
 
 fn from_int_array(values: Vec<Option<i32>>) -> Vec<i32> {
     values.into_iter().map(|v| v.unwrap_or_default()).collect()
+}
+
+
+fn derive_vernacular_group(taxon: &UserTaxon) -> Option<String> {
+    match taxon.kingdom.as_ref().map(|k| k.as_str()) {
+        Some("Archaea") => Some("bacteria".into()),
+        Some("Bacteria") => Some("bacteria".into()),
+        Some("Protozoa") => Some("protists and other unicellular organisms".into()),
+        Some("Fungi") => Some("mushrooms and other fungi".into()),
+        Some("Animalia") => match taxon.phylum.as_ref().map(|k| k.as_str()) {
+            Some("Mollusca") => Some("molluscs".into()),
+            Some("Arthropoda") => match taxon.class.as_ref().map(|k| k.as_str()) {
+                Some("Insecta") => Some("insects".into()),
+                _ => None,
+            }
+            Some("Chordata") => match taxon.class.as_ref().map(|k| k.as_str()) {
+                Some("Amphibia") => Some("frogs and other amphibians".into()),
+                Some("Aves") => Some("birds".into()),
+                Some("Mammalia") => Some("mammals".into()),
+                _ => None,
+            }
+            _ => None,
+        }
+        Some("Chromista") => Some("seaweeds and other algae".into()),
+        Some("Plantae") => match taxon.phylum.as_ref().map(|k| k.as_str()) {
+            Some("Rhodophyta") => Some("seaweeds and other algae".into()),
+            _ => Some("higher plants".into()),
+        }
+        _ => None,
+    }
 }

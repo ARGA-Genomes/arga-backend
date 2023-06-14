@@ -44,7 +44,7 @@ impl Species {
 
         let names = names::table
             .filter(names::canonical_name.eq(&canonical_name))
-            // .filter(names::rank.eq("species"))
+            .filter(names::rank.eq("species"))
             .load::<ArgaName>(&mut conn)
             .await;
 
