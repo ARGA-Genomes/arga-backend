@@ -20,8 +20,8 @@ sql_function! { fn st_simplify(geom: Nullable<Geometry>, tolerance: Float, prese
 
 
 #[derive(Queryable, Debug)]
-pub struct Ibra {
-    pub reg_name_7: Option<String>,
+pub struct Region {
+    pub name: Option<String>,
     pub wkb_geometry: Option<Geom>,
 }
 
@@ -61,14 +61,68 @@ impl maps::GetGeometry for Database {
 
         let regions = query
             .filter(reg_name_7.eq_any(regions))
-            .load::<Ibra>(&mut conn)
+            .load::<Region>(&mut conn)
             .await?;
 
         let mut features = Vec::new();
         for region in regions {
             if let Some(geometry) = region.wkb_geometry.and_then(|v| v.to_geotype()) {
                 features.push(RegionGeometry {
-                    name: region.reg_name_7.unwrap(),
+                    name: region.name.unwrap_or("No region".to_string()),
+                    geometry,
+                })
+            }
+        }
+
+        Ok(features)
+    }
+
+    async fn map_imcra_provincial(&self, regions: &Vec<String>, tolerance: &Option<f32>) -> Result<Vec<maps::RegionGeometry>, Error> {
+        use schema::imcra_provincial::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let query = match tolerance {
+            Some(tolerance) => imcra_provincial.select((pb_name, st_simplify(wkb_geometry, tolerance, false))).into_boxed(),
+            None => imcra_provincial.select((pb_name, wkb_geometry)).into_boxed(),
+        };
+
+        let regions = query
+            .filter(pb_name.eq_any(regions))
+            .load::<Region>(&mut conn)
+            .await?;
+
+        let mut features = Vec::new();
+        for region in regions {
+            if let Some(geometry) = region.wkb_geometry.and_then(|v| v.to_geotype()) {
+                features.push(RegionGeometry {
+                    name: region.name.unwrap_or("No region".to_string()),
+                    geometry,
+                })
+            }
+        }
+
+        Ok(features)
+    }
+
+    async fn map_imcra_mesoscale(&self, regions: &Vec<String>, tolerance: &Option<f32>) -> Result<Vec<maps::RegionGeometry>, Error> {
+        use schema::imcra_mesoscale::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let query = match tolerance {
+            Some(tolerance) => imcra_mesoscale.select((meso_name, st_simplify(wkb_geometry, tolerance, false))).into_boxed(),
+            None => imcra_mesoscale.select((meso_name, wkb_geometry)).into_boxed(),
+        };
+
+        let regions = query
+            .filter(meso_name.eq_any(regions))
+            .load::<Region>(&mut conn)
+            .await?;
+
+        let mut features = Vec::new();
+        for region in regions {
+            if let Some(geometry) = region.wkb_geometry.and_then(|v| v.to_geotype()) {
+                features.push(RegionGeometry {
+                    name: region.name.unwrap_or("No region".to_string()),
                     geometry,
                 })
             }

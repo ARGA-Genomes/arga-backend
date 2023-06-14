@@ -23,4 +23,8 @@ pub trait GetGeometry {
 
     /// Get the polygon geometry for the specified IBRA regions
     async fn map_ibra(&self, regions: &Vec<String>, tolerance: &Option<f32>) -> Result<Vec<RegionGeometry>, Self::Error>;
+    /// Get the polygon geometry for the specified IMCRA provincial regions
+    async fn map_imcra_provincial(&self, regions: &Vec<String>, tolerance: &Option<f32>) -> Result<Vec<RegionGeometry>, Self::Error>;
+    /// Get the polygon geometry for the specified IMCRA mesoscale regions
+    async fn map_imcra_mesoscale(&self, regions: &Vec<String>, tolerance: &Option<f32>) -> Result<Vec<RegionGeometry>, Self::Error>;
 }

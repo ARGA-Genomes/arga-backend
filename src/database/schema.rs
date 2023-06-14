@@ -112,6 +112,21 @@ diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::Geometry;
 
+    imcra_mesoscale (ogc_fid) {
+        ogc_fid -> Int4,
+        meso_name -> Nullable<Varchar>,
+        meso_num -> Nullable<Int4>,
+        meso_abbr -> Nullable<Varchar>,
+        water_type -> Nullable<Varchar>,
+        area_km2 -> Nullable<Float8>,
+        wkb_geometry -> Nullable<Geometry>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::Geometry;
+
     imcra_provincial (ogc_fid) {
         ogc_fid -> Int4,
         pb_name -> Nullable<Varchar>,
