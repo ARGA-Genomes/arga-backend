@@ -23,6 +23,62 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    assemblies (id) {
+        id -> Uuid,
+        name_id -> Uuid,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        accession -> Varchar,
+        bioproject_id -> Nullable<Varchar>,
+        biosample_id -> Nullable<Varchar>,
+        material_sample_id -> Nullable<Varchar>,
+        nuccore -> Nullable<Varchar>,
+        refseq_category -> Nullable<Varchar>,
+        specific_host -> Nullable<Varchar>,
+        clone_strain -> Nullable<Varchar>,
+        version_status -> Nullable<Varchar>,
+        contam_screen_input -> Nullable<Varchar>,
+        release_type -> Nullable<Varchar>,
+        genome_rep -> Nullable<Varchar>,
+        gbrs_paired_asm -> Nullable<Varchar>,
+        paired_asm_comp -> Nullable<Varchar>,
+        excluded_from_refseq -> Nullable<Varchar>,
+        relation_to_type_material -> Nullable<Varchar>,
+        asm_not_live_date -> Nullable<Varchar>,
+        other_catalog_numbers -> Nullable<Varchar>,
+        recorded_by -> Nullable<Varchar>,
+        genetic_accession_uri -> Nullable<Varchar>,
+        event_date -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
+    assembly_stats (id) {
+        id -> Uuid,
+        assembly_id -> Uuid,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        total_length -> Nullable<Int4>,
+        spanned_gaps -> Nullable<Int4>,
+        unspanned_gaps -> Nullable<Int4>,
+        region_count -> Nullable<Int4>,
+        scaffold_count -> Nullable<Int4>,
+        scaffold_n50 -> Nullable<Int4>,
+        scaffold_l50 -> Nullable<Int4>,
+        scaffold_n75 -> Nullable<Int4>,
+        scaffold_n90 -> Nullable<Int4>,
+        contig_count -> Nullable<Int4>,
+        contig_n50 -> Nullable<Int4>,
+        contig_l50 -> Nullable<Int4>,
+        total_gap_length -> Nullable<Int4>,
+        molecule_count -> Nullable<Int4>,
+        top_level_count -> Nullable<Int4>,
+        component_count -> Nullable<Int4>,
+        gc_perc -> Nullable<Int4>,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::AttributeDataType;
 
@@ -32,6 +88,23 @@ diesel::table! {
         data_type -> AttributeDataType,
         description -> Nullable<Text>,
         reference_url -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
+    biosamples (id) {
+        id -> Uuid,
+        name_id -> Uuid,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        accession -> Varchar,
+        sra -> Nullable<Varchar>,
+        submission_date -> Nullable<Varchar>,
+        publication_date -> Nullable<Varchar>,
+        last_update -> Nullable<Varchar>,
+        title -> Nullable<Varchar>,
+        owner -> Nullable<Varchar>,
+        attributes -> Nullable<Jsonb>,
     }
 }
 
@@ -435,6 +508,9 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(assemblies -> names (name_id));
+diesel::joinable!(assembly_stats -> assemblies (assembly_id));
+diesel::joinable!(biosamples -> names (name_id));
 diesel::joinable!(conservation_statuses -> name_lists (list_id));
 diesel::joinable!(conservation_statuses -> names (name_id));
 diesel::joinable!(name_vernacular_names -> names (name_id));
@@ -448,11 +524,15 @@ diesel::joinable!(user_taxa -> names (name_id));
 diesel::joinable!(user_taxa -> user_taxa_lists (taxa_lists_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    assemblies,
+    assembly_stats,
     attributes,
+    biosamples,
     conservation_statuses,
     distribution,
     historical_bushfires,
     ibra,
+    imcra_mesoscale,
     imcra_provincial,
     jobs,
     media,

@@ -9,6 +9,7 @@ pub mod stats;
 pub mod maps;
 pub mod lists;
 pub mod names;
+pub mod assembly;
 
 
 use async_graphql::SimpleObject;
