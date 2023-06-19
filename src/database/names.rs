@@ -4,6 +4,7 @@ use diesel::prelude::*;
 use diesel::sql_types::{Text, Nullable};
 use diesel_async::RunQueryDsl;
 use tracing::instrument;
+use uuid::Uuid;
 
 use crate::index::names::GetNames;
 
@@ -40,6 +41,21 @@ impl GetNames for Database {
         let name = names
             .filter(scientific_name.eq(name))
             .order_by(scientific_name)
+            .first::<Name>(&mut conn)
+            .await?;
+
+        Ok(name)
+    }
+
+    #[instrument(skip(self))]
+    async fn find_by_assembly_id(&self, uuid: &Uuid) -> Result<Name, Self::Error> {
+        use schema::{names, assemblies};
+        let mut conn = self.pool.get().await?;
+
+        let name = assemblies::table
+            .inner_join(names::table)
+            .filter(assemblies::id.eq(uuid))
+            .select(names::all_columns)
             .first::<Name>(&mut conn)
             .await?;
 
