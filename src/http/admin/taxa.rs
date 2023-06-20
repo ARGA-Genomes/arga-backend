@@ -15,13 +15,13 @@ use uuid::Uuid;
 use crate::http::Context;
 use crate::http::error::InternalError;
 use crate::database::{schema, schema_gnl, Database};
-use crate::database::models::{UserTaxaList, UserTaxon, ArgaTaxon, AttributeDataType};
+use crate::database::models::{UserTaxaList, UserTaxon, AttributeDataType, Name};
 
 
 #[derive(Debug, Serialize)]
 struct TaxaList {
     total: usize,
-    records: Vec<ArgaTaxon>,
+    records: Vec<Name>,
 }
 
 async fn taxa(
@@ -29,7 +29,7 @@ async fn taxa(
     State(db_provider): State<Database>,
 ) -> Result<Json<TaxaList>, InternalError>
 {
-    use schema_gnl::gnl::dsl::*;
+    use schema::names::dsl::*;
     let mut conn = db_provider.pool.get().await?;
 
     // pagination
@@ -37,31 +37,15 @@ async fn taxa(
     let page_size = parse_int_param(&params, "page_size", 20);
     let offset = (page - 1) * page_size;
 
-    let mut query = gnl
+    let mut query = names
+        .filter(rank.eq("species"))
         .order_by(scientific_name)
         .offset(offset)
         .limit(page_size)
         .into_boxed();
 
-    let mut total = gnl
+    let mut total = names
         .into_boxed();
-
-    // filters
-    if let Some(filter_source) = params.get("source") {
-        query = query.filter(source.eq(filter_source));
-        total = total.filter(source.eq(filter_source));
-
-        match parse_uuid(&params, "taxa_lists_id") {
-            Some(list_uuid) => {
-                query = query.filter(taxa_lists_id.eq(list_uuid));
-                total = total.filter(taxa_lists_id.eq(list_uuid));
-            },
-            None => {
-                query = query.filter(taxa_lists_id.is_null());
-                total = total.filter(taxa_lists_id.is_null());
-            }
-        };
-    }
 
     if let Some(search) = params.get("q") {
         let q = format!("%{search}%");
@@ -69,7 +53,7 @@ async fn taxa(
         total = total.filter(canonical_name.ilike(q));
     }
 
-    let records = query.load::<ArgaTaxon>(&mut conn).await?;
+    let records = query.load::<Name>(&mut conn).await?;
     let total: i64 = total.count().get_result(&mut conn).await?;
 
     Ok(Json(TaxaList {
