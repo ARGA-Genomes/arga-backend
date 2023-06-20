@@ -170,9 +170,10 @@ async fn upload_main_image(
 
     // move the temporary image file to the image store
     let filename = format!("arga_admin_{}", form.file);
+    let outpath = format!("{}.jpg", form.file);
     let tmp_path = std::env::var("ADMIN_TMP_UPLOAD_STORAGE").expect("No upload storage specified");
     let img_path = std::env::var("ADMIN_IMAGE_UPLOAD_STORAGE").expect("No upload storage specified");
-    std::fs::copy(Path::new(&tmp_path).join(&filename), Path::new(&img_path).join(&form.file))?;
+    std::fs::copy(Path::new(&tmp_path).join(&filename), Path::new(&img_path).join("assets").join(&outpath))?;
 
     // delete any previous main images
     diesel::delete(taxon_photos::table)
