@@ -11,7 +11,6 @@ use diesel_async::RunQueryDsl;
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
-
 use crate::http::Context;
 use crate::http::error::InternalError;
 use crate::database::{schema, schema_gnl, Database};
