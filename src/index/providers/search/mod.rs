@@ -1,5 +1,5 @@
 use tantivy::{Index, IndexReader, ReloadPolicy};
-use tantivy::schema::{Schema, TEXT, STORED};
+use tantivy::schema::{Schema, TEXT, STORED, INDEXED};
 
 pub mod search;
 
@@ -38,7 +38,10 @@ impl SearchIndex {
         schema_builder.add_text_field("scientific_name", TEXT | STORED);
         schema_builder.add_text_field("canonical_name", TEXT);
         schema_builder.add_text_field("rank", TEXT);
+        schema_builder.add_text_field("taxonomic_status", TEXT);
         schema_builder.add_text_field("common_names", TEXT | STORED);
+        schema_builder.add_text_field("name_id", TEXT | STORED);
+        schema_builder.add_i64_field("taxa_priority", INDEXED);
 
         let schema = schema_builder.build();
 

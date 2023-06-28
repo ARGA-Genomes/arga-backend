@@ -4,7 +4,10 @@ use async_graphql::*;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Serialize, Deserialize};
+use uuid::Uuid;
 
+use crate::database::models::UserTaxon;
+use crate::database::schema;
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
@@ -26,9 +29,9 @@ use crate::index::search::{
     SpeciesSearchWithRegion,
     Searchable,
     TaxaSearch,
-    SearchResults
+    SearchResults,
+    Classification,
 };
-use crate::database::schema_gnl;
 use crate::database::models::ArgaTaxon;
 
 
@@ -342,49 +345,59 @@ impl Search {
 
     async fn full_text(&self, ctx: &Context<'_>, query: String, data_type: Option<String>) -> Result<FullTextSearchResult, Error>
     {
-        let data_type = data_type.unwrap_or("all".to_string());
-
+        use schema::{user_taxa, user_taxa_lists};
         let state = ctx.data::<State>().unwrap();
+        let mut conn = state.database.pool.get().await?;
+
         let mut results = FullTextSearchResult::default();
 
+        let data_type = data_type.unwrap_or("all".to_string());
         if data_type == "all" || data_type == "species" {
+            let query = format!("{query} +rank:species");
             let db_results = state.search.full_text(&query).await?;
             results.records.extend(db_results.records);
         };
 
         // get the taxon names to enrich the result data with
-        let mut names = Vec::with_capacity(results.records.len());
+        let mut name_ids = Vec::with_capacity(results.records.len());
         for record in &results.records {
             match record {
-                FullTextSearchItem::Taxon(item) => names.push(item.scientific_name.clone()),
+                FullTextSearchItem::Taxon(item) => name_ids.push(item.name_id),
                 _ => {},
             }
         }
 
-        // match the results against the ARGA GNL
-        use schema_gnl::gnl::dsl::*;
-        let mut conn = state.database.pool.get().await?;
+        // enrich the results with taxonomic details
+        let rows = user_taxa::table
+            .inner_join(user_taxa_lists::table)
+            .select(user_taxa::all_columns)
+            .filter(user_taxa::name_id.eq_any(name_ids))
+            .order(user_taxa_lists::priority)
+            .load::<UserTaxon>(&mut conn)
+            .await?;
 
-        let rows = gnl
-            .filter(scientific_name.eq_any(names))
-            .load::<ArgaTaxon>(&mut conn).await?;
-
-        let mut record_map: HashMap<String, ArgaTaxon> = HashMap::new();
+        let mut record_map: HashMap<Uuid, UserTaxon> = HashMap::new();
         for row in rows {
-            if let Some(name) = &row.scientific_name {
-                record_map.insert(name.clone(), row);
-            }
+            record_map.insert(row.name_id.clone(), row);
         }
 
         // enrich the results with the gnl data
         for result in results.records.iter_mut() {
             match result {
                 FullTextSearchItem::Taxon(item) => {
-                    if let Some(record) = record_map.get(&item.scientific_name) {
+                    if let Some(record) = record_map.get(&item.name_id) {
                         item.scientific_name_authorship = record.scientific_name_authorship.clone();
                         item.canonical_name = record.canonical_name.clone();
                         item.rank = record.taxon_rank.clone();
                         item.taxonomic_status = record.taxonomic_status.clone();
+                        item.classification = Classification {
+                            kingdom: record.kingdom.clone(),
+                            phylum: record.phylum.clone(),
+                            class: record.class.clone(),
+                            order: record.order.clone(),
+                            family: record.family.clone(),
+                            genus: record.genus.clone(),
+                        };
                     }
                 }
                 _ => {}

@@ -1,6 +1,7 @@
 use axum::async_trait;
 use async_graphql::{SimpleObject, Union, Enum};
 use serde::{Serialize, Deserialize};
+use uuid::Uuid;
 
 use crate::database::models::ArgaTaxon;
 
@@ -197,15 +198,29 @@ pub enum FullTextType {
     Barcode,
 }
 
+#[derive(Debug, Default, Deserialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct Classification {
+    pub kingdom: Option<String>,
+    pub phylum: Option<String>,
+    pub class: Option<String>,
+    pub order: Option<String>,
+    pub family: Option<String>,
+    pub genus: Option<String>,
+}
+
 #[derive(Debug, Deserialize, SimpleObject)]
 #[serde(rename_all = "camelCase")]
 pub struct TaxonItem {
+    #[graphql(skip)]
+    pub name_id: Uuid,
     pub scientific_name: String,
     pub scientific_name_authorship: Option<String>,
     pub canonical_name: Option<String>,
     pub rank: Option<String>,
     pub taxonomic_status: Option<String>,
     pub common_names: Vec<String>,
+    pub classification: Classification,
     pub score: f32,
     pub r#type: FullTextType,
 }
