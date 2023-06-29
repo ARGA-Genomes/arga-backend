@@ -40,6 +40,7 @@ impl From<Facet> for SpeciesSearchItem {
             canonical_name: Some(source.value),
             total_records: source.count,
             total_genomic_records: None,
+            data_summary: Default::default(),
         }
     }
 }

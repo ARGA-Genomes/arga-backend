@@ -162,9 +162,10 @@ impl Lists {
             if let Some(item) = species.get_mut(&stat.name.id) {
                 item.data_summary = ListDataSummary {
                     whole_genomes: stat.whole_genomes,
+                    partial_genomes: stat.partial_genomes,
                     mitogenomes: stat.mitogenomes,
                     barcodes: stat.barcodes,
-                    other: stat.total - stat.whole_genomes - stat.mitogenomes - stat.barcodes,
+                    other: stat.total - stat.whole_genomes - stat.mitogenomes - stat.barcodes - stat.partial_genomes,
                 }
             }
         }

@@ -20,6 +20,9 @@ impl Overview for Solr {
             OverviewCategory::PreservedSpecimens => r#"basisOfRecord:"PRESERVED_SPECIMEN""#,
             OverviewCategory::TerrestrialBiodiversity => r#"biome:"TERRESTRIAL""#,
             OverviewCategory::ThreatenedSpecies => "*:*",
+            OverviewCategory::Genome =>  r#"dynamicProperties_ncbi_genome_rep:"Full" OR dynamicProperties_ncbi_genome_rep:"Partial" OR dataResourceName:*RefSeq*"#,
+            OverviewCategory::Organelles => "*:*", //TODO: to fix once the data is ready
+            OverviewCategory::Barcodes => r#"dataProviderName:"Barcode of Life""#
         };
 
         let params = vec![

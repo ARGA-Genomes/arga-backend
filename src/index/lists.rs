@@ -51,6 +51,7 @@ pub trait GetListPhotos {
 #[derive(Clone, Debug, Serialize, Deserialize, Default, SimpleObject)]
 pub struct ListDataSummary {
     pub whole_genomes: usize,
+    pub partial_genomes: usize,
     pub mitogenomes: usize,
     pub barcodes: usize,
     pub other: usize,

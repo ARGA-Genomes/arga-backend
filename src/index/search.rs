@@ -4,6 +4,7 @@ use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 use crate::database::models::ArgaTaxon;
+use crate::index::lists::ListDataSummary;
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
@@ -123,6 +124,7 @@ pub struct SpeciesSearchItem {
     pub canonical_name: Option<String>,
     pub total_records: usize,
     pub total_genomic_records: Option<usize>,
+    pub data_summary: ListDataSummary,
 }
 
 #[derive(Debug, Deserialize, SimpleObject)]

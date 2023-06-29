@@ -14,6 +14,8 @@ pub struct SpeciesStats {
     pub total: usize,
     /// The total amount of whole genomes available, including reference sequences
     pub whole_genomes: usize,
+    /// The total amount of partial genomes available
+    pub partial_genomes: usize,
     /// The total amount of mitogenomes available
     pub mitogenomes: usize,
     /// The total amount of barcodes avaialble

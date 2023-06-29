@@ -12,6 +12,9 @@ pub enum OverviewCategory {
     PreservedSpecimens,
     TerrestrialBiodiversity,
     ThreatenedSpecies,
+    Genome,
+    Organelles,
+    Barcodes
 }
 
 

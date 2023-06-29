@@ -31,6 +31,7 @@ impl Statistics {
         for stat in solr_stats {
             stats.total += stat.total;
             stats.whole_genomes += stat.whole_genomes;
+            stats.partial_genomes += stat.partial_genomes;
             stats.mitogenomes += stat.mitogenomes;
             stats.barcodes += stat.barcodes;
         }
@@ -75,6 +76,8 @@ pub struct SpeciesStatistics {
     pub total: usize,
     /// The total amount of whole genomes available
     pub whole_genomes: usize,
+    /// The total amount of partial genomes available
+    pub partial_genomes: usize,
     /// The total amount of mitogenomes available
     pub mitogenomes: usize,
     /// The total amount of barcodes available

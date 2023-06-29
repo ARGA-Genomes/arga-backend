@@ -11,6 +11,9 @@ use crate::database::schema;
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
+use crate::index::lists::{ListDataSummary};
+use crate::index::names::GetNames;
+use crate::index::stats::GetSpeciesStats;
 use crate::index::search::{
     DNASearchByCanonicalName,
     FullTextSearch,
@@ -248,6 +251,26 @@ impl Search {
         results.sort_by(|a, b| {
             b.total_records.cmp(&a.total_records)
         });
+
+        let itr = results.iter_mut();
+
+        for item in itr {
+            let names = state.database.find_by_canonical_name(&item.canonical_name.as_deref().unwrap_or("")).await?;
+
+            if !names.is_empty() {
+                // assign the data summary associated with the name
+                let stats = state.solr.species_stats(&names).await?;
+                for stat in stats.into_iter() {
+                    item.data_summary = ListDataSummary {
+                        whole_genomes: stat.whole_genomes,
+                        partial_genomes: stat.partial_genomes,
+                        mitogenomes: stat.mitogenomes,
+                        barcodes: stat.barcodes,
+                        other: stat.total - stat.whole_genomes - stat.mitogenomes - stat.barcodes - stat.partial_genomes,
+                    };
+                }
+            }
+        }
 
         Ok(results.into_iter().take(21).collect())
     }

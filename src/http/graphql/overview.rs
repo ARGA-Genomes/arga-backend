@@ -62,4 +62,20 @@ impl Overview {
         let state = ctx.data::<State>().unwrap();
         Ok(state.solr.total(OverviewCategory::ThreatenedSpecies).await?)
     }
+
+    /// Returns the amount of genomes in the index
+    async fn genomes(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.solr.total(OverviewCategory::Genome).await?)
+    }
+    /// Returns the amount of organelles in the index
+    async fn organelles(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.solr.total(OverviewCategory::Organelles).await?)
+    }
+    /// Returns the amount of barcodes in the index
+    async fn barcodes(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.solr.total(OverviewCategory::Barcodes).await?)
+    }
 }
