@@ -12,7 +12,13 @@ pub mod names;
 pub mod assembly;
 pub mod models;
 
-use diesel::{ConnectionResult, Queryable};
+use std::marker::PhantomData;
+
+use diesel::expression::{ValidGrouping, AsExpression};
+use diesel::pg::Pg;
+use diesel::query_builder::{QueryFragment, AstPass, QueryId};
+use diesel::sql_types::{BigInt, SqlType, SingleValue};
+use diesel::{ConnectionResult, Queryable, QueryResult, Expression, DieselNumericOps, SelectableExpression, AppearsOnTable};
 use futures::FutureExt;
 use futures::future::BoxFuture;
 use thiserror::Error;
@@ -83,11 +89,73 @@ impl From<Taxon> for Taxonomy {
 }
 
 
+pub fn sum_if<T, E>(expr: E) -> ColumnSum<T, E::Expression>
+where
+    T: SqlType + SingleValue,
+    E: AsExpression<T>,
+{
+    ColumnSum {
+        expr: expr.as_expression(),
+        _marker: PhantomData,
+    }
+}
+
+
+#[derive(Debug, Clone, Copy, QueryId, DieselNumericOps)]
+pub struct ColumnSum<T, E> {
+    expr: E,
+    _marker: PhantomData<T>,
+}
+
+impl<T, E> QueryFragment<Pg> for ColumnSum<T, E>
+where
+    T: SqlType + SingleValue,
+    E: QueryFragment<Pg>,
+{
+    fn walk_ast<'b>(&'b self, mut out: AstPass<'_, 'b, Pg>) -> QueryResult<()> {
+        out.push_sql("SUM(CASE WHEN ");
+        self.expr.walk_ast(out.reborrow())?;
+        out.push_sql(" THEN 1 ELSE 0 END)");
+        Ok(())
+    }
+}
+
+
+
+impl<T, E> Expression for ColumnSum<T, E>
+where
+    T: SqlType + SingleValue,
+    E: Expression,
+{
+    type SqlType = BigInt;
+}
+
+impl<T, E, GB> ValidGrouping<GB> for ColumnSum<T, E>
+where T: SqlType + SingleValue,
+{
+    type IsAggregate = diesel::expression::is_aggregate::Yes;
+}
+
+impl<T, E, QS> SelectableExpression<QS> for ColumnSum<T, E>
+where
+    Self: AppearsOnTable<QS>,
+    E: SelectableExpression<QS>,
+{
+}
+
+impl<T, E, QS> AppearsOnTable<QS> for ColumnSum<T, E>
+where
+    Self: Expression,
+    E: AppearsOnTable<QS>,
+{
+}
+
+
+
 #[derive(Clone)]
 pub struct Database {
     pub pool: Pool<AsyncPgConnection>,
 }
-
 
 impl Database {
     pub async fn connect(url: &str) -> Result<Database, Error> {

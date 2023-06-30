@@ -7,11 +7,11 @@ use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 use crate::database::models::UserTaxon;
-use crate::database::schema;
+use crate::database::{schema, sum_if};
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
-use crate::index::lists::{ListDataSummary};
+use crate::index::lists::ListDataSummary;
 use crate::index::names::GetNames;
 use crate::index::search::AssemblySummary;
 use crate::index::stats::GetSpeciesStats;
@@ -369,7 +369,6 @@ impl Search {
 
     async fn full_text(&self, ctx: &Context<'_>, query: String, data_type: Option<String>) -> Result<FullTextSearchResult, Error> {
         use schema::{user_taxa, user_taxa_lists, assemblies};
-        use diesel::dsl::count;
 
         let state = ctx.data::<State>().unwrap();
         let mut conn = state.database.pool.get().await?;
@@ -406,15 +405,14 @@ impl Search {
             record_map.insert(row.name_id.clone(), row);
         }
 
-
-        // get a summary of available assemblies for each name
+        // get the total amounts of assembly records for each name
         let rows = assemblies::table
             .group_by(assemblies::name_id)
             .select((
                 assemblies::name_id,
-                count(assemblies::refseq_category.eq("reference genome")),
-                count(assemblies::genome_rep.eq("Full")),
-                count(assemblies::genome_rep.eq("Partial")),
+                sum_if(assemblies::refseq_category.eq("reference genome")),
+                sum_if(assemblies::genome_rep.eq("Full")),
+                sum_if(assemblies::genome_rep.eq("Partial")),
             ))
             .filter(assemblies::name_id.eq_any(&name_ids))
             .load::<(Uuid, i64, i64, i64)>(&mut conn)
@@ -447,9 +445,9 @@ impl Search {
 
                     if let Some(summary) = assembly_map.get(&item.name_id) {
                         item.assembly_summary = AssemblySummary {
-                            whole_genomes: summary.0,
-                            partial_genomes: summary.1,
-                            reference_genomes: summary.2,
+                            reference_genomes: summary.0,
+                            whole_genomes: summary.1,
+                            partial_genomes: summary.2,
                             barcodes: 0,
                         }
                     }
