@@ -13,6 +13,7 @@ use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
 use crate::index::lists::{ListDataSummary};
 use crate::index::names::GetNames;
+use crate::index::search::AssemblySummary;
 use crate::index::stats::GetSpeciesStats;
 use crate::index::search::{
     DNASearchByCanonicalName,
@@ -366,9 +367,10 @@ impl Search {
     }
 
 
-    async fn full_text(&self, ctx: &Context<'_>, query: String, data_type: Option<String>) -> Result<FullTextSearchResult, Error>
-    {
-        use schema::{user_taxa, user_taxa_lists};
+    async fn full_text(&self, ctx: &Context<'_>, query: String, data_type: Option<String>) -> Result<FullTextSearchResult, Error> {
+        use schema::{user_taxa, user_taxa_lists, assemblies};
+        use diesel::dsl::count;
+
         let state = ctx.data::<State>().unwrap();
         let mut conn = state.database.pool.get().await?;
 
@@ -390,11 +392,11 @@ impl Search {
             }
         }
 
-        // enrich the results with taxonomic details
+        // look for taxonomic details for each name
         let rows = user_taxa::table
             .inner_join(user_taxa_lists::table)
             .select(user_taxa::all_columns)
-            .filter(user_taxa::name_id.eq_any(name_ids))
+            .filter(user_taxa::name_id.eq_any(&name_ids))
             .order(user_taxa_lists::priority)
             .load::<UserTaxon>(&mut conn)
             .await?;
@@ -403,6 +405,26 @@ impl Search {
         for row in rows {
             record_map.insert(row.name_id.clone(), row);
         }
+
+
+        // get a summary of available assemblies for each name
+        let rows = assemblies::table
+            .group_by(assemblies::name_id)
+            .select((
+                assemblies::name_id,
+                count(assemblies::refseq_category.eq("reference genome")),
+                count(assemblies::genome_rep.eq("Full")),
+                count(assemblies::genome_rep.eq("Partial")),
+            ))
+            .filter(assemblies::name_id.eq_any(&name_ids))
+            .load::<(Uuid, i64, i64, i64)>(&mut conn)
+            .await?;
+
+        let mut assembly_map: HashMap<Uuid, (usize, usize, usize)> = HashMap::new();
+        for row in rows {
+            assembly_map.insert(row.0, (row.1 as usize, row.2 as usize, row.3 as usize));
+        }
+
 
         // enrich the results with the gnl data
         for result in results.records.iter_mut() {
@@ -422,10 +444,20 @@ impl Search {
                             genus: record.genus.clone(),
                         };
                     }
+
+                    if let Some(summary) = assembly_map.get(&item.name_id) {
+                        item.assembly_summary = AssemblySummary {
+                            whole_genomes: summary.0,
+                            partial_genomes: summary.1,
+                            reference_genomes: summary.2,
+                            barcodes: 0,
+                        }
+                    }
                 }
                 _ => {}
             };
         }
+
 
         // if we are only searching for species shortcut the request
         if data_type == "species" {

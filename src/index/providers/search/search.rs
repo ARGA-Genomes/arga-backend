@@ -3,7 +3,7 @@ use polars::prelude::IntoVec;
 use tantivy::{query::QueryParser, collector::TopDocs, TantivyError};
 use uuid::Uuid;
 
-use crate::index::search::{FullTextSearch, FullTextSearchResult, FullTextSearchItem, TaxonItem, FullTextType, Classification};
+use crate::index::search::{FullTextSearch, FullTextSearchResult, FullTextSearchItem, TaxonItem, FullTextType, Classification, AssemblySummary};
 
 use super::SearchIndex;
 
@@ -49,6 +49,7 @@ impl FullTextSearch for SearchIndex {
                 taxonomic_status: None,
                 common_names,
                 classification: Classification::default(),
+                assembly_summary: AssemblySummary::default(),
                 score,
                 r#type: FullTextType::Taxon,
             }));

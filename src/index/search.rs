@@ -211,6 +211,15 @@ pub struct Classification {
     pub genus: Option<String>,
 }
 
+#[derive(Debug, Default, Deserialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct AssemblySummary {
+    pub whole_genomes: usize,
+    pub partial_genomes: usize,
+    pub reference_genomes: usize,
+    pub barcodes: usize,
+}
+
 #[derive(Debug, Deserialize, SimpleObject)]
 #[serde(rename_all = "camelCase")]
 pub struct TaxonItem {
@@ -223,6 +232,7 @@ pub struct TaxonItem {
     pub taxonomic_status: Option<String>,
     pub common_names: Vec<String>,
     pub classification: Classification,
+    pub assembly_summary: AssemblySummary,
     pub score: f32,
     pub r#type: FullTextType,
 }
