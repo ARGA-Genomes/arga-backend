@@ -100,6 +100,23 @@ impl Database {
 }
 
 
+pub fn get_database_url() -> String {
+    match std::env::var("DATABASE_URL") {
+        Ok(url) => url.to_string(),
+        Err(_) => {
+            tracing::info!("DATABASE_URL not specified. Building URL from other env vars");
+            let host = std::env::var("DATABASE_HOST").expect("Must specify a database host");
+            let port = std::env::var("DATABASE_PORT").expect("Must specify a database port");
+            let user = std::env::var("DATABASE_USER").expect("Must specify a database user");
+            let pass = std::env::var("DATABASE_PASS").expect("Must specify a database pass");
+            let name = std::env::var("DATABASE_NAME").expect("Must specify a database name");
+
+            format!("postgresql://{user}:{pass}@{host}:{port}/{name}")
+        }
+    }
+}
+
+
 fn _establish_tls_connection(url: &str) -> BoxFuture<ConnectionResult<AsyncPgConnection>> {
     (async {
         let store = rustls::RootCertStore::empty();

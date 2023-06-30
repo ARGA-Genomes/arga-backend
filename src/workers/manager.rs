@@ -60,7 +60,7 @@ pub struct PostgresStore {
 
 impl PostgresStore {
     pub fn init(cx: CX![]) -> Option<Self> {
-        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        let url = crate::database::get_database_url();
         let mut handle = cx.anymap_get::<TokioHandle>();
 
         handle.spawn_ret(ret_to!([cx], Self::setup_connection() as (PgPool)), cx, || async move {

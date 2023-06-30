@@ -56,7 +56,7 @@ pub async fn reindex() -> tantivy::Result<()> {
 
 
 async fn index_names(schema: &Schema, index: &Index) -> tantivy::Result<()> {
-    let db_host = std::env::var("DATABASE_URL").expect("No database url specified");
+    let db_host = crate::database::get_database_url();
     let database = Database::connect(&db_host).await.expect("Failed to connect to the database");
 
     // index some data with 500mb memory heap
