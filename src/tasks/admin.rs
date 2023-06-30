@@ -19,7 +19,7 @@ pub async fn create_admin(name: &str, email: &str, password: &str) {
 
     use schema::users::dsl as dsl;
 
-    let db_host = crate::database::get_database_url();
+    let db_host = arga_backend::database::get_database_url();
     let database = Database::connect(&db_host).await.expect("Failed to connect to the database");
     let mut pool = database.pool.get().await.unwrap();
 

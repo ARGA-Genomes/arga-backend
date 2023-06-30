@@ -112,7 +112,7 @@ async fn serve() {
     let client = SolrClient::new(&solr_host);
     let solr = Solr::new(client);
 
-    let db_host = crate::database::get_database_url();
+    let db_host = arga_backend::database::get_database_url();
     let database = Database::connect(&db_host).await.expect("Failed to connect to the database");
 
     let config = http::Config {
