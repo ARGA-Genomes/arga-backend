@@ -42,11 +42,21 @@ enum Commands {
         /// A generated and safe password for the new admin user
         password: String,
     },
+
+    /// Queue an import job for a dataset
+    Dataset {
+        /// The worker job type that should process the file
+        worker: String,
+        /// The name to give this dataset
+        name: String,
+        /// The path to the file being imported
+        path: String,
+    }
 }
 
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), anyhow::Error> {
     dotenv().ok();
 
     let cli = Cli::parse();
@@ -55,8 +65,11 @@ async fn main() {
         Some(Commands::CreateAdmin { name, email, password }) => tasks::admin::create_admin(name, email, password).await,
         Some(Commands::Workers(command)) => workers::process_command(command),
         Some(Commands::Search(command)) => search::process_command(command).await,
+        Some(Commands::Dataset { worker, name, path }) => tasks::dataset::import(worker, name, path).await?,
         None => serve().await,
     }
+
+    Ok(())
 }
 
 

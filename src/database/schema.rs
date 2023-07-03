@@ -109,6 +109,31 @@ diesel::table! {
 }
 
 diesel::table! {
+    collection_events (id) {
+        id -> Uuid,
+        event_id -> Uuid,
+        specimen_id -> Uuid,
+        organism_id -> Nullable<Uuid>,
+        occurrence_id -> Nullable<Varchar>,
+        catalog_number -> Nullable<Varchar>,
+        record_number -> Nullable<Varchar>,
+        individual_count -> Nullable<Varchar>,
+        organism_quantity -> Nullable<Varchar>,
+        organism_quantity_type -> Nullable<Varchar>,
+        sex -> Nullable<Varchar>,
+        life_stage -> Nullable<Varchar>,
+        reproductive_condition -> Nullable<Varchar>,
+        behavior -> Nullable<Varchar>,
+        establishment_means -> Nullable<Varchar>,
+        degree_of_establishment -> Nullable<Varchar>,
+        pathway -> Nullable<Varchar>,
+        occurrence_status -> Nullable<Varchar>,
+        preparation -> Nullable<Varchar>,
+        other_catalog_numbers -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     conservation_statuses (id) {
         id -> Uuid,
         list_id -> Uuid,
@@ -133,6 +158,23 @@ diesel::table! {
         occurrence_status -> Nullable<Varchar>,
         threat_status -> Nullable<Varchar>,
         source -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    events (id) {
+        id -> Uuid,
+        parent_event_id -> Nullable<Uuid>,
+        event_id -> Nullable<Varchar>,
+        field_number -> Nullable<Varchar>,
+        event_date -> Nullable<Date>,
+        habitat -> Nullable<Varchar>,
+        sampling_protocol -> Nullable<Varchar>,
+        sampling_size_value -> Nullable<Varchar>,
+        sampling_size_unit -> Nullable<Varchar>,
+        sampling_effort -> Nullable<Varchar>,
+        field_notes -> Nullable<Text>,
+        event_remarks -> Nullable<Text>,
     }
 }
 
@@ -338,6 +380,19 @@ diesel::table! {
 }
 
 diesel::table! {
+    organisms (id) {
+        id -> Uuid,
+        name_id -> Uuid,
+        organism_id -> Nullable<Varchar>,
+        organism_name -> Nullable<Varchar>,
+        organism_scope -> Nullable<Varchar>,
+        associated_organisms -> Nullable<Varchar>,
+        previous_identifications -> Nullable<Varchar>,
+        remarks -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::RegionType;
 
@@ -372,6 +427,10 @@ diesel::table! {
         longitude -> Nullable<Float8>,
         details -> Nullable<Varchar>,
         remarks -> Nullable<Varchar>,
+        institution_code -> Nullable<Varchar>,
+        collection_code -> Nullable<Varchar>,
+        catalog_number -> Nullable<Varchar>,
+        recorded_by -> Nullable<Varchar>,
     }
 }
 
@@ -511,10 +570,14 @@ diesel::table! {
 diesel::joinable!(assemblies -> names (name_id));
 diesel::joinable!(assembly_stats -> assemblies (assembly_id));
 diesel::joinable!(biosamples -> names (name_id));
+diesel::joinable!(collection_events -> events (event_id));
+diesel::joinable!(collection_events -> organisms (organism_id));
+diesel::joinable!(collection_events -> specimens (specimen_id));
 diesel::joinable!(conservation_statuses -> name_lists (list_id));
 diesel::joinable!(conservation_statuses -> names (name_id));
 diesel::joinable!(name_vernacular_names -> names (name_id));
 diesel::joinable!(name_vernacular_names -> vernacular_names (vernacular_name_id));
+diesel::joinable!(organisms -> names (name_id));
 diesel::joinable!(regions -> names (name_id));
 diesel::joinable!(specimens -> name_lists (list_id));
 diesel::joinable!(specimens -> names (name_id));
@@ -528,8 +591,10 @@ diesel::allow_tables_to_appear_in_same_query!(
     assembly_stats,
     attributes,
     biosamples,
+    collection_events,
     conservation_statuses,
     distribution,
+    events,
     historical_bushfires,
     ibra,
     imcra_mesoscale,
@@ -547,6 +612,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     object_values_text,
     object_values_timestamp,
     objects,
+    organisms,
     regions,
     spatial_ref_sys,
     specimens,

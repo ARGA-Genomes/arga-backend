@@ -226,6 +226,10 @@ impl GetSpecimens for Database {
             results.push(species::Specimen {
                 type_status: record.type_status,
                 institution_name: record.institution_name,
+                institution_code: record.institution_code,
+                collection_code: record.collection_code,
+                catalog_number: record.catalog_number,
+                recorded_by: record.recorded_by,
                 organism_id: record.organism_id,
                 locality: record.locality,
                 latitude: record.latitude,

@@ -129,6 +129,10 @@ pub trait GetMedia {
 pub struct Specimen {
     pub type_status: String,
     pub institution_name: Option<String>,
+    pub institution_code: Option<String>,
+    pub collection_code: Option<String>,
+    pub catalog_number: Option<String>,
+    pub recorded_by: Option<String>,
     pub organism_id: Option<String>,
     pub locality: Option<String>,
     pub latitude: Option<f64>,
