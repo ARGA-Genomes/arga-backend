@@ -3,6 +3,7 @@
 
 [print_schema]
 file = "src/database/schema.rs"
+filter = { except_tables = ["spatial_ref_sys"] }
 
 [migrations_directory]
 dir = "migrations"
