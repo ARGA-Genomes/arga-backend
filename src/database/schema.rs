@@ -538,7 +538,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     object_values_timestamp,
     objects,
     regions,
-    spatial_ref_sys,
     specimens,
     taxa,
     taxon_photos,
