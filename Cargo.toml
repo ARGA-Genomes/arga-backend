@@ -54,6 +54,6 @@ uuid = { version = "1.2.2", features = ["serde", "v4"] }
 [dev-dependencies]
 criterion = { version = "0.5.1", features = ["tokio", "async_tokio"] }
 
-[[bench]]
-name = "sample_attributes"
-harness = false
+# [[bench]]
+# name = "sample_attributes"
+# harness = false
