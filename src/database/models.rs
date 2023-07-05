@@ -487,6 +487,7 @@ pub struct CollectionEvent {
     pub reproductive_condition: Option<String>,
     pub behavior: Option<String>,
     pub establishment_means: Option<String>,
+    pub degree_of_establishment: Option<String>,
     pub pathway: Option<String>,
     pub occurrence_status: Option<String>,
     pub preparation: Option<String>,

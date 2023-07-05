@@ -3,6 +3,7 @@ use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 
 pub use super::Taxonomy;
+use super::specimen::SpecimenDetails;
 use crate::database::models::Name;
 
 
@@ -124,30 +125,13 @@ pub trait GetMedia {
 }
 
 
-/// A specimen of a specific species.
-#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
-pub struct Specimen {
-    pub type_status: String,
-    pub institution_name: Option<String>,
-    pub institution_code: Option<String>,
-    pub collection_code: Option<String>,
-    pub catalog_number: Option<String>,
-    pub recorded_by: Option<String>,
-    pub organism_id: Option<String>,
-    pub locality: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-    pub details: Option<String>,
-    pub remarks: Option<String>,
-}
-
 /// Get specimens of a specific species.
 #[async_trait]
 pub trait GetSpecimens {
     type Error;
 
     /// Get specimens related to the species taxon.
-    async fn specimens(&self, name: &Name) -> Result<Vec<Specimen>, Self::Error>;
+    async fn specimens(&self, name: &Name) -> Result<Vec<SpecimenDetails>, Self::Error>;
 }
 
 

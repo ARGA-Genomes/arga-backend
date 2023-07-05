@@ -8,6 +8,7 @@ pub mod maps;
 pub mod lists;
 pub mod traces;
 pub mod assembly;
+pub mod specimen;
 pub mod extensions;
 
 use axum::{Extension, Router};
@@ -33,6 +34,7 @@ use self::lists::{Lists, FilterItem};
 use self::extensions::ErrorLogging;
 use self::traces::Traces;
 use self::assembly::Assembly;
+use self::specimen::Specimen;
 
 use super::error::Error;
 
@@ -106,6 +108,11 @@ impl Query {
     async fn assembly(&self, ctx: &Context<'_>, accession: String) -> Result<Assembly, Error> {
         let state = ctx.data::<State>().unwrap();
         Assembly::new(&state.database, &accession).await
+    }
+
+    async fn specimen(&self, ctx: &Context<'_>, specimen_id: String) -> Result<Specimen, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Specimen::new(&state.database, &specimen_id).await
     }
 }
 
