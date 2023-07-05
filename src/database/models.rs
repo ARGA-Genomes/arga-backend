@@ -432,6 +432,66 @@ pub struct Specimen {
     pub longitude: Option<f64>,
     pub details: Option<String>,
     pub remarks: Option<String>,
+    pub institution_code: Option<String>,
+    pub collection_code: Option<String>,
+    pub catalog_number: Option<String>,
+    pub recorded_by: Option<String>,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::organisms)]
+pub struct Organism {
+    pub id: Uuid,
+    pub name_id: Uuid,
+    pub organism_id: Option<String>,
+    pub organism_name: Option<String>,
+    pub organism_scope: Option<String>,
+    pub associated_organisms: Option<String>,
+    pub previous_identifications: Option<String>,
+    pub remarks: Option<String>,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::events)]
+pub struct Event {
+    pub id: Uuid,
+    pub parent_event_id: Option<Uuid>,
+    pub event_id: Option<String>,
+    pub field_number: Option<String>,
+    pub event_date: Option<chrono::NaiveDate>,
+    pub habitat: Option<String>,
+    pub sampling_protocol: Option<String>,
+    pub sampling_size_value: Option<String>,
+    pub sampling_size_unit: Option<String>,
+    pub sampling_effort: Option<String>,
+    pub field_notes: Option<String>,
+    pub event_remarks: Option<String>,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::collection_events)]
+pub struct CollectionEvent {
+    pub id: Uuid,
+    pub event_id: Uuid,
+    pub specimen_id: Uuid,
+    pub organism_id: Option<Uuid>,
+
+    pub occurrence_id: Option<String>,
+    pub catalog_number: Option<String>,
+    pub record_number: Option<String>,
+    pub individual_count: Option<String>,
+    pub organism_quantity: Option<String>,
+    pub organism_quantity_type: Option<String>,
+    pub sex: Option<String>,
+    pub life_stage: Option<String>,
+    pub reproductive_condition: Option<String>,
+    pub behavior: Option<String>,
+    pub establishment_means: Option<String>,
+    pub degree_of_establishment: Option<String>,
+    pub pathway: Option<String>,
+    pub occurrence_status: Option<String>,
+    pub preparation: Option<String>,
+    pub other_catalog_numbers: Option<String>,
 }
 
 

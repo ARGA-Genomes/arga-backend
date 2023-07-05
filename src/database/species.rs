@@ -6,6 +6,7 @@ use diesel::Queryable;
 use tracing::instrument;
 use uuid::Uuid;
 
+use crate::index::specimen;
 use crate::index::species::{self, GetSpecies, Taxonomy, GetRegions, GetMedia, GetSpecimens, GetConservationStatus, GetTraceFiles};
 use super::{schema, Database, Error};
 use super::models::{Name, UserTaxon, RegionType, TaxonPhoto, Specimen, TraceFile, ConservationStatus};
@@ -212,29 +213,18 @@ impl GetMedia for Database {
 impl GetSpecimens for Database {
     type Error = Error;
 
-    async fn specimens(&self, name: &Name) -> Result<Vec<species::Specimen>, Error> {
+    async fn specimens(&self, name: &Name) -> Result<Vec<specimen::SpecimenDetails>, Error> {
         use schema::specimens::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let records = specimens
             .filter(name_id.eq(name.id))
+            .limit(20)
+            .order((type_status, institution_name, institution_code))
             .load::<Specimen>(&mut conn)
             .await?;
 
-        let mut results = Vec::with_capacity(records.len());
-        for record in records {
-            results.push(species::Specimen {
-                type_status: record.type_status,
-                institution_name: record.institution_name,
-                organism_id: record.organism_id,
-                locality: record.locality,
-                latitude: record.latitude,
-                longitude: record.longitude,
-                details: record.details,
-                remarks: record.remarks,
-            });
-        }
-
+        let results = records.into_iter().map(|r| r.into()).collect();
         Ok(results)
     }
 }

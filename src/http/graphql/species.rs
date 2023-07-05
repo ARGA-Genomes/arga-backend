@@ -12,7 +12,6 @@ use crate::index::species::{
     GetSpecimens,
     GetTraceFiles,
     GetWholeGenomes,
-    Specimen,
     TraceFile,
     WholeGenome,
     Taxonomy,
@@ -25,6 +24,7 @@ use crate::index::species::{
     GetRegions,
     GetMedia,
 };
+use crate::index::specimen::SpecimenDetails;
 use crate::database::{schema, Database};
 use crate::database::models::Name as ArgaName;
 
@@ -99,7 +99,7 @@ impl Species {
     }
 
     #[instrument(skip(self, ctx))]
-    async fn specimens(&self, ctx: &Context<'_>) -> Result<Vec<Specimen>, Error> {
+    async fn specimens(&self, ctx: &Context<'_>) -> Result<Vec<SpecimenDetails>, Error> {
         let state = ctx.data::<State>().unwrap();
         let specimens = state.database.specimens(&self.name).await?;
         Ok(specimens)
