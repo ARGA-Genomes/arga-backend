@@ -9,6 +9,7 @@ use crate::http::Context as State;
 
 use crate::database::models;
 use crate::database::schema;
+use crate::index::names::GetNames;
 use crate::index::specimen::{SpecimenDetails, Organism, Event};
 use crate::index::specimen::{GetSpecimenOrganism, GetSpecimenEvents};
 
@@ -44,6 +45,12 @@ impl SpecimenQuery {
         Ok(SpecimenQuery {
             specimen,
         })
+    }
+
+    async fn canonical_name(&self, ctx: &Context<'_>) -> Result<Option<String>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let name = state.database.find_by_name_id(&self.specimen.name_id).await?;
+        Ok(name.canonical_name)
     }
 
     #[instrument(skip(self))]

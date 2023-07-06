@@ -20,6 +20,20 @@ impl GetNames for Database {
     type Error = Error;
 
     #[instrument(skip(self))]
+    async fn find_by_name_id(&self, uuid: &Uuid) -> Result<Name, Self::Error> {
+        use schema::names::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let record = names
+            .filter(id.eq(uuid))
+            .order_by(scientific_name)
+            .get_result::<Name>(&mut conn)
+            .await?;
+
+        Ok(record)
+    }
+
+    #[instrument(skip(self))]
     async fn find_by_canonical_name(&self, name: &str) -> Result<Vec<Name>, Self::Error> {
         use schema::names::dsl::*;
         let mut conn = self.pool.get().await?;
