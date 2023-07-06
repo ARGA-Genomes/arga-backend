@@ -6,7 +6,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::database::models::{Specimen, Organism, Event, CollectionEvent};
+use crate::database::models::{Specimen, Organism, Event, CollectionEvent, SequencingEvent, SequencingRunEvent};
 use crate::index::specimen::{self, GetSpecimen, GetSpecimenOrganism, GetSpecimenEvents, EventDetails};
 use super::{schema, Database, Error};
 
@@ -88,11 +88,12 @@ impl GetSpecimenEvents for Database {
     type Error = Error;
 
     async fn get_specimen_events(&self, specimen_id: &Uuid) -> Result<Vec<specimen::Event>, Self::Error> {
-        use schema::{events, collection_events};
+        use schema::{events, collection_events, sequencing_events, sequencing_run_events};
         let mut conn = self.pool.get().await?;
 
         let mut event_map: HashMap<Uuid, Vec<EventDetails>> = HashMap::new();
 
+        // get all collection events
         let collections = collection_events::table
             .filter(collection_events::specimen_id.eq(specimen_id))
             .load::<CollectionEvent>(&mut conn)
@@ -103,6 +104,38 @@ impl GetSpecimenEvents for Database {
             entry.or_default().push(EventDetails::Collection(collection.into()));
         }
 
+        // get all sequencing events
+        let sequencing = sequencing_events::table
+            .filter(sequencing_events::specimen_id.eq(specimen_id))
+            .load::<SequencingEvent>(&mut conn)
+            .await?;
+
+        let sequencing_ids: Vec<Uuid> = sequencing.iter().map(|s| s.id.clone()).collect();
+        let runs = sequencing_run_events::table
+            .filter(sequencing_run_events::sequencing_event_id.eq_any(sequencing_ids))
+            .load::<SequencingRunEvent>(&mut conn)
+            .await?;
+
+        let mut sequence_map: HashMap<Uuid, Vec<SequencingRunEvent>> = HashMap::new();
+        for run in runs {
+            let entry = sequence_map.entry(run.sequencing_event_id);
+            entry.or_default().push(run);
+        }
+
+        for sequencing in sequencing.into_iter() {
+            let uuid = sequencing.id.clone();
+            let event_id = sequencing.event_id.clone();
+
+            let mut sequencing = specimen::SequencingEvent::from(sequencing);
+            if let Some(runs) = sequence_map.remove(&uuid) {
+                sequencing.runs = runs.into_iter().map(|r| specimen::SequencingRunEvent::from(r)).collect();
+            }
+
+            let entry = event_map.entry(event_id);
+            entry.or_default().push(EventDetails::Sequencing(sequencing));
+        }
+
+        // add all sub events into their main event
         let events = events::table
             .filter(events::id.eq_any(event_map.keys()))
             .load::<Event>(&mut conn)
@@ -162,6 +195,39 @@ impl From<CollectionEvent> for specimen::CollectionEvent {
             occurrence_status: value.occurrence_status,
             preparation: value.preparation,
             other_catalog_numbers: value.other_catalog_numbers
+        }
+    }
+}
+
+impl From<SequencingEvent> for specimen::SequencingEvent {
+    fn from(value: SequencingEvent) -> Self {
+        Self {
+            id: value.id.to_string(),
+            organism_id: value.organism_id.map(|uuid| uuid.to_string()),
+            sequence_id: value.sequence_id,
+            genbank_accession: value.genbank_accession,
+            target_gene: value.target_gene,
+            dna_sequence: value.dna_sequence,
+            runs: Vec::new(),
+        }
+    }
+}
+
+impl From<SequencingRunEvent> for specimen::SequencingRunEvent {
+    fn from(value: SequencingRunEvent) -> Self {
+        Self {
+            id: value.id.to_string(),
+            trace_id: value.trace_id,
+            trace_name: value.trace_name,
+            trace_link: value.trace_link,
+            sequencing_date: value.sequencing_date.map(|d| d.to_string()),
+            sequencing_center: value.sequencing_center,
+            target_gene: value.target_gene,
+            direction: value.direction,
+            pcr_primer_name_forward: value.pcr_primer_name_forward,
+            pcr_primer_name_reverse: value.pcr_primer_name_reverse,
+            sequence_primer_forward_name: value.sequence_primer_forward_name,
+            sequence_primer_reverse_name: value.sequence_primer_reverse_name,
         }
     }
 }

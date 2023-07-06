@@ -267,6 +267,21 @@ diesel::table! {
 }
 
 diesel::table! {
+    markers (id) {
+        id -> Uuid,
+        name_id -> Uuid,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+        accession -> Varchar,
+        material_sample_id -> Nullable<Varchar>,
+        gb_acs -> Nullable<Varchar>,
+        marker_code -> Nullable<Varchar>,
+        nucleotide -> Nullable<Text>,
+        recorded_by -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     media (id) {
         id -> Uuid,
         media_id -> Nullable<Int8>,
@@ -401,6 +416,37 @@ diesel::table! {
         name_id -> Uuid,
         region_type -> RegionType,
         values -> Array<Nullable<Text>>,
+    }
+}
+
+diesel::table! {
+    sequencing_events (id) {
+        id -> Uuid,
+        event_id -> Uuid,
+        specimen_id -> Uuid,
+        organism_id -> Nullable<Uuid>,
+        sequence_id -> Nullable<Varchar>,
+        genbank_accession -> Nullable<Varchar>,
+        target_gene -> Nullable<Varchar>,
+        dna_sequence -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    sequencing_run_events (id) {
+        id -> Uuid,
+        sequencing_event_id -> Uuid,
+        trace_id -> Nullable<Varchar>,
+        trace_name -> Nullable<Varchar>,
+        trace_link -> Nullable<Varchar>,
+        sequencing_date -> Nullable<Timestamp>,
+        sequencing_center -> Nullable<Varchar>,
+        target_gene -> Nullable<Varchar>,
+        direction -> Nullable<Varchar>,
+        pcr_primer_name_forward -> Nullable<Varchar>,
+        pcr_primer_name_reverse -> Nullable<Varchar>,
+        sequence_primer_forward_name -> Nullable<Varchar>,
+        sequence_primer_reverse_name -> Nullable<Varchar>,
     }
 }
 
@@ -565,10 +611,15 @@ diesel::joinable!(collection_events -> organisms (organism_id));
 diesel::joinable!(collection_events -> specimens (specimen_id));
 diesel::joinable!(conservation_statuses -> name_lists (list_id));
 diesel::joinable!(conservation_statuses -> names (name_id));
+diesel::joinable!(markers -> names (name_id));
 diesel::joinable!(name_vernacular_names -> names (name_id));
 diesel::joinable!(name_vernacular_names -> vernacular_names (vernacular_name_id));
 diesel::joinable!(organisms -> names (name_id));
 diesel::joinable!(regions -> names (name_id));
+diesel::joinable!(sequencing_events -> events (event_id));
+diesel::joinable!(sequencing_events -> organisms (organism_id));
+diesel::joinable!(sequencing_events -> specimens (specimen_id));
+diesel::joinable!(sequencing_run_events -> sequencing_events (sequencing_event_id));
 diesel::joinable!(specimens -> name_lists (list_id));
 diesel::joinable!(specimens -> names (name_id));
 diesel::joinable!(taxon_photos -> names (name_id));
@@ -590,6 +641,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     imcra_mesoscale,
     imcra_provincial,
     jobs,
+    markers,
     media,
     media_observations,
     name_lists,
@@ -604,6 +656,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     objects,
     organisms,
     regions,
+    sequencing_events,
+    sequencing_run_events,
     specimens,
     taxa,
     taxon_photos,

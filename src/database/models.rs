@@ -494,6 +494,39 @@ pub struct CollectionEvent {
     pub other_catalog_numbers: Option<String>,
 }
 
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::sequencing_events)]
+pub struct SequencingEvent {
+    pub id: Uuid,
+    pub event_id: Uuid,
+    pub specimen_id: Uuid,
+    pub organism_id: Option<Uuid>,
+
+    pub sequence_id: Option<String>,
+    pub genbank_accession: Option<String>,
+    pub target_gene: Option<String>,
+    pub dna_sequence: Option<String>,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::sequencing_run_events)]
+pub struct SequencingRunEvent {
+    pub id: Uuid,
+    pub sequencing_event_id: Uuid,
+
+    pub trace_id: Option<String>,
+    pub trace_name: Option<String>,
+    pub trace_link: Option<String>,
+    pub sequencing_date: Option<chrono::NaiveDateTime>,
+    pub sequencing_center: Option<String>,
+    pub target_gene: Option<String>,
+    pub direction: Option<String>,
+    pub pcr_primer_name_forward: Option<String>,
+    pub pcr_primer_name_reverse: Option<String>,
+    pub sequence_primer_forward_name: Option<String>,
+    pub sequence_primer_reverse_name: Option<String>,
+}
+
 
 // postgres arrays allows nulls to be entered into an array
 // so diesel will treat it as an array of optional numbers.

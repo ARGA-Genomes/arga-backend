@@ -68,6 +68,7 @@ pub struct Event {
 #[derive(Debug, Clone, Union, Serialize, Deserialize)]
 pub enum EventDetails {
     Collection(CollectionEvent),
+    Sequencing(SequencingEvent),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
@@ -89,6 +90,33 @@ pub struct CollectionEvent {
     pub occurrence_status: Option<String>,
     pub preparation: Option<String>,
     pub other_catalog_numbers: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
+pub struct SequencingEvent {
+    pub id: String,
+    pub organism_id: Option<String>,
+    pub sequence_id: Option<String>,
+    pub genbank_accession: Option<String>,
+    pub target_gene: Option<String>,
+    pub dna_sequence: Option<String>,
+    pub runs: Vec<SequencingRunEvent>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
+pub struct SequencingRunEvent {
+    pub id: String,
+    pub trace_id: Option<String>,
+    pub trace_name: Option<String>,
+    pub trace_link: Option<String>,
+    pub sequencing_date: Option<String>,
+    pub sequencing_center: Option<String>,
+    pub target_gene: Option<String>,
+    pub direction: Option<String>,
+    pub pcr_primer_name_forward: Option<String>,
+    pub pcr_primer_name_reverse: Option<String>,
+    pub sequence_primer_forward_name: Option<String>,
+    pub sequence_primer_reverse_name: Option<String>,
 }
 
 

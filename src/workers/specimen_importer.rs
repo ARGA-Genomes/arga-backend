@@ -3,15 +3,15 @@ use std::collections::HashMap;
 
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
+use itertools::izip;
 use rayon::prelude::*;
-use polars::prelude::*;
 use serde::Deserialize;
 use stakker::*;
 use tracing::{instrument, info, error};
 use uuid::Uuid;
 
 use crate::database::schema;
-use crate::database::models::{Job, NameList, NameListType, Specimen, Event, CollectionEvent, Organism};
+use crate::database::models::{Job, NameList, NameListType, Specimen, Event, CollectionEvent, Organism, SequencingEvent, SequencingRunEvent};
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
@@ -78,9 +78,6 @@ impl SpecimenImporter {
 pub enum Error {
     #[error("an error occurred with the database connection")]
     Database(#[from] diesel::result::Error),
-
-    #[error("an error occurred parsing the file")]
-    Parsing(#[from] PolarsError),
 
     #[error("an error occurred parsing the file")]
     Csv(#[from] csv::Error),
@@ -153,6 +150,39 @@ struct Record {
     associated_organisms: Option<String>,
     previous_identifications: Option<String>,
     organism_remarks: Option<String>,
+
+    // dna block
+    #[serde(rename(deserialize = "sequence_id"))]
+    sequence_id: Option<String>,
+    #[serde(rename(deserialize = "genbank_accession"))]
+    genbank_accession: Option<String>,
+    #[serde(rename(deserialize = "target_gene"))]
+    target_gene: Option<String>,
+    #[serde(rename(deserialize = "DNA_sequence"))]
+    dna_sequence: Option<String>,
+
+    #[serde(rename(deserialize = "trace_ids"))]
+    trace_id: Option<String>,
+    #[serde(rename(deserialize = "trace_names"))]
+    trace_name: Option<String>,
+    #[serde(rename(deserialize = "trace_links"))]
+    trace_link: Option<String>,
+    #[serde(rename(deserialize = "sequencing_date"))]
+    sequencing_date: Option<String>,
+    #[serde(rename(deserialize = "bold_sequencing_centers"))]
+    sequencing_center: Option<String>,
+    #[serde(rename(deserialize = "target_gene.1"))]
+    sequencing_target_genes: Option<String>,
+    #[serde(rename(deserialize = "bold_directions"))]
+    direction: Option<String>,
+    #[serde(rename(deserialize = "pcr_primer_name_forward"))]
+    pcr_primer_name_forward: Option<String>,
+    #[serde(rename(deserialize = "pcr_primer_name_reverse"))]
+    pcr_primer_name_reverse: Option<String>,
+    #[serde(rename(deserialize = "sequence_primer_forward_name"))]
+    sequence_primer_forward_name: Option<String>,
+    #[serde(rename(deserialize = "sequence_primer_reverse_name"))]
+    sequence_primer_reverse_name: Option<String>,
 }
 
 #[derive(Debug, Queryable, Deserialize)]
@@ -196,14 +226,15 @@ pub fn import(path: PathBuf, list: &NameList) -> Result<(), Error> {
 
 
 fn import_specimens(records: Vec<Record>, list: &NameList, pool: &mut PgPool) -> Result<(), Error> {
-    use schema::{events, collection_events, specimens, organisms};
+    use schema::{events, collection_events, specimens, organisms, sequencing_events, sequencing_run_events};
 
     let names = match_names(&records, pool);
     let specimens = extract_specimens(&list, &names,  &records);
     let organisms = extract_organisms(&records, &specimens);
     let events = extract_events(&records, &specimens);
     let collections = extract_collection_events(&records, &specimens, &events);
-
+    let sequencing = extract_sequencing_events(&records, &specimens, &events);
+    let sequencing_runs = extract_sequencing_run_events(&records, &sequencing);
 
     // filter out unmatched specimens
     let specimens = specimens.into_iter().filter_map(|r| r).collect::<Vec<Specimen>>();
@@ -280,6 +311,43 @@ fn import_specimens(records: Vec<Record>, list: &NameList, pool: &mut PgPool) ->
         total_imported += chunk_total?;
     }
     info!(total=collections.len(), total_imported, "Importing specimen collection events finished");
+
+
+    // filter out unmatched sequencing events
+    let sequencing = sequencing.into_iter().filter_map(|r| r).collect::<Vec<SequencingEvent>>();
+
+    info!(total=sequencing.len(), "Importing specimen sequencing events");
+    let imported: Vec<Result<usize, Error>> = sequencing.par_chunks(1000).map(|chunk| {
+        let mut conn = pool.get()?;
+        let inserted_rows = diesel::insert_into(sequencing_events::table)
+            .values(chunk)
+            .execute(&mut conn)?;
+        Ok(inserted_rows)
+    }).collect();
+
+    let mut total_imported = 0;
+    for chunk_total in imported {
+        total_imported += chunk_total?;
+    }
+    info!(total=sequencing.len(), total_imported, "Importing specimen sequencing events finished");
+
+
+    // sequencing run events by nature is not aligned with the rest of the records, which means
+    // it is already filtered by extraction
+    info!(total=sequencing_runs.len(), "Importing specimen sequencing run events");
+    let imported: Vec<Result<usize, Error>> = sequencing_runs.par_chunks(1000).map(|chunk| {
+        let mut conn = pool.get()?;
+        let inserted_rows = diesel::insert_into(sequencing_run_events::table)
+            .values(chunk)
+            .execute(&mut conn)?;
+        Ok(inserted_rows)
+    }).collect();
+
+    let mut total_imported = 0;
+    for chunk_total in imported {
+        total_imported += chunk_total?;
+    }
+    info!(total=sequencing_runs.len(), total_imported, "Importing specimen sequencing run events finished");
 
     Ok(())
 }
@@ -410,6 +478,117 @@ fn extract_collection_events(
     collections
 }
 
+fn extract_sequencing_events(
+    records: &Vec<Record>,
+    specimens: &Vec<Option<Specimen>>,
+    events: &Vec<Option<Event>>,
+) -> Vec<Option<SequencingEvent>>
+{
+    info!(total=records.len(), "Extracting sequencing events");
+
+    let sequencing = (records, specimens, events).into_par_iter().map(|(row, specimen, event)| {
+        match (specimen, event) {
+            (Some(specimen), Some(event)) => Some(SequencingEvent {
+                id: Uuid::new_v4(),
+                event_id: event.id.clone(),
+                specimen_id: specimen.id.clone(),
+                organism_id: None,
+
+                sequence_id: row.sequence_id.clone(),
+                genbank_accession: row.genbank_accession.clone(),
+                target_gene: row.target_gene.clone(),
+                dna_sequence: row.dna_sequence.clone(),
+            }),
+            _ => None,
+        }
+    }).collect::<Vec<Option<SequencingEvent>>>();
+
+    info!(sequencing_events=sequencing.len(), "Extracting sequencing events finished");
+    sequencing
+}
+
+fn extract_sequencing_run_events(
+    records: &Vec<Record>,
+    sequencing: &Vec<Option<SequencingEvent>>,
+) -> Vec<SequencingRunEvent>
+{
+    info!(total=records.len(), "Extracting sequencing run events");
+
+    let sequencing_runs = (records, sequencing).into_par_iter().map(|(row, event)| {
+        match event {
+            Some(event) => {
+                // sequence run data is an array separated by a pipe. so we split
+                // all the fields that should have the same length and zip through
+                // them to generate sequence run events
+                //
+                // TODO: This requires all fields to be present and the same length.
+                // we might wanna make this more lenient when data becomes more sparse
+                let trace_id = str_to_vec(&row.trace_id);
+                let trace_name = str_to_vec(&row.trace_name);
+                let trace_link = str_to_vec(&row.trace_link);
+                let sequencing_date = str_to_vec(&row.sequencing_date);
+                let sequencing_center = str_to_vec(&row.sequencing_center);
+                let target_gene = str_to_vec(&row.sequencing_target_genes);
+                let direction = str_to_vec(&row.direction);
+                let pcr_primer_name_forward = str_to_vec(&row.pcr_primer_name_forward);
+                let pcr_primer_name_reverse = str_to_vec(&row.pcr_primer_name_reverse);
+                let sequence_primer_forward_name = str_to_vec(&row.sequence_primer_forward_name);
+                let sequence_primer_reverse_name = str_to_vec(&row.sequence_primer_reverse_name);
+
+                let mut runs = Vec::new();
+                for (
+                    trace_id,
+                    trace_name,
+                    trace_link,
+                    sequencing_date,
+                    sequencing_center,
+                    target_gene,
+                    direction,
+                    pcr_primer_name_forward,
+                    pcr_primer_name_reverse,
+                    sequence_primer_forward_name,
+                    sequence_primer_reverse_name
+                ) in izip!(
+                    trace_id,
+                    trace_name,
+                    trace_link,
+                    sequencing_date,
+                    sequencing_center,
+                    target_gene,
+                    direction,
+                    pcr_primer_name_forward,
+                    pcr_primer_name_reverse,
+                    sequence_primer_forward_name,
+                    sequence_primer_reverse_name,
+                ) {
+                    runs.push(SequencingRunEvent {
+                        id: Uuid::new_v4(),
+                        sequencing_event_id: event.id.clone(),
+                        trace_id: Some(trace_id),
+                        trace_name: Some(trace_name),
+                        trace_link: Some(trace_link),
+                        sequencing_date: chrono::NaiveDateTime::parse_from_str(&sequencing_date, "%Y-%m-%d %H:%M:%S").ok(),
+                        sequencing_center: Some(sequencing_center),
+                        target_gene: Some(target_gene),
+                        direction: Some(direction),
+                        pcr_primer_name_forward: Some(pcr_primer_name_forward),
+                        pcr_primer_name_reverse: Some(pcr_primer_name_reverse),
+                        sequence_primer_forward_name: Some(sequence_primer_forward_name),
+                        sequence_primer_reverse_name: Some(sequence_primer_reverse_name),
+                    })
+                }
+
+                runs
+            },
+            _ => vec![],
+        }
+    }).collect::<Vec<Vec<SequencingRunEvent>>>();
+
+    let sequencing_runs = sequencing_runs.concat();
+    info!(sequencing_run_events=sequencing_runs.len(), "Extracting sequencing run events finished");
+    sequencing_runs
+}
+
 
 fn extract_specimens(list: &NameList, names: &HashMap<String, Uuid>, records: &Vec<Record>) -> Vec<Option<Specimen>> {
     info!(total=records.len(), "Extracting specimens");
@@ -439,6 +618,14 @@ fn extract_specimens(list: &NameList, names: &HashMap<String, Uuid>, records: &V
 
     info!(specimens=specimens.len(), "Extracting specimens finished");
     specimens
+}
+
+
+fn str_to_vec(value: &Option<String>) -> Vec<String> {
+    match value {
+        Some(val) => val.split("|").map(|v| v.to_string()).collect(),
+        None => Vec::new(),
+    }
 }
 
 
