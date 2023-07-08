@@ -132,6 +132,37 @@ pub struct UserTaxon {
 }
 
 
+#[derive(Clone, Queryable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema_gnl::ranked_taxa)]
+pub struct RankedTaxon {
+    pub id: Uuid,
+    pub taxa_lists_id: Uuid,
+    pub name_id: Uuid,
+
+    pub scientific_name: Option<String>,
+    pub scientific_name_authorship: Option<String>,
+    pub canonical_name: Option<String>,
+
+    pub specific_epithet: Option<String>,
+    pub infraspecific_epithet: Option<String>,
+    pub taxon_rank: Option<String>,
+    pub name_according_to: Option<String>,
+    pub name_published_in: Option<String>,
+    pub taxonomic_status: Option<String>,
+    pub taxon_remarks: Option<String>,
+
+    pub kingdom: Option<String>,
+    pub phylum: Option<String>,
+    pub class: Option<String>,
+    pub order: Option<String>,
+    pub family: Option<String>,
+    pub genus: Option<String>,
+
+    pub list_name: String,
+    pub taxa_priority: i32,
+}
+
+
 #[derive(Clone, Queryable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::users)]
 pub struct User {

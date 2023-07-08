@@ -116,6 +116,7 @@ impl GetGenusStats for Solr {
         let breakdown = self.genus_breakdown(genus).await?;
         Ok(GenusStats {
             total_species: breakdown.species.len(),
+            total_valid_species: 0,
         })
     }
 }
@@ -182,7 +183,7 @@ struct RawSpeciesFacet {
 impl From<Facet> for GenusBreakdownItem {
     fn from(source: Facet) -> Self {
         GenusBreakdownItem {
-            name: source.value,
+            canonical_name: source.value,
             total: source.count,
         }
     }

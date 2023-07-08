@@ -32,6 +32,9 @@ use crate::http::Error as HttpError;
 use crate::index::Taxonomy;
 
 
+pub type PgPool = Pool<AsyncPgConnection>;
+
+
 #[derive(Error, Debug)]
 pub enum Error {
     #[error(transparent)]
@@ -156,6 +159,8 @@ where
 #[derive(Clone)]
 pub struct Database {
     pub pool: Pool<AsyncPgConnection>,
+
+    pub genus: genus::GenusProvider,
 }
 
 impl Database {
@@ -164,7 +169,10 @@ impl Database {
         // let config = AsyncDieselConnectionManager::<AsyncPgConnection>::new_with_setup(url, establish_tls_connection);
         let pool = Pool::builder().build(config).await?;
 
-        Ok(Database { pool })
+        Ok(Database {
+            genus: genus::GenusProvider { pool: pool.clone() },
+            pool
+        })
     }
 }
 

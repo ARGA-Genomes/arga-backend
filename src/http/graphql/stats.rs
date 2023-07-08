@@ -42,14 +42,16 @@ impl Statistics {
     #[instrument(skip(self, ctx))]
     async fn genus(&self, ctx: &Context<'_>, genus: String) -> Result<GenusStatistics, Error> {
         let state = ctx.data::<State>().unwrap();
-        let db_stats = state.database.genus_stats(&genus).await.unwrap();
-        let solr_stats = state.solr.genus_stats(&genus).await.unwrap();
-        let solr_breakdown = state.solr.genus_breakdown(&genus).await.unwrap();
+        let db_stats = state.database.genus_stats(&genus).await?;
+        let breakdown = state.database.genus_breakdown(&genus).await?;
+        // let solr_stats = state.solr.genus_stats(&genus).await.unwrap();
+        // let solr_breakdown = state.solr.genus_breakdown(&genus).await.unwrap();
 
         Ok(GenusStatistics {
             total_species: db_stats.total_species,
-            species_with_data: solr_stats.total_species,
-            breakdown: solr_breakdown.species,
+            total_valid_species: db_stats.total_species,
+            species_with_data: breakdown.species.len(),
+            breakdown: breakdown.species,
         })
     }
 
@@ -90,6 +92,8 @@ pub struct SpeciesStatistics {
 pub struct GenusStatistics {
     /// The total amount of species
     pub total_species: usize,
+    /// The total amount of valid species
+    pub total_valid_species: usize,
     /// The total amount of species that have data records
     pub species_with_data: usize,
 

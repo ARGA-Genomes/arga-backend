@@ -37,6 +37,8 @@ pub trait GetSpeciesStats {
 #[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GenusStats {
+    /// The total amount of accepted species in the genus
+    pub total_valid_species: usize,
     /// The total amount of species in the genus
     pub total_species: usize,
 }
@@ -61,7 +63,7 @@ pub struct GenusBreakdown {
 #[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GenusBreakdownItem {
-    pub name: String,
+    pub canonical_name: String,
     pub total: usize,
 }
 
