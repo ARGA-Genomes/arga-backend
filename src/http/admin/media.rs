@@ -185,7 +185,7 @@ async fn upload_main_image(
     let photo = TaxonPhoto {
         id: Uuid::new_v4(),
         name_id: name.id,
-        url: format!("https://nectar-arga-dev-2.ala.org.au/assets/{}.jpg", form.file),
+        url: format!("https://app.arga.org.au/assets/{}.jpg", form.file),
         source: form.source,
         publisher: form.publisher,
         license: form.license,
