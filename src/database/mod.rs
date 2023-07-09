@@ -11,6 +11,7 @@ pub mod lists;
 pub mod names;
 pub mod assembly;
 pub mod specimen;
+pub mod markers;
 pub mod models;
 
 use std::marker::PhantomData;
@@ -161,6 +162,7 @@ pub struct Database {
     pub pool: Pool<AsyncPgConnection>,
 
     pub genus: genus::GenusProvider,
+    pub markers: markers::MarkerProvider,
 }
 
 impl Database {
@@ -171,6 +173,7 @@ impl Database {
 
         Ok(Database {
             genus: genus::GenusProvider { pool: pool.clone() },
+            markers: markers::MarkerProvider { pool: pool.clone() },
             pool
         })
     }

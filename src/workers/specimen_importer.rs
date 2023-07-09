@@ -363,7 +363,7 @@ fn match_names(records: &Vec<Record>, pool: &mut PgPool) -> HashMap<String, Uuid
 
         let results = names::table
             .select((names::id, names::scientific_name, names::canonical_name))
-            .filter(names::canonical_name.eq_any(all_names))
+            .filter(names::scientific_name.eq_any(all_names))
             .load::<NameMatch>(&mut conn)?;
 
         Ok::<Vec<NameMatch>, Error>(results)
@@ -374,8 +374,7 @@ fn match_names(records: &Vec<Record>, pool: &mut PgPool) -> HashMap<String, Uuid
     for chunk in matched {
         if let Ok(names) = chunk {
             for name_match in names {
-                let name = name_match.canonical_name.unwrap_or(name_match.scientific_name);
-                id_map.insert(name, name_match.id);
+                id_map.insert(name_match.scientific_name, name_match.id);
             }
         }
     }

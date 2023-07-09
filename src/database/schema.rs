@@ -278,6 +278,15 @@ diesel::table! {
         marker_code -> Nullable<Varchar>,
         nucleotide -> Nullable<Text>,
         recorded_by -> Nullable<Varchar>,
+        list_id -> Uuid,
+        version -> Nullable<Varchar>,
+        basepairs -> Nullable<Int8>,
+        #[sql_name = "type"]
+        type_ -> Nullable<Varchar>,
+        shape -> Nullable<Varchar>,
+        source_url -> Nullable<Varchar>,
+        fasta_url -> Nullable<Varchar>,
+        extra_data -> Nullable<Jsonb>,
     }
 }
 

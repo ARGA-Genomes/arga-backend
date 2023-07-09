@@ -1,0 +1,9 @@
+ALTER TABLE markers
+DROP COLUMN list_id,
+DROP COLUMN version,
+DROP COLUMN basepairs,
+DROP COLUMN type,
+DROP COLUMN shape,
+DROP COLUMN source_url,
+DROP COLUMN fasta_url,
+DROP COLUMN extra_data;

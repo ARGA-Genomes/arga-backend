@@ -9,6 +9,7 @@ pub mod lists;
 pub mod traces;
 pub mod assembly;
 pub mod specimen;
+pub mod markers;
 pub mod extensions;
 
 use axum::{Extension, Router};
@@ -35,6 +36,7 @@ use self::extensions::ErrorLogging;
 use self::traces::Traces;
 use self::assembly::Assembly;
 use self::specimen::Specimen;
+use self::markers::Markers;
 
 use super::error::Error;
 
@@ -113,6 +115,10 @@ impl Query {
     async fn specimen(&self, ctx: &Context<'_>, specimen_id: String) -> Result<Specimen, Error> {
         let state = ctx.data::<State>().unwrap();
         Specimen::new(&state.database, &specimen_id).await
+    }
+
+    async fn markers(&self, ctx: &Context<'_>) -> Markers {
+        Markers {}
     }
 }
 
