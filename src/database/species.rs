@@ -99,27 +99,6 @@ impl GetSpecies for Database {
 
         Ok(taxa)
     }
-
-    async fn distribution(&self, name: &str) -> Result<Vec<species::Distribution>, Error> {
-        use schema::taxa::dsl::{taxa, canonical_name, taxon_id as taxa_taxon_id};
-        use schema::distribution::dsl::*;
-        let mut conn = self.pool.get().await?;
-
-        let rows = distribution
-            .inner_join(taxa.on(taxon_id.eq(taxa_taxon_id)))
-            .select((
-                locality,
-                country,
-                country_code,
-                threat_status,
-                source,
-            ))
-            .filter(canonical_name.eq(name))
-            .load::<Distribution>(&mut conn).await?;
-
-        let dist = rows.into_iter().map(|r| r.into()).collect();
-        Ok(dist)
-    }
 }
 
 

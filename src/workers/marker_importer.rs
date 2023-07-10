@@ -3,7 +3,6 @@ use std::collections::HashMap;
 
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
-use itertools::izip;
 use rayon::prelude::*;
 use serde::Deserialize;
 use stakker::*;
@@ -11,7 +10,7 @@ use tracing::{instrument, info, error};
 use uuid::Uuid;
 
 use crate::database::schema;
-use crate::database::models::{Job, NameList, NameListType, Specimen, Marker};
+use crate::database::models::{Job, NameList, NameListType, Marker};
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
@@ -99,13 +98,13 @@ struct Record {
     accession: String,
     #[serde(rename(deserialize = "scientificName"))]
     scientific_name: String,
-    details: Option<String>,
+    // details: Option<String>,
     version: Option<String>,
     basepairs: Option<usize>,
     r#type: Option<String>,
     shape: Option<String>,
-    date: Option<String>,
-    comment: Option<String>,
+    // date: Option<String>,
+    // comment: Option<String>,
     genbank_url: Option<String>,
     fasta_url: Option<String>,
 
@@ -252,14 +251,6 @@ fn extract_markers(list: &NameList, names: &HashMap<String, Uuid>, records: &Vec
 
     info!(markers=markers.len(), "Extracting marker finished");
     markers
-}
-
-
-fn str_to_vec(value: &Option<String>) -> Vec<String> {
-    match value {
-        Some(val) => val.split("|").map(|v| v.to_string()).collect(),
-        None => Vec::new(),
-    }
 }
 
 

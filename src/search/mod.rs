@@ -171,27 +171,24 @@ struct Taxon {
 
 async fn get_taxa(db: &Database, names: &[Name]) -> Vec<Taxon> {
     let mut conn = db.pool.get().await.unwrap();
-    use schema::{user_taxa, user_taxa_lists};
+    use schema_gnl::ranked_taxa::dsl::*;
 
     let name_ids: Vec<&Uuid> = names.iter().map(|name| &name.id).collect();
 
-    // get taxa details with the list details for boosting
-    user_taxa::table
-        .inner_join(user_taxa_lists::table)
-        .select((
-            user_taxa::name_id,
-            user_taxa::taxonomic_status,
-            user_taxa_lists::priority,
-            user_taxa::kingdom,
-            user_taxa::phylum,
-            user_taxa::class,
-            user_taxa::order,
-            user_taxa::family,
-            user_taxa::genus,
-        ))
-        .filter(user_taxa::name_id.eq_any(&name_ids))
-        .order(user_taxa_lists::priority)
-        .load::<Taxon>(&mut conn)
-        .await
-        .unwrap()
+    // use the ranked taxa to get the right taxa details to boost
+    ranked_taxa.select((
+        name_id,
+        taxonomic_status,
+        taxa_priority,
+        kingdom,
+        phylum,
+        class,
+        order,
+        family,
+        genus,
+    ))
+    .filter(name_id.eq_any(&name_ids))
+    .load::<Taxon>(&mut conn)
+    .await
+    .unwrap()
 }

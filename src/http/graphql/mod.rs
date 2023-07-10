@@ -117,7 +117,7 @@ impl Query {
         Specimen::new(&state.database, &specimen_id).await
     }
 
-    async fn markers(&self, ctx: &Context<'_>) -> Markers {
+    async fn markers(&self) -> Markers {
         Markers {}
     }
 }

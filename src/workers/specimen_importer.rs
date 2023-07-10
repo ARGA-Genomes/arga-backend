@@ -189,7 +189,6 @@ struct Record {
 struct NameMatch {
     id: Uuid,
     scientific_name: String,
-    canonical_name: Option<String>,
 }
 
 
@@ -362,7 +361,7 @@ fn match_names(records: &Vec<Record>, pool: &mut PgPool) -> HashMap<String, Uuid
         let all_names: Vec<&String> = chunk.iter().map(|row| &row.scientific_name).collect();
 
         let results = names::table
-            .select((names::id, names::scientific_name, names::canonical_name))
+            .select((names::id, names::scientific_name))
             .filter(names::scientific_name.eq_any(all_names))
             .load::<NameMatch>(&mut conn)?;
 

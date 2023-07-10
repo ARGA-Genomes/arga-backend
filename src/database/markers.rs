@@ -21,6 +21,7 @@ impl MarkerProvider {
             .select(markers::all_columns)
             .filter(names::canonical_name.eq(canonical_name))
             .order_by(markers::accession)
+            .limit(40)
             .load::<Marker>(&mut conn)
             .await?;
 

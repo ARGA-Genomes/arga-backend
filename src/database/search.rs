@@ -11,7 +11,7 @@ use crate::index::search::{
     SpeciesSearchByCanonicalName,
     SpeciesSearchExcludingCanonicalName,
 };
-use super::{schema, schema_gnl, Database, Error};
+use super::{schema_gnl, Database, Error};
 
 
 #[derive(Queryable, Debug)]
@@ -65,10 +65,10 @@ impl SpeciesSearchByCanonicalName for Database {
     type Error = Error;
 
     async fn search_species_by_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Error> {
-        use schema_gnl::gnl::dsl::*;
+        use schema_gnl::ranked_taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let rows = gnl
+        let rows = ranked_taxa
             .select(scientific_name)
             .filter(taxon_rank.eq("species"))
             .filter(taxonomic_status.eq("accepted"))
@@ -101,10 +101,10 @@ impl SpeciesSearchExcludingCanonicalName for Database {
     type Error = Error;
 
     async fn search_species_excluding_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Error> {
-        use schema::taxa::dsl::*;
+        use schema_gnl::ranked_taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let rows = taxa
+        let rows = ranked_taxa
             .select(scientific_name)
             .filter(taxon_rank.eq("species"))
             .filter(taxonomic_status.eq("accepted"))

@@ -73,10 +73,10 @@ impl GetFamilyStats for Database {
     type Error = Error;
 
     async fn family_stats(&self, family_value: &str) -> Result<FamilyStats, Error> {
-        use schema::taxa::dsl::*;
+        use schema_gnl::ranked_taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total_genera: i64 = taxa
+        let total_genera: i64 = ranked_taxa
             .filter(family.eq(family_value))
             .filter(taxon_rank.eq("genus"))
             .filter(taxonomic_status.eq("accepted"))

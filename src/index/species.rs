@@ -34,8 +34,6 @@ pub trait GetSpecies {
     async fn taxonomy(&self, name: &Name) -> Result<Taxonomy, Self::Error>;
     /// Get all taxonomic information linked to a list of names.
     async fn taxa(&self, name: &Vec<Name>) -> Result<Vec<Taxonomy>, Self::Error>;
-    /// Get location and status details of a specific species.
-    async fn distribution(&self, canonical_name: &str) -> Result<Vec<Distribution>, Self::Error>;
 }
 
 

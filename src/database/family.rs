@@ -12,10 +12,10 @@ impl GetFamily for Database {
     type Error = Error;
 
     async fn taxonomy(&self, name: &str) -> Result<Taxonomy, Error> {
-        use schema_gnl::gnl::dsl::*;
+        use schema_gnl::ranked_taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let taxon = gnl
+        let taxon = ranked_taxa
             .select((
                 scientific_name_authorship,
                 canonical_name,

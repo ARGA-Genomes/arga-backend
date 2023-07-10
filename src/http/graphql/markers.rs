@@ -1,15 +1,9 @@
 use async_graphql::*;
 use tracing::instrument;
-use diesel::prelude::*;
-use diesel_async::RunQueryDsl;
-use uuid::Uuid;
 
 use crate::database::models;
 use crate::http::Error;
 use crate::http::Context as State;
-
-use crate::database::models::TraceFile;
-use crate::database::schema;
 
 
 pub struct Markers;

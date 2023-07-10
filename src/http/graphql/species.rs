@@ -15,7 +15,6 @@ use crate::index::species::{
     TraceFile,
     WholeGenome,
     Taxonomy,
-    Distribution,
     GenomicData,
     Region,
     Photo,
@@ -27,6 +26,7 @@ use crate::index::species::{
 use crate::index::specimen::SpecimenDetails;
 use crate::database::{schema, Database};
 use crate::database::models::Name as ArgaName;
+use super::markers::SpeciesMarker;
 
 
 pub struct Species {
@@ -62,14 +62,6 @@ impl Species {
         let taxonomy = state.database.taxonomy(&self.name).await?;
 
         Ok(taxonomy)
-    }
-
-    #[instrument(skip(self, ctx))]
-    async fn distribution(&self, ctx: &Context<'_>) -> Result<Vec<Distribution>, Error> {
-        let state = ctx.data::<State>().unwrap();
-        let distribution = state.database.distribution(&self.canonical_name).await?;
-
-        Ok(distribution)
     }
 
     #[instrument(skip(self, _ctx))]
@@ -135,6 +127,13 @@ impl Species {
         let state = ctx.data::<State>().unwrap();
         let records = state.database.trace_files(&self.all_names).await?;
         Ok(records)
+    }
+
+    async fn markers(&self, ctx: &Context<'_>) -> Result<Vec<SpeciesMarker>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let markers = state.database.markers.species(&self.canonical_name).await?;
+        let markers = markers.into_iter().map(|m| m.into()).collect();
+        Ok(markers)
     }
 }
 
