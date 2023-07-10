@@ -9,7 +9,7 @@ use axum::routing::{get, post};
 
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tracing::debug;
 use uuid::Uuid;
 
@@ -20,51 +20,7 @@ use tokio_util::io::StreamReader;
 use crate::http::Context;
 use crate::http::error::{InternalError, Error};
 use crate::database::{schema, Database};
-use crate::database::models::{Media, Name, TaxonPhoto};
-
-
-#[derive(Serialize, Debug)]
-struct MediaList {
-    total: usize,
-    records: Vec<Media>,
-}
-
-async fn media(
-    Query(params): Query<HashMap<String, String>>,
-    State(db_provider): State<Database>,
-) -> Result<Json<MediaList>, InternalError>
-{
-    use schema::media::dsl::*;
-    use schema::media_observations::dsl as observations;
-    let mut conn = db_provider.pool.get().await?;
-
-    let name = params.get("scientific_name").expect("must provide a scientific name parameter");
-
-    // pagination
-    let page = parse_int_param(&params, "page", 1);
-    let page_size = parse_int_param(&params, "page_size", 5);
-    let offset = (page - 1) * page_size;
-
-    let records = media
-        .inner_join(observations::media_observations.on(media_id.eq(observations::media_id)))
-        .select(media::all_columns())
-        .filter(observations::scientific_name.eq(name))
-        .order(media_id.desc())
-        .offset(offset)
-        .limit(page_size)
-        .load::<Media>(&mut conn).await?;
-
-    let total: i64 = media
-        .inner_join(observations::media_observations.on(media_id.eq(observations::media_id)))
-        .filter(observations::scientific_name.eq(name))
-        .count()
-        .get_result(&mut conn).await?;
-
-    Ok(Json(MediaList {
-        total: total as usize,
-        records,
-    }))
-}
+use crate::database::models::{Name, TaxonPhoto};
 
 
 async fn main_media(
@@ -248,11 +204,6 @@ where
 }
 
 
-fn parse_int_param(params: &HashMap<String, String>, name: &str, default: i64) -> i64 {
-    let val = params.get(name).map(|val| val.parse::<i64>().unwrap_or(default)).unwrap_or(default);
-    if val <= 0 { 1 } else { val }
-}
-
 fn valid_path(path: &str) -> bool {
     let path = std::path::Path::new(path);
     let mut components = path.components().peekable();
@@ -270,7 +221,6 @@ fn valid_path(path: &str) -> bool {
 /// The REST gateway for the admin backend for basic CRUD operations
 pub(crate) fn router() -> Router<Context> {
     Router::new()
-        .route("/api/admin/media", get(media))
         .route("/api/admin/media/main", get(main_media))
         .route("/api/admin/media/main", post(upsert_main_media))
         .route("/api/admin/media/upload", post(accept_image))

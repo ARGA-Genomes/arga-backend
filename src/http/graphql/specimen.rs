@@ -10,8 +10,8 @@ use crate::http::Context as State;
 use crate::database::models;
 use crate::database::schema;
 use crate::index::names::GetNames;
-use crate::index::specimen::{SpecimenDetails, Organism, Event};
-use crate::index::specimen::{GetSpecimenOrganism, GetSpecimenEvents};
+use crate::index::specimen::{SpecimenDetails, Event};
+use crate::index::specimen::GetSpecimenEvents;
 
 
 #[derive(MergedObject)]

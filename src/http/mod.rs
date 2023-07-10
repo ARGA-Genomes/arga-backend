@@ -9,7 +9,6 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::database::Database;
-use crate::index::providers::ala::Ala;
 use crate::index::providers::search::SearchIndex;
 use crate::index::providers::solr::Solr;
 
@@ -42,7 +41,6 @@ pub(crate) struct Context {
     pub config: Config,
     pub database: Database,
     pub solr: Solr,
-    pub ala: Ala,
     pub search: SearchIndex,
 }
 
@@ -68,7 +66,6 @@ pub async fn serve(
         config,
         database,
         solr,
-        ala: Ala::new(),
         search: SearchIndex::open()?,
     };
 

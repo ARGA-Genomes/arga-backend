@@ -3,7 +3,6 @@ use async_graphql::{SimpleObject, Union, Enum};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
-use crate::database::models::ArgaTaxon;
 use crate::index::lists::ListDataSummary;
 
 
@@ -149,18 +148,6 @@ pub trait SpeciesSearchByCanonicalName {
 pub trait SpeciesSearchExcludingCanonicalName {
     type Error;
     async fn search_species_excluding_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Self::Error>;
-}
-
-#[async_trait]
-pub trait SpeciesSearchWithRegion {
-    type Error;
-    async fn search_species_with_region(
-        &self,
-        region: &Vec<String>,
-        filters: &Vec<SearchFilterItem>,
-        offset: i64,
-        limit: i64
-    ) -> Result<Vec<ArgaTaxon>, Self::Error>;
 }
 
 #[async_trait]

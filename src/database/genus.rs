@@ -3,9 +3,9 @@ use async_trait::async_trait;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
-use crate::{index::genus::{GetGenus, Taxonomy}, database::{schema::names::authorship, models::UserTaxon, sum_if}};
+use crate::index::genus::{GetGenus, Taxonomy};
+use crate::database::sum_if;
 use super::{schema, schema_gnl, Database, Error, Taxon, PgPool, models::RankedTaxon};
-
 
 
 #[async_trait]
