@@ -235,12 +235,12 @@ impl Search {
 
         // limit the results for pagination. this should become variable
         // once a pagination system is more fleshed out
-        let mut results = Vec::with_capacity(20);
+        let mut results = Vec::with_capacity(21);
 
         // first get the data we do have from the solr index.
         let solr_results = state.solr.search_species(None, &filters, with_record_type).await?;
 
-        for record in solr_results.records.into_iter().take(20) {
+        for record in solr_results.records.into_iter().take(21) {
             results.push(record);
         }
 
