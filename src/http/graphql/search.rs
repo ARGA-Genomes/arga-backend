@@ -11,10 +11,7 @@ use crate::database::{schema, sum_if};
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::filters::{TaxonomyFilters, Filterable};
-use crate::index::lists::ListDataSummary;
-use crate::index::names::GetNames;
 use crate::index::search::AssemblySummary;
-use crate::index::stats::GetSpeciesStats;
 use crate::index::search::{
     DNASearchByCanonicalName,
     FullTextSearch,
@@ -37,9 +34,18 @@ use crate::index::search::{
     Classification,
 };
 use crate::database::models::ArgaTaxon;
+use crate::index::lists::{GetListPhotos, Pagination};
+use crate::index::names::GetNames;
 
 
 pub struct Search;
+
+#[derive(Debug, Enum, Eq, PartialEq, Copy, Clone)]
+pub enum WithRecordType {
+    Genomes,
+    Organelles,
+    Barcodes
+}
 
 #[Object]
 impl Search {
@@ -149,7 +155,7 @@ impl Search {
         let mut results = Vec::with_capacity(21);
 
         // first get the data we do have from the solr index.
-        let solr_results = state.solr.search_species(None, &db_filters).await.unwrap();
+        let solr_results = state.solr.search_species(None, &db_filters,None).await.unwrap();
 
         for record in solr_results.records.into_iter().take(21) {
             results.push(SearchItem {
@@ -207,7 +213,7 @@ impl Search {
         family: Option<String>,
     ) -> Result<Vec<GenusSearchItem>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let filters = create_filters(kingdom, phylum, class, family, None, None);
+        let filters = create_filters(kingdom, phylum, class, family, None, None, None);
         let results = state.database.search_genus("", &filters).await.unwrap();
 
         Ok(results.records)
@@ -222,23 +228,24 @@ impl Search {
         class: Option<String>,
         family: Option<String>,
         genus: Option<String>,
+        with_record_type: Option<WithRecordType>,
     ) -> Result<Vec<SpeciesSearchItem>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let filters = create_filters(kingdom, phylum, class, family, genus, None);
+        let filters = create_filters(kingdom, phylum, class, family, genus, None, with_record_type);
 
         // limit the results for pagination. this should become variable
         // once a pagination system is more fleshed out
-        let mut results = Vec::with_capacity(21);
+        let mut results = Vec::with_capacity(20);
 
         // first get the data we do have from the solr index.
-        let solr_results = state.solr.search_species(None, &filters).await?;
+        let solr_results = state.solr.search_species(None, &filters, with_record_type).await?;
 
-        for record in solr_results.records.into_iter().take(21) {
+        for record in solr_results.records.into_iter().take(20) {
             results.push(record);
         }
 
         // get species from gbif backbone that don't have any genomic records
-        let db_results = state.database.search_species(None, &filters).await?;
+        let db_results = state.database.search_species(None, &filters, with_record_type).await?;
 
         for record in db_results.records.into_iter() {
             // add the filler gbif record if we don't have enough records with data
@@ -259,17 +266,11 @@ impl Search {
             let names = state.database.find_by_canonical_name(&item.canonical_name.as_deref().unwrap_or("")).await?;
 
             if !names.is_empty() {
-                // assign the data summary associated with the name
-                let stats = state.solr.species_stats(&names).await?;
-                for stat in stats.into_iter() {
-                    item.data_summary = ListDataSummary {
-                        whole_genomes: stat.whole_genomes,
-                        partial_genomes: stat.partial_genomes,
-                        mitogenomes: stat.mitogenomes,
-                        barcodes: stat.barcodes,
-                        other: stat.total - stat.whole_genomes - stat.mitogenomes - stat.barcodes - stat.partial_genomes,
-                    };
-                }
+                let photos = state.database.list_photos(&names).await?;
+                // for photo in photos.into_iter() {
+                //     item.photo = Some(photo.into());
+                //     break;
+                // }
             }
         }
 
@@ -289,9 +290,9 @@ impl Search {
     ) -> Result<Vec<SpeciesSearchItem>, Error>
     {
         let state = ctx.data::<State>().unwrap();
-        let filters = create_filters(kingdom, phylum, class, family, genus, None);
+        let filters = create_filters(kingdom, phylum, class, family, genus, None, None);
 
-        let mut results = state.database.search_species(q, &filters).await?;
+        let mut results = state.database.search_species(q, &filters, None).await?;
 
         let names = results
             .records
@@ -336,7 +337,7 @@ impl Search {
     ) -> Result<Vec<SpeciesSummaryResult>, Error>
     {
         let state = ctx.data::<State>().unwrap();
-        let filters = create_filters(kingdom, phylum, class, family, genus, None);
+        let filters = create_filters(kingdom, phylum, class, family, genus, None, None);
 
         let results = state.database.search_species_with_region(&ibra_region, &filters, offset, limit).await?;
         let mut results: Vec<SpeciesSummaryResult> = results.into_iter().map(|v| v.into()).collect();
@@ -537,6 +538,7 @@ fn create_filters(
     family: Option<String>,
     genus: Option<String>,
     ibra_region: Option<String>,
+    with_record_type: Option<WithRecordType>
 ) -> Vec<SearchFilterItem> {
     let mut filters = Vec::new();
 
@@ -557,6 +559,19 @@ fn create_filters(
     }
     if let Some(value) = ibra_region {
         filters.push(SearchFilterItem { field: "ibra_region".into(), value, method: SearchFilterMethod::Include })
+    }
+    if let Some(value) = with_record_type {
+        if value == WithRecordType::Genomes {
+            let v =  r#"dynamicProperties_ncbi_genome_rep:"Full" OR dynamicProperties_ncbi_genome_rep:"Partial" OR dataResourceName:*RefSeq*"#;
+            filters.push(SearchFilterItem { field: "".to_string(), value:v.to_owned(), method: SearchFilterMethod::Include });
+        }
+        else if  value == WithRecordType::Organelles{
+            //TODO: to fix once the data is ready
+        }
+        else if  value == WithRecordType::Barcodes{
+            let v = "BOLD - Australian records";
+            filters.push(SearchFilterItem { field: "dataResourceName".into(), value:v.to_owned() , method: SearchFilterMethod::Include });
+        }
     }
 
     filters

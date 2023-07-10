@@ -223,7 +223,8 @@ impl SpeciesSearchByCanonicalName for Database {
                     canonical_name: Some(name),
                     total_records: 0,
                     total_genomic_records: None,
-                    data_summary: Default::default()
+                    data_summary: Default::default(),
+                    photo: Default::default()
                 });
             }
         }
@@ -260,6 +261,7 @@ impl SpeciesSearchExcludingCanonicalName for Database {
                     total_records: 0,
                     total_genomic_records: None,
                     data_summary: Default::default(),
+                    photo: Default::default()
                 });
             }
         }
@@ -342,7 +344,7 @@ impl SpeciesSearch for Database {
     type Error = Error;
 
     #[tracing::instrument(skip(self))]
-    async fn search_species(&self, q: Option<String>, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Self::Error> {
+    async fn search_species(&self, q: Option<String>, filters: &Vec<SearchFilterItem>, results_type: Option<WithRecordType>) -> Result<SpeciesSearchResult, Self::Error> {
         use schema_gnl::gnl::dsl::*;
         let mut conn = self.pool.get().await?;
 
@@ -476,6 +478,7 @@ impl From<SpeciesSearchItem> for crate::index::search::SpeciesSearchItem {
             total_records: 0,
             total_genomic_records: None,
             data_summary: Default::default(),
+            photo: Default::default()
         }
     }
 }
@@ -492,6 +495,7 @@ sql_function! {
 
 use diesel::pg::Pg;
 use diesel::sql_types::*;
+use crate::http::graphql::search::WithRecordType;
 
 diesel::infix_operator!(Similar, " % ", Bool, backend: Pg);
 diesel::infix_operator!(WordSimilar, " <% ", Bool, backend: Pg);

@@ -3,7 +3,9 @@ use async_graphql::{SimpleObject, Union, Enum};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
-use crate::database::models::ArgaTaxon;
+use crate::database::models::{ArgaTaxon};
+use crate::http::graphql::lists::SpeciesPhoto;
+use crate::http::graphql::search::WithRecordType;
 use crate::index::lists::ListDataSummary;
 
 
@@ -125,6 +127,7 @@ pub struct SpeciesSearchItem {
     pub total_records: usize,
     pub total_genomic_records: Option<usize>,
     pub data_summary: ListDataSummary,
+    pub photo: Option<SpeciesPhoto>,
 }
 
 #[derive(Debug, Deserialize, SimpleObject)]
@@ -136,7 +139,7 @@ pub struct SpeciesSearchResult {
 #[async_trait]
 pub trait SpeciesSearch {
     type Error;
-    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Self::Error>;
+    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>, results_type: Option<WithRecordType>) -> Result<SpeciesSearchResult, Self::Error>;
 }
 
 #[async_trait]

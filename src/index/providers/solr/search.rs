@@ -1,5 +1,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
+use crate::http::graphql::search::WithRecordType;
+use crate::index::lists::ListDataSummary;
 
 use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SpeciesSearchItem, SpeciesSearch, SpeciesSearchResult, SpeciesSearchByCanonicalName, DNASearchByCanonicalName, FullTextSearch, FullTextSearchResult, FullTextSearchItem, GenomeSequenceItem, FullTextType};
 use super::{Solr, Error};
@@ -15,14 +17,23 @@ struct DataRecords {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SpeciesFacet {
+    #[serde(alias = "scientificName", alias = "scientificName,dynamicProperties_ncbi_genome_rep", alias = "scientificName,dataResourceName")]
     scientific_name: Vec<Facet>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RawSpeciesFacet {
-    #[serde(rename(deserialize = "raw_scientificName"))]
+    #[serde(alias = "raw_scientificName", alias = "raw_scientificName,dynamicProperties_ncbi_genome_rep", alias = "raw_scientificName,dataResourceName")]
     scientific_name: Vec<Facet>,
+}
+
+#[derive(Debug, Default, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct FacetPivot {
+    _field: String,
+    value: String,
+    count: usize,
 }
 
 #[derive(Debug, Deserialize)]
@@ -31,16 +42,48 @@ struct Facet {
     _field: String,
     value: String,
     count: usize,
+    pivot: Option<Vec<FacetPivot>>,
 }
 
 impl From<Facet> for SpeciesSearchItem {
     fn from(source: Facet) -> Self {
+
+        let mut whole_genomes = 0;
+        let mut partial_genomes = 0;
+        let mut barcodes = 0;
+        let mut mitogenomes = 0; //TODO: fix this once the data is ready
+
+        match source.pivot {
+            Some(pivot) => {
+
+                for item in pivot {
+                    if item._field == "dynamicProperties_ncbi_genome_rep" && item.value == "Full" {
+                        whole_genomes = item.count;
+                    }
+                    else if item._field == "dynamicProperties_ncbi_genome_rep" && item.value == "Partial" {
+                        partial_genomes = item.count
+                    }
+                    else if  item._field == "dataResourceName" && item.value == "BOLD - Australian records" {
+                        barcodes = item.count;
+                    }
+                }
+            },
+            None => {}
+        }
+
         Self {
             scientific_name: None,
             canonical_name: Some(source.value),
             total_records: source.count,
             total_genomic_records: None,
-            data_summary: Default::default(),
+            data_summary: ListDataSummary {
+                whole_genomes,
+                partial_genomes,
+                mitogenomes,
+                barcodes ,
+                other: source.count - whole_genomes - partial_genomes - barcodes - mitogenomes,
+            },
+            photo: Default::default()
         }
     }
 }
@@ -49,7 +92,7 @@ impl From<Facet> for SpeciesSearchItem {
 impl SpeciesSearch for Solr {
     type Error = Error;
 
-    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Error> {
+    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>, results_type: Option<WithRecordType>) -> Result<SpeciesSearchResult, Error> {
         let _query = format!(r#"scientificName:"*{}*""#, query.unwrap_or_default());
 
         // convert the filter items to a format that solr understands, specifically {key}:{value}
@@ -66,21 +109,39 @@ impl SpeciesSearch for Solr {
             params.push(("fq", filter));
         }
 
+        let mut extra_pivot = "";
+
+        if let Some(value) = results_type {
+            if value == WithRecordType::Genomes {
+                extra_pivot = ",dynamicProperties_ncbi_genome_rep";
+            }
+            else if  value == WithRecordType::Organelles{
+                //TODO: to fix once the data is ready
+            }
+            else if  value == WithRecordType::Barcodes{
+                extra_pivot = ",dataResourceName";
+            }
+        }
+
+        let pivot = "scientificName".to_owned() +extra_pivot;
+
         // first get species that have been matched by the name service
         let matched_params = [vec![
             ("fq", "taxonRank:species"),
             ("fl", "scientificName"),
-            ("facet.pivot", "scientificName"),
+            ("facet.pivot", &pivot),
         ], params.clone()].concat();
         tracing::debug!(?matched_params);
         let (_records, matched_facets) = self.client.select_faceted::<DataRecords, SpeciesFacet>(&matched_params).await?;
+
+        let raw_pivot = "raw_scientificName".to_owned() +extra_pivot;
 
         // then we get all the species that could only be matched by genus
         let unmatched_params = [vec![
             ("fq", "matchType:higherMatch"),
             ("fq", "taxonRank:genus"),
             ("fl", "raw_scientificName"),
-            ("facet.pivot", "raw_scientificName"),
+            ("facet.pivot", &raw_pivot),
         ], params].concat();
         tracing::debug!(?unmatched_params);
         let (_records, unmatched_facets) = self.client.select_faceted::<DataRecords, RawSpeciesFacet>(&unmatched_params).await?;
@@ -264,7 +325,12 @@ impl From<SolrSearchItem> for SearchItem {
 
 
 fn filter_to_solr_filter(filter: &SearchFilterItem) -> String {
-    format!("{}:{}", &filter.field, &filter.value)
+    if filter.field.is_empty() {
+        format!("{}", &filter.value)
+    }
+    else {
+        format!("{}:{}", &filter.field, &filter.value)
+    }
 }
 
 
