@@ -215,8 +215,6 @@ pub struct TaxonItem {
     pub scientific_name: String,
     pub scientific_name_authorship: Option<String>,
     pub canonical_name: Option<String>,
-    pub rank: Option<String>,
-    pub taxonomic_status: Option<String>,
     pub common_names: Vec<String>,
     pub classification: Classification,
     pub assembly_summary: AssemblySummary,

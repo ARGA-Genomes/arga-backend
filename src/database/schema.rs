@@ -16,6 +16,10 @@ pub mod sql_types {
     #[derive(diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "region_type"))]
     pub struct RegionType;
+
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "taxonomic_status"))]
+    pub struct TaxonomicStatus;
 }
 
 diesel::table! {
@@ -281,7 +285,6 @@ diesel::table! {
         scientific_name -> Varchar,
         canonical_name -> Nullable<Varchar>,
         authorship -> Nullable<Varchar>,
-        rank -> Varchar,
     }
 }
 
@@ -362,6 +365,54 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::TaxonomicStatus;
+
+    taxa (id) {
+        id -> Uuid,
+        source -> Uuid,
+        name_id -> Uuid,
+        status -> TaxonomicStatus,
+        scientific_name -> Varchar,
+        canonical_name -> Nullable<Varchar>,
+        kingdom -> Nullable<Varchar>,
+        phylum -> Nullable<Varchar>,
+        class -> Nullable<Varchar>,
+        order -> Nullable<Varchar>,
+        family -> Nullable<Varchar>,
+        tribe -> Nullable<Varchar>,
+        genus -> Nullable<Varchar>,
+        specific_epithet -> Nullable<Varchar>,
+        subphylum -> Nullable<Varchar>,
+        subclass -> Nullable<Varchar>,
+        suborder -> Nullable<Varchar>,
+        subfamily -> Nullable<Varchar>,
+        subtribe -> Nullable<Varchar>,
+        subgenus -> Nullable<Varchar>,
+        subspecific_epithet -> Nullable<Varchar>,
+        superclass -> Nullable<Varchar>,
+        superorder -> Nullable<Varchar>,
+        superfamily -> Nullable<Varchar>,
+        supertribe -> Nullable<Varchar>,
+        order_authority -> Nullable<Varchar>,
+        family_authority -> Nullable<Varchar>,
+        genus_authority -> Nullable<Varchar>,
+        species_authority -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
+    taxon_history (id) {
+        id -> Uuid,
+        old_taxon_id -> Uuid,
+        new_taxon_id -> Uuid,
+        changed_by -> Nullable<Varchar>,
+        reason -> Nullable<Varchar>,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     taxon_photos (id) {
         id -> Uuid,
         name_id -> Uuid,
@@ -370,6 +421,24 @@ diesel::table! {
         publisher -> Nullable<Varchar>,
         license -> Nullable<Varchar>,
         rights_holder -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
+    taxon_remarks (id) {
+        id -> Uuid,
+        taxon_id -> Uuid,
+        remark -> Varchar,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    taxon_source (id) {
+        id -> Uuid,
+        name -> Varchar,
+        description -> Nullable<Varchar>,
+        url -> Nullable<Varchar>,
     }
 }
 
@@ -472,7 +541,10 @@ diesel::joinable!(sequencing_events -> specimens (specimen_id));
 diesel::joinable!(sequencing_run_events -> sequencing_events (sequencing_event_id));
 diesel::joinable!(specimens -> name_lists (list_id));
 diesel::joinable!(specimens -> names (name_id));
+diesel::joinable!(taxa -> names (name_id));
+diesel::joinable!(taxa -> taxon_source (source));
 diesel::joinable!(taxon_photos -> names (name_id));
+diesel::joinable!(taxon_remarks -> taxa (taxon_id));
 diesel::joinable!(trace_files -> names (name_id));
 diesel::joinable!(user_taxa -> names (name_id));
 diesel::joinable!(user_taxa -> user_taxa_lists (taxa_lists_id));
@@ -498,7 +570,11 @@ diesel::allow_tables_to_appear_in_same_query!(
     sequencing_events,
     sequencing_run_events,
     specimens,
+    taxa,
+    taxon_history,
     taxon_photos,
+    taxon_remarks,
+    taxon_source,
     trace_files,
     user_taxa,
     user_taxa_lists,

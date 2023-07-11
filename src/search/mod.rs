@@ -66,9 +66,6 @@ async fn index_names(schema: &Schema, index: &Index) -> tantivy::Result<()> {
     let scientific_name = schema.get_field("scientific_name").expect("scientific_name schema field not found");
     let canonical_name = schema.get_field("canonical_name").expect("canonical_name schema field not found");
     let common_names = schema.get_field("common_names").expect("common_names schema field not found");
-    let rank = schema.get_field("rank").expect("rank schema field not found");
-    let taxonomic_status = schema.get_field("taxonomic_status").expect("taxonomic_status schema field not found");
-    let taxa_priority = schema.get_field("name_id").expect("name_id schema field not found");
 
 
     info!("Loading names from database");
@@ -101,10 +98,12 @@ async fn index_names(schema: &Schema, index: &Index) -> tantivy::Result<()> {
         for name in chunk {
             let mut doc = doc!(
                 scientific_name => name.scientific_name.clone(),
-                canonical_name => name.canonical_name.clone().unwrap_or_default(),
-                rank => name.rank.clone(),
                 name_id => name.id.to_string(),
             );
+
+            if let Some(name) = &name.canonical_name {
+                doc.add_text(canonical_name, name);
+            }
 
             if let Some(names) = vernacular_map.get(&name.id) {
                 for common in names {
@@ -112,12 +111,12 @@ async fn index_names(schema: &Schema, index: &Index) -> tantivy::Result<()> {
                 }
             }
 
-            if let Some(taxon) = taxa_map.get(&name.id) {
-                doc.add_i64(taxa_priority, taxon.taxa_priority.into());
-                if let Some(status) = &taxon.taxonomic_status {
-                    doc.add_text(taxonomic_status, status);
-                }
-            }
+            // if let Some(taxon) = taxa_map.get(&name.id) {
+            //     doc.add_i64(taxa_priority, taxon.taxa_priority.into());
+            //     if let Some(status) = &taxon.taxonomic_status {
+            //         doc.add_text(taxonomic_status, status);
+            //     }
+            // }
 
             index_writer.add_document(doc)?;
         }
@@ -158,9 +157,6 @@ async fn get_vernacular_names(db: &Database, names: &[Name]) -> Vec<CommonName> 
 #[derive(Debug, Queryable, Serialize, Deserialize)]
 struct Taxon {
     pub name_id: Uuid,
-    pub taxonomic_status: Option<String>,
-    pub taxa_priority: i32,
-
     pub kingdom: Option<String>,
     pub phylum: Option<String>,
     pub class: Option<String>,
@@ -171,15 +167,13 @@ struct Taxon {
 
 async fn get_taxa(db: &Database, names: &[Name]) -> Vec<Taxon> {
     let mut conn = db.pool.get().await.unwrap();
-    use schema_gnl::ranked_taxa::dsl::*;
+    use schema::taxa::dsl::*;
 
     let name_ids: Vec<&Uuid> = names.iter().map(|name| &name.id).collect();
 
     // use the ranked taxa to get the right taxa details to boost
-    ranked_taxa.select((
+    taxa.select((
         name_id,
-        taxonomic_status,
-        taxa_priority,
         kingdom,
         phylum,
         class,

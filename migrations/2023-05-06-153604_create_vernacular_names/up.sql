@@ -22,8 +22,7 @@ SELECT
     language AS vernacular_language,
     scientific_name,
     authorship as scientific_name_authorship,
-    canonical_name,
-    rank
+    canonical_name
 FROM name_vernacular_names
 JOIN vernacular_names on name_vernacular_names.vernacular_name_id = vernacular_names.id
 JOIN names on name_vernacular_names.name_id = names.id;

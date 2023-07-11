@@ -5,7 +5,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::database::models::UserTaxon;
+use crate::database::models::Taxon;
 use crate::database::{schema, sum_if};
 use crate::http::Error;
 use crate::http::Context as State;
@@ -24,7 +24,7 @@ pub struct Search;
 #[Object]
 impl Search {
     async fn full_text(&self, ctx: &Context<'_>, query: String, data_type: Option<String>) -> Result<FullTextSearchResult, Error> {
-        use schema::{user_taxa, user_taxa_lists, assemblies};
+        use schema::{taxa, assemblies};
 
         let state = ctx.data::<State>().unwrap();
         let mut conn = state.database.pool.get().await?;
@@ -33,7 +33,6 @@ impl Search {
 
         let data_type = data_type.unwrap_or("all".to_string());
         if data_type == "all" || data_type == "species" {
-            let query = format!("{query} +rank:species");
             let db_results = state.search.full_text(&query).await?;
             results.records.extend(db_results.records);
         };
@@ -48,15 +47,12 @@ impl Search {
         }
 
         // look for taxonomic details for each name
-        let rows = user_taxa::table
-            .inner_join(user_taxa_lists::table)
-            .select(user_taxa::all_columns)
-            .filter(user_taxa::name_id.eq_any(&name_ids))
-            .order(user_taxa_lists::priority)
-            .load::<UserTaxon>(&mut conn)
+        let rows = taxa::table
+            .filter(taxa::name_id.eq_any(&name_ids))
+            .load::<Taxon>(&mut conn)
             .await?;
 
-        let mut record_map: HashMap<Uuid, UserTaxon> = HashMap::new();
+        let mut record_map: HashMap<Uuid, Taxon> = HashMap::new();
         for row in rows {
             record_map.insert(row.name_id.clone(), row);
         }
@@ -85,10 +81,8 @@ impl Search {
             match result {
                 FullTextSearchItem::Taxon(item) => {
                     if let Some(record) = record_map.get(&item.name_id) {
-                        item.scientific_name_authorship = record.scientific_name_authorship.clone();
+                        item.scientific_name_authorship = record.species_authority.clone();
                         item.canonical_name = record.canonical_name.clone();
-                        item.rank = record.taxon_rank.clone();
-                        item.taxonomic_status = record.taxonomic_status.clone();
                         item.classification = Classification {
                             kingdom: record.kingdom.clone(),
                             phylum: record.phylum.clone(),

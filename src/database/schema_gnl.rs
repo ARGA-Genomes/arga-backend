@@ -32,7 +32,6 @@ diesel::table! {
         scientific_name -> Varchar,
         scientific_name_authorship -> Nullable<Varchar>,
         canonical_name -> Nullable<Varchar>,
-        rank -> Nullable<Varchar>,
     }
 }
 

@@ -1,8 +1,98 @@
+use chrono::{DateTime, Utc};
 use diesel::{Queryable, Insertable};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 use super::{schema, schema_gnl};
+
+
+#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::taxon_source)]
+pub struct TaxonSource {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub url: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::TaxonomicStatus"]
+pub enum TaxonomicStatus {
+    Valid,
+    Undescribed,
+    SpeciesInquirenda,
+    Hybrid,
+    Synonym,
+    Invalid,
+}
+
+impl Default for TaxonomicStatus {
+    fn default() -> Self {
+        TaxonomicStatus::Invalid
+    }
+}
+
+#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::taxa)]
+pub struct Taxon {
+    pub id: Uuid,
+    pub source: Uuid,
+    pub name_id: Uuid,
+
+    pub status: TaxonomicStatus,
+    pub scientific_name: String,
+    pub canonical_name: Option<String>,
+
+    pub kingdom: Option<String>,
+    pub phylum: Option<String>,
+    pub class: Option<String>,
+    pub order: Option<String>,
+    pub family: Option<String>,
+    pub tribe: Option<String>,
+    pub genus: Option<String>,
+    pub specific_epithet: Option<String>,
+
+    pub subphylum: Option<String>,
+    pub subclass: Option<String>,
+    pub suborder: Option<String>,
+    pub subfamily: Option<String>,
+    pub subtribe: Option<String>,
+    pub subgenus: Option<String>,
+    pub subspecific_epithet: Option<String>,
+
+    pub superclass: Option<String>,
+    pub superorder: Option<String>,
+    pub superfamily: Option<String>,
+    pub supertribe: Option<String>,
+
+    pub order_authority: Option<String>,
+    pub family_authority: Option<String>,
+    pub genus_authority: Option<String>,
+    pub species_authority: Option<String>,
+
+    // pub name_according_to: Option<String>,
+    // pub name_published_in: Option<String>,
+}
+
+#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::taxon_history)]
+pub struct TaxonHistory {
+    pub id: Uuid,
+    pub old_taxon_id: Uuid,
+    pub new_taxon_id: Uuid,
+    pub changed_by: Option<String>,
+    pub reason: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::taxon_remarks)]
+pub struct TaxonRemarks {
+    pub id: Uuid,
+    pub taxon_id: Uuid,
+    pub remark: String,
+    pub created_at: DateTime<Utc>,
+}
 
 
 #[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
@@ -129,7 +219,6 @@ pub struct Name {
     pub scientific_name: String,
     pub canonical_name: Option<String>,
     pub authorship: Option<String>,
-    pub rank: String,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
@@ -141,7 +230,6 @@ pub struct CommonName {
     pub scientific_name: String,
     pub scientific_name_authorship: Option<String>,
     pub canonical_name: Option<String>,
-    pub rank: Option<String>,
 }
 
 

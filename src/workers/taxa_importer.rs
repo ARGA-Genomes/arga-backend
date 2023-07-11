@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
+use chrono::{DateTime, Utc};
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
 use rayon::prelude::*;
@@ -10,11 +11,7 @@ use tracing::{instrument, info, error};
 use uuid::Uuid;
 
 use crate::database::schema;
-use crate::database::models::{
-    Job,
-    UserTaxon,
-    UserTaxaList,
-    Name,
+use crate::database::models::{Job, Name, TaxonSource, Taxon, TaxonomicStatus,
     // Regions, RegionType,
 };
 
@@ -67,9 +64,9 @@ impl TaxaImporter {
         if let Some(payload) = job.payload {
             match serde_json::from_value::<ImportJobData>(payload) {
                 Ok(data) => {
-                    let taxa_list = create_taxa_list(&data.name, &data.description).unwrap();
+                    let source = get_or_create_taxon_source(&data.name, &data.description, &data.url).unwrap();
                     let path = Path::new(&tmp_path).join(data.tmp_name);
-                    import(path, &taxa_list).unwrap();
+                    import(path, &source).unwrap();
                 }
                 Err(err) => {
                     error!(?err, "Invalid JSON payload");
@@ -96,6 +93,7 @@ pub enum Error {
 struct ImportJobData {
     name: String,
     description: Option<String>,
+    url: Option<String>,
     tmp_name: String,
 }
 
@@ -139,12 +137,19 @@ struct Record {
     specific_epithet: Option<String>,
     subspecific_epithet: Option<String>,
 
+    species: Option<String>,
+    genus_full: Option<String>,
+    family_full: Option<String>,
+    order_full: Option<String>,
+
     name_according_to: Option<String>,
     name_published_in: Option<String>,
 
     taxonomic_status: Option<String>,
     taxon_remarks: Option<String>,
-    // source: Option<String>,
+    source: Option<String>,
+    source_url: Option<String>,
+    source_id: Option<String>,
 }
 
 #[derive(Debug, Queryable, Deserialize)]
@@ -154,23 +159,28 @@ struct NameMatch {
 }
 
 
-pub fn create_taxa_list(list_name: &str, list_description: &Option<String>) -> Result<UserTaxaList, Error> {
-    use schema::user_taxa_lists::dsl::*;
+pub fn get_or_create_taxon_source(name: &str, description: &Option<String>, url: &Option<String>) -> Result<TaxonSource, Error> {
+    use schema::taxon_source;
     let pool = get_connection_pool();
     let mut conn = pool.get()?;
 
-    let taxa_list = diesel::insert_into(user_taxa_lists)
+    if let Some(source) = taxon_source::table.filter(taxon_source::name.eq(name)).get_result(&mut conn).optional()? {
+        return Ok(source);
+    }
+
+    let source = diesel::insert_into(taxon_source::table)
         .values((
-            name.eq(list_name),
-            description.eq(list_description),
+            taxon_source::name.eq(name),
+            taxon_source::description.eq(description),
+            taxon_source::url.eq(url),
         ))
         .get_result(&mut conn)?;
 
-    Ok(taxa_list)
+    Ok(source)
 }
 
 #[instrument]
-pub fn import(path: PathBuf, list: &UserTaxaList) -> Result<(), Error> {
+pub fn import(path: PathBuf, source: &TaxonSource) -> Result<(), Error> {
     info!("Getting database connection pool");
     let pool = &mut get_connection_pool();
 
@@ -180,7 +190,7 @@ pub fn import(path: PathBuf, list: &UserTaxaList) -> Result<(), Error> {
     }
 
     import_names(&records, pool)?;
-    import_taxa(&records, list, pool)?;
+    import_taxa(&records, source, pool)?;
     // import_regions(&records, pool)?;
 
     Ok(())
@@ -212,27 +222,29 @@ fn import_names(records: &Vec<Record>, pool: &mut PgPool) -> Result<(), Error> {
 }
 
 
-fn import_taxa(records: &Vec<Record>, list: &UserTaxaList, pool: &mut PgPool) -> Result<(), Error> {
-    use schema::user_taxa;
+fn import_taxa(records: &Vec<Record>, source: &TaxonSource, pool: &mut PgPool) -> Result<(), Error> {
+    use schema::taxa;
 
     let names = match_names(&records, pool);
-    let taxa = extract_taxa(&list, &names, &records);
+    let taxa = extract_taxa(&source, &names, &records);
+    // let taxa = extract_history(&source, &names, &records);
+    // let taxa = extract_remarks(&source, &names, &records);
 
     // filter out unmatched specimens
-    let mut taxa = taxa.into_iter().filter_map(|r| r).collect::<Vec<UserTaxon>>();
+    let taxa = taxa.into_iter().filter_map(|r| r).collect::<Vec<Taxon>>();
 
     // deduplicate taxa entries so that the same csv file for other imports
     // can be used for taxa imports
-    let total = taxa.len();
-    info!(total, "Deduplicating taxa");
-    taxa.par_sort_by(|a, b| a.scientific_name.cmp(&b.scientific_name));
-    taxa.dedup_by(|a, b| a.scientific_name.eq(&b.scientific_name));
-    info!(total, duplicates=total - taxa.len(), "Deduplicating taxa finished");
+    // let total = taxa.len();
+    // info!(total, "Deduplicating taxa");
+    // taxa.par_sort_by(|a, b| a.scientific_name.cmp(&b.scientific_name));
+    // taxa.dedup_by(|a, b| a.scientific_name.eq(&b.scientific_name));
+    // info!(total, duplicates=total - taxa.len(), "Deduplicating taxa finished");
 
     info!(total=taxa.len(), "Importing taxa");
     let imported: Vec<Result<usize, Error>> = taxa.par_chunks(1000).map(|chunk| {
         let mut conn = pool.get()?;
-        let inserted_rows = diesel::insert_into(user_taxa::table)
+        let inserted_rows = diesel::insert_into(taxa::table)
             .values(chunk)
             .execute(&mut conn)?;
         Ok(inserted_rows)
@@ -246,6 +258,149 @@ fn import_taxa(records: &Vec<Record>, list: &UserTaxaList, pool: &mut PgPool) ->
 
     Ok(())
 }
+
+
+fn match_names(records: &Vec<Record>, pool: &mut PgPool) -> HashMap<String, Uuid> {
+    use schema::names;
+    info!(total=records.len(), "Matching names");
+
+    let matched: Vec<Result<Vec<NameMatch>, Error>> = records.par_chunks(50_000).map(|chunk| {
+        let mut conn = pool.get()?;
+        let scientific_names: Vec<&String> = chunk.iter().map(|row| &row.scientific_name).collect();
+
+        let results = names::table
+            .select((names::id, names::scientific_name))
+            .filter(names::scientific_name.eq_any(scientific_names))
+            .load::<NameMatch>(&mut conn)?;
+
+        Ok::<Vec<NameMatch>, Error>(results)
+    }).collect();
+
+    let mut id_map: HashMap<String, Uuid> = HashMap::new();
+
+    for chunk in matched {
+        if let Ok(names) = chunk {
+            for name_match in names {
+                id_map.insert(name_match.scientific_name, name_match.id);
+            }
+        }
+    }
+
+    info!(total=records.len(), matched=id_map.len(), "Matching names finished");
+    id_map
+}
+
+
+fn extract_names(records: &Vec<Record>) -> Vec<Name> {
+    info!(total=records.len(), "Extracting names");
+
+    let names = records.par_iter().map(|row| {
+        let species_authority = extract_authority(&row.canonical_name, &row.species);
+
+        Name {
+            id: Uuid::new_v4(),
+            scientific_name: row.scientific_name.clone(),
+            canonical_name: row.canonical_name.clone(),
+            authorship: species_authority,
+        }
+    }).collect::<Vec<Name>>();
+
+    info!(names=names.len(), "Extracting names finished");
+    names
+}
+
+
+fn extract_taxa(source: &TaxonSource, names: &HashMap<String, Uuid>, records: &Vec<Record>) -> Vec<Option<Taxon>> {
+    info!(total=records.len(), "Extracting taxa");
+
+    let taxa = records.par_iter().map(|row| {
+        let order_authority = extract_authority(&row.order, &row.order_full);
+        let family_authority = extract_authority(&row.family, &row.family_full);
+        let genus_authority = extract_authority(&row.genus, &row.genus_full);
+        let species_authority = extract_authority(&row.canonical_name, &row.species);
+
+        match names.get(&row.scientific_name) {
+            Some(name_id) => Some(Taxon {
+                id: Uuid::new_v4(),
+                source: source.id.clone(),
+                name_id: name_id.clone(),
+
+                status: str_to_taxonomic_status(&row.taxonomic_status),
+                scientific_name: row.scientific_name.clone(),
+                canonical_name: row.canonical_name.clone(),
+
+                kingdom: row.kingdom.clone(),
+                phylum: row.phylum.clone(),
+                class: row.class.clone(),
+                order: row.order.clone(),
+                family: row.family.clone(),
+                tribe: row.tribe.clone(),
+                genus: row.genus.clone(),
+                specific_epithet: row.specific_epithet.clone(),
+
+                subphylum: row.subphylum.clone(),
+                subclass: row.subclass.clone(),
+                suborder: row.suborder.clone(),
+                subfamily: row.subfamily.clone(),
+                subtribe: row.subtribe.clone(),
+                subgenus: row.subgenus.clone(),
+                subspecific_epithet: row.subspecific_epithet.clone(),
+
+                superclass: row.superclass.clone(),
+                superorder: row.superorder.clone(),
+                superfamily: row.superfamily.clone(),
+                supertribe: row.supertribe.clone(),
+
+                order_authority,
+                family_authority,
+                genus_authority,
+                species_authority,
+
+                // name_according_to: row.name_according_to.clone(),
+                // name_published_in: row.name_published_in.clone(),
+            }),
+            None => None,
+        }
+    }).collect::<Vec<Option<Taxon>>>();
+
+    info!(taxa=taxa.len(), "Extracting taxa finished");
+    taxa
+}
+
+
+fn extract_authority(name: &Option<String>, full_name: &Option<String>) -> Option<String> {
+    match (name, full_name) {
+        (Some(name), Some(full_name)) => Some(full_name.trim_start_matches(name).trim().to_string()),
+        _ => None
+    }
+}
+
+
+fn str_to_taxonomic_status(value: &Option<String>) -> TaxonomicStatus {
+    match value {
+        Some(status) => match status.to_lowercase().as_str() {
+            "valid" => TaxonomicStatus::Valid,
+            "undescribed" => TaxonomicStatus::Undescribed,
+            "species inquirenda" => TaxonomicStatus::SpeciesInquirenda,
+            "hybrid" => TaxonomicStatus::Hybrid,
+            "synonym" => TaxonomicStatus::Synonym,
+            "invalid" => TaxonomicStatus::Invalid,
+            _ => TaxonomicStatus::Invalid,
+        },
+        None => TaxonomicStatus::Invalid,
+    }
+}
+
+
+fn get_connection_pool() -> Pool<ConnectionManager<PgConnection>> {
+    let url = crate::database::get_database_url();
+    let manager = ConnectionManager::<PgConnection>::new(url);
+    Pool::builder().build(manager).expect("Could not build connection pool")
+}
+
+
+
+
 
 
 // #[derive(Default)]
@@ -341,145 +496,3 @@ fn import_taxa(records: &Vec<Record>, list: &UserTaxaList, pool: &mut PgPool) ->
 //     info!(total, "Finished importing regions");
 //     Ok(())
 // }
-
-
-fn match_names(records: &Vec<Record>, pool: &mut PgPool) -> HashMap<String, Uuid> {
-    use schema::names;
-    info!(total=records.len(), "Matching names");
-
-    let matched: Vec<Result<Vec<NameMatch>, Error>> = records.par_chunks(50_000).map(|chunk| {
-        let mut conn = pool.get()?;
-        let scientific_names: Vec<&String> = chunk.iter().map(|row| &row.scientific_name).collect();
-
-        let results = names::table
-            .select((names::id, names::scientific_name))
-            .filter(names::scientific_name.eq_any(scientific_names))
-            .load::<NameMatch>(&mut conn)?;
-
-        Ok::<Vec<NameMatch>, Error>(results)
-    }).collect();
-
-    let mut id_map: HashMap<String, Uuid> = HashMap::new();
-
-    for chunk in matched {
-        if let Ok(names) = chunk {
-            for name_match in names {
-                id_map.insert(name_match.scientific_name, name_match.id);
-            }
-        }
-    }
-
-    info!(total=records.len(), matched=id_map.len(), "Matching names finished");
-    id_map
-}
-
-
-fn extract_names(records: &Vec<Record>) -> Vec<Name> {
-    info!(total=records.len(), "Extracting names");
-
-    let names = records.par_iter().map(|row| {
-        Name {
-            id: Uuid::new_v4(),
-            scientific_name: row.scientific_name.clone(),
-            canonical_name: row.canonical_name.clone(),
-            authorship: row.authority.clone(),
-            rank: row.rank.clone().unwrap_or_else(|| derive_taxon_rank(&row)),
-        }
-    }).collect::<Vec<Name>>();
-
-    info!(names=names.len(), "Extracting names finished");
-    names
-}
-
-
-fn extract_taxa(list: &UserTaxaList, names: &HashMap<String, Uuid>, records: &Vec<Record>) -> Vec<Option<UserTaxon>> {
-    info!(total=records.len(), "Extracting taxa");
-
-    let taxa = records.par_iter().map(|row| {
-        match names.get(&row.scientific_name) {
-            Some(name_id) => Some(UserTaxon {
-                id: Uuid::new_v4(),
-                taxa_lists_id: list.id.clone(),
-                name_id: name_id.clone(),
-                scientific_name: Some(row.scientific_name.clone()),
-                scientific_name_authorship: row.authority.clone(),
-                canonical_name: row.canonical_name.clone(),
-                specific_epithet: row.specific_epithet.clone(),
-                infraspecific_epithet: row.subspecific_epithet.clone(),
-                taxon_rank: Some(row.rank.clone().unwrap_or_else(|| derive_taxon_rank(&row))),
-                name_according_to: row.name_according_to.clone(),
-                name_published_in: row.name_published_in.clone(),
-                taxonomic_status: row.taxonomic_status.clone(),
-                taxon_remarks: row.taxon_remarks.clone(),
-                kingdom: row.kingdom.clone(),
-                phylum: row.phylum.clone(),
-                class: row.class.clone(),
-                order: row.order.clone(),
-                family: row.family.clone(),
-                genus: row.genus.clone(),
-            }),
-            None => None,
-        }
-    }).collect::<Vec<Option<UserTaxon>>>();
-
-    info!(taxa=taxa.len(), "Extracting taxa finished");
-    taxa
-}
-
-
-fn derive_taxon_rank(record: &Record) -> String {
-    let rank = if record.subspecies.is_some() {
-        "subspecies"
-    } else if record.subspecific_epithet.is_some() {
-        "subspecies"
-    } else if record.specific_epithet.is_some() {
-        "species"
-    } else if record.canonical_name.is_some() {
-        "species"
-    } else if record.subgenus.is_some() {
-        "subgenus"
-    } else if record.genus.is_some() {
-        "genus"
-    } else if record.subtribe.is_some() {
-        "subtribe"
-    } else if record.tribe.is_some() {
-        "tribe"
-    } else if record.supertribe.is_some() {
-        "supertribe"
-    } else if record.subfamily.is_some() {
-        "subfamily"
-    } else if record.family.is_some() {
-        "family"
-    } else if record.superfamily.is_some() {
-        "superfamily"
-    } else if record.suborder.is_some() {
-        "suborder"
-    } else if record.order.is_some() {
-        "order"
-    } else if record.superorder.is_some() {
-        "superorder"
-    } else if record.subclass.is_some() {
-        "subclass"
-    } else if record.class.is_some() {
-        "class"
-    } else if record.superclass.is_some() {
-        "superclass"
-    } else if record.subphylum.is_some() {
-        "subphylum"
-    } else if record.phylum.is_some() {
-        "phylum"
-    } else if record.kingdom.is_some() {
-        "kingdom"
-    } else {
-        "unranked"
-    };
-
-    String::from(rank)
-}
-
-
-fn get_connection_pool() -> Pool<ConnectionManager<PgConnection>> {
-    let url = crate::database::get_database_url();
-    let manager = ConnectionManager::<PgConnection>::new(url);
-    Pool::builder().build(manager).expect("Could not build connection pool")
-}

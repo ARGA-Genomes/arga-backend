@@ -35,7 +35,6 @@ async fn taxa(
     let offset = (page - 1) * page_size;
 
     let mut query = names
-        .filter(rank.eq("species"))
         .order_by(scientific_name)
         .offset(offset)
         .limit(page_size)
