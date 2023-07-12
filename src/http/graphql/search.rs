@@ -155,7 +155,7 @@ impl Search {
         let mut results = Vec::with_capacity(21);
 
         // first get the data we do have from the solr index.
-        let solr_results = state.solr.search_species(None, &db_filters,None).await.unwrap();
+        let solr_results = state.solr.search_species(None, &db_filters,None, None).await.unwrap();
 
         for record in solr_results.records.into_iter().take(21) {
             results.push(SearchItem {
@@ -229,23 +229,24 @@ impl Search {
         family: Option<String>,
         genus: Option<String>,
         with_record_type: Option<WithRecordType>,
+        pagination: Option<Pagination>
     ) -> Result<Vec<SpeciesSearchItem>, Error> {
         let state = ctx.data::<State>().unwrap();
         let filters = create_filters(kingdom, phylum, class, family, genus, None, with_record_type);
 
         // limit the results for pagination. this should become variable
         // once a pagination system is more fleshed out
-        let mut results = Vec::with_capacity(21);
+        let mut results = Vec::new();
 
         // first get the data we do have from the solr index.
-        let solr_results = state.solr.search_species(None, &filters, with_record_type).await?;
+        let solr_results = state.solr.search_species(None, &filters, with_record_type, pagination).await?;
 
-        for record in solr_results.records.into_iter().take(21) {
+        for record in solr_results.records.into_iter() {
             results.push(record);
         }
 
         // get species from gbif backbone that don't have any genomic records
-        let db_results = state.database.search_species(None, &filters, with_record_type).await?;
+        let db_results = state.database.search_species(None, &filters, with_record_type, pagination).await?;
 
         for record in db_results.records.into_iter() {
             // add the filler gbif record if we don't have enough records with data
@@ -267,14 +268,20 @@ impl Search {
 
             if !names.is_empty() {
                 let photos = state.database.list_photos(&names).await?;
-                // for photo in photos.into_iter() {
-                //     item.photo = Some(photo.into());
-                //     break;
-                // }
+                let photo = photos.into_iter().next();
+                if photo.is_some(){
+                    item.photo = Some(photo.unwrap().into());
+                }
             }
         }
 
-        Ok(results.into_iter().take(21).collect())
+        let mut page_size = 20;
+
+        if pagination.is_some() {
+            page_size = pagination.unwrap().page_size;
+        }
+
+        Ok(results.into_iter().take(page_size as usize).collect())
     }
 
     #[tracing::instrument(skip(self, ctx))]
@@ -292,7 +299,7 @@ impl Search {
         let state = ctx.data::<State>().unwrap();
         let filters = create_filters(kingdom, phylum, class, family, genus, None, None);
 
-        let mut results = state.database.search_species(q, &filters, None).await?;
+        let mut results = state.database.search_species(q, &filters, None, None).await?;
 
         let names = results
             .records

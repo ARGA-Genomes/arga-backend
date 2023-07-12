@@ -81,7 +81,7 @@ impl Genus {
                 item.data_summary = ListDataSummary {
                     whole_genomes: stat.whole_genomes,
                     partial_genomes: stat.partial_genomes,
-                    mitogenomes: stat.mitogenomes,
+                    organelles: stat.organelles,
                     barcodes: stat.barcodes,
                     other: stat.other,
                 }

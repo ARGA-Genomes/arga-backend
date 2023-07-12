@@ -344,16 +344,25 @@ impl SpeciesSearch for Database {
     type Error = Error;
 
     #[tracing::instrument(skip(self))]
-    async fn search_species(&self, q: Option<String>, filters: &Vec<SearchFilterItem>, results_type: Option<WithRecordType>) -> Result<SpeciesSearchResult, Self::Error> {
+    async fn search_species(&self, q: Option<String>, filters: &Vec<SearchFilterItem>, results_type: Option<WithRecordType>, pagination: Option<Pagination>) -> Result<SpeciesSearchResult, Self::Error> {
         use schema_gnl::gnl::dsl::*;
         let mut conn = self.pool.get().await?;
+
+        let mut offset = 0;
+        let mut page_size = 20;
+
+        if pagination.is_some() {
+            offset = pagination.unwrap().page_size * (pagination.unwrap().page - 1);
+            page_size = pagination.unwrap().page_size;
+        }
 
         let mut query = gnl
             .select((scientific_name, canonical_name))
             .filter(taxonomic_status.eq("accepted"))
             .filter(taxon_rank.eq("species"))
             .order_by(scientific_name)
-            .limit(21)
+            .limit(page_size)
+            .offset(offset)
             .into_boxed();
 
         if let Some(q) = q {
@@ -496,6 +505,7 @@ sql_function! {
 use diesel::pg::Pg;
 use diesel::sql_types::*;
 use crate::http::graphql::search::WithRecordType;
+use crate::index::lists::Pagination;
 
 diesel::infix_operator!(Similar, " % ", Bool, backend: Pg);
 diesel::infix_operator!(WordSimilar, " <% ", Bool, backend: Pg);

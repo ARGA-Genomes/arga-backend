@@ -22,7 +22,7 @@ pub struct Filters {
     pub items: Vec<FilterItem>,
 }
 
-#[derive(Debug, InputObject)]
+#[derive(Debug, InputObject, Clone, Copy)]
 pub struct Pagination {
     pub page: i64,
     pub page_size: i64,
@@ -52,7 +52,7 @@ pub trait GetListPhotos {
 pub struct ListDataSummary {
     pub whole_genomes: usize,
     pub partial_genomes: usize,
-    pub mitogenomes: usize,
+    pub organelles: usize,
     pub barcodes: usize,
     pub other: usize,
 }

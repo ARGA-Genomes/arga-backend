@@ -6,7 +6,7 @@ use uuid::Uuid;
 use crate::database::models::{ArgaTaxon};
 use crate::http::graphql::lists::SpeciesPhoto;
 use crate::http::graphql::search::WithRecordType;
-use crate::index::lists::ListDataSummary;
+use crate::index::lists::{ListDataSummary, Pagination};
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
@@ -139,7 +139,7 @@ pub struct SpeciesSearchResult {
 #[async_trait]
 pub trait SpeciesSearch {
     type Error;
-    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>, results_type: Option<WithRecordType>) -> Result<SpeciesSearchResult, Self::Error>;
+    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>, results_type: Option<WithRecordType>, pagination: Option<Pagination>) -> Result<SpeciesSearchResult, Self::Error>;
 }
 
 #[async_trait]

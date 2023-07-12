@@ -95,7 +95,7 @@ impl GetSpeciesStats for Solr {
                         total: facet.count,
                         whole_genomes: *queries.get(QUERY_WHOLE_GENOMES).unwrap_or(&0),
                         barcodes: *queries.get(QUERY_BARCODES).unwrap_or(&0),
-                        mitogenomes: 0, // TODO: update
+                        organelles: 0, // TODO: update
                         partial_genomes: *queries.get(QUERY_PARTIAL_GENOMES).unwrap_or(&0),
                     });
                 }

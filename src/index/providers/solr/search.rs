@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use serde::Deserialize;
 use crate::http::graphql::search::WithRecordType;
-use crate::index::lists::ListDataSummary;
+use crate::index::lists::{ListDataSummary, Pagination};
 
 use crate::index::search::{Searchable, SearchResults, SearchFilterItem, SearchItem, GroupedSearchItem, SpeciesList, SpeciesSearchItem, SpeciesSearch, SpeciesSearchResult, SpeciesSearchByCanonicalName, DNASearchByCanonicalName, FullTextSearch, FullTextSearchResult, FullTextSearchItem, GenomeSequenceItem, FullTextType};
 use super::{Solr, Error};
@@ -51,7 +51,7 @@ impl From<Facet> for SpeciesSearchItem {
         let mut whole_genomes = 0;
         let mut partial_genomes = 0;
         let mut barcodes = 0;
-        let mut mitogenomes = 0; //TODO: fix this once the data is ready
+        let mut organelles = 0; //TODO: fix this once the data is ready
 
         match source.pivot {
             Some(pivot) => {
@@ -79,9 +79,9 @@ impl From<Facet> for SpeciesSearchItem {
             data_summary: ListDataSummary {
                 whole_genomes,
                 partial_genomes,
-                mitogenomes,
+                organelles,
                 barcodes ,
-                other: source.count - whole_genomes - partial_genomes - barcodes - mitogenomes,
+                other: source.count - whole_genomes - partial_genomes - barcodes - organelles,
             },
             photo: Default::default()
         }
@@ -92,8 +92,20 @@ impl From<Facet> for SpeciesSearchItem {
 impl SpeciesSearch for Solr {
     type Error = Error;
 
-    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>, results_type: Option<WithRecordType>) -> Result<SpeciesSearchResult, Error> {
+    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>, results_type: Option<WithRecordType>, pagination: Option<Pagination>) -> Result<SpeciesSearchResult, Error> {
         let _query = format!(r#"scientificName:"*{}*""#, query.unwrap_or_default());
+
+        let mut offset = "0";
+        let mut page_size = "20";
+        let tmp_offset;
+        let tmp;
+
+        if pagination.is_some() {
+            tmp_offset = (pagination.unwrap().page_size * (pagination.unwrap().page - 1)).to_string();
+            offset = &tmp_offset;
+            tmp = pagination.unwrap().page_size.to_string();
+            page_size = &tmp;
+        }
 
         // convert the filter items to a format that solr understands, specifically {key}:{value}
         let filters = filters.iter().map(|filter| filter_to_solr_filter(filter)).collect::<Vec<String>>();
@@ -102,6 +114,7 @@ impl SpeciesSearch for Solr {
             // ("q", query.as_str()),
             ("q", "*:*"),
             ("facet", "true"),
+            ("facet.limit", page_size)
         ];
 
         // having multiple `fq` params is the same as using AND
@@ -130,6 +143,7 @@ impl SpeciesSearch for Solr {
             ("fq", "taxonRank:species"),
             ("fl", "scientificName"),
             ("facet.pivot", &pivot),
+            ("f.scientificName.facet.offset", offset)
         ], params.clone()].concat();
         tracing::debug!(?matched_params);
         let (_records, matched_facets) = self.client.select_faceted::<DataRecords, SpeciesFacet>(&matched_params).await?;
@@ -142,6 +156,7 @@ impl SpeciesSearch for Solr {
             ("fq", "taxonRank:genus"),
             ("fl", "raw_scientificName"),
             ("facet.pivot", &raw_pivot),
+            ("f.raw_scientificName.facet.offset", offset)
         ], params].concat();
         tracing::debug!(?unmatched_params);
         let (_records, unmatched_facets) = self.client.select_faceted::<DataRecords, RawSpeciesFacet>(&unmatched_params).await?;
