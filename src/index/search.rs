@@ -180,11 +180,18 @@ pub trait GenusSearch {
 #[derive(Debug, Deserialize, PartialEq, Eq, Clone, Copy, Enum)]
 pub enum FullTextType {
     Taxon,
+    Genus,
     ReferenceGenomeSequence,
     WholeGenomeSequence,
     PartialGenomeSequence,
     UnknownGenomeSequence,
     Barcode,
+}
+
+impl Default for FullTextType {
+    fn default() -> Self {
+        Self::Taxon
+    }
 }
 
 #[derive(Debug, Default, Deserialize, SimpleObject)]
@@ -207,15 +214,28 @@ pub struct AssemblySummary {
     pub barcodes: usize,
 }
 
-#[derive(Debug, Deserialize, SimpleObject)]
+#[derive(Debug, Default, Deserialize, SimpleObject)]
 #[serde(rename_all = "camelCase")]
 pub struct TaxonItem {
-    #[graphql(skip)]
-    pub name_id: Uuid,
     pub scientific_name: String,
     pub scientific_name_authorship: Option<String>,
     pub canonical_name: Option<String>,
     pub common_names: Vec<String>,
+    pub subspecies: Vec<String>,
+    pub classification: Classification,
+    pub assembly_summary: AssemblySummary,
+    pub score: f32,
+    pub r#type: FullTextType,
+}
+
+
+#[derive(Debug, Default, Deserialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct GenusItem {
+    pub scientific_name: String,
+    pub scientific_name_authorship: Option<String>,
+    pub canonical_name: Option<String>,
+    pub undescribed_species: Vec<String>,
     pub classification: Classification,
     pub assembly_summary: AssemblySummary,
     pub score: f32,
@@ -235,6 +255,7 @@ pub struct  GenomeSequenceItem {
 #[derive(Debug, Union, Deserialize)]
 pub enum FullTextSearchItem {
     Taxon(TaxonItem),
+    Genus(GenusItem),
     GenomeSequence(GenomeSequenceItem)
 }
 
@@ -256,11 +277,13 @@ impl PartialOrd for FullTextSearchItem {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         let score = match self {
             FullTextSearchItem::Taxon(item) => item.score,
+            FullTextSearchItem::Genus(item) => item.score,
             FullTextSearchItem::GenomeSequence(item) => item.score,
         };
 
         match other {
             FullTextSearchItem::Taxon(item) => score.partial_cmp(&item.score),
+            FullTextSearchItem::Genus(item) => score.partial_cmp(&item.score),
             FullTextSearchItem::GenomeSequence(item) => score.partial_cmp(&item.score),
         }
     }
@@ -271,6 +294,7 @@ impl PartialEq for FullTextSearchItem {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Taxon(l0), Self::Taxon(r0)) => l0.score == r0.score,
+            (Self::Genus(l0), Self::Genus(r0)) => l0.score == r0.score,
             (Self::GenomeSequence(l0), Self::GenomeSequence(r0)) => l0.score == r0.score,
             _ => false,
         }

@@ -1,4 +1,48 @@
 diesel::table! {
+    species (id) {
+        id -> Uuid,
+        source -> Uuid,
+        name_id -> Uuid,
+        status -> crate::database::schema::sql_types::TaxonomicStatus,
+        scientific_name -> Varchar,
+        canonical_name -> Nullable<Varchar>,
+        kingdom -> Nullable<Varchar>,
+        phylum -> Nullable<Varchar>,
+        class -> Nullable<Varchar>,
+        order -> Nullable<Varchar>,
+        family -> Nullable<Varchar>,
+        tribe -> Nullable<Varchar>,
+        genus -> Nullable<Varchar>,
+        specific_epithet -> Nullable<Varchar>,
+        subphylum -> Nullable<Varchar>,
+        subclass -> Nullable<Varchar>,
+        suborder -> Nullable<Varchar>,
+        subfamily -> Nullable<Varchar>,
+        subtribe -> Nullable<Varchar>,
+        subgenus -> Nullable<Varchar>,
+        subspecific_epithet -> Nullable<Varchar>,
+        superclass -> Nullable<Varchar>,
+        superorder -> Nullable<Varchar>,
+        superfamily -> Nullable<Varchar>,
+        supertribe -> Nullable<Varchar>,
+        order_authority -> Nullable<Varchar>,
+        family_authority -> Nullable<Varchar>,
+        genus_authority -> Nullable<Varchar>,
+        species_authority -> Nullable<Varchar>,
+        subspecies -> Nullable<Array<Text>>,
+        window_rank -> BigInt,
+    }
+}
+
+diesel::table! {
+    undescribed_species (genus) {
+        genus -> Varchar,
+        genus_authority -> Nullable<Varchar>,
+        names -> Array<Text>,
+    }
+}
+
+diesel::table! {
     ranked_taxa (id) {
         id -> Uuid,
         taxa_lists_id -> Uuid,

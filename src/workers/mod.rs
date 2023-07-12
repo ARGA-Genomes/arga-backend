@@ -1,6 +1,7 @@
 mod manager;
 mod tokio_bridge;
 mod taxa_importer;
+mod synonym_importer;
 mod conservation_status_importer;
 mod specimen_importer;
 mod marker_importer;

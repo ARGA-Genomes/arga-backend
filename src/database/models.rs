@@ -94,6 +94,56 @@ pub struct TaxonRemarks {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Queryable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema_gnl::species)]
+pub struct Species {
+    pub id: Uuid,
+    pub source: Uuid,
+    pub name_id: Uuid,
+
+    pub status: TaxonomicStatus,
+    pub scientific_name: String,
+    pub canonical_name: Option<String>,
+
+    pub kingdom: Option<String>,
+    pub phylum: Option<String>,
+    pub class: Option<String>,
+    pub order: Option<String>,
+    pub family: Option<String>,
+    pub tribe: Option<String>,
+    pub genus: Option<String>,
+    pub specific_epithet: Option<String>,
+
+    pub subphylum: Option<String>,
+    pub subclass: Option<String>,
+    pub suborder: Option<String>,
+    pub subfamily: Option<String>,
+    pub subtribe: Option<String>,
+    pub subgenus: Option<String>,
+    pub subspecific_epithet: Option<String>,
+
+    pub superclass: Option<String>,
+    pub superorder: Option<String>,
+    pub superfamily: Option<String>,
+    pub supertribe: Option<String>,
+
+    pub order_authority: Option<String>,
+    pub family_authority: Option<String>,
+    pub genus_authority: Option<String>,
+    pub species_authority: Option<String>,
+
+    pub subspecies: Option<Vec<String>>,
+    pub window_rank: i64,
+}
+
+#[derive(Queryable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema_gnl::undescribed_species)]
+pub struct UndescribedSpecies {
+    pub genus: String,
+    pub genus_authority: Option<String>,
+    pub names: Vec<String>,
+}
+
 
 #[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::user_taxa_lists)]

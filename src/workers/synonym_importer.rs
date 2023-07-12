@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
+use chrono::Utc;
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
 use rayon::prelude::*;
@@ -10,19 +11,17 @@ use tracing::{instrument, info, error};
 use uuid::Uuid;
 
 use crate::database::schema;
-use crate::database::models::{Job, Name, TaxonSource, Taxon, TaxonomicStatus,
-    // Regions, RegionType,
-};
+use crate::database::models::{Job, Name, TaxonSource, Taxon, TaxonomicStatus, TaxonHistory};
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
-pub struct TaxaImporter {
+pub struct SynonymImporter {
     thread: PipedThread<Job, Job>,
 }
 
-impl TaxaImporter {
+impl SynonymImporter {
     pub fn init(cx: CX![]) -> Option<Self> {
         let thread = PipedThread::spawn(
             fwd_to!([cx], recv() as (Job)),
@@ -57,7 +56,7 @@ impl TaxaImporter {
 
     // #[instrument]
     fn process(job: Job) {
-        info!("Running taxa importer");
+        info!("Running synonym importer");
         let tmp_path = std::env::var("ADMIN_TMP_UPLOAD_STORAGE").expect("No upload storage specified");
 
         if let Some(payload) = job.payload {
@@ -99,6 +98,8 @@ struct ImportJobData {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Record {
+    valid_scientific_name: String,
+
     scientific_name: String,
     authority: Option<String>,
     canonical_name: Option<String>,
@@ -125,14 +126,6 @@ struct Record {
     subgenus: Option<String>,
     subspecies: Option<String>,
 
-    // basionym_genus: Option<String>,
-    // basionym_subgenus: Option<String>,
-    // basionym_species: Option<String>,
-    // basionym_subspecies: Option<String>,
-    // basionym_canonical_name: Option<String>,
-    // basionym_author: Option<String>,
-    // basionym_year: Option<String>,
-
     specific_epithet: Option<String>,
     subspecific_epithet: Option<String>,
 
@@ -144,15 +137,22 @@ struct Record {
     name_according_to: Option<String>,
     name_published_in: Option<String>,
 
-    taxonomic_status: Option<String>,
     taxon_remarks: Option<String>,
     source: Option<String>,
     source_url: Option<String>,
     source_id: Option<String>,
+
+    change_reason: Option<String>,
 }
 
 #[derive(Debug, Queryable, Deserialize)]
 struct NameMatch {
+    id: Uuid,
+    scientific_name: String,
+}
+
+#[derive(Debug, Queryable, Deserialize)]
+struct TaxonMatch {
     id: Uuid,
     scientific_name: String,
 }
@@ -178,6 +178,7 @@ pub fn get_or_create_taxon_source(name: &str, description: &Option<String>, url:
     Ok(source)
 }
 
+
 #[instrument]
 pub fn import(path: PathBuf, source: &TaxonSource) -> Result<(), Error> {
     info!("Getting database connection pool");
@@ -189,8 +190,8 @@ pub fn import(path: PathBuf, source: &TaxonSource) -> Result<(), Error> {
     }
 
     import_names(&records, pool)?;
-    import_taxa(&records, source, pool)?;
-    // import_regions(&records, pool)?;
+    import_synonyms(&records, source, pool)?;
+    import_taxa_history(&records, source, pool)?;
 
     Ok(())
 }
@@ -221,30 +222,21 @@ fn import_names(records: &Vec<Record>, pool: &mut PgPool) -> Result<(), Error> {
 }
 
 
-fn import_taxa(records: &Vec<Record>, source: &TaxonSource, pool: &mut PgPool) -> Result<(), Error> {
+fn import_synonyms(records: &Vec<Record>, source: &TaxonSource, pool: &mut PgPool) -> Result<(), Error> {
     use schema::taxa;
 
     let names = match_names(&records, pool);
-    let taxa = extract_taxa(&source, &names, &records);
-    // let taxa = extract_history(&source, &names, &records);
-    // let taxa = extract_remarks(&source, &names, &records);
+    let synonyms = extract_synonyms(&source, &names, &records);
 
     // filter out unmatched specimens
-    let taxa = taxa.into_iter().filter_map(|r| r).collect::<Vec<Taxon>>();
+    let synonyms = synonyms.into_iter().filter_map(|r| r).collect::<Vec<Taxon>>();
 
-    // deduplicate taxa entries so that the same csv file for other imports
-    // can be used for taxa imports
-    // let total = taxa.len();
-    // info!(total, "Deduplicating taxa");
-    // taxa.par_sort_by(|a, b| a.scientific_name.cmp(&b.scientific_name));
-    // taxa.dedup_by(|a, b| a.scientific_name.eq(&b.scientific_name));
-    // info!(total, duplicates=total - taxa.len(), "Deduplicating taxa finished");
-
-    info!(total=taxa.len(), "Importing taxa");
-    let imported: Vec<Result<usize, Error>> = taxa.par_chunks(1000).map(|chunk| {
+    info!(total=synonyms.len(), "Importing synonyms");
+    let imported: Vec<Result<usize, Error>> = synonyms.par_chunks(1000).map(|chunk| {
         let mut conn = pool.get()?;
         let inserted_rows = diesel::insert_into(taxa::table)
             .values(chunk)
+            .on_conflict_do_nothing()
             .execute(&mut conn)?;
         Ok(inserted_rows)
     }).collect();
@@ -253,7 +245,36 @@ fn import_taxa(records: &Vec<Record>, source: &TaxonSource, pool: &mut PgPool) -
     for chunk_total in imported {
         total_imported += chunk_total?;
     }
-    info!(total=taxa.len(), total_imported, "Importing taxa finished");
+    info!(total=synonyms.len(), total_imported, "Importing synonyms finished");
+
+    Ok(())
+}
+
+
+fn import_taxa_history(records: &Vec<Record>, source: &TaxonSource, pool: &mut PgPool) -> Result<(), Error> {
+    use schema::taxon_history;
+
+    let taxa = match_taxa(&records, pool);
+    let history = extract_taxa_history(&source, &taxa, &records);
+
+    // filter out unmatched taxa history
+    let history = history.into_iter().filter_map(|r| r).collect::<Vec<TaxonHistory>>();
+
+    info!(total=history.len(), "Importing taxa history");
+    let imported: Vec<Result<usize, Error>> = history.par_chunks(1000).map(|chunk| {
+        let mut conn = pool.get()?;
+        let inserted_rows = diesel::insert_into(taxon_history::table)
+            .values(chunk)
+            .on_conflict_do_nothing()
+            .execute(&mut conn)?;
+        Ok(inserted_rows)
+    }).collect();
+
+    let mut total_imported = 0;
+    for chunk_total in imported {
+        total_imported += chunk_total?;
+    }
+    info!(total=history.len(), total_imported, "Importing taxa history finished");
 
     Ok(())
 }
@@ -290,6 +311,40 @@ fn match_names(records: &Vec<Record>, pool: &mut PgPool) -> HashMap<String, Uuid
 }
 
 
+fn match_taxa(records: &Vec<Record>, pool: &mut PgPool) -> HashMap<String, Uuid> {
+    use schema::taxa;
+    info!(total=records.len(), "Matching taxa");
+
+    let matched: Vec<Result<Vec<TaxonMatch>, Error>> = records.par_chunks(50_000).map(|chunk| {
+        let mut conn = pool.get()?;
+
+        let mut names: Vec<&String> = chunk.iter().map(|row| &row.scientific_name).collect();
+        let valid_names: Vec<&String> = chunk.iter().map(|row| &row.valid_scientific_name).collect();
+        names.extend(valid_names);
+
+        let results = taxa::table
+            .select((taxa::id, taxa::scientific_name))
+            .filter(taxa::scientific_name.eq_any(names))
+            .load::<TaxonMatch>(&mut conn)?;
+
+        Ok::<Vec<TaxonMatch>, Error>(results)
+    }).collect();
+
+    let mut id_map: HashMap<String, Uuid> = HashMap::new();
+
+    for chunk in matched {
+        if let Ok(names) = chunk {
+            for taxon_match in names {
+                id_map.insert(taxon_match.scientific_name, taxon_match.id);
+            }
+        }
+    }
+
+    info!(total=records.len(), matched=id_map.len(), "Matching names finished");
+    id_map
+}
+
+
 fn extract_names(records: &Vec<Record>) -> Vec<Name> {
     info!(total=records.len(), "Extracting names");
 
@@ -309,8 +364,8 @@ fn extract_names(records: &Vec<Record>) -> Vec<Name> {
 }
 
 
-fn extract_taxa(source: &TaxonSource, names: &HashMap<String, Uuid>, records: &Vec<Record>) -> Vec<Option<Taxon>> {
-    info!(total=records.len(), "Extracting taxa");
+fn extract_synonyms(source: &TaxonSource, names: &HashMap<String, Uuid>, records: &Vec<Record>) -> Vec<Option<Taxon>> {
+    info!(total=records.len(), "Extracting synonyms");
 
     let taxa = records.par_iter().map(|row| {
         let order_authority = extract_authority(&row.order, &row.order_full);
@@ -324,7 +379,7 @@ fn extract_taxa(source: &TaxonSource, names: &HashMap<String, Uuid>, records: &V
                 source: source.id.clone(),
                 name_id: name_id.clone(),
 
-                status: str_to_taxonomic_status(&row.taxonomic_status),
+                status: TaxonomicStatus::Synonym,
                 scientific_name: row.scientific_name.clone(),
                 canonical_name: row.canonical_name.clone(),
 
@@ -354,16 +409,39 @@ fn extract_taxa(source: &TaxonSource, names: &HashMap<String, Uuid>, records: &V
                 family_authority,
                 genus_authority,
                 species_authority,
-
-                // name_according_to: row.name_according_to.clone(),
-                // name_published_in: row.name_published_in.clone(),
             }),
             None => None,
         }
     }).collect::<Vec<Option<Taxon>>>();
 
-    info!(taxa=taxa.len(), "Extracting taxa finished");
+    info!(taxa=taxa.len(), "Extracting synonyms finished");
     taxa
+}
+
+
+fn extract_taxa_history(source: &TaxonSource, taxa: &HashMap<String, Uuid>, records: &Vec<Record>) -> Vec<Option<TaxonHistory>> {
+    info!(total=records.len(), "Extracting taxa history");
+
+    let history = records.par_iter().map(|row| {
+        let old_taxon_id = taxa.get(&row.scientific_name);
+        let new_taxon_id = taxa.get(&row.valid_scientific_name);
+        let changed_by = format!("Import: {}", source.name);
+
+        match (old_taxon_id, new_taxon_id) {
+            (Some(old_taxon_id), Some(new_taxon_id)) => Some(TaxonHistory {
+                id: Uuid::new_v4(),
+                old_taxon_id: old_taxon_id.clone(),
+                new_taxon_id: new_taxon_id.clone(),
+                changed_by: Some(changed_by),
+                reason: row.change_reason.clone(),
+                created_at: Utc::now(),
+            }),
+            _ => None,
+        }
+    }).collect::<Vec<Option<TaxonHistory>>>();
+
+    info!(history=history.len(), "Extracting taxa history finished");
+    history
 }
 
 
@@ -375,123 +453,8 @@ fn extract_authority(name: &Option<String>, full_name: &Option<String>) -> Optio
 }
 
 
-fn str_to_taxonomic_status(value: &Option<String>) -> TaxonomicStatus {
-    match value {
-        Some(status) => match status.to_lowercase().as_str() {
-            "valid" => TaxonomicStatus::Valid,
-            "undescribed" => TaxonomicStatus::Undescribed,
-            "species inquirenda" => TaxonomicStatus::SpeciesInquirenda,
-            "hybrid" => TaxonomicStatus::Hybrid,
-            "synonym" => TaxonomicStatus::Synonym,
-            "invalid" => TaxonomicStatus::Invalid,
-            _ => TaxonomicStatus::Invalid,
-        },
-        None => TaxonomicStatus::Invalid,
-    }
-}
-
-
 fn get_connection_pool() -> Pool<ConnectionManager<PgConnection>> {
     let url = crate::database::get_database_url();
     let manager = ConnectionManager::<PgConnection>::new(url);
     Pool::builder().build(manager).expect("Could not build connection pool")
 }
-
-
-
-
-
-
-// #[derive(Default)]
-// struct RegionImport {
-//     scientific_name: String,
-//     ibra: Option<Vec<String>>,
-//     imcra: Option<Vec<String>>,
-// }
-
-// #[instrument(skip(df, conn))]
-// fn import_regions(df: &DataFrame, conn: &mut PgConnection) -> Result<(), Error> {
-//     info!(height = df.height(), "Transforming");
-
-//     let mut rows = Vec::with_capacity(df.height());
-//     for _ in 0..df.height() {
-//         rows.push(RegionImport::default());
-//     }
-
-//     let series = df.column("scientificName")?;
-//     for (idx, value) in series.iter().enumerate() {
-//         rows[idx].scientific_name = parse_string(&value).expect("scientificName is mandatory")
-//     }
-
-//     // set the optional fields for the name data. it wont overwrite existing names
-//     // but new names will prserve these values indefinitely
-//     let attr_names = df.get_column_names();
-//     let attributes = find_attributes(&attr_names, conn)?;
-
-//     for attribute in &attributes {
-//         let series = df.column(&attribute.name)?;
-//         info!(name = attribute.name, "Enumerating column");
-
-//         match attribute.name.as_str() {
-//             "ibraRegions" => for (idx, value) in series.iter().enumerate() {
-//                 rows[idx].ibra = parse_array(&value);
-//             },
-//             "imcraRegions" => for (idx, value) in series.iter().enumerate() {
-//                 rows[idx].imcra = parse_array(&value);
-//             },
-//             _ => {}
-//         }
-//     }
-
-//     info!(total=rows.len(), "Importing regions");
-//     use schema::{regions, names};
-
-//     let mut total = 0;
-//     for chunk in rows.chunks(10_000) {
-//         info!(rows = chunk.len(), "Inserting into regions");
-
-//         let mut id_map: HashMap<String, Uuid> = HashMap::new();
-//         let all_names: Vec<&String> = rows.iter().map(|row| &row.scientific_name).collect();
-
-//         let results = names::table
-//             .select((names::id, names::scientific_name))
-//             .filter(names::scientific_name.eq_any(all_names))
-//             .load::<(Uuid, String)>(conn)?;
-
-//         for (uuid, name) in results {
-//             id_map.insert(name, uuid);
-//         }
-
-//         let mut values = Vec::new();
-//         for row in chunk {
-//             if let Some(uuid) = id_map.get(&row.scientific_name) {
-//                 if let Some(value) = &row.ibra {
-//                     values.push(Regions {
-//                         id: Uuid::new_v4(),
-//                         name_id: uuid.clone(),
-//                         region_type: RegionType::Ibra,
-//                         values: value.clone(),
-//                     });
-//                 }
-//                 if let Some(value) = &row.imcra {
-//                     values.push(Regions {
-//                         id: Uuid::new_v4(),
-//                         name_id: uuid.clone(),
-//                         region_type: RegionType::Imcra,
-//                         values: value.clone(),
-//                     });
-//                 }
-//             }
-//         }
-
-//         let inserted_rows = diesel::insert_into(regions::table)
-//             .values(values)
-//             .execute(conn)?;
-
-//         info!(inserted_rows, "Inserted into regions");
-//         total += inserted_rows;
-//     }
-
-//     info!(total, "Finished importing regions");
-//     Ok(())
-// }
