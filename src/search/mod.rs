@@ -65,6 +65,7 @@ async fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
     let name_id = schema.get_field("name_id").expect("name_id schema field not found");
     let canonical_name = schema.get_field("canonical_name").expect("canonical_name schema field not found");
     let subspecies = schema.get_field("subspecies").expect("subspecies schema field not found");
+    let synonyms = schema.get_field("synonyms").expect("synonyms schema field not found");
     // let common_names = schema.get_field("common_names").expect("common_names schema field not found");
 
     let genus = schema.get_field("genus").expect("genus schema field not found");
@@ -78,14 +79,17 @@ async fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
             let mut doc = doc!(
                 name_id => species.name_id.to_string(),
             );
-
             if let Some(name) = &species.canonical_name {
                 doc.add_text(canonical_name, name);
             }
-
             if let Some(names) = &species.subspecies {
                 for name in names {
                     doc.add_text(subspecies, name);
+                }
+            }
+            if let Some(names) = &species.synonyms {
+                for name in names {
+                    doc.add_text(synonyms, name);
                 }
             }
 

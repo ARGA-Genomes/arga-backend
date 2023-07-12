@@ -222,6 +222,7 @@ pub struct TaxonItem {
     pub canonical_name: Option<String>,
     pub common_names: Vec<String>,
     pub subspecies: Vec<String>,
+    pub synonyms: Vec<String>,
     pub classification: Classification,
     pub assembly_summary: AssemblySummary,
     pub score: f32,

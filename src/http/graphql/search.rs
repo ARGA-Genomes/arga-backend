@@ -26,7 +26,7 @@ pub struct Search;
 impl Search {
     async fn full_text(&self, ctx: &Context<'_>, query: String, data_type: Option<String>) -> Result<FullTextSearchResult, Error> {
         use schema::{assemblies, taxa};
-        use schema_gnl::species;
+        use schema_gnl::{species, synonyms};
 
         let state = ctx.data::<State>().unwrap();
         let mut conn = state.database.pool.get().await?;
@@ -72,12 +72,19 @@ impl Search {
 
         // look for taxonomic details for each name
         let rows = species::table
+            .left_join(synonyms::table)
+            .select((
+                species::all_columns,
+                synonyms::names.nullable(),
+            ))
             .filter(species::name_id.eq_any(&name_ids))
-            .load::<Species>(&mut conn)
+            .load::<(Species, Option<Vec<String>>)>(&mut conn)
             .await?;
 
         let mut species_map: HashMap<Uuid, Species> = HashMap::new();
-        for row in rows {
+        let mut synonym_map: HashMap<Uuid, Vec<String>> = HashMap::new();
+        for (row, synonyms) in rows {
+            synonym_map.insert(row.name_id.clone(), synonyms.unwrap_or_default());
             species_map.insert(row.name_id.clone(), row);
         }
 
@@ -126,6 +133,10 @@ impl Search {
                             family: species.family.clone(),
                             genus: species.genus.clone(),
                         };
+                    }
+
+                    if let Some(synonyms) = synonym_map.get(uuid) {
+                        item.synonyms = synonyms.clone();
                     }
 
                     if let Some((refseq, full, partial)) = assembly_map.get(&uuid) {

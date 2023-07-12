@@ -17,19 +17,22 @@ pub struct SpeciesDoc {
     pub name_id: Uuid,
     pub canonical_name: Option<String>,
     pub subspecies: Option<Vec<String>>,
+    pub synonyms: Option<Vec<String>>,
 }
 
 pub async fn get_species(db: &Database) -> Result<Vec<SpeciesDoc>, Error> {
-    use schema_gnl::species::dsl::*;
+    use schema_gnl::{species, synonyms};
     let mut conn = db.pool.get().await.unwrap();
 
-    let docs = species
+    let docs = species::table
+        .left_join(synonyms::table)
         .select((
-            name_id,
-            canonical_name,
-            subspecies,
+            species::name_id,
+            species::canonical_name,
+            species::subspecies,
+            synonyms::names.nullable(),
         ))
-        .filter(status.eq(TaxonomicStatus::Valid))
+        .filter(species::status.eq(TaxonomicStatus::Valid))
         .load::<SpeciesDoc>(&mut conn)
         .await?;
 
