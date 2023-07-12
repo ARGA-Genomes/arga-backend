@@ -5,7 +5,8 @@ use diesel_async::RunQueryDsl;
 
 use crate::index::genus::{GetGenus, Taxonomy};
 use crate::database::sum_if;
-use super::{schema, schema_gnl, Database, Error, Taxon, PgPool, models::RankedTaxon};
+use super::{schema, Database, Error, Taxon as ShortTaxon, PgPool};
+use super::models::Taxon;
 
 
 #[async_trait]
@@ -13,12 +14,12 @@ impl GetGenus for Database {
     type Error = Error;
 
     async fn taxonomy(&self, name: &str) -> Result<Taxonomy, Error> {
-        use schema_gnl::ranked_taxa::dsl::*;
+        use schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let taxon = ranked_taxa
+        let taxon = taxa
             .select((
-                scientific_name_authorship,
+                species_authority,
                 canonical_name,
                 kingdom,
                 phylum,
@@ -27,9 +28,8 @@ impl GetGenus for Database {
                 family,
                 genus,
             ))
-            .filter(taxon_rank.eq("genus"))
-            .filter(canonical_name.eq(name))
-            .first::<Taxon>(&mut conn).await?;
+            .filter(genus.eq(name))
+            .first::<ShortTaxon>(&mut conn).await?;
 
         Ok(Taxonomy::from(taxon))
     }
@@ -42,15 +42,13 @@ pub struct GenusProvider {
 }
 
 impl GenusProvider {
-    pub async fn species(&self, genus_name: &str) -> Result<Vec<RankedTaxon>, Error> {
-        use schema_gnl::ranked_taxa::dsl::*;
+    pub async fn species(&self, genus_name: &str) -> Result<Vec<Taxon>, Error> {
+        use schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let species = ranked_taxa
+        let species = taxa
             .filter(genus.eq(genus_name))
-            // .filter(taxon_rank.eq("species"))
-            .order_by(taxa_priority)
-            .load::<RankedTaxon>(&mut conn)
+            .load::<Taxon>(&mut conn)
             .await?;
 
         Ok(species)

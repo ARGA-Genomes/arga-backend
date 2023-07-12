@@ -39,12 +39,12 @@ impl Genus {
 
         let mut species: HashMap<Uuid, ListSpecies> = HashMap::new();
 
-        let ranked = state.database.genus.species(&self.genus).await?;
-        for taxon in ranked {
+        let taxa = state.database.genus.species(&self.genus).await?;
+        for taxon in taxa {
             let taxonomy = Taxonomy {
-                scientific_name: taxon.scientific_name.unwrap_or_default(),
+                scientific_name: taxon.scientific_name,
                 canonical_name: taxon.canonical_name,
-                authorship: taxon.scientific_name_authorship,
+                authorship: taxon.species_authority,
                 kingdom: taxon.kingdom,
                 phylum: taxon.phylum,
                 class: taxon.class,

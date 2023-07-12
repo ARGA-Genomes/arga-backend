@@ -9,7 +9,7 @@ use uuid::Uuid;
 use crate::index::specimen;
 use crate::index::species::{self, GetSpecies, Taxonomy, GetRegions, GetMedia, GetSpecimens, GetConservationStatus, GetTraceFiles};
 use super::{schema, Database, Error};
-use super::models::{Name, UserTaxon, RegionType, TaxonPhoto, Specimen, TraceFile, ConservationStatus};
+use super::models::{Taxon, Name, RegionType, TaxonPhoto, Specimen, TraceFile, ConservationStatus};
 
 
 #[derive(Queryable, Debug)]
@@ -40,22 +40,19 @@ impl GetSpecies for Database {
 
     #[instrument(skip(self))]
     async fn taxonomy(&self, name: &Name) -> Result<Taxonomy, Error> {
-        use schema::{user_taxa, user_taxa_lists};
+        use schema::taxa;
         let mut conn = self.pool.get().await?;
 
-        let taxon = user_taxa::table
-            .inner_join(user_taxa_lists::table)
-            .select(user_taxa::all_columns)
-            .filter(user_taxa::name_id.eq(name.id))
-            .order(user_taxa_lists::priority)
-            .first::<UserTaxon>(&mut conn)
+        let taxon = taxa::table
+            .filter(taxa::name_id.eq(name.id))
+            .first::<Taxon>(&mut conn)
             .await?;
 
         let taxonomy = Taxonomy {
             vernacular_group: derive_vernacular_group(&taxon),
-            scientific_name: taxon.scientific_name.unwrap_or_else(|| name.scientific_name.clone()),
+            scientific_name: taxon.scientific_name,
             canonical_name: taxon.canonical_name,
-            authorship: taxon.scientific_name_authorship,
+            authorship: taxon.species_authority,
             kingdom: taxon.kingdom,
             phylum: taxon.phylum,
             class: taxon.class,
@@ -68,26 +65,23 @@ impl GetSpecies for Database {
 
     #[instrument(skip(self))]
     async fn taxa(&self, names: &Vec<Name>) -> Result<Vec<Taxonomy>, Error> {
-        use schema::{user_taxa, user_taxa_lists};
+        use schema::taxa;
         let mut conn = self.pool.get().await?;
 
         let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
 
-        let records = user_taxa::table
-            .inner_join(user_taxa_lists::table)
-            .select(user_taxa::all_columns)
-            .filter(user_taxa::name_id.eq_any(name_ids))
-            .order(user_taxa_lists::priority)
-            .load::<UserTaxon>(&mut conn)
+        let records = taxa::table
+            .filter(taxa::name_id.eq_any(name_ids))
+            .load::<Taxon>(&mut conn)
             .await?;
 
         let mut taxa = Vec::with_capacity(records.len());
         for taxon in records {
             taxa.push(Taxonomy {
                 vernacular_group: derive_vernacular_group(&taxon),
-                scientific_name: taxon.scientific_name.unwrap_or_default(),
+                scientific_name: taxon.scientific_name,
                 canonical_name: taxon.canonical_name,
-                authorship: taxon.scientific_name_authorship,
+                authorship: taxon.species_authority,
                 kingdom: taxon.kingdom,
                 phylum: taxon.phylum,
                 class: taxon.class,
@@ -295,7 +289,7 @@ fn from_int_array(values: Vec<Option<i32>>) -> Vec<i32> {
 }
 
 
-fn derive_vernacular_group(taxon: &UserTaxon) -> Option<String> {
+fn derive_vernacular_group(taxon: &Taxon) -> Option<String> {
     match taxon.kingdom.as_ref().map(|k| k.as_str()) {
         Some("Archaea") => Some("bacteria".into()),
         Some("Bacteria") => Some("bacteria".into()),
