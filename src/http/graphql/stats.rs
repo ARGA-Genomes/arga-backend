@@ -4,6 +4,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use tracing::instrument;
 
+use crate::database::stats::BreakdownItem;
 use crate::http::Error;
 use crate::http::Context as State;
 
@@ -68,6 +69,19 @@ impl Statistics {
             breakdown: solr_breakdown.genera,
         })
     }
+
+    #[instrument(skip(self, ctx))]
+    async fn order(&self, ctx: &Context<'_>, order: String) -> Result<OrderStatistics, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let stats = state.database.stats.order(&order).await?;
+        let breakdown = state.database.stats.order_breakdown(&order).await?;
+
+        Ok(OrderStatistics {
+            total_families: stats.total_families,
+            families_with_data: stats.total_families_with_data,
+            breakdown: breakdown.families,
+        })
+    }
 }
 
 
@@ -112,4 +126,17 @@ pub struct FamilyStatistics {
 
     /// A breakdown of genera and the amount of data for it
     pub breakdown: Vec<FamilyBreakdownItem>,
+}
+
+
+#[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderStatistics {
+    /// The total amount of families
+    pub total_families: usize,
+    /// The total amount of families that have data records
+    pub families_with_data: usize,
+
+    /// A breakdown of families and the amount of data for it
+    pub breakdown: Vec<BreakdownItem>,
 }
