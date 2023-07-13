@@ -15,16 +15,16 @@ use crate::index::lists::ListDataSummary;
 
 use super::lists::ListSpecies;
 
-pub struct Order {
-    pub order: String,
+pub struct Class {
+    pub class: String,
 }
 
 #[Object]
-impl Order {
+impl Class {
     #[instrument(skip(self, ctx))]
     async fn taxonomy(&self, ctx: &Context<'_>) -> Result<Taxonomy, Error> {
         let state = ctx.data::<State>().unwrap();
-        let taxonomy = state.database.order.taxonomy(&self.order).await?;
+        let taxonomy = state.database.class.taxonomy(&self.class).await?;
 
         Ok(taxonomy)
     }
@@ -37,7 +37,7 @@ impl Order {
 
         let mut species: HashMap<Uuid, ListSpecies> = HashMap::new();
 
-        let taxa = state.database.order.species(&self.order).await?;
+        let taxa = state.database.class.species(&self.class).await?;
         for taxon in taxa {
             let taxonomy = Taxonomy {
                 scientific_name: taxon.scientific_name,
@@ -73,7 +73,7 @@ impl Order {
         }
 
         // assign the data summary associated with the name
-        let stats = state.database.order.species_summary(&name_ids).await?;
+        let stats = state.database.class.species_summary(&name_ids).await?;
         for stat in stats.into_iter() {
             if let Some(item) = species.get_mut(&stat.name_id) {
                 item.data_summary = ListDataSummary {

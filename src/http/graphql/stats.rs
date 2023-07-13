@@ -82,6 +82,19 @@ impl Statistics {
             breakdown: breakdown.families,
         })
     }
+
+    #[instrument(skip(self, ctx))]
+    async fn class(&self, ctx: &Context<'_>, class: String) -> Result<ClassStatistics, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let stats = state.database.stats.class(&class).await?;
+        let breakdown = state.database.stats.class_breakdown(&class).await?;
+
+        Ok(ClassStatistics {
+            total_orders: stats.total_orders,
+            orders_with_data: stats.total_orders_with_data,
+            breakdown: breakdown.orders,
+        })
+    }
 }
 
 
@@ -138,5 +151,18 @@ pub struct OrderStatistics {
     pub families_with_data: usize,
 
     /// A breakdown of families and the amount of data for it
+    pub breakdown: Vec<BreakdownItem>,
+}
+
+
+#[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClassStatistics {
+    /// The total amount of orders
+    pub total_orders: usize,
+    /// The total amount of orders that have data records
+    pub orders_with_data: usize,
+
+    /// A breakdown of orders and the amount of data for it
     pub breakdown: Vec<BreakdownItem>,
 }

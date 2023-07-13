@@ -2,6 +2,7 @@ pub mod schema;
 pub mod schema_gnl;
 
 pub mod search;
+pub mod class;
 pub mod order;
 pub mod family;
 pub mod genus;
@@ -163,6 +164,7 @@ where
 pub struct Database {
     pub pool: Pool<AsyncPgConnection>,
 
+    pub class: class::ClassProvider,
     pub order: order::OrderProvider,
     pub genus: genus::GenusProvider,
     pub markers: markers::MarkerProvider,
@@ -177,6 +179,7 @@ impl Database {
         let pool = Pool::builder().build(config).await?;
 
         Ok(Database {
+            class: class::ClassProvider { pool: pool.clone() },
             order: order::OrderProvider { pool: pool.clone() },
             genus: genus::GenusProvider { pool: pool.clone() },
             markers: markers::MarkerProvider { pool: pool.clone() },

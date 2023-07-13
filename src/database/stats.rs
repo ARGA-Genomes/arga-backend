@@ -92,6 +92,20 @@ impl GetFamilyStats for Database {
 }
 
 
+#[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClassStats {
+    /// The total amount of orders in the class
+    pub total_orders: usize,
+    pub total_orders_with_data: usize,
+}
+
+#[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClassBreakdown {
+    pub orders: Vec<BreakdownItem>,
+}
+
 
 #[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -154,6 +168,42 @@ impl StatsProvider {
 
         Ok(OrderBreakdown {
             families,
+        })
+    }
+
+    pub async fn class(&self, name: &str) -> Result<ClassStats, Error> {
+        use schema::taxa::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let total: i64 = taxa
+            .filter(class.eq(name))
+            .filter(status.eq(TaxonomicStatus::Valid))
+            .group_by(order)
+            .count()
+            .get_result(&mut conn)
+            .await?;
+
+        Ok(ClassStats {
+            // this can never be negative due to the count
+            total_orders: total as usize,
+            total_orders_with_data: 0,
+        })
+    }
+
+    pub async fn class_breakdown(&self, name: &str) -> Result<ClassBreakdown, Error> {
+        use schema::taxa::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let orders = taxa
+            .filter(class.eq(name))
+            .filter(status.eq(TaxonomicStatus::Valid))
+            .group_by(order)
+            .select((order, diesel::dsl::count_star()))
+            .load::<BreakdownItem>(&mut conn)
+            .await?;
+
+        Ok(ClassBreakdown {
+            orders,
         })
     }
 }

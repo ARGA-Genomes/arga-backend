@@ -9,11 +9,11 @@ use super::models::Taxon;
 
 
 #[derive(Clone)]
-pub struct OrderProvider {
+pub struct ClassProvider {
     pub pool: PgPool,
 }
 
-impl OrderProvider {
+impl ClassProvider {
     pub async fn taxonomy(&self, name: &str) -> Result<Taxonomy, Error> {
         use schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
@@ -29,20 +29,21 @@ impl OrderProvider {
                 family,
                 genus,
             ))
-            .filter(order.eq(name))
+            .filter(class.eq(name))
             .first::<ShortTaxon>(&mut conn).await?;
 
+        taxon.order = None;
         taxon.family = None;
         taxon.genus = None;
         Ok(Taxonomy::from(taxon))
     }
 
-    pub async fn species(&self, order_name: &str) -> Result<Vec<Taxon>, Error> {
+    pub async fn species(&self, class_name: &str) -> Result<Vec<Taxon>, Error> {
         use schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let species = taxa
-            .filter(order.eq(order_name))
+            .filter(class.eq(class_name))
             .filter(status.eq(TaxonomicStatus::Valid))
             .load::<Taxon>(&mut conn)
             .await?;

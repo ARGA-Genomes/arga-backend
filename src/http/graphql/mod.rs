@@ -1,5 +1,6 @@
 pub mod overview;
 pub mod search;
+pub mod class;
 pub mod order;
 pub mod family;
 pub mod genus;
@@ -27,6 +28,7 @@ use crate::http::Context as State;
 use crate::index::lists::{Filters, Pagination};
 use self::overview::Overview;
 use self::search::Search;
+use self::class::Class;
 use self::order::Order;
 use self::family::Family;
 use self::genus::Genus;
@@ -64,6 +66,10 @@ impl Query {
     async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<Species, Error> {
         let state = ctx.data::<State>().unwrap();
         Species::new(&state.database, canonical_name).await
+    }
+
+    async fn class(&self, class: String) -> Class {
+        Class { class }
     }
 
     async fn order(&self, order: String) -> Order {
