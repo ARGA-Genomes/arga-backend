@@ -10,10 +10,21 @@ pub struct Overview;
 #[Object]
 impl Overview {
     /// Returns the amount of genomic records for animals in the index
-    async fn animals(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+    async fn animals(&self, ctx: &Context<'_>) -> Result<i64, Error> {
         let state = ctx.data::<State>().unwrap();
-        Ok(state.solr.total(OverviewCategory::Animals).await?)
+        Ok(state.database.overview.animals().await?.total)
     }
+
+    async fn genomes(&self, ctx: &Context<'_>) -> Result<i64, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.database.overview.genomes().await?.total)
+    }
+
+    async fn markers(&self, ctx: &Context<'_>) -> Result<i64, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.database.overview.markers().await?.total)
+    }
+
 
     /// Returns the amount of genomic records for plants in the index
     async fn plants(&self, ctx: &Context<'_>) -> Result<usize, Error> {
