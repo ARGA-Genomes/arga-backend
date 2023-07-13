@@ -20,6 +20,15 @@ use crate::index::search::{
 };
 
 
+
+#[derive(Debug, Enum, Eq, PartialEq, Copy, Clone)]
+pub enum WithRecordType {
+    Genomes,
+    Organelles,
+    Barcodes
+}
+
+
 pub struct Search;
 
 #[Object]

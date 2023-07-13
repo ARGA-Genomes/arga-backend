@@ -83,7 +83,6 @@ impl From<Facet> for SpeciesSearchItem {
                 barcodes ,
                 other: source.count - whole_genomes - partial_genomes - barcodes - organelles,
             },
-            photo: Default::default()
         }
     }
 }

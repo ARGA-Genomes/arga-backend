@@ -3,7 +3,9 @@ use async_graphql::{SimpleObject, Union, Enum};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
-use crate::index::lists::ListDataSummary;
+use crate::{index::lists::ListDataSummary, http::graphql::search::WithRecordType};
+
+use super::lists::Pagination;
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
