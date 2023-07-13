@@ -11,6 +11,7 @@ pub mod lists;
 pub mod traces;
 pub mod assembly;
 pub mod specimen;
+pub mod marker;
 pub mod markers;
 pub mod extensions;
 
@@ -40,6 +41,7 @@ use self::extensions::ErrorLogging;
 use self::traces::Traces;
 use self::assembly::Assembly;
 use self::specimen::Specimen;
+use self::marker::Marker;
 use self::markers::Markers;
 
 use super::error::Error;
@@ -127,6 +129,11 @@ impl Query {
     async fn specimen(&self, ctx: &Context<'_>, specimen_id: String) -> Result<Specimen, Error> {
         let state = ctx.data::<State>().unwrap();
         Specimen::new(&state.database, &specimen_id).await
+    }
+
+    async fn marker(&self, ctx: &Context<'_>, accession: String) -> Result<Marker, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Marker::new(&state.database, &accession).await
     }
 
     async fn markers(&self) -> Markers {

@@ -570,7 +570,7 @@ pub struct BioSample {
 }
 
 
-#[derive(Debug, Queryable, Insertable, Default)]
+#[derive(Debug, Clone, Queryable, Insertable, Default)]
 #[diesel(table_name = schema::markers)]
 pub struct Marker {
     pub id: Uuid,
