@@ -77,7 +77,7 @@ impl GenusProvider {
                 reference_genomes: reference_genomes as usize,
                 whole_genomes: whole_genomes as usize,
                 partial_genomes: partial_genomes as usize,
-                mitogenomes: 0,
+                organelles: 0,
                 barcodes: 0,
                 other: 0,
             });
@@ -93,7 +93,7 @@ pub struct SpeciesSummary {
     pub reference_genomes: usize,
     pub whole_genomes: usize,
     pub partial_genomes: usize,
-    pub mitogenomes: usize,
+    pub organelles: usize,
     pub barcodes: usize,
     pub other: usize,
 }

@@ -27,16 +27,22 @@ impl Overview {
         Ok(state.solr.total(OverviewCategory::Fungi).await?)
     }
 
-    /// Returns the amount of bacteria specimens in the index
-    async fn bacteria(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+    /// Returns the amount of agriculture, aquaculture and commercial species in the index
+    async fn agricultural_and_aquaculture_and_commercial(&self, ctx: &Context<'_>) -> Result<usize, Error> {
         let state = ctx.data::<State>().unwrap();
-        Ok(state.solr.total(OverviewCategory::AgriculturalAndPest).await?)
+        Ok(state.solr.total(OverviewCategory::AgriculturalAndAquacultureAndCommercial).await?)
+    }
+
+    /// Returns the amount of bioSecurity and pest in the index
+    async fn bio_security_and_pest(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.solr.total(OverviewCategory::BioSecurityAndPest).await?)
     }
 
     /// Returns the amount of marine specimens in the index
     async fn marine(&self, ctx: &Context<'_>) -> Result<usize, Error> {
         let state = ctx.data::<State>().unwrap();
-        Ok(state.solr.total(OverviewCategory::MarineAndAquaculture).await?)
+        Ok(state.solr.total(OverviewCategory::Marine).await?)
     }
 
     /// Returns the amount of specimens collected in Australia
@@ -57,16 +63,21 @@ impl Overview {
         Ok(state.solr.total(OverviewCategory::TerrestrialBiodiversity).await?)
     }
 
-    /// Returns the amount of published datasets in the index
-    async fn published_datasets(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+    /// Returns the amount of threatened species in the index
+    async fn threatened_species(&self, ctx: &Context<'_>) -> Result<usize, Error> {
         let state = ctx.data::<State>().unwrap();
         Ok(state.solr.total(OverviewCategory::ThreatenedSpecies).await?)
     }
 
-    /// Returns the amount of genomes in the index
-    async fn genomes(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+    /// Returns the amount of whole genomes in the index
+    async fn whole_genomes(&self, ctx: &Context<'_>) -> Result<usize, Error> {
         let state = ctx.data::<State>().unwrap();
-        Ok(state.solr.total(OverviewCategory::Genome).await?)
+        Ok(state.solr.total(OverviewCategory::WholeGenome).await?)
+    }
+    /// Returns the amount of whole genomes in the index
+    async fn partial_genomes(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.solr.total(OverviewCategory::PartialGenome).await?)
     }
     /// Returns the amount of organelles in the index
     async fn organelles(&self, ctx: &Context<'_>) -> Result<usize, Error> {
@@ -77,5 +88,17 @@ impl Overview {
     async fn barcodes(&self, ctx: &Context<'_>) -> Result<usize, Error> {
         let state = ctx.data::<State>().unwrap();
         Ok(state.solr.total(OverviewCategory::Barcodes).await?)
+    }
+
+    /// Returns the amount of records
+    async fn all_records(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.solr.total(OverviewCategory::AllRecords).await?)
+    }
+
+    /// Returns the amount of species
+    async fn all_species(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.solr.total(OverviewCategory::AllSpecies).await?)
     }
 }

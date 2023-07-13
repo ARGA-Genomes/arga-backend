@@ -14,15 +14,18 @@ impl Overview for Solr {
             OverviewCategory::Animals => "kingdom:Animalia",
             OverviewCategory::Plants => "kingdom:Plantae",
             OverviewCategory::Fungi => "kingdom:Fungi",
-            OverviewCategory::AgriculturalAndPest => "*:*",
-            OverviewCategory::MarineAndAquaculture => r#"biome:"MARINE""#,
-            OverviewCategory::AllSpecies => "*:*",
+            OverviewCategory::AgriculturalAndAquacultureAndCommercial => "*:*", //TODO: to fix once the data is ready
+            OverviewCategory::BioSecurityAndPest => "*:*", //TODO: to fix once the data is ready
+            OverviewCategory::Marine => r#"biome:"MARINE""#,
+            OverviewCategory::AllRecords => "*:*",
             OverviewCategory::PreservedSpecimens => r#"basisOfRecord:"PRESERVED_SPECIMEN""#,
             OverviewCategory::TerrestrialBiodiversity => r#"biome:"TERRESTRIAL""#,
-            OverviewCategory::ThreatenedSpecies => "*:*",
-            OverviewCategory::Genome =>  r#"dynamicProperties_ncbi_genome_rep:"Full" OR dynamicProperties_ncbi_genome_rep:"Partial" OR dataResourceName:*RefSeq*"#,
+            OverviewCategory::ThreatenedSpecies => "*:*", //TODO: to fix once the data is ready
+            OverviewCategory::WholeGenome =>  r#"dynamicProperties_ncbi_genome_rep:"Full" OR dataResourceName:*RefSeq*"#,
+            OverviewCategory::PartialGenome =>  r#"dynamicProperties_ncbi_genome_rep:"Partial""#,
             OverviewCategory::Organelles => "*:*", //TODO: to fix once the data is ready
-            OverviewCategory::Barcodes => r#"dataProviderName:"Barcode of Life""#
+            OverviewCategory::Barcodes => r#"dataProviderName:"Barcode of Life""#,
+            OverviewCategory::AllSpecies => "taxonRank:species",
         };
 
         let params = vec![

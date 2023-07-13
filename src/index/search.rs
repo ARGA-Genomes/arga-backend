@@ -135,7 +135,7 @@ pub struct SpeciesSearchResult {
 #[async_trait]
 pub trait SpeciesSearch {
     type Error;
-    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>) -> Result<SpeciesSearchResult, Self::Error>;
+    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>, results_type: Option<WithRecordType>, pagination: Option<Pagination>) -> Result<SpeciesSearchResult, Self::Error>;
 }
 
 #[async_trait]

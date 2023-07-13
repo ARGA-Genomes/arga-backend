@@ -81,7 +81,8 @@ pub struct GenomicData {
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
 pub struct AssociatedSequences {
-    pub sequenceID: String,
+    #[serde(rename(deserialize = "sequenceID"))]
+    pub sequence_id: String,
     pub genbank_accession: String,
     pub markercode: String,
     pub nucleotides: String

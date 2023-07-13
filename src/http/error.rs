@@ -29,6 +29,12 @@ pub enum Error {
 
     #[error(transparent)]
     SearchIndex(#[from] crate::index::providers::search::Error),
+
+    #[error("request timeout")]
+    Timeout,
+
+    #[error("upstream request timeout")]
+    GatewayTimeout,
 }
 
 
@@ -44,6 +50,8 @@ impl Error {
             Error::Solr(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::SearchIndex(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Timeout => StatusCode::REQUEST_TIMEOUT,
+            Error::GatewayTimeout => StatusCode::GATEWAY_TIMEOUT
         }
     }
 }
@@ -69,6 +77,14 @@ impl IntoResponse for Error {
             },
             Error::SearchIndex(err) => {
                 error!(?err, "Search index error");
+            },
+            Error::Timeout => {
+                tracing::debug!("Timeout");
+                error!("Timeout");
+            },
+            Error::GatewayTimeout => {
+                tracing::debug!("Gateway timeout");
+                error!("Gateway timeout");
             },
 
             _ => {}

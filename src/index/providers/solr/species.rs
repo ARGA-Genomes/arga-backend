@@ -304,7 +304,7 @@ fn parse_associated_sequences(value: &str) -> Result<Option<AssociatedSequences>
 
         if !json_string.is_empty() {
             Ok(Some(AssociatedSequences {
-                sequenceID: associated_sequences.sequenceID,
+                sequence_id: associated_sequences.sequence_id,
                 genbank_accession: associated_sequences.genbank_accession,
                 markercode: associated_sequences.markercode,
                 nucleotides: associated_sequences.nucleotides,

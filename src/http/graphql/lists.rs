@@ -163,9 +163,9 @@ impl Lists {
                 item.data_summary = ListDataSummary {
                     whole_genomes: stat.whole_genomes,
                     partial_genomes: stat.partial_genomes,
-                    mitogenomes: stat.mitogenomes,
+                    organelles: stat.organelles,
                     barcodes: stat.barcodes,
-                    other: stat.total - stat.whole_genomes - stat.mitogenomes - stat.barcodes - stat.partial_genomes,
+                    other: stat.total - stat.whole_genomes - stat.organelles - stat.barcodes - stat.partial_genomes,
                 }
             }
         }

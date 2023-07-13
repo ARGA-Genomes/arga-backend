@@ -6,15 +6,18 @@ pub enum OverviewCategory {
     Animals,
     Plants,
     Fungi,
-    AgriculturalAndPest,
-    MarineAndAquaculture,
+    AgriculturalAndAquacultureAndCommercial,
+    BioSecurityAndPest,
+    Marine,
     AllSpecies,
     PreservedSpecimens,
     TerrestrialBiodiversity,
     ThreatenedSpecies,
-    Genome,
+    WholeGenome,
+    PartialGenome,
     Organelles,
-    Barcodes
+    Barcodes,
+    AllRecords,
 }
 
 
