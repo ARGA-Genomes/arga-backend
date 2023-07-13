@@ -5,6 +5,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
 
+use crate::database::models::TaxonomicStatus;
 use crate::index::search::{
     SearchItem,
     SpeciesSearchResult,
@@ -65,28 +66,25 @@ impl SpeciesSearchByCanonicalName for Database {
     type Error = Error;
 
     async fn search_species_by_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Error> {
-        use schema_gnl::ranked_taxa::dsl::*;
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let rows = ranked_taxa
+        let rows = species
             .select(scientific_name)
-            .filter(taxon_rank.eq("species"))
-            .filter(taxonomic_status.eq("accepted"))
+            .filter(status.eq(TaxonomicStatus::Valid))
             .filter(canonical_name.eq_any(names))
             .order_by(canonical_name)
-            .load::<Option<String>>(&mut conn).await?;
+            .load::<String>(&mut conn).await?;
 
         let mut items = Vec::with_capacity(rows.len());
-        for row in rows {
-            if let Some(name) = row {
-                items.push(crate::index::search::SpeciesSearchItem {
-                    scientific_name: None,
-                    canonical_name: Some(name),
-                    total_records: 0,
-                    total_genomic_records: None,
-                    data_summary: Default::default()
-                });
-            }
+        for name in rows {
+            items.push(crate::index::search::SpeciesSearchItem {
+                scientific_name: None,
+                canonical_name: Some(name),
+                total_records: 0,
+                total_genomic_records: None,
+                data_summary: Default::default()
+            });
         }
 
         Ok(SpeciesSearchResult {
@@ -101,28 +99,25 @@ impl SpeciesSearchExcludingCanonicalName for Database {
     type Error = Error;
 
     async fn search_species_excluding_canonical_names(&self, names: &Vec<String>) -> Result<SpeciesSearchResult, Error> {
-        use schema_gnl::ranked_taxa::dsl::*;
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let rows = ranked_taxa
+        let rows = species
             .select(scientific_name)
-            .filter(taxon_rank.eq("species"))
-            .filter(taxonomic_status.eq("accepted"))
+            .filter(status.eq(TaxonomicStatus::Valid))
             .filter(canonical_name.ne_all(names))
             .order_by(canonical_name)
-            .load::<Option<String>>(&mut conn).await?;
+            .load::<String>(&mut conn).await?;
 
         let mut items = Vec::with_capacity(rows.len());
-        for row in rows {
-            if let Some(name) = row {
-                items.push(crate::index::search::SpeciesSearchItem {
-                    scientific_name: None,
-                    canonical_name: Some(name),
-                    total_records: 0,
-                    total_genomic_records: None,
-                    data_summary: Default::default(),
-                });
-            }
+        for name in rows {
+            items.push(crate::index::search::SpeciesSearchItem {
+                scientific_name: None,
+                canonical_name: Some(name),
+                total_records: 0,
+                total_genomic_records: None,
+                data_summary: Default::default(),
+            });
         }
 
         Ok(SpeciesSearchResult {
