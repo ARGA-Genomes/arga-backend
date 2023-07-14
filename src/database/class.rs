@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
@@ -44,7 +46,7 @@ impl ClassProvider {
 
         let species = taxa
             .filter(class.eq(class_name))
-            .filter(status.eq(TaxonomicStatus::Valid))
+            .filter(status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .load::<Taxon>(&mut conn)
             .await?;
 
@@ -52,8 +54,10 @@ impl ClassProvider {
     }
 
     pub async fn species_summary(&self, name_ids: &Vec<uuid::Uuid>) -> Result<Vec<SpeciesSummary>, Error> {
-        use schema::assemblies;
+        use schema::{assemblies, markers};
         let mut conn = self.pool.get().await?;
+
+        let mut map = HashMap::new();
 
         let rows = assemblies::table
             .group_by(assemblies::name_id)
@@ -67,9 +71,8 @@ impl ClassProvider {
             .load::<(uuid::Uuid, i64, i64, i64)>(&mut conn)
             .await?;
 
-        let mut summaries = Vec::new();
         for (name_id, reference_genomes, whole_genomes, partial_genomes) in rows {
-            summaries.push(SpeciesSummary {
+            map.insert(name_id.clone(), SpeciesSummary {
                 name_id,
                 reference_genomes: reference_genomes as usize,
                 whole_genomes: whole_genomes as usize,
@@ -80,11 +83,30 @@ impl ClassProvider {
             });
         }
 
+
+        let rows = markers::table
+            .group_by(markers::name_id)
+            .select((
+                markers::name_id,
+                sum_if(markers::accession.is_not_null()),
+            ))
+            .filter(markers::name_id.eq_any(name_ids))
+            .load::<(uuid::Uuid, i64)>(&mut conn)
+            .await?;
+
+        for (name_id, markers) in rows {
+            let entry = map.entry(name_id.clone());
+            entry.or_default().barcodes = markers as usize;
+        }
+
+
+        let summaries = Vec::from_iter(map.values().cloned());
         Ok(summaries)
     }
 }
 
 
+#[derive(Clone, Default)]
 pub struct SpeciesSummary {
     pub name_id: uuid::Uuid,
     pub reference_genomes: usize,
