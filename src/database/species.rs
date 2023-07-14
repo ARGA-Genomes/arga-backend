@@ -15,9 +15,16 @@ use super::models::{Taxon, Name, RegionType, TaxonPhoto, Specimen, TraceFile, Co
 
 #[derive(Debug, Clone, Queryable)]
 pub struct AssemblySummary {
+    pub name_id: Uuid,
     pub reference_genomes: i64,
     pub whole_genomes: i64,
     pub partial_genomes: i64,
+}
+
+#[derive(Debug, Clone, Queryable)]
+pub struct MarkerSummary {
+    pub name_id: Uuid,
+    pub barcodes: i64,
 }
 
 
@@ -27,23 +34,46 @@ pub struct SpeciesProvider {
 }
 
 impl SpeciesProvider {
-    pub async fn assembly_summary(&self, name: &Name) -> Result<AssemblySummary, Error> {
+    pub async fn assembly_summary(&self, names: &Vec<Name>) -> Result<Vec<AssemblySummary>, Error> {
         use schema::assemblies::dsl::*;
         let mut conn = self.pool.get().await?;
 
+        let name_ids: Vec<Uuid> = names.iter().map(|n| n.id.clone()).collect();
+
         // get the total amounts of assembly records for each name
-        let summary = assemblies
+        let summaries = assemblies
             .group_by(name_id)
             .select((
+                name_id,
                 sum_if(refseq_category.eq("reference genome")),
                 sum_if(genome_rep.eq("Full")),
                 sum_if(genome_rep.eq("Partial")),
             ))
-            .filter(name_id.eq(&name.id))
-            .get_result::<AssemblySummary>(&mut conn)
+            .filter(name_id.eq_any(&name_ids))
+            .load::<AssemblySummary>(&mut conn)
             .await?;
 
-        Ok(summary)
+        Ok(summaries)
+    }
+
+    pub async fn marker_summary(&self, names: &Vec<Name>) -> Result<Vec<MarkerSummary>, Error> {
+        use schema::markers::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let name_ids: Vec<Uuid> = names.iter().map(|n| n.id.clone()).collect();
+
+        // get the total amounts of assembly records for each name
+        let summaries = markers
+            .group_by(name_id)
+            .select((
+                name_id,
+                diesel::dsl::count_star(),
+            ))
+            .filter(name_id.eq_any(&name_ids))
+            .load::<MarkerSummary>(&mut conn)
+            .await?;
+
+        Ok(summaries)
     }
 }
 

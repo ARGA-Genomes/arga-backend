@@ -25,16 +25,19 @@ impl Statistics {
             return Err(Error::NotFound(canonical_name));
         }
 
-        let solr_stats = state.solr.species_stats(&names).await?;
+        let assembly_summaries = state.database.species.assembly_summary(&names).await?;
+        let marker_summaries = state.database.species.marker_summary(&names).await?;
 
         // combine the stats for all species matching the canonical name
         let mut stats = SpeciesStatistics::default();
-        for stat in solr_stats {
-            stats.total += stat.total;
-            stats.whole_genomes += stat.whole_genomes;
-            stats.partial_genomes += stat.partial_genomes;
-            stats.organelles += stat.organelles;
-            stats.barcodes += stat.barcodes;
+        for stat in assembly_summaries {
+            stats.total += (stat.whole_genomes + stat.reference_genomes + stat.partial_genomes) as usize;
+            stats.whole_genomes += stat.whole_genomes as usize;
+            stats.partial_genomes += stat.partial_genomes as usize;
+        }
+        for stat in marker_summaries {
+            stats.total += stat.barcodes as usize;
+            stats.barcodes += stat.barcodes as usize;
         }
 
         Ok(stats)
@@ -45,8 +48,6 @@ impl Statistics {
         let state = ctx.data::<State>().unwrap();
         let db_stats = state.database.genus_stats(&genus).await?;
         let breakdown = state.database.genus_breakdown(&genus).await?;
-        // let solr_stats = state.solr.genus_stats(&genus).await.unwrap();
-        // let solr_breakdown = state.solr.genus_breakdown(&genus).await.unwrap();
 
         Ok(GenusStatistics {
             total_species: db_stats.total_species,
