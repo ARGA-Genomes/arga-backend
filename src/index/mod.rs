@@ -35,4 +35,7 @@ pub struct Taxonomy {
     pub genus: Option<String>,
 
     pub vernacular_group: Option<String>,
+
+    pub subspecies: Vec<Taxonomy>,
+    pub synonyms: Vec<Taxonomy>,
 }

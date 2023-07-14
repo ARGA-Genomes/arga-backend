@@ -92,6 +92,8 @@ impl From<Taxon> for Taxonomy {
             family: source.family,
             genus: source.genus,
             vernacular_group: None,
+            subspecies: vec![],
+            synonyms: vec![],
         }
     }
 }
@@ -166,10 +168,12 @@ pub struct Database {
 
     pub class: class::ClassProvider,
     pub order: order::OrderProvider,
+    pub family: family::FamilyProvider,
     pub genus: genus::GenusProvider,
     pub markers: markers::MarkerProvider,
     pub overview: overview::OverviewProvider,
     pub stats: stats::StatsProvider,
+    pub species: species::SpeciesProvider,
 }
 
 impl Database {
@@ -181,10 +185,12 @@ impl Database {
         Ok(Database {
             class: class::ClassProvider { pool: pool.clone() },
             order: order::OrderProvider { pool: pool.clone() },
+            family: family::FamilyProvider { pool: pool.clone() },
             genus: genus::GenusProvider { pool: pool.clone() },
             markers: markers::MarkerProvider { pool: pool.clone() },
             overview: overview::OverviewProvider { pool: pool.clone() },
             stats: stats::StatsProvider { pool: pool.clone() },
+            species: species::SpeciesProvider { pool: pool.clone() },
             pool
         })
     }

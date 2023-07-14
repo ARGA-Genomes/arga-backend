@@ -52,6 +52,8 @@ impl Genus {
                 family: taxon.family,
                 genus: taxon.genus,
                 vernacular_group: None,
+                subspecies: vec![],
+                synonyms: vec![],
             };
 
             species.insert(taxon.name_id, ListSpecies {

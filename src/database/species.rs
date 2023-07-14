@@ -6,10 +6,48 @@ use diesel::Queryable;
 use tracing::instrument;
 use uuid::Uuid;
 
+use crate::database::sum_if;
 use crate::index::specimen;
 use crate::index::species::{self, GetSpecies, Taxonomy, GetRegions, GetMedia, GetSpecimens, GetConservationStatus, GetTraceFiles};
-use super::{schema, Database, Error};
+use super::{schema, Database, Error, PgPool};
 use super::models::{Taxon, Name, RegionType, TaxonPhoto, Specimen, TraceFile, ConservationStatus};
+
+
+#[derive(Debug, Clone, Queryable)]
+pub struct AssemblySummary {
+    pub reference_genomes: i64,
+    pub whole_genomes: i64,
+    pub partial_genomes: i64,
+}
+
+
+#[derive(Clone)]
+pub struct SpeciesProvider {
+    pub pool: PgPool,
+}
+
+impl SpeciesProvider {
+    pub async fn assembly_summary(&self, name: &Name) -> Result<AssemblySummary, Error> {
+        use schema::assemblies::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        // get the total amounts of assembly records for each name
+        let summary = assemblies
+            .group_by(name_id)
+            .select((
+                sum_if(refseq_category.eq("reference genome")),
+                sum_if(genome_rep.eq("Full")),
+                sum_if(genome_rep.eq("Partial")),
+            ))
+            .filter(name_id.eq(&name.id))
+            .get_result::<AssemblySummary>(&mut conn)
+            .await?;
+
+        Ok(summary)
+    }
+}
+
+
 
 
 #[derive(Queryable, Debug)]
@@ -59,6 +97,8 @@ impl GetSpecies for Database {
             order: taxon.order,
             family: taxon.family,
             genus: taxon.genus,
+            subspecies: vec![],
+            synonyms: vec![],
         };
         Ok(taxonomy)
     }
@@ -88,6 +128,8 @@ impl GetSpecies for Database {
                 order: taxon.order,
                 family: taxon.family,
                 genus: taxon.genus,
+                subspecies: vec![],
+                synonyms: vec![],
             })
         }
 
