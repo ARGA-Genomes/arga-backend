@@ -25,6 +25,7 @@ impl Statistics {
             return Err(Error::NotFound(canonical_name));
         }
 
+        let names = names.iter().map(|name| name.id).collect();
         let assembly_summaries = state.database.species.assembly_summary(&names).await?;
         let marker_summaries = state.database.species.marker_summary(&names).await?;
 

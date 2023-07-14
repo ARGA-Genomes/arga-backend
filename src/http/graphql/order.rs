@@ -10,9 +10,9 @@ use uuid::Uuid;
 use crate::database::models::TaxonPhoto;
 use crate::http::Error;
 use crate::http::Context as State;
-use crate::index::Taxonomy;
 use crate::index::lists::ListDataSummary;
 
+use super::common::Taxonomy;
 use super::lists::ListSpecies;
 
 pub struct Order {
@@ -39,23 +39,8 @@ impl Order {
 
         let taxa = state.database.order.species(&self.order).await?;
         for taxon in taxa {
-            let taxonomy = Taxonomy {
-                scientific_name: taxon.scientific_name,
-                canonical_name: taxon.canonical_name,
-                authorship: taxon.species_authority,
-                kingdom: taxon.kingdom,
-                phylum: taxon.phylum,
-                class: taxon.class,
-                order: taxon.order,
-                family: taxon.family,
-                genus: taxon.genus,
-                vernacular_group: None,
-                subspecies: vec![],
-                synonyms: vec![],
-            };
-
             species.insert(taxon.name_id, ListSpecies {
-                taxonomy,
+                taxonomy: taxon.into(),
                 photo: None,
                 data_summary: ListDataSummary::default(),
             });

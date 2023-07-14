@@ -11,9 +11,9 @@ use crate::database::models::TaxonPhoto;
 use crate::http::Error;
 use crate::http::Context as State;
 
-use crate::index::genus::{GetGenus, Taxonomy};
 use crate::index::lists::ListDataSummary;
 
+use super::common::Taxonomy;
 use super::lists::ListSpecies;
 
 
@@ -26,7 +26,7 @@ impl Genus {
     #[instrument(skip(self, ctx))]
     async fn taxonomy(&self, ctx: &Context<'_>) -> Result<Taxonomy, Error> {
         let state = ctx.data::<State>().unwrap();
-        let taxonomy = state.database.taxonomy(&self.genus).await.unwrap();
+        let taxonomy = state.database.genus.taxonomy(&self.genus).await.unwrap();
 
         Ok(taxonomy)
     }
@@ -41,23 +41,8 @@ impl Genus {
 
         let taxa = state.database.genus.species(&self.genus).await?;
         for taxon in taxa {
-            let taxonomy = Taxonomy {
-                scientific_name: taxon.scientific_name,
-                canonical_name: taxon.canonical_name,
-                authorship: taxon.species_authority,
-                kingdom: taxon.kingdom,
-                phylum: taxon.phylum,
-                class: taxon.class,
-                order: taxon.order,
-                family: taxon.family,
-                genus: taxon.genus,
-                vernacular_group: None,
-                subspecies: vec![],
-                synonyms: vec![],
-            };
-
             species.insert(taxon.name_id, ListSpecies {
-                taxonomy,
+                taxonomy: taxon.into(),
                 photo: None,
                 data_summary: ListDataSummary::default(),
             });

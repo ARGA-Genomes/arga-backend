@@ -23,7 +23,7 @@ use diesel::expression::{ValidGrouping, AsExpression};
 use diesel::pg::Pg;
 use diesel::query_builder::{QueryFragment, AstPass, QueryId};
 use diesel::sql_types::{BigInt, SqlType, SingleValue};
-use diesel::{ConnectionResult, Queryable, QueryResult, Expression, DieselNumericOps, SelectableExpression, AppearsOnTable};
+use diesel::{ConnectionResult, QueryResult, Expression, DieselNumericOps, SelectableExpression, AppearsOnTable};
 use futures::FutureExt;
 use futures::future::BoxFuture;
 use thiserror::Error;
@@ -33,7 +33,6 @@ use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::pooled_connection::bb8::Pool;
 
 use crate::http::Error as HttpError;
-use crate::index::Taxonomy;
 
 
 pub type PgPool = Pool<AsyncPgConnection>;
@@ -62,39 +61,6 @@ impl From<diesel_async::pooled_connection::PoolError> for HttpError {
 impl From<diesel_async::pooled_connection::bb8::RunError> for HttpError {
     fn from(err: diesel_async::pooled_connection::bb8::RunError) -> Self {
         HttpError::Database(Error::GetPool(err))
-    }
-}
-
-
-#[derive(Queryable, Debug)]
-struct Taxon {
-    scientific_name_authorship: Option<String>,
-    canonical_name: Option<String>,
-    kingdom: Option<String>,
-    phylum: Option<String>,
-    class: Option<String>,
-    order: Option<String>,
-    family: Option<String>,
-    genus: Option<String>,
-}
-
-impl From<Taxon> for Taxonomy {
-    fn from(source: Taxon) -> Self {
-        Self {
-            scientific_name: "".to_string(),
-            canonical_name: source.canonical_name,
-            authorship: source.scientific_name_authorship,
-
-            kingdom: source.kingdom,
-            phylum: source.phylum,
-            class: source.class,
-            order: source.order,
-            family: source.family,
-            genus: source.genus,
-            vernacular_group: None,
-            subspecies: vec![],
-            synonyms: vec![],
-        }
     }
 }
 
@@ -174,6 +140,8 @@ pub struct Database {
     pub overview: overview::OverviewProvider,
     pub stats: stats::StatsProvider,
     pub species: species::SpeciesProvider,
+    pub assembly: assembly::AssemblyProvider,
+    pub lists: lists::ListProvider,
 }
 
 impl Database {
@@ -191,6 +159,8 @@ impl Database {
             overview: overview::OverviewProvider { pool: pool.clone() },
             stats: stats::StatsProvider { pool: pool.clone() },
             species: species::SpeciesProvider { pool: pool.clone() },
+            assembly: assembly::AssemblyProvider { pool: pool.clone() },
+            lists: lists::ListProvider { pool: pool.clone() },
             pool
         })
     }

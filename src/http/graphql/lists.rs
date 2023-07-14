@@ -12,12 +12,15 @@ use uuid::Uuid;
 
 use crate::http::Error;
 use crate::http::Context as State;
-use crate::index::Taxonomy;
 use crate::index::lists;
 use crate::index::lists::{Filters, GetListNames, GetListPhotos, GetListStats, GetListTaxa, ListDataSummary, ListStats, Pagination};
 use crate::index::stats::GetSpeciesStats;
 use crate::database::{schema, Database};
 use crate::database::models::{NameList, TaxonPhoto, Name as ArgaName};
+use super::common::SpeciesCard;
+use super::common::SpeciesPhoto;
+use super::common::Taxonomy;
+use super::helpers::SpeciesHelper;
 
 
 #[derive(Debug, Enum, Eq, PartialEq, Copy, Clone)]
@@ -61,27 +64,6 @@ pub struct ListSpecies {
     pub data_summary: ListDataSummary,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
-pub struct SpeciesPhoto {
-    url: String,
-    source: Option<String>,
-    publisher: Option<String>,
-    license: Option<String>,
-    rights_holder: Option<String>,
-}
-
-impl From<TaxonPhoto> for SpeciesPhoto {
-    fn from(value: TaxonPhoto) -> Self {
-        Self {
-            url: value.url,
-            source: value.source,
-            publisher: value.publisher,
-            license: value.license,
-            rights_holder: value.rights_holder,
-        }
-    }
-}
-
 
 pub struct Lists {
     pub list: NameList,
@@ -118,64 +100,13 @@ impl Lists {
     }
 
     #[instrument(skip(self, ctx))]
-    async fn species(&self, ctx: &Context<'_>) -> Result<Vec<ListSpecies>, Error> {
+    async fn species(&self, ctx: &Context<'_>) -> Result<Vec<SpeciesCard>, Error> {
         let state = ctx.data::<State>().unwrap();
+        let helper = SpeciesHelper::new(&state.database);
 
-        let mut species: HashMap<Uuid, ListSpecies> = HashMap::new();
-
-        // get the taxonomic information for all the names associated with the list
-        // we also stub out the ListSpecies struct to make the rest of the data
-        // association easier by mapping the name uuid to a final struct output
-        let taxa = state.database.list_taxa(&self.names).await?;
-        for taxon in taxa {
-            let taxonomy = Taxonomy {
-                scientific_name: taxon.scientific_name.unwrap(),
-                canonical_name: taxon.canonical_name,
-                authorship: taxon.scientific_name_authorship,
-                kingdom: taxon.kingdom,
-                phylum: taxon.phylum,
-                class: taxon.class,
-                order: taxon.order,
-                family: taxon.family,
-                genus: taxon.genus,
-                vernacular_group: None,
-                subspecies: vec![],
-                synonyms: vec![],
-            };
-
-            species.insert(taxon.name_id, ListSpecies {
-                taxonomy,
-                photo: None,
-                data_summary: ListDataSummary::default(),
-            });
-        }
-
-        // assign the photo associated with the name
-        let photos = state.database.list_photos(&self.names).await?;
-        for photo in photos.into_iter() {
-            if let Some(item) = species.get_mut(&photo.name_id) {
-                item.photo = Some(photo.into());
-            }
-        }
-
-        // assign the data summary associated with the name
-        let stats = state.solr.species_stats(&self.names).await?;
-        for stat in stats.into_iter() {
-            if let Some(item) = species.get_mut(&stat.name.id) {
-                item.data_summary = ListDataSummary {
-                    whole_genomes: stat.whole_genomes,
-                    partial_genomes: stat.partial_genomes,
-                    organelles: stat.organelles,
-                    barcodes: stat.barcodes,
-                    other: stat.total - stat.whole_genomes - stat.organelles - stat.barcodes - stat.partial_genomes,
-                }
-            }
-        }
-
-        // sort by name and output the combined species data
-        let mut species: Vec<ListSpecies> = species.into_values().collect();
-        species.sort_by(|a, b| a.taxonomy.scientific_name.cmp(&b.taxonomy.scientific_name));
-        Ok(species)
+        let taxa = state.database.lists.list_taxa(&self.names).await?;
+        let cards = helper.cards(taxa).await?;
+        Ok(cards)
     }
 
     #[instrument(skip(self, ctx))]

@@ -4,9 +4,9 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
 use crate::database::models::TaxonomicStatus;
-use crate::index::genus::Taxonomy;
 use crate::database::sum_if;
-use super::{schema, Error, Taxon as ShortTaxon, PgPool};
+use crate::http::graphql::common::Taxonomy;
+use super::{schema, Error, PgPool};
 use super::models::Taxon;
 
 
@@ -21,18 +21,8 @@ impl OrderProvider {
         let mut conn = self.pool.get().await?;
 
         let mut taxon = taxa
-            .select((
-                species_authority,
-                canonical_name,
-                kingdom,
-                phylum,
-                class,
-                order,
-                family,
-                genus,
-            ))
             .filter(order.eq(name))
-            .first::<ShortTaxon>(&mut conn).await?;
+            .first::<Taxon>(&mut conn).await?;
 
         taxon.family = None;
         taxon.genus = None;

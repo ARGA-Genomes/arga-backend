@@ -4,9 +4,33 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::database::models::{Assembly, AssemblyStats, BioSample};
+use crate::database::models::{Assembly, AssemblyStats, BioSample, Taxon};
 use crate::index::assembly::{self, GetAssembly, GetAssemblyStats, GetBioSamples};
-use super::{schema, Database, Error};
+use super::{schema, Database, Error, PgPool};
+
+
+#[derive(Clone)]
+pub struct AssemblyProvider {
+    pub pool: PgPool,
+}
+
+impl AssemblyProvider {
+    /// Get all species that have an assembly record associated with its name
+    pub async fn species(&self) -> Result<Vec<Taxon>, Error> {
+        use schema::{taxa, names, assemblies};
+        let mut conn = self.pool.get().await?;
+
+        let species = names::table
+            .inner_join(assemblies::table)
+            .inner_join(taxa::table)
+            .select(taxa::all_columns)
+            .limit(40)
+            .load::<Taxon>(&mut conn)
+            .await?;
+
+        Ok(species)
+    }
+}
 
 
 #[async_trait]

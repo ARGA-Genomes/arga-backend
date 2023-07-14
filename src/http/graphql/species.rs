@@ -14,7 +14,6 @@ use crate::index::species::{
     GetWholeGenomes,
     TraceFile,
     WholeGenome,
-    Taxonomy,
     GenomicData,
     Region,
     Photo,
@@ -26,6 +25,7 @@ use crate::index::species::{
 use crate::index::specimen::SpecimenDetails;
 use crate::database::{schema, Database};
 use crate::database::models::Name as ArgaName;
+use super::common::Taxonomy;
 use super::markers::SpeciesMarker;
 
 

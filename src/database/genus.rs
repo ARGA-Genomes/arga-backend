@@ -1,42 +1,13 @@
 use std::collections::HashMap;
 
-use async_trait::async_trait;
-
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
 use crate::database::models::TaxonomicStatus;
-use crate::index::genus::{GetGenus, Taxonomy};
 use crate::database::sum_if;
-use super::{schema, Database, Error, Taxon as ShortTaxon, PgPool};
+use crate::http::graphql::common::Taxonomy;
+use super::{schema, Error, PgPool};
 use super::models::Taxon;
-
-
-#[async_trait]
-impl GetGenus for Database {
-    type Error = Error;
-
-    async fn taxonomy(&self, name: &str) -> Result<Taxonomy, Error> {
-        use schema::taxa::dsl::*;
-        let mut conn = self.pool.get().await?;
-
-        let taxon = taxa
-            .select((
-                species_authority,
-                canonical_name,
-                kingdom,
-                phylum,
-                class,
-                order,
-                family,
-                genus,
-            ))
-            .filter(genus.eq(name))
-            .first::<ShortTaxon>(&mut conn).await?;
-
-        Ok(Taxonomy::from(taxon))
-    }
-}
 
 
 #[derive(Clone)]
@@ -45,6 +16,17 @@ pub struct GenusProvider {
 }
 
 impl GenusProvider {
+    pub async fn taxonomy(&self, name: &str) -> Result<Taxonomy, Error> {
+        use schema::taxa::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let taxon = taxa
+            .filter(genus.eq(name))
+            .first::<Taxon>(&mut conn).await?;
+
+        Ok(Taxonomy::from(taxon))
+    }
+
     pub async fn species(&self, genus_name: &str) -> Result<Vec<Taxon>, Error> {
         use schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;

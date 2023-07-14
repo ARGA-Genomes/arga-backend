@@ -6,13 +6,36 @@ use diesel_async::RunQueryDsl;
 use tracing::{instrument, debug};
 use uuid::Uuid;
 
-use crate::index::lists::{GetListNames, GetListTaxa, GetListPhotos, Filters, Filter, FilterItem, Pagination, GetListStats, ListStats};
+use crate::database::models::Taxon;
+use crate::index::lists::{GetListNames, GetListPhotos, Filters, Filter, FilterItem, Pagination, GetListStats, ListStats};
 
-use super::{schema, Database, Error};
-use super::models::{NameList, Name, UserTaxon, TaxonPhoto};
+use super::{schema, Database, Error, PgPool};
+use super::models::{NameList, Name, TaxonPhoto};
 
 
 sql_function!(fn lower(x: Nullable<Text>) -> Nullable<Text>);
+
+
+#[derive(Clone)]
+pub struct ListProvider {
+    pub pool: PgPool,
+}
+
+impl ListProvider {
+    pub async fn list_taxa(&self, list: &Vec<Name>) -> Result<Vec<Taxon>, Error> {
+        use schema::taxa::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let name_ids: Vec<Uuid> = list.iter().map(|n| n.id).collect();
+
+        let records = taxa
+            .filter(name_id.eq_any(name_ids))
+            .load::<Taxon>(&mut conn)
+            .await?;
+
+        Ok(records)
+    }
+}
 
 
 #[async_trait]
@@ -60,24 +83,6 @@ impl GetListNames for Database {
     }
 }
 
-#[async_trait]
-impl GetListTaxa for Database {
-    type Error = Error;
-
-    async fn list_taxa(&self, list: &Vec<Name>) -> Result<Vec<UserTaxon>, Self::Error> {
-        use schema::user_taxa::dsl::*;
-        let mut conn = self.pool.get().await?;
-
-        let name_ids: Vec<Uuid> = list.iter().map(|n| n.id).collect();
-
-        let records = user_taxa
-            .filter(name_id.eq_any(name_ids))
-            .load::<UserTaxon>(&mut conn)
-            .await?;
-
-        Ok(records)
-    }
-}
 
 #[async_trait]
 impl GetListPhotos for Database {

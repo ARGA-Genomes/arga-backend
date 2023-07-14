@@ -2,9 +2,8 @@ use async_graphql::SimpleObject;
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 
-pub use super::Taxonomy;
 use super::specimen::SpecimenDetails;
-use crate::database::models::Name;
+use crate::{database::models::Name, http::graphql::common::Taxonomy};
 
 
 /// The distribution of a species in a specific locality.
