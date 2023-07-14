@@ -245,6 +245,7 @@ fn import_taxa(records: &Vec<Record>, source: &TaxonSource, pool: &mut PgPool) -
         let mut conn = pool.get()?;
         let inserted_rows = diesel::insert_into(taxa::table)
             .values(chunk)
+            .on_conflict_do_nothing()
             .execute(&mut conn)?;
         Ok(inserted_rows)
     }).collect();
