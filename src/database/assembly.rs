@@ -5,8 +5,9 @@ use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::database::models::{Assembly, AssemblyStats, BioSample, Taxon, TaxonomicStatus};
-use crate::index::assembly::{self, GetAssembly, GetAssemblyStats, GetBioSamples};
+use crate::index::assembly::{self, GetAssembly, GetBioSamples};
 use super::{schema, Database, Error, PgPool};
+
 
 
 #[derive(Clone)]
@@ -30,6 +31,18 @@ impl AssemblyProvider {
             .await?;
 
         Ok(species)
+    }
+
+    pub async fn stats(&self, assembly_id: &Uuid) -> Result<AssemblyStats, Error> {
+        use schema::assembly_stats;
+        let mut conn = self.pool.get().await?;
+
+        let stat = assembly_stats::table
+            .filter(assembly_stats::assembly_id.eq(assembly_id))
+            .get_result::<AssemblyStats>(&mut conn)
+            .await?;
+
+        Ok(stat)
     }
 }
 
@@ -73,49 +86,6 @@ impl From<Assembly> for assembly::AssemblyDetails {
             recorded_by: value.recorded_by,
             genetic_accession_uri: value.genetic_accession_uri,
             event_date: value.event_date,
-        }
-    }
-}
-
-
-#[async_trait]
-impl GetAssemblyStats for Database {
-    type Error = Error;
-
-    async fn get_assembly_stats(&self, assembly_id: &Uuid) -> Result<assembly::AssemblyStats, Self::Error> {
-        use schema::assembly_stats;
-        let mut conn = self.pool.get().await?;
-
-        let stat = assembly_stats::table
-            .filter(assembly_stats::assembly_id.eq(assembly_id))
-            .get_result::<AssemblyStats>(&mut conn)
-            .await?;
-
-        Ok(stat.into())
-    }
-}
-
-impl From<AssemblyStats> for assembly::AssemblyStats {
-    fn from(value: AssemblyStats) -> Self {
-        Self {
-            id: value.id.to_string(),
-            total_length: value.total_length,
-            spanned_gaps: value.spanned_gaps,
-            unspanned_gaps: value.unspanned_gaps,
-            region_count: value.region_count,
-            scaffold_count: value.scaffold_count,
-            scaffold_n50: value.scaffold_n50,
-            scaffold_l50: value.scaffold_l50,
-            scaffold_n75: value.scaffold_n75,
-            scaffold_n90: value.scaffold_n90,
-            contig_count: value.contig_count,
-            contig_n50: value.contig_n50,
-            contig_l50: value.contig_l50,
-            total_gap_length: value.total_gap_length,
-            molecule_count: value.molecule_count,
-            top_level_count: value.top_level_count,
-            component_count: value.component_count,
-            gc_perc: value.gc_perc,
         }
     }
 }

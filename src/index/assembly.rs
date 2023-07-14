@@ -1,7 +1,6 @@
 use async_graphql::SimpleObject;
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
-use uuid::Uuid;
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
@@ -31,36 +30,6 @@ pub struct AssemblyDetails {
 pub trait GetAssembly {
     type Error;
     async fn get_assembly(&self, accession: &str) -> Result<AssemblyDetails, Self::Error>;
-}
-
-
-#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
-pub struct AssemblyStats {
-    pub id: String,
-    pub total_length: Option<i32>,
-    pub spanned_gaps: Option<i32>,
-    pub unspanned_gaps: Option<i32>,
-    pub region_count: Option<i32>,
-    pub scaffold_count: Option<i32>,
-    pub scaffold_n50: Option<i32>,
-    pub scaffold_l50: Option<i32>,
-    pub scaffold_n75: Option<i32>,
-    pub scaffold_n90: Option<i32>,
-    pub contig_count: Option<i32>,
-    pub contig_n50: Option<i32>,
-    pub contig_l50: Option<i32>,
-    pub total_gap_length: Option<i32>,
-    pub molecule_count: Option<i32>,
-    pub top_level_count: Option<i32>,
-    pub component_count: Option<i32>,
-    pub gc_perc: Option<i32>,
-}
-
-#[async_trait]
-pub trait GetAssemblyStats {
-    type Error;
-
-    async fn get_assembly_stats(&self, assembly_id: &Uuid) -> Result<AssemblyStats, Self::Error>;
 }
 
 
