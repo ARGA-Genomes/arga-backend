@@ -45,6 +45,34 @@ impl OverviewProvider {
         })
     }
 
+    pub async fn whole_genomes(&self) -> Result<Overview, Error> {
+        use schema::assemblies::dsl::*;
+        let mut conn = self.pool.get().await?;
+        let total: i64 = assemblies
+            .filter(genome_rep.eq("Full"))
+            .count()
+            .get_result(&mut conn)
+            .await?;
+
+        Ok(Overview {
+            total,
+        })
+    }
+
+    pub async fn partial_genomes(&self) -> Result<Overview, Error> {
+        use schema::assemblies::dsl::*;
+        let mut conn = self.pool.get().await?;
+        let total: i64 = assemblies
+            .filter(genome_rep.eq("Partial"))
+            .count()
+            .get_result(&mut conn)
+            .await?;
+
+        Ok(Overview {
+            total,
+        })
+    }
+
     pub async fn markers(&self) -> Result<Overview, Error> {
         use schema::markers;
         let mut conn = self.pool.get().await?;

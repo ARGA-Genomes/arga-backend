@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use chrono::Utc;
 use diesel::*;
@@ -101,9 +101,9 @@ struct Record {
     valid_scientific_name: String,
 
     scientific_name: String,
-    authority: Option<String>,
+    // authority: Option<String>,
     canonical_name: Option<String>,
-    rank: Option<String>,
+    // rank: Option<String>,
 
     kingdom: Option<String>,
     phylum: Option<String>,
@@ -124,7 +124,7 @@ struct Record {
     subfamily: Option<String>,
     subtribe: Option<String>,
     subgenus: Option<String>,
-    subspecies: Option<String>,
+    // subspecies: Option<String>,
 
     specific_epithet: Option<String>,
     subspecific_epithet: Option<String>,
@@ -134,13 +134,13 @@ struct Record {
     family_full: Option<String>,
     order_full: Option<String>,
 
-    name_according_to: Option<String>,
-    name_published_in: Option<String>,
+    // name_according_to: Option<String>,
+    // name_published_in: Option<String>,
 
-    taxon_remarks: Option<String>,
-    source: Option<String>,
-    source_url: Option<String>,
-    source_id: Option<String>,
+    // taxon_remarks: Option<String>,
+    // source: Option<String>,
+    // source_url: Option<String>,
+    // source_id: Option<String>,
 
     change_reason: Option<String>,
 }

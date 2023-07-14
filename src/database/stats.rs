@@ -5,8 +5,8 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Serialize, Deserialize};
 
-use crate::{index::stats::{GetGenusStats, GenusStats, FamilyStats, GetFamilyStats, GetGenusBreakdown, GenusBreakdown, GenusBreakdownItem, FamilyBreakdown}, database::models::TaxonomicStatus};
-use super::{schema, schema_gnl, sum_if, Database, Error, PgPool};
+use crate::{index::stats::{GetGenusStats, GenusStats, FamilyStats, GetFamilyStats, GetGenusBreakdown, GenusBreakdown, GenusBreakdownItem}, database::models::TaxonomicStatus};
+use super::{schema, sum_if, Database, Error, PgPool};
 
 
 #[async_trait]

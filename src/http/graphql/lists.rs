@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use async_graphql::*;
 
 use serde::Deserialize;
@@ -8,15 +6,13 @@ use tracing::instrument;
 
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use uuid::Uuid;
 
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::lists;
-use crate::index::lists::{Filters, GetListNames, GetListPhotos, GetListStats, GetListTaxa, ListDataSummary, ListStats, Pagination};
-use crate::index::stats::GetSpeciesStats;
+use crate::index::lists::{Filters, GetListNames, GetListStats, ListDataSummary, ListStats, Pagination};
 use crate::database::{schema, Database};
-use crate::database::models::{NameList, TaxonPhoto, Name as ArgaName};
+use crate::database::models::{NameList, Name as ArgaName};
 use super::common::SpeciesCard;
 use super::common::SpeciesPhoto;
 use super::common::Taxonomy;

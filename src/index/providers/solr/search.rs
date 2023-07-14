@@ -51,7 +51,7 @@ impl From<Facet> for SpeciesSearchItem {
         let mut whole_genomes = 0;
         let mut partial_genomes = 0;
         let mut barcodes = 0;
-        let mut organelles = 0; //TODO: fix this once the data is ready
+        let organelles = 0; //TODO: fix this once the data is ready
 
         match source.pivot {
             Some(pivot) => {

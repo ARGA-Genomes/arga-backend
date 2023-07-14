@@ -100,9 +100,9 @@ struct ImportJobData {
 #[serde(rename_all = "camelCase")]
 struct Record {
     scientific_name: String,
-    authority: Option<String>,
+    // authority: Option<String>,
     canonical_name: Option<String>,
-    rank: Option<String>,
+    // rank: Option<String>,
 
     kingdom: Option<String>,
     phylum: Option<String>,
@@ -123,7 +123,7 @@ struct Record {
     subfamily: Option<String>,
     subtribe: Option<String>,
     subgenus: Option<String>,
-    subspecies: Option<String>,
+    // subspecies: Option<String>,
 
     // basionym_genus: Option<String>,
     // basionym_subgenus: Option<String>,
@@ -141,14 +141,14 @@ struct Record {
     family_full: Option<String>,
     order_full: Option<String>,
 
-    name_according_to: Option<String>,
-    name_published_in: Option<String>,
+    // name_according_to: Option<String>,
+    // name_published_in: Option<String>,
 
     taxonomic_status: Option<String>,
-    taxon_remarks: Option<String>,
-    source: Option<String>,
-    source_url: Option<String>,
-    source_id: Option<String>,
+    // taxon_remarks: Option<String>,
+    // source: Option<String>,
+    // source_url: Option<String>,
+    // source_id: Option<String>,
 }
 
 #[derive(Debug, Queryable, Deserialize)]

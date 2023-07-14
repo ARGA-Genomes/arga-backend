@@ -12,7 +12,6 @@ use crate::http::Context as State;
 use crate::index::providers::search::SearchItem;
 use crate::index::search::{AssemblySummary, TaxonItem, GenusItem};
 use crate::index::search::{
-    FullTextSearch,
     FullTextSearchItem,
     FullTextSearchResult,
     FullTextType,
@@ -56,7 +55,6 @@ impl Search {
             match record {
                 SearchItem::Species { uuid, .. } => name_ids.push(uuid.clone()),
                 SearchItem::UndescribedSpecies { genus, .. } => genera_names.push(genus.into()),
-                _ => {},
             }
         }
 
@@ -195,8 +193,6 @@ impl Search {
                         results.push(FullTextSearchItem::Genus(item));
                     }
                 }
-
-                _ => {}
             };
         }
 

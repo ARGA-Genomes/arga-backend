@@ -81,14 +81,14 @@ impl Overview {
     }
 
     /// Returns the amount of whole genomes in the index
-    async fn whole_genomes(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+    async fn whole_genomes(&self, ctx: &Context<'_>) -> Result<i64, Error> {
         let state = ctx.data::<State>().unwrap();
-        Ok(state.solr.total(OverviewCategory::WholeGenome).await?)
+        Ok(state.database.overview.whole_genomes().await?.total)
     }
-    /// Returns the amount of whole genomes in the index
-    async fn partial_genomes(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+    /// Returns the amount of partial genomes in the index
+    async fn partial_genomes(&self, ctx: &Context<'_>) -> Result<i64, Error> {
         let state = ctx.data::<State>().unwrap();
-        Ok(state.solr.total(OverviewCategory::PartialGenome).await?)
+        Ok(state.database.overview.partial_genomes().await?.total)
     }
     /// Returns the amount of organelles in the index
     async fn organelles(&self, ctx: &Context<'_>) -> Result<usize, Error> {
@@ -96,9 +96,9 @@ impl Overview {
         Ok(state.solr.total(OverviewCategory::Organelles).await?)
     }
     /// Returns the amount of barcodes in the index
-    async fn barcodes(&self, ctx: &Context<'_>) -> Result<usize, Error> {
+    async fn barcodes(&self, ctx: &Context<'_>) -> Result<i64, Error> {
         let state = ctx.data::<State>().unwrap();
-        Ok(state.solr.total(OverviewCategory::Barcodes).await?)
+        Ok(state.database.overview.markers().await?.total)
     }
 
     /// Returns the amount of records

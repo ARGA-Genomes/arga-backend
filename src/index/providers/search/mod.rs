@@ -25,7 +25,7 @@ struct SearchFields {
     name_id: Field,
     canonical_name: Field,
     subspecies: Field,
-    synonyms: Field,
+    // synonyms: Field,
 
     genus: Field,
     undescribed_species: Field,
@@ -34,7 +34,6 @@ struct SearchFields {
 
 #[derive(Clone)]
 pub struct SearchIndex {
-    schema: Schema,
     index: Index,
     reader: IndexReader,
     fields: SearchFields,
@@ -51,14 +50,13 @@ impl SearchIndex {
             name_id: get_field(&schema, "name_id")?,
             canonical_name: get_field(&schema, "canonical_name")?,
             subspecies: get_field(&schema, "subspecies")?,
-            synonyms: get_field(&schema, "synonyms")?,
+            // synonyms: get_field(&schema, "synonyms")?,
 
             genus: get_field(&schema, "genus")?,
             undescribed_species: get_field(&schema, "undescribed_species")?,
         };
 
         Ok(SearchIndex {
-            schema,
             index,
             reader,
             fields,

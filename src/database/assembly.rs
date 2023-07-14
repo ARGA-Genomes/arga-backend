@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::database::models::{Assembly, AssemblyStats, BioSample, Taxon};
+use crate::database::models::{Assembly, AssemblyStats, BioSample, Taxon, TaxonomicStatus};
 use crate::index::assembly::{self, GetAssembly, GetAssemblyStats, GetBioSamples};
 use super::{schema, Database, Error, PgPool};
 
@@ -24,6 +24,7 @@ impl AssemblyProvider {
             .inner_join(assemblies::table)
             .inner_join(taxa::table)
             .select(taxa::all_columns)
+            .filter(taxa::status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .limit(40)
             .load::<Taxon>(&mut conn)
             .await?;
