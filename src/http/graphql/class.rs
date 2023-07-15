@@ -2,7 +2,8 @@ use async_graphql::*;
 
 use crate::http::Error;
 use crate::http::Context as State;
-use super::common::SpeciesCard;
+
+use super::common::{Page, SpeciesCard};
 use super::common::Taxonomy;
 use super::helpers::SpeciesHelper;
 
@@ -23,12 +24,16 @@ impl Class {
 
     /// Get a list of species with enriched data ideal for displaying as a card.
     /// The enriched data includes the taxonomy, species photos, and data summaries.
-    async fn species(&self, ctx: &Context<'_>) -> Result<Vec<SpeciesCard>, Error> {
+    async fn species(&self, ctx: &Context<'_>, page: i64) -> Result<Page<SpeciesCard>, Error> {
         let state = ctx.data::<State>().unwrap();
         let helper = SpeciesHelper::new(&state.database);
 
-        let taxa = state.database.class.species(&self.class).await?;
-        let cards = helper.cards(taxa).await?;
-        Ok(cards)
+        let page = state.database.class.species(&self.class, page).await?;
+        let cards = helper.cards(page.records).await?;
+
+        Ok(Page {
+            records: cards,
+            total: page.total,
+        })
     }
 }

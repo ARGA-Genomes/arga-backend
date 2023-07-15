@@ -3,7 +3,9 @@ use diesel_async::RunQueryDsl;
 
 use crate::database::models::TaxonomicStatus;
 use crate::http::graphql::common::Taxonomy;
-use super::{schema, Error, PgPool};
+
+use super::extensions::Paginate;
+use super::{schema, Error, PgPool, PageResult};
 use super::models::Taxon;
 
 
@@ -27,16 +29,18 @@ impl FamilyProvider {
     }
 
     /// Get a list of valid and undescribed species descending from a family.
-    pub async fn species(&self, family_name: &str) -> Result<Vec<Taxon>, Error> {
+    pub async fn species(&self, family_name: &str, page: i64) -> PageResult<Taxon> {
         use schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let species = taxa
             .filter(family.eq(family_name))
             .filter(status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
-            .load::<Taxon>(&mut conn)
+            .order_by(scientific_name)
+            .paginate(page)
+            .load::<(Taxon, i64)>(&mut conn)
             .await?;
 
-        Ok(species)
+        Ok(species.into())
     }
 }
