@@ -317,7 +317,27 @@ fn extract_taxa(source: &TaxonSource, names: &HashMap<String, Uuid>, records: &V
         let order_authority = extract_authority(&row.order, &row.order_full);
         let family_authority = extract_authority(&row.family, &row.family_full);
         let genus_authority = extract_authority(&row.genus, &row.genus_full);
-        let species_authority = extract_authority(&row.canonical_name, &row.species);
+
+        // if genus isn't supplied try to extract it from the scientific name
+        // by splitting on the first space and taking the first component
+        let genus = match &row.genus {
+            Some(genus) => Some(genus.clone()),
+            None => extract_genus(&row.scientific_name),
+        };
+
+        // if genus isn't supplied try to extract it from the scientific name
+        // by splitting on the first space and taking the first component
+        let specific_epithet = match &row.specific_epithet {
+            Some(specific_epithet) => Some(specific_epithet.clone()),
+            None => extract_specific_epithet(&row.scientific_name),
+        };
+
+        // fallback to extracting the authority from the scientific name if a
+        // species value isn't present
+        let species_authority = match &row.species {
+            Some(_) => extract_authority(&row.canonical_name, &row.species),
+            None => extract_authority(&row.canonical_name, &Some(row.scientific_name.clone())),
+        };
 
         match names.get(&row.scientific_name) {
             Some(name_id) => Some(Taxon {
@@ -335,8 +355,8 @@ fn extract_taxa(source: &TaxonSource, names: &HashMap<String, Uuid>, records: &V
                 order: row.order.clone(),
                 family: row.family.clone(),
                 tribe: row.tribe.clone(),
-                genus: row.genus.clone(),
-                specific_epithet: row.specific_epithet.clone(),
+                genus,
+                specific_epithet,
 
                 subphylum: row.subphylum.clone(),
                 subclass: row.subclass.clone(),
@@ -368,6 +388,23 @@ fn extract_taxa(source: &TaxonSource, names: &HashMap<String, Uuid>, records: &V
 }
 
 
+fn extract_genus(scientific_name: &str) -> Option<String> {
+    match scientific_name.split_once(" ") {
+        Some((genus, _rest)) => Some(genus.to_string()),
+        None => None,
+    }
+}
+
+fn extract_specific_epithet(scientific_name: &str) -> Option<String> {
+    match scientific_name.split_once(" ") {
+        Some((genus, rest)) => match rest.split_once(" ") {
+            Some((specific_epithet, _rest)) => Some(specific_epithet.to_string()),
+            None => None,
+        }
+        None => None,
+    }
+}
+
 fn extract_authority(name: &Option<String>, full_name: &Option<String>) -> Option<String> {
     match (name, full_name) {
         (Some(name), Some(full_name)) => Some(full_name.trim_start_matches(name).trim().to_string()),
@@ -376,15 +413,29 @@ fn extract_authority(name: &Option<String>, full_name: &Option<String>) -> Optio
 }
 
 
+// based on https://rs.gbif.org/vocabulary/gbif/taxonomic_status.xml
 fn str_to_taxonomic_status(value: &Option<String>) -> TaxonomicStatus {
     match value {
         Some(status) => match status.to_lowercase().as_str() {
             "valid" => TaxonomicStatus::Valid,
+            "valid name" => TaxonomicStatus::Valid,
+            "accepted" => TaxonomicStatus::Valid,
+            "accepted name" => TaxonomicStatus::Valid,
+
             "undescribed" => TaxonomicStatus::Undescribed,
             "species inquirenda" => TaxonomicStatus::SpeciesInquirenda,
             "hybrid" => TaxonomicStatus::Hybrid,
+
             "synonym" => TaxonomicStatus::Synonym,
+            "junior synonym" => TaxonomicStatus::Synonym,
+            "later synonym" => TaxonomicStatus::Synonym,
+
+
             "invalid" => TaxonomicStatus::Invalid,
+            "invalid name" => TaxonomicStatus::Invalid,
+            "unaccepted" => TaxonomicStatus::Invalid,
+            "unaccepted name" => TaxonomicStatus::Invalid,
+
             _ => TaxonomicStatus::Invalid,
         },
         None => TaxonomicStatus::Invalid,
