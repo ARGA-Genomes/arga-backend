@@ -1,8 +1,6 @@
 use async_graphql::*;
 use serde::Deserialize;
 use serde::Serialize;
-use tracing::instrument;
-
 use crate::database::Database;
 use crate::http::Error;
 use crate::http::Context as State;

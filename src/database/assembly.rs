@@ -2,8 +2,9 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::database::models::{Assembly, AssemblyStats, BioSample, Taxon, TaxonomicStatus};
-use super::{schema, Error, PgPool};
+use crate::database::models::{Assembly, AssemblyStats, BioSample, TaxonomicStatus};
+use super::extensions::Paginate;
+use super::{schema, Error, PgPool, PageResult};
 
 
 #[derive(Clone)]
@@ -26,20 +27,22 @@ impl AssemblyProvider {
     }
 
     /// Get all species that have an assembly record associated with its name
-    pub async fn species(&self) -> Result<Vec<Taxon>, Error> {
+    pub async fn species(&self, page: i64) -> PageResult<Uuid> {
         use schema::{taxa, names, assemblies};
         let mut conn = self.pool.get().await?;
 
-        let species = names::table
+        let records = names::table
             .inner_join(assemblies::table)
             .inner_join(taxa::table)
-            .select(taxa::all_columns)
             .filter(taxa::status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
-            .limit(40)
-            .load::<Taxon>(&mut conn)
+            .select(names::id)
+            .group_by(names::id)
+            .order_by(names::scientific_name)
+            .paginate(page)
+            .load::<(Uuid, i64)>(&mut conn)
             .await?;
 
-        Ok(species)
+        Ok(records.into())
     }
 
     /// Get the assembly statistics associated with the provided assembly

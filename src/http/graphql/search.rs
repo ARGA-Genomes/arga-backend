@@ -6,7 +6,8 @@ use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::database::models::{Species, TaxonomicStatus, Taxon};
-use crate::database::{schema, schema_gnl, sum_if};
+use crate::database::extensions::sum_if;
+use crate::database::{schema, schema_gnl};
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::providers::search::SearchItem;

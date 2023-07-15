@@ -4,8 +4,9 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Serialize, Deserialize};
 
-use crate::database::models::TaxonomicStatus;
-use super::{schema, sum_if, Error, PgPool};
+use super::models::TaxonomicStatus;
+use super::extensions::sum_if;
+use super::{schema, Error, PgPool};
 
 
 #[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]

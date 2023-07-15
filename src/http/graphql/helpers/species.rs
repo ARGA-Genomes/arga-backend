@@ -21,15 +21,27 @@ impl SpeciesHelper {
         SpeciesHelper { database: database.clone() }
     }
 
-    /// Create a list of species cards from a list of taxonomy
+    pub async fn taxonomy(&self, name_ids: &Vec<Uuid>) -> Result<Vec<Taxon>, Error> {
+        use schema::taxa::dsl::*;
+        let mut conn = self.database.pool.get().await?;
+
+        let records = taxa
+            .filter(name_id.eq_any(name_ids))
+            .load::<Taxon>(&mut conn)
+            .await?;
+
+        Ok(records)
+    }
+
+    /// Create a list of species cards from a list of name ids
     ///
-    /// This will enrich the provided taxa with additional data such as
-    /// species photos and data summaries.
+    /// This will enrich the provided names with additional data such as
+    /// taxonomy, species photos, and data summaries.
     pub async fn cards(&self, taxa: Vec<Taxon>) -> Result<Vec<SpeciesCard>, Error> {
         use schema::taxon_photos;
         let mut conn = self.database.pool.get().await?;
 
-        let name_ids: Vec<Uuid> = taxa.iter().map(|taxon| taxon.name_id.clone()).collect();
+        let name_ids = taxa.iter().map(|taxon| taxon.name_id).collect();
 
         let mut cards: HashMap<Uuid, SpeciesCard> = HashMap::new();
 

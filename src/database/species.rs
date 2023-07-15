@@ -7,12 +7,13 @@ use serde::{Serialize, Deserialize};
 use tracing::instrument;
 use uuid::Uuid;
 
-use crate::database::sum_if;
 use crate::http::graphql::common::Taxonomy;
 use crate::index::specimen;
 use crate::index::species::{self, GetSpecies, GetRegions, GetMedia, GetSpecimens, GetConservationStatus, GetTraceFiles};
-use super::{schema, Database, Error, PgPool};
+
 use super::models::{Taxon, Name, RegionType, TaxonPhoto, Specimen, TraceFile, ConservationStatus};
+use super::extensions::sum_if;
+use super::{schema, Database, Error, PgPool};
 
 
 #[derive(Debug, Clone, Default, Queryable, Serialize, Deserialize)]
