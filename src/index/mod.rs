@@ -6,5 +6,4 @@ pub mod species;
 pub mod maps;
 pub mod lists;
 pub mod names;
-pub mod assembly;
 pub mod specimen;
