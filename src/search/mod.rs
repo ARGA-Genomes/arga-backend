@@ -78,7 +78,11 @@ async fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
     let genus = schema.get_field("genus").expect("genus schema field not found");
 
     info!("Loading species from database");
-    let species = taxon::get_species(&database).await?;
+    let mut species = taxon::get_species(&database).await?;
+
+    info!("Loading undescribed species from database");
+    let undescribed = taxon::get_undescribed_species(&database).await?;
+    species.extend(undescribed);
 
     for chunk in species.chunks(1_000_000) {
         for species in chunk {
@@ -116,24 +120,6 @@ async fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
         }
         index_writer.commit()?;
     }
-
-    // info!("Loading undescribed species from database");
-    // let undescribed = taxon::get_undescribed_species(&database).await?;
-
-    // for chunk in undescribed.chunks(1_000_000) {
-    //     for record in chunk {
-    //         let mut doc = doc!(
-    //             genus => record.genus.to_string(),
-    //         );
-
-    //         for name in &record.names {
-    //             doc.add_text(undescribed_species, name);
-    //         }
-
-    //         index_writer.add_document(doc)?;
-    //     }
-    //     index_writer.commit()?;
-    // }
 
     Ok(())
 }
