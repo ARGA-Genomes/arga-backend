@@ -35,7 +35,7 @@ pub struct Search;
 impl Search {
     async fn full_text(&self, ctx: &Context<'_>, query: String, data_type: Option<String>) -> Result<FullTextSearchResult, Error> {
         use schema::{assemblies, taxa};
-        use schema_gnl::{species, synonyms};
+        use schema_gnl::{species, synonyms, species_vernacular_names};
 
         let state = ctx.data::<State>().unwrap();
         let mut conn = state.database.pool.get().await?;
@@ -81,18 +81,22 @@ impl Search {
         // look for taxonomic details for each name
         let rows = species::table
             .left_join(synonyms::table)
+            .left_join(species_vernacular_names::table)
             .select((
                 species::all_columns,
                 synonyms::names.nullable(),
+                species_vernacular_names::vernacular_names.nullable(),
             ))
             .filter(species::name_id.eq_any(&name_ids))
-            .load::<(Species, Option<Vec<String>>)>(&mut conn)
+            .load::<(Species, Option<Vec<String>>, Option<Vec<String>>)>(&mut conn)
             .await?;
 
         let mut species_map: HashMap<Uuid, Species> = HashMap::new();
         let mut synonym_map: HashMap<Uuid, Vec<String>> = HashMap::new();
-        for (row, synonyms) in rows {
+        let mut vernacular_map: HashMap<Uuid, Vec<String>> = HashMap::new();
+        for (row, synonyms, vernacular) in rows {
             synonym_map.insert(row.name_id.clone(), synonyms.unwrap_or_default());
+            vernacular_map.insert(row.name_id.clone(), vernacular.unwrap_or_default());
             species_map.insert(row.name_id.clone(), row);
         }
 
@@ -145,6 +149,10 @@ impl Search {
 
                     if let Some(synonyms) = synonym_map.get(uuid) {
                         item.synonyms = synonyms.clone();
+                    }
+
+                    if let Some(vernacular) = vernacular_map.get(uuid) {
+                        item.common_names = vernacular.clone();
                     }
 
                     if let Some((refseq, full, partial)) = assembly_map.get(&uuid) {

@@ -25,7 +25,8 @@ struct SearchFields {
     name_id: Field,
     canonical_name: Field,
     subspecies: Field,
-    // synonyms: Field,
+    synonyms: Field,
+    common_names: Field,
 
     genus: Field,
     undescribed_species: Field,
@@ -50,7 +51,8 @@ impl SearchIndex {
             name_id: get_field(&schema, "name_id")?,
             canonical_name: get_field(&schema, "canonical_name")?,
             subspecies: get_field(&schema, "subspecies")?,
-            // synonyms: get_field(&schema, "synonyms")?,
+            synonyms: get_field(&schema, "synonyms")?,
+            common_names: get_field(&schema, "common_names")?,
 
             genus: get_field(&schema, "genus")?,
             undescribed_species: get_field(&schema, "undescribed_species")?,
@@ -67,13 +69,13 @@ impl SearchIndex {
         // define the data we want to be search on
         let mut schema_builder = Schema::builder();
         schema_builder.add_text_field("name_id", TEXT | STORED);
-        // schema_builder.add_text_field("common_names", TEXT | STORED);
-        schema_builder.add_text_field("canonical_name", TEXT);
-        schema_builder.add_text_field("subspecies", TEXT);
+        schema_builder.add_text_field("canonical_name", TEXT | STORED);
+        schema_builder.add_text_field("subspecies", TEXT | STORED);
         schema_builder.add_text_field("synonyms", TEXT | STORED);
+        schema_builder.add_text_field("common_names", TEXT | STORED);
 
         schema_builder.add_text_field("genus", TEXT | STORED);
-        schema_builder.add_text_field("undescribed_species", TEXT);
+        schema_builder.add_text_field("undescribed_species", TEXT | STORED);
 
         let schema = schema_builder.build();
 
@@ -86,6 +88,8 @@ impl SearchIndex {
         let query_parser = QueryParser::for_index(&self.index, vec![
             self.fields.canonical_name,
             self.fields.subspecies,
+            self.fields.synonyms,
+            self.fields.common_names,
             self.fields.genus,
             self.fields.undescribed_species,
         ]);

@@ -8,6 +8,7 @@ use crate::database::models::{Job, JobStatus};
 
 use super::taxa_importer::TaxaImporter;
 use super::synonym_importer::SynonymImporter;
+use super::vernacular_importer::VernacularImporter;
 use super::conservation_status_importer::ConservationStatusImporter;
 use super::specimen_importer::SpecimenImporter;
 use super::marker_importer::MarkerImporter;
@@ -134,6 +135,7 @@ pub struct Allocator {
 
     taxa_importer: ActorOwn<TaxaImporter>,
     synonym_importer: ActorOwn<SynonymImporter>,
+    vernacular_importer: ActorOwn<VernacularImporter>,
     conservation_status_importer: ActorOwn<ConservationStatusImporter>,
     specimen_importer: ActorOwn<SpecimenImporter>,
     marker_importer: ActorOwn<MarkerImporter>,
@@ -154,6 +156,7 @@ impl Allocator {
 
             taxa_importer: actor!(cx, TaxaImporter::init(), ret_nop!()),
             synonym_importer: actor!(cx, SynonymImporter::init(), ret_nop!()),
+            vernacular_importer: actor!(cx, VernacularImporter::init(), ret_nop!()),
             conservation_status_importer: actor!(cx, ConservationStatusImporter::init(), ret_nop!()),
             specimen_importer: actor!(cx, SpecimenImporter::init(), ret_nop!()),
             marker_importer: actor!(cx, MarkerImporter::init(), ret_nop!()),
@@ -169,6 +172,7 @@ impl Allocator {
             let ret = match job.worker.as_str() {
                 "import_csv" => ret_some_to!([self.taxa_importer], import() as (Job)),
                 "import_synonym" => ret_some_to!([self.synonym_importer], import() as (Job)),
+                "import_vernacular" => ret_some_to!([self.vernacular_importer], import() as (Job)),
                 "import_conservation_status" => ret_some_to!([self.conservation_status_importer], import() as (Job)),
                 "import_specimen" => ret_some_to!([self.specimen_importer], import() as (Job)),
                 "import_marker" => ret_some_to!([self.marker_importer], import() as (Job)),

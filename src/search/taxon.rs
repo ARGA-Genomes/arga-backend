@@ -18,19 +18,22 @@ pub struct SpeciesDoc {
     pub canonical_name: Option<String>,
     pub subspecies: Option<Vec<String>>,
     pub synonyms: Option<Vec<String>>,
+    pub vernacular_names: Option<Vec<String>>,
 }
 
 pub async fn get_species(db: &Database) -> Result<Vec<SpeciesDoc>, Error> {
-    use schema_gnl::{species, synonyms};
+    use schema_gnl::{species, synonyms, species_vernacular_names};
     let mut conn = db.pool.get().await.unwrap();
 
     let docs = species::table
         .left_join(synonyms::table)
+        .left_join(species_vernacular_names::table)
         .select((
             species::name_id,
             species::canonical_name,
             species::subspecies,
             synonyms::names.nullable(),
+            species_vernacular_names::vernacular_names.nullable(),
         ))
         .filter(species::status.eq(TaxonomicStatus::Valid))
         .load::<SpeciesDoc>(&mut conn)

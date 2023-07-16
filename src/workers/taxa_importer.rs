@@ -397,7 +397,7 @@ fn extract_genus(scientific_name: &str) -> Option<String> {
 
 fn extract_specific_epithet(scientific_name: &str) -> Option<String> {
     match scientific_name.split_once(" ") {
-        Some((genus, rest)) => match rest.split_once(" ") {
+        Some((_genus, rest)) => match rest.split_once(" ") {
             Some((specific_epithet, _rest)) => Some(specific_epithet.to_string()),
             None => None,
         }
