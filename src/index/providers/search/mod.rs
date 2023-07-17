@@ -7,6 +7,7 @@ use tracing::error;
 use uuid::Uuid;
 
 use crate::database::models::TaxonomicStatus;
+use crate::index::lists::Pagination;
 
 
 #[derive(thiserror::Error, Debug)]
@@ -181,9 +182,17 @@ impl SearchIndex {
         schema_builder.add_date_field("release_date", STORED);
     }
 
-    pub fn species(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
+    pub fn species(&self, query: &str, pagination: Option<Pagination>) -> Result<Vec<SearchItem>, Error> {
         let searcher = self.reader.searcher();
         let query = format!("data_type:taxon {query}");
+
+        let mut offset = 0;
+        let mut page_size = 20;
+
+        if pagination.is_some() {
+            offset = pagination.unwrap().page_size * (pagination.unwrap().page - 1);
+            page_size = pagination.unwrap().page_size;
+        }
 
         let mut query_parser = QueryParser::for_index(&self.index, vec![
             self.common.canonical_name,
@@ -195,9 +204,9 @@ impl SearchIndex {
         query_parser.set_conjunction_by_default();
         let parsed_query = query_parser.parse_query(&query)?;
 
-        let mut records = Vec::with_capacity(20);
+        let mut records = Vec::new();
 
-        let top_docs = searcher.search(&parsed_query, &TopDocs::with_limit(20))?;
+        let top_docs = searcher.search(&parsed_query, &TopDocs::with_limit(page_size as usize).and_offset(offset as usize))?;
         for (score, doc_address) in top_docs {
             let doc = searcher.doc(doc_address)?;
 
@@ -229,9 +238,17 @@ impl SearchIndex {
         Ok(records)
     }
 
-    pub fn genomes(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
+    pub fn genomes(&self, query: &str, pagination: Option<Pagination>) -> Result<Vec<SearchItem>, Error> {
         let searcher = self.reader.searcher();
         let query = format!("data_type:genome {query}");
+
+        let mut offset = 0;
+        let mut page_size = 20;
+
+        if pagination.is_some() {
+            offset = pagination.unwrap().page_size * (pagination.unwrap().page - 1);
+            page_size = pagination.unwrap().page_size;
+        }
 
         let mut query_parser = QueryParser::for_index(&self.index, vec![
             self.common.canonical_name,
@@ -240,9 +257,9 @@ impl SearchIndex {
         query_parser.set_conjunction_by_default();
         let parsed_query = query_parser.parse_query(&query)?;
 
-        let mut records = Vec::with_capacity(20);
+        let mut records = Vec::new();
 
-        let top_docs = searcher.search(&parsed_query, &TopDocs::with_limit(20))?;
+        let top_docs = searcher.search(&parsed_query, &TopDocs::with_limit(page_size as usize).and_offset(offset as usize))?;
         for (score, doc_address) in top_docs {
             let doc = searcher.doc(doc_address)?;
 
