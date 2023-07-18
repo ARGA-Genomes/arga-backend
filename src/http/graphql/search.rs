@@ -32,9 +32,10 @@ impl Search {
             _ => state.search.all(&query),
         }?;
 
+        let mut name_ids: Vec<Uuid> = Vec::new();
         let mut taxa: HashMap<Uuid, TaxonItem> = HashMap::new();
         let mut genomes: Vec<GenomeItem> = Vec::new();
-        let mut name_ids: Vec<Uuid> = Vec::new();
+        let mut loci: Vec<LocusItem> = Vec::new();
 
         for item in search_results {
             match item {
@@ -75,6 +76,21 @@ impl Search {
                         release_date: item.release_date.map(|d| d.format("%d/%m/%Y").to_string()),
                     });
                 },
+                SearchItem::Locus(item) => {
+                    loci.push(LocusItem {
+                        r#type: FullTextType::Locus,
+                        score: item.score,
+                        status: serde_json::to_string(&item.status).unwrap(),
+                        canonical_name: item.canonical_name,
+
+                        accession: item.accession,
+                        locus_type: item.locus_type,
+                        data_source: item.data_source,
+                        voucher_status: item.voucher_status,
+                        event_date: item.event_date.map(|d| d.format("%d/%m/%Y").to_string()),
+                        event_location: item.event_location,
+                    });
+                },
             }
         }
 
@@ -100,10 +116,12 @@ impl Search {
         // collect results
         let taxa: Vec<FullTextSearchItem> = taxa.into_values().map(|v| FullTextSearchItem::Taxon(v)).collect();
         let genomes: Vec<FullTextSearchItem> = genomes.into_iter().map(|v| FullTextSearchItem::Genome(v)).collect();
+        let loci: Vec<FullTextSearchItem> = loci.into_iter().map(|v| FullTextSearchItem::Locus(v)).collect();
 
-        let mut records = Vec::with_capacity(taxa.len() + genomes.len());
+        let mut records = Vec::with_capacity(taxa.len() + genomes.len() + loci.len());
         records.extend(taxa);
         records.extend(genomes);
+        records.extend(loci);
         records.sort_by(|a, b| b.partial_cmp(a).unwrap());
 
         Ok(FullTextSearchResult { records })
@@ -115,7 +133,7 @@ impl Search {
 pub enum FullTextType {
     Taxon,
     Genome,
-    Barcode,
+    Locus,
 }
 
 #[derive(Debug, Default, Deserialize, SimpleObject)]
@@ -152,17 +170,31 @@ pub struct TaxonItem {
     pub status: String,
 }
 
-
 #[derive(Debug, Deserialize, SimpleObject)]
 #[serde(rename_all = "camelCase")]
 pub struct GenomeItem {
     pub accession: String,
     pub canonical_name: Option<String>,
-    pub genome_rep: Option<String>,
     pub data_source: Option<String>,
+    pub genome_rep: Option<String>,
     pub level: Option<String>,
     pub reference_genome: bool,
     pub release_date: Option<String>,
+    pub score: f32,
+    pub r#type: FullTextType,
+    pub status: String,
+}
+
+#[derive(Debug, Deserialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct LocusItem {
+    pub accession: String,
+    pub canonical_name: Option<String>,
+    pub data_source: Option<String>,
+    pub locus_type: Option<String>,
+    pub voucher_status: Option<String>,
+    pub event_date: Option<String>,
+    pub event_location: Option<String>,
     pub score: f32,
     pub r#type: FullTextType,
     pub status: String,
@@ -178,7 +210,8 @@ pub struct FullTextSearchResult {
 #[derive(Debug, Union, Deserialize)]
 pub enum FullTextSearchItem {
     Taxon(TaxonItem),
-    Genome(GenomeItem)
+    Genome(GenomeItem),
+    Locus(LocusItem),
 }
 
 impl FullTextSearchItem {
@@ -186,6 +219,7 @@ impl FullTextSearchItem {
         match self {
             FullTextSearchItem::Taxon(item) => item.score,
             FullTextSearchItem::Genome(item) => item.score,
+            FullTextSearchItem::Locus(item) => item.score,
         }
     }
 }

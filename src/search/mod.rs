@@ -1,13 +1,14 @@
 mod taxon;
 mod genome;
+mod locus;
 
-use tantivy::schema::Schema;
+use tantivy::schema::{Schema, Field};
 use tracing::info;
 
 use tantivy::{doc, Index, DateTime};
 
 use anyhow::Error;
-use crate::index::providers::search::SearchIndex;
+use crate::index::providers::search::{SearchIndex, DataType};
 use crate::database::Database;
 
 
@@ -34,6 +35,7 @@ pub async fn create() -> Result<(), Error> {
 
     index_names(&schema, &index).await?;
     index_genomes(&schema, &index).await?;
+    index_loci(&schema, &index).await?;
     Ok(())
 }
 
@@ -50,6 +52,7 @@ pub async fn reindex() -> Result<(), Error> {
 
     index_names(&schema, &index).await?;
     index_genomes(&schema, &index).await?;
+    index_loci(&schema, &index).await?;
     Ok(())
 }
 
@@ -61,21 +64,21 @@ async fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
     // index some data with 500mb memory heap
     let mut index_writer = index.writer(500_000_000)?;
 
-    let data_type = schema.get_field("data_type").expect("data_type schema field not found");
-    let name_id = schema.get_field("name_id").expect("name_id schema field not found");
-    let status = schema.get_field("status").expect("status schema field not found");
+    let data_type = get_field(schema, "data_type")?;
+    let name_id = get_field(schema, "name_id")?;
+    let status = get_field(schema, "status")?;
+    let canonical_name = get_field(schema, "canonical_name")?;
 
-    let canonical_name = schema.get_field("canonical_name").expect("canonical_name schema field not found");
-    let subspecies = schema.get_field("subspecies").expect("subspecies schema field not found");
-    let synonyms = schema.get_field("synonyms").expect("synonyms schema field not found");
-    let common_names = schema.get_field("common_names").expect("common_names schema field not found");
+    let subspecies = get_field(schema, "subspecies")?;
+    let synonyms = get_field(schema, "synonyms")?;
+    let common_names = get_field(schema, "common_names")?;
 
-    let kingdom = schema.get_field("kingdom").expect("kingdom schema field not found");
-    let phylum = schema.get_field("phylum").expect("phylum schema field not found");
-    let class = schema.get_field("class").expect("class schema field not found");
-    let order = schema.get_field("order").expect("order schema field not found");
-    let family = schema.get_field("family").expect("family schema field not found");
-    let genus = schema.get_field("genus").expect("genus schema field not found");
+    let kingdom = get_field(schema, "kingdom")?;
+    let phylum = get_field(schema, "phylum")?;
+    let class = get_field(schema, "class")?;
+    let order = get_field(schema, "order")?;
+    let family = get_field(schema, "family")?;
+    let genus = get_field(schema, "genus")?;
 
     info!("Loading species from database");
     let species = taxon::get_species(&database).await?;
@@ -83,7 +86,7 @@ async fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
     for chunk in species.chunks(1_000_000) {
         for species in chunk {
             let mut doc = doc!(
-                data_type => "taxon",
+                data_type => DataType::Taxon.to_string(),
                 name_id => species.name_id.to_string(),
                 status => serde_json::to_string(&species.status)?,
             );
@@ -117,24 +120,6 @@ async fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
         index_writer.commit()?;
     }
 
-    // info!("Loading undescribed species from database");
-    // let undescribed = taxon::get_undescribed_species(&database).await?;
-
-    // for chunk in undescribed.chunks(1_000_000) {
-    //     for record in chunk {
-    //         let mut doc = doc!(
-    //             genus => record.genus.to_string(),
-    //         );
-
-    //         for name in &record.names {
-    //             doc.add_text(undescribed_species, name);
-    //         }
-
-    //         index_writer.add_document(doc)?;
-    //     }
-    //     index_writer.commit()?;
-    // }
-
     Ok(())
 }
 
@@ -145,16 +130,16 @@ async fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
     // index some data with 500mb memory heap
     let mut index_writer = index.writer(500_000_000)?;
 
-    let data_type = schema.get_field("data_type").expect("data_type schema field not found");
-    let name_id = schema.get_field("name_id").expect("name_id schema field not found");
-    let status = schema.get_field("status").expect("status schema field not found");
-    let canonical_name = schema.get_field("canonical_name").expect("canonical_name schema field not found");
+    let data_type = get_field(schema, "data_type")?;
+    let name_id = get_field(schema, "name_id")?;
+    let status = get_field(schema, "status")?;
+    let canonical_name = get_field(schema, "canonical_name")?;
 
-    let accession = schema.get_field("accession").expect("accession schema field not found");
-    let genome_rep = schema.get_field("genome_rep").expect("genome_rep schema field not found");
-    let level = schema.get_field("level").expect("level schema field not found");
-    let reference_genome = schema.get_field("reference_genome").expect("reference_genome schema field not found");
-    let release_date = schema.get_field("release_date").expect("release_date schema field not found");
+    let accession = get_field(schema, "accession")?;
+    let genome_rep = get_field(schema, "genome_rep")?;
+    let level = get_field(schema, "level")?;
+    let reference_genome = get_field(schema, "reference_genome")?;
+    let release_date = get_field(schema, "release_date")?;
 
     info!("Loading assemblies from database");
     let records = genome::get_genomes(&database).await?;
@@ -162,7 +147,7 @@ async fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
     for chunk in records.chunks(1_000_000) {
         for genome in chunk {
             let mut doc = doc!(
-                data_type => "genome",
+                data_type => DataType::Genome.to_string(),
                 name_id => genome.name_id.to_string(),
                 status => serde_json::to_string(&genome.status)?,
                 accession => genome.accession.clone(),
@@ -187,4 +172,49 @@ async fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+
+async fn index_loci(schema: &Schema, index: &Index) -> Result<(), Error> {
+    let db_host = crate::database::get_database_url();
+    let database = Database::connect(&db_host).await.expect("Failed to connect to the database");
+
+    // index some data with 500mb memory heap
+    let mut index_writer = index.writer(500_000_000)?;
+
+    let data_type = get_field(schema, "data_type")?;
+    let name_id = get_field(schema, "name_id")?;
+    let status = get_field(schema, "status")?;
+    let canonical_name = get_field(schema, "canonical_name")?;
+
+    let accession = get_field(schema, "accession")?;
+    let locus_type = get_field(schema, "locus_type")?;
+
+    info!("Loading loci from database");
+    let records = locus::get_loci(&database).await?;
+
+    for chunk in records.chunks(1_000_000) {
+        for locus in chunk {
+            let mut doc = doc!(
+                data_type => DataType::Locus.to_string(),
+                name_id => locus.name_id.to_string(),
+                status => serde_json::to_string(&locus.status)?,
+                accession => locus.accession.clone(),
+            );
+
+            if let Some(value) = &locus.canonical_name { doc.add_text(canonical_name, value); }
+            if let Some(value) = &locus.locus_type { doc.add_text(locus_type, value); }
+
+            index_writer.add_document(doc)?;
+        }
+        index_writer.commit()?;
+    }
+
+    Ok(())
+}
+
+
+fn get_field(schema: &Schema, name: &str) -> Result<Field, Error> {
+    let field = schema.get_field(name).ok_or(tantivy::TantivyError::FieldNotFound(name.to_string()))?;
+    Ok(field)
 }

@@ -26,6 +26,7 @@ pub enum Error {
 pub enum SearchItem {
     Species(SpeciesItem),
     Genome(GenomeItem),
+    Locus(LocusItem),
 }
 
 #[derive(Debug)]
@@ -60,6 +61,21 @@ pub struct GenomeItem {
     pub level: Option<String>,
     pub reference_genome: bool,
     pub release_date: Option<NaiveDateTime>,
+}
+
+#[derive(Debug)]
+pub struct LocusItem {
+    pub name_id: Uuid,
+    pub status: TaxonomicStatus,
+    pub score: f32,
+
+    pub canonical_name: Option<String>,
+    pub accession: String,
+    pub locus_type: Option<String>,
+    pub data_source: Option<String>,
+    pub voucher_status: Option<String>,
+    pub event_date: Option<NaiveDateTime>,
+    pub event_location: Option<String>,
 }
 
 
@@ -105,20 +121,10 @@ struct LocusFields {
 }
 
 #[derive(Debug, Clone)]
-enum DataType {
+pub enum DataType {
     Taxon,
     Genome,
     Locus,
-}
-
-impl From<DataType> for String {
-    fn from(value: DataType) -> Self {
-        match value {
-            DataType::Taxon => "Taxon".to_string(),
-            DataType::Genome => "Genome".to_string(),
-            DataType::Locus => "Locus".to_string(),
-        }
-    }
 }
 
 impl TryFrom<&str> for DataType {
@@ -131,6 +137,17 @@ impl TryFrom<&str> for DataType {
             "Locus" => Ok(DataType::Locus),
             val => Err(Error::ParseError(format!("Unkown data type: {}", val).to_string())),
         }
+    }
+}
+
+impl std::fmt::Display for DataType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DataType::Taxon => f.write_str("Taxon"),
+            DataType::Genome => f.write_str("Genome"),
+            DataType::Locus => f.write_str("Locus"),
+        }?;
+        Ok(())
     }
 }
 
@@ -247,19 +264,18 @@ impl SearchIndex {
     }
 
 
-
     pub fn taxonomy(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
-        let query = format!("data_type:taxon {query}");
+        let query = format!("data_type:{} {query}", DataType::Taxon);
         self.all(&query)
     }
 
     pub fn genomes(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
-        let query = format!("data_type:genome {query}");
+        let query = format!("data_type:{} {query}", DataType::Genome);
         self.all(&query)
     }
 
     pub fn loci(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
-        let query = format!("data_type:locus {query}");
+        let query = format!("data_type:{} {query}", DataType::Locus);
         self.all(&query)
     }
 
@@ -323,7 +339,18 @@ impl SearchIndex {
                         reference_genome: get_bool(&doc, self.genome.reference_genome).unwrap_or(false),
                         release_date: get_datetime(&doc, self.genome.release_date),
                     }),
-                    DataType::Locus => todo!(),
+                    DataType::Locus => SearchItem::Locus(LocusItem {
+                        name_id,
+                        status,
+                        score,
+                        canonical_name: get_text(&doc, self.common.canonical_name),
+                        accession: get_text(&doc, self.locus.accession).unwrap_or_default(),
+                        locus_type: get_text(&doc, self.locus.locus_type),
+                        data_source: get_text(&doc, self.locus.data_source),
+                        voucher_status: get_text(&doc, self.locus.voucher_status),
+                        event_date: get_datetime(&doc, self.locus.event_date),
+                        event_location: get_text(&doc, self.locus.event_location),
+                    }),
                 };
 
                 records.push(item);
