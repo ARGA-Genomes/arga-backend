@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use crate::http::Error;
 use crate::http::Context as State;
+use crate::index::lists::Pagination;
 use crate::index::providers::search::SearchItem;
 
 
@@ -21,9 +22,10 @@ pub struct Search;
 
 #[Object]
 impl Search {
-    async fn full_text(&self, ctx: &Context<'_>, query: String, data_type: Option<String>) -> Result<FullTextSearchResult, Error> {
+    async fn full_text(&self, ctx: &Context<'_>, query: String, data_type: Option<String>, pagination: Option<Pagination>) -> Result<FullTextSearchResult, Error> {
         let state = ctx.data::<State>().unwrap();
 
+        let mut total;
         let search_results = match data_type.unwrap_or_default().as_str() {
             "taxonomy" => state.search.taxonomy(&query),
             "genomes" => state.search.genomes(&query),
@@ -124,7 +126,7 @@ impl Search {
         records.extend(loci);
         records.sort_by(|a, b| b.partial_cmp(a).unwrap());
 
-        Ok(FullTextSearchResult { records })
+        Ok(FullTextSearchResult { records, total })
     }
 }
 
@@ -205,6 +207,7 @@ pub struct LocusItem {
 #[serde(rename_all = "camelCase")]
 pub struct FullTextSearchResult {
     pub records: Vec<FullTextSearchItem>,
+    pub total: i32
 }
 
 #[derive(Debug, Union, Deserialize)]

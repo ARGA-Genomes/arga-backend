@@ -1,5 +1,5 @@
 use chrono::NaiveDateTime;
-use tantivy::collector::TopDocs;
+use tantivy::collector::{Count, TopDocs};
 use tantivy::query::QueryParser;
 use tantivy::{Index, IndexReader, ReloadPolicy, TantivyError, Document};
 use tantivy::schema::{Schema, TEXT, STORED, Field, SchemaBuilder, STRING};
@@ -7,6 +7,7 @@ use tracing::error;
 use uuid::Uuid;
 
 use crate::database::models::TaxonomicStatus;
+use crate::index::lists::Pagination;
 
 
 #[derive(thiserror::Error, Debug)]
@@ -19,6 +20,12 @@ pub enum Error {
 
     #[error("Parse error: {0}")]
     ParseError(String),
+}
+
+#[derive(Debug)]
+pub struct FinalResult {
+    pub(crate) results: Vec<SearchItem>,
+    pub(crate) total: i32
 }
 
 
@@ -279,8 +286,16 @@ impl SearchIndex {
         self.all(&query)
     }
 
-    pub fn all(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
+    pub fn all(&self, query: &str, pagination: Option<Pagination>) -> Result<FinalResult, Error> {
         let searcher = self.reader.searcher();
+
+        let mut offset = 0;
+        let mut page_size = 20;
+
+        if pagination.is_some() {
+            offset = pagination.unwrap().page_size * (pagination.unwrap().page - 1);
+            page_size = pagination.unwrap().page_size;
+        }
 
         // set the fields that the query should search on
         let mut query_parser = QueryParser::for_index(&self.index, vec![
@@ -294,9 +309,10 @@ impl SearchIndex {
         query_parser.set_conjunction_by_default();
         let parsed_query = query_parser.parse_query(&query)?;
 
-        let mut records = Vec::with_capacity(20);
+        let mut records = Vec::new();
 
-        let top_docs = searcher.search(&parsed_query, &TopDocs::with_limit(20))?;
+        let top_docs = searcher.search(&parsed_query, &TopDocs::with_limit(page_size as usize).and_offset(offset as usize))?;
+        let count = searcher.search(&parsed_query, &Count).unwrap();
         for (score, doc_address) in top_docs {
             let doc = searcher.doc(doc_address)?;
 
@@ -357,7 +373,7 @@ impl SearchIndex {
             }
         }
 
-        Ok(records)
+        Ok(FinalResult { results: records, total: count as i32 })
     }
 }
 

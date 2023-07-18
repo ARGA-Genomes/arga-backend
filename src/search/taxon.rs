@@ -53,7 +53,39 @@ pub async fn get_species(db: &Database) -> Result<Vec<SpeciesDoc>, Error> {
             species::family,
             species::genus,
         ))
-        .filter(species::status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
+        .filter(species::status.eq_any(&[TaxonomicStatus::Valid]))
+        .load::<SpeciesDoc>(&mut conn)
+        .await?;
+
+    Ok(docs)
+}
+
+pub async fn get_undescribed_species(db: &Database) -> Result<Vec<SpeciesDoc>, Error> {
+    use schema::taxa;
+    use schema_gnl::{species, synonyms, species_vernacular_names};
+    let mut conn = db.pool.get().await.unwrap();
+
+    let docs = taxa::table
+        .left_join(species::table)
+        .left_join(synonyms::table)
+        .left_join(species_vernacular_names::table)
+        .select((
+            taxa::name_id,
+            taxa::status,
+
+            taxa::canonical_name,
+            species::subspecies.nullable(),
+            synonyms::names.nullable(),
+            species_vernacular_names::vernacular_names.nullable(),
+
+            taxa::kingdom,
+            taxa::phylum,
+            taxa::class,
+            taxa::order,
+            taxa::family,
+            taxa::genus,
+        ))
+        .filter(taxa::status.eq_any(&[TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
         .load::<SpeciesDoc>(&mut conn)
         .await?;
 

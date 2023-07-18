@@ -152,10 +152,14 @@ diesel::table! {
 }
 
 
-use super::schema::{names, assemblies};
+use super::schema::{names, assemblies, taxa};
 
 diesel::joinable!(species -> synonyms (id));
 diesel::joinable!(species -> species_vernacular_names (id));
+diesel::joinable!(taxa -> species (id));
+diesel::joinable!(taxa -> synonyms (id));
+diesel::joinable!(taxa -> species_vernacular_names (id));
+
 diesel::joinable!(ranked_taxa -> assemblies (name_id));
 diesel::joinable!(ranked_taxa -> names (name_id));
 
@@ -165,6 +169,21 @@ diesel::allow_tables_to_appear_in_same_query!(
     species_vernacular_names,
     undescribed_species,
     names,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    species,
+    taxa,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    synonyms,
+    taxa,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    species_vernacular_names,
+    taxa,
 );
 
 diesel::allow_tables_to_appear_in_same_query!(

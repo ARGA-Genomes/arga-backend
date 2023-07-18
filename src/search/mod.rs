@@ -81,7 +81,11 @@ async fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
     let genus = get_field(schema, "genus")?;
 
     info!("Loading species from database");
-    let species = taxon::get_species(&database).await?;
+    let mut species = taxon::get_species(&database).await?;
+
+    info!("Loading undescribed species from database");
+    let undescribed = taxon::get_undescribed_species(&database).await?;
+    species.extend(undescribed);
 
     for chunk in species.chunks(1_000_000) {
         for species in chunk {
