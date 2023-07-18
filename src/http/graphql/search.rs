@@ -26,20 +26,24 @@ impl Search {
         let state = ctx.data::<State>().unwrap();
 
         let mut search_results: Vec<SearchItem> = Vec::new();
+        let mut total;
 
         match data_type.as_ref().map(|s| s.as_str()) {
             Some("taxonomy") => {
                 let results = state.search.species(&query, pagination)?;
-                search_results.extend(results);
+                total = results.total;
+                search_results.extend(results.results);
             }
             Some("genomes") => {
                 let results = state.search.genomes(&query, pagination)?;
-                search_results.extend(results);
+                total = results.total;
+                search_results.extend(results.results);
             }
             // default to all search
             _ => {
                 let results = state.search.species(&query, pagination)?;
-                search_results.extend(results);
+                total = results.total;
+                search_results.extend(results.results);
             }
         }
 
@@ -117,7 +121,7 @@ impl Search {
         records.extend(genomes);
         records.sort_by(|a, b| b.partial_cmp(a).unwrap());
 
-        Ok(FullTextSearchResult { records })
+        Ok(FullTextSearchResult { records, total })
     }
 }
 
@@ -184,6 +188,7 @@ pub struct GenomeItem {
 #[serde(rename_all = "camelCase")]
 pub struct FullTextSearchResult {
     pub records: Vec<FullTextSearchItem>,
+    pub total: i32
 }
 
 #[derive(Debug, Union, Deserialize)]
