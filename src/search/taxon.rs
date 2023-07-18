@@ -8,7 +8,7 @@ use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::database::models::TaxonomicStatus;
-use crate::database::{schema_gnl, Database};
+use crate::database::{schema, schema_gnl, Database};
 use crate::http::Error;
 
 

@@ -10,6 +10,9 @@ use crate::database::models::TaxonomicStatus;
 use crate::index::lists::Pagination;
 
 
+pub type SearchResult = Result<(Vec<SearchItem>, usize), Error>;
+
+
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("tantivy index error")]
@@ -24,8 +27,8 @@ pub enum Error {
 
 #[derive(Debug)]
 pub struct FinalResult {
-    pub(crate) results: Vec<SearchItem>,
-    pub(crate) total: i32
+    pub results: Vec<SearchItem>,
+    pub total: usize
 }
 
 
@@ -271,31 +274,34 @@ impl SearchIndex {
     }
 
 
-    pub fn taxonomy(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
+    pub fn taxonomy(&self, query: &str, pagination: &Pagination) -> SearchResult {
         let query = format!("data_type:{} {query}", DataType::Taxon);
-        self.all(&query)
+        let results = self.all(&query, pagination)?;
+        Ok((results.results, results.total))
     }
 
-    pub fn genomes(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
+    pub fn genomes(&self, query: &str, pagination: &Pagination) -> SearchResult {
         let query = format!("data_type:{} {query}", DataType::Genome);
-        self.all(&query)
+        let results = self.all(&query, pagination)?;
+        Ok((results.results, results.total))
     }
 
-    pub fn loci(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
+    pub fn loci(&self, query: &str, pagination: &Pagination) -> SearchResult {
         let query = format!("data_type:{} {query}", DataType::Locus);
-        self.all(&query)
+        let results = self.all(&query, pagination)?;
+        Ok((results.results, results.total))
     }
 
-    pub fn all(&self, query: &str, pagination: Option<Pagination>) -> Result<FinalResult, Error> {
+    pub fn all(&self, query: &str, pagination: &Pagination) -> Result<FinalResult, Error> {
         let searcher = self.reader.searcher();
 
-        let mut offset = 0;
-        let mut page_size = 20;
-
-        if pagination.is_some() {
-            offset = pagination.unwrap().page_size * (pagination.unwrap().page - 1);
-            page_size = pagination.unwrap().page_size;
-        }
+        // by default the pagination struct is made for postgres which
+        // doesn't use unsigned integers, so we use i64. converting it to
+        // a usize for tantivy is safe because it doesn't make sense to provide
+        // a negative page_size. still, we should probably migrate this to its
+        // own pagination struct at this point to keep the types consistent
+        let page_size = pagination.page_size as usize;
+        let offset = page_size * pagination.page as usize;
 
         // set the fields that the query should search on
         let mut query_parser = QueryParser::for_index(&self.index, vec![
@@ -311,8 +317,9 @@ impl SearchIndex {
 
         let mut records = Vec::new();
 
-        let top_docs = searcher.search(&parsed_query, &TopDocs::with_limit(page_size as usize).and_offset(offset as usize))?;
-        let count = searcher.search(&parsed_query, &Count).unwrap();
+        let top_docs = searcher.search(&parsed_query, &TopDocs::with_limit(page_size).and_offset(offset))?;
+        let count = searcher.search(&parsed_query, &Count)?;
+
         for (score, doc_address) in top_docs {
             let doc = searcher.doc(doc_address)?;
 
@@ -373,7 +380,7 @@ impl SearchIndex {
             }
         }
 
-        Ok(FinalResult { results: records, total: count as i32 })
+        Ok(FinalResult { results: records, total: count })
     }
 }
 

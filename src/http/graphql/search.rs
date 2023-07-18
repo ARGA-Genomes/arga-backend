@@ -22,16 +22,25 @@ pub struct Search;
 
 #[Object]
 impl Search {
-    async fn full_text(&self, ctx: &Context<'_>, query: String, data_type: Option<String>, pagination: Option<Pagination>) -> Result<FullTextSearchResult, Error> {
+    async fn full_text(
+        &self,
+        ctx: &Context<'_>,
+        query: String,
+        pagination: Pagination,
+        data_type: Option<String>
+    ) -> Result<FullTextSearchResult, Error>
+    {
         let state = ctx.data::<State>().unwrap();
 
-        let mut total;
-        let search_results = match data_type.unwrap_or_default().as_str() {
-            "taxonomy" => state.search.taxonomy(&query),
-            "genomes" => state.search.genomes(&query),
-            "loci" => state.search.loci(&query),
+        let (search_results, total) = match data_type.unwrap_or_default().as_str() {
+            "taxonomy" => state.search.taxonomy(&query, &pagination),
+            "genomes" => state.search.genomes(&query, &pagination),
+            "loci" => state.search.loci(&query, &pagination),
             // default to an 'all' search
-            _ => state.search.all(&query),
+            _ => {
+                let results = state.search.all(&query, &pagination)?;
+                Ok((results.results, results.total))
+            },
         }?;
 
         let mut name_ids: Vec<Uuid> = Vec::new();
@@ -207,7 +216,7 @@ pub struct LocusItem {
 #[serde(rename_all = "camelCase")]
 pub struct FullTextSearchResult {
     pub records: Vec<FullTextSearchItem>,
-    pub total: i32
+    pub total: usize
 }
 
 #[derive(Debug, Union, Deserialize)]
