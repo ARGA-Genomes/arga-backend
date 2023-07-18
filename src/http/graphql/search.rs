@@ -24,23 +24,13 @@ impl Search {
     async fn full_text(&self, ctx: &Context<'_>, query: String, data_type: Option<String>) -> Result<FullTextSearchResult, Error> {
         let state = ctx.data::<State>().unwrap();
 
-        let mut search_results: Vec<SearchItem> = Vec::new();
-
-        match data_type.as_ref().map(|s| s.as_str()) {
-            Some("taxonomy") => {
-                let results = state.search.species(&query)?;
-                search_results.extend(results);
-            }
-            Some("genomes") => {
-                let results = state.search.genomes(&query)?;
-                search_results.extend(results);
-            }
-            // default to all search
-            _ => {
-                let results = state.search.species(&query)?;
-                search_results.extend(results);
-            }
-        }
+        let search_results = match data_type.unwrap_or_default().as_str() {
+            "taxonomy" => state.search.taxonomy(&query),
+            "genomes" => state.search.genomes(&query),
+            "loci" => state.search.loci(&query),
+            // default to an 'all' search
+            _ => state.search.all(&query),
+        }?;
 
         let mut taxa: HashMap<Uuid, TaxonItem> = HashMap::new();
         let mut genomes: Vec<GenomeItem> = Vec::new();

@@ -16,6 +16,9 @@ pub enum Error {
 
     #[error("tantivy query error")]
     QueryError(#[from] tantivy::query::QueryParserError),
+
+    #[error("Parse error: {0}")]
+    ParseError(String),
 }
 
 
@@ -62,6 +65,7 @@ pub struct GenomeItem {
 
 #[derive(Debug, Clone)]
 struct CommonFields {
+    data_type: Field,
     name_id: Field,
     status: Field,
     canonical_name: Field,
@@ -90,6 +94,46 @@ struct GenomeFields {
     release_date: Field,
 }
 
+#[derive(Debug, Clone)]
+struct LocusFields {
+    accession: Field,
+    locus_type: Field,
+    data_source: Field,
+    voucher_status: Field,
+    event_date: Field,
+    event_location: Field,
+}
+
+#[derive(Debug, Clone)]
+enum DataType {
+    Taxon,
+    Genome,
+    Locus,
+}
+
+impl From<DataType> for String {
+    fn from(value: DataType) -> Self {
+        match value {
+            DataType::Taxon => "Taxon".to_string(),
+            DataType::Genome => "Genome".to_string(),
+            DataType::Locus => "Locus".to_string(),
+        }
+    }
+}
+
+impl TryFrom<&str> for DataType {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "Taxon" => Ok(DataType::Taxon),
+            "Genome" => Ok(DataType::Genome),
+            "Locus" => Ok(DataType::Locus),
+            val => Err(Error::ParseError(format!("Unkown data type: {}", val).to_string())),
+        }
+    }
+}
+
 
 #[derive(Clone)]
 pub struct SearchIndex {
@@ -99,8 +143,8 @@ pub struct SearchIndex {
     common: CommonFields,
     taxon: TaxonFields,
     genome: GenomeFields,
+    locus: LocusFields,
 }
-
 
 impl SearchIndex {
     pub fn open() -> Result<SearchIndex, Error> {
@@ -109,6 +153,7 @@ impl SearchIndex {
         let reader = index.reader_builder().reload_policy(ReloadPolicy::OnCommit).try_into()?;
 
         let common = CommonFields {
+            data_type: get_field(&schema, "data_type")?,
             name_id: get_field(&schema, "name_id")?,
             status: get_field(&schema, "status")?,
             canonical_name: get_field(&schema, "canonical_name")?,
@@ -132,6 +177,14 @@ impl SearchIndex {
             reference_genome: get_field(&schema, "reference_genome")?,
             release_date: get_field(&schema, "release_date")?,
         };
+        let locus = LocusFields {
+            accession: get_field(&schema, "accession")?,
+            locus_type: get_field(&schema, "locus_type")?,
+            data_source: get_field(&schema, "data_source")?,
+            voucher_status: get_field(&schema, "voucher_status")?,
+            event_date: get_field(&schema, "event_date")?,
+            event_location: get_field(&schema, "event_location")?,
+        };
 
         Ok(SearchIndex {
             index,
@@ -139,6 +192,7 @@ impl SearchIndex {
             common,
             taxon,
             genome,
+            locus,
         })
     }
 
@@ -146,17 +200,23 @@ impl SearchIndex {
         // define the data we want to be search on
         let mut schema_builder = Schema::builder();
 
-        // common fields
+        Self::common_schema(&mut schema_builder);
+        Self::taxon_schema(&mut schema_builder);
+        Self::genome_schema(&mut schema_builder);
+        Self::locus_schema(&mut schema_builder);
+
+        let schema = schema_builder.build();
+        Ok(schema)
+    }
+
+    pub fn common_schema(schema_builder: &mut SchemaBuilder) {
         schema_builder.add_text_field("data_type", STRING | STORED);
         schema_builder.add_text_field("name_id", STRING | STORED);
         schema_builder.add_text_field("status", STRING | STORED);
         schema_builder.add_text_field("canonical_name", TEXT | STORED);
 
-        Self::taxon_schema(&mut schema_builder);
-        Self::genome_schema(&mut schema_builder);
-
-        let schema = schema_builder.build();
-        Ok(schema)
+        schema_builder.add_text_field("accession", STRING | STORED);
+        schema_builder.add_text_field("data_source", TEXT | STORED);
     }
 
     pub fn taxon_schema(schema_builder: &mut SchemaBuilder) {
@@ -173,70 +233,48 @@ impl SearchIndex {
     }
 
     pub fn genome_schema(schema_builder: &mut SchemaBuilder) {
-        schema_builder.add_text_field("accession", STRING | STORED);
         schema_builder.add_text_field("genome_rep", STRING | STORED);
-        schema_builder.add_text_field("data_source", TEXT | STORED);
         schema_builder.add_text_field("level", TEXT | STORED);
         schema_builder.add_bool_field("reference_genome", STORED);
         schema_builder.add_date_field("release_date", STORED);
     }
 
-    pub fn species(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
-        let searcher = self.reader.searcher();
-        let query = format!("data_type:taxon {query}");
+    pub fn locus_schema(schema_builder: &mut SchemaBuilder) {
+        schema_builder.add_text_field("locus_type", STRING | STORED);
+        schema_builder.add_text_field("voucher_status", STRING | STORED);
+        schema_builder.add_date_field("event_date", STORED);
+        schema_builder.add_text_field("event_location", STORED);
+    }
 
+
+
+    pub fn taxonomy(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
+        let query = format!("data_type:taxon {query}");
+        self.all(&query)
+    }
+
+    pub fn genomes(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
+        let query = format!("data_type:genome {query}");
+        self.all(&query)
+    }
+
+    pub fn loci(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
+        let query = format!("data_type:locus {query}");
+        self.all(&query)
+    }
+
+    pub fn all(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
+        let searcher = self.reader.searcher();
+
+        // set the fields that the query should search on
         let mut query_parser = QueryParser::for_index(&self.index, vec![
             self.common.canonical_name,
             self.taxon.subspecies,
             self.taxon.synonyms,
             self.taxon.common_names,
-        ]);
-        // query_parser.set_field_boost(common_names, 50.0);
-        query_parser.set_conjunction_by_default();
-        let parsed_query = query_parser.parse_query(&query)?;
-
-        let mut records = Vec::with_capacity(20);
-
-        let top_docs = searcher.search(&parsed_query, &TopDocs::with_limit(20))?;
-        for (score, doc_address) in top_docs {
-            let doc = searcher.doc(doc_address)?;
-
-            if let Some(name_id) = get_uuid(&doc, self.common.name_id) {
-                let status = match get_text(&doc, self.common.status) {
-                    None => TaxonomicStatus::Invalid,
-                    Some(value) => serde_json::from_str(&value).unwrap_or(TaxonomicStatus::Invalid),
-                };
-
-                let item = SpeciesItem {
-                    name_id,
-                    status,
-                    score,
-                    canonical_name: get_text(&doc, self.common.canonical_name),
-                    subspecies: get_all_text(&doc, self.taxon.subspecies),
-                    synonyms: get_all_text(&doc, self.taxon.synonyms),
-                    common_names: get_all_text(&doc, self.taxon.common_names),
-                    kingdom: get_text(&doc, self.taxon.kingdom),
-                    phylum: get_text(&doc, self.taxon.phylum),
-                    class: get_text(&doc, self.taxon.class),
-                    order: get_text(&doc, self.taxon.order),
-                    family: get_text(&doc, self.taxon.family),
-                    genus: get_text(&doc, self.taxon.genus),
-                };
-                records.push(SearchItem::Species(item));
-            }
-        }
-
-        Ok(records)
-    }
-
-    pub fn genomes(&self, query: &str) -> Result<Vec<SearchItem>, Error> {
-        let searcher = self.reader.searcher();
-        let query = format!("data_type:genome {query}");
-
-        let mut query_parser = QueryParser::for_index(&self.index, vec![
-            self.common.canonical_name,
             self.genome.accession,
         ]);
+
         query_parser.set_conjunction_by_default();
         let parsed_query = query_parser.parse_query(&query)?;
 
@@ -246,25 +284,49 @@ impl SearchIndex {
         for (score, doc_address) in top_docs {
             let doc = searcher.doc(doc_address)?;
 
-            if let Some(name_id) = get_uuid(&doc, self.common.name_id) {
+            let data_type = get_data_type(&doc, self.common.data_type);
+            let name_id = get_uuid(&doc, self.common.name_id);
+
+            // this should always unwrap but we cannot guarantee that the index isn't
+            // corrupted or wrongly used, so only process results that have all mandatory fields
+            if let (Some(data_type), Some(name_id)) = (data_type, name_id) {
                 let status = match get_text(&doc, self.common.status) {
                     None => TaxonomicStatus::Invalid,
                     Some(value) => serde_json::from_str(&value).unwrap_or(TaxonomicStatus::Invalid),
                 };
 
-                let item = GenomeItem {
-                    name_id,
-                    status,
-                    score,
-                    canonical_name: get_text(&doc, self.common.canonical_name),
-                    accession: get_text(&doc, self.genome.accession).unwrap_or_default(),
-                    genome_rep: get_text(&doc, self.genome.genome_rep),
-                    data_source: get_text(&doc, self.genome.data_source),
-                    level: get_text(&doc, self.genome.level),
-                    reference_genome: get_bool(&doc, self.genome.reference_genome).unwrap_or(false),
-                    release_date: get_datetime(&doc, self.genome.release_date),
+                let item = match data_type {
+                    DataType::Taxon => SearchItem::Species(SpeciesItem {
+                        name_id,
+                        status,
+                        score,
+                        canonical_name: get_text(&doc, self.common.canonical_name),
+                        subspecies: get_all_text(&doc, self.taxon.subspecies),
+                        synonyms: get_all_text(&doc, self.taxon.synonyms),
+                        common_names: get_all_text(&doc, self.taxon.common_names),
+                        kingdom: get_text(&doc, self.taxon.kingdom),
+                        phylum: get_text(&doc, self.taxon.phylum),
+                        class: get_text(&doc, self.taxon.class),
+                        order: get_text(&doc, self.taxon.order),
+                        family: get_text(&doc, self.taxon.family),
+                        genus: get_text(&doc, self.taxon.genus),
+                    }),
+                    DataType::Genome => SearchItem::Genome(GenomeItem {
+                        name_id,
+                        status,
+                        score,
+                        canonical_name: get_text(&doc, self.common.canonical_name),
+                        accession: get_text(&doc, self.genome.accession).unwrap_or_default(),
+                        genome_rep: get_text(&doc, self.genome.genome_rep),
+                        data_source: get_text(&doc, self.genome.data_source),
+                        level: get_text(&doc, self.genome.level),
+                        reference_genome: get_bool(&doc, self.genome.reference_genome).unwrap_or(false),
+                        release_date: get_datetime(&doc, self.genome.release_date),
+                    }),
+                    DataType::Locus => todo!(),
                 };
-                records.push(SearchItem::Genome(item));
+
+                records.push(item);
             }
         }
 
@@ -276,6 +338,22 @@ impl SearchIndex {
 fn get_field(schema: &Schema, name: &str) -> Result<Field, Error> {
     let field = schema.get_field(name).ok_or(TantivyError::FieldNotFound(name.to_string()))?;
     Ok(field)
+}
+
+fn get_data_type(doc: &Document, field: Field) -> Option<DataType> {
+    match doc.get_first(field) {
+        None => None,
+        Some(value) => match value.as_text() {
+            Some(val) => match DataType::try_from(val) {
+                Ok(data_type) => Some(data_type),
+                Err(err) => {
+                    error!(?err, "Failed to read data_type");
+                    None
+                },
+            },
+            None => None,
+        }
+    }
 }
 
 fn get_uuid(doc: &Document, field: Field) -> Option<Uuid> {
