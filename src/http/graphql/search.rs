@@ -27,7 +27,7 @@ impl Search {
         ctx: &Context<'_>,
         query: String,
         pagination: Pagination,
-        data_type: Option<String>
+        data_type: Option<String>,
     ) -> Result<FullTextSearchResult, Error>
     {
         let state = ctx.data::<State>().unwrap();

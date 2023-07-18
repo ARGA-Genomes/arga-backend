@@ -300,8 +300,9 @@ impl SearchIndex {
         // a usize for tantivy is safe because it doesn't make sense to provide
         // a negative page_size. still, we should probably migrate this to its
         // own pagination struct at this point to keep the types consistent
+        let page = pagination.page as usize;
         let page_size = pagination.page_size as usize;
-        let offset = page_size * pagination.page as usize;
+        let offset = page_size * page.checked_sub(1).unwrap_or(0);
 
         // set the fields that the query should search on
         let mut query_parser = QueryParser::for_index(&self.index, vec![
