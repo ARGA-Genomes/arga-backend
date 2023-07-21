@@ -6,6 +6,7 @@ mod conservation_status_importer;
 mod specimen_importer;
 mod marker_importer;
 mod vernacular_importer;
+mod region_importer;
 // mod trace_importer;
 
 use std::time::{Instant, Duration};
