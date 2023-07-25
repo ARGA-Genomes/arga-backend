@@ -30,6 +30,12 @@ pub struct MarkerSummary {
     pub barcodes: i64,
 }
 
+#[derive(Debug, Queryable)]
+pub struct VernacularName {
+    pub name: String,
+    pub language: Option<String>,
+}
+
 
 #[derive(Clone)]
 pub struct SpeciesProvider {
@@ -37,6 +43,50 @@ pub struct SpeciesProvider {
 }
 
 impl SpeciesProvider {
+    /// Get taxonomic information for a specific species.
+    pub async fn taxonomy(&self, name_id: &Uuid) -> Result<Taxon, Error> {
+        use schema::taxa;
+        let mut conn = self.pool.get().await?;
+
+        let taxon = taxa::table
+            .filter(taxa::name_id.eq(name_id))
+            .first::<Taxon>(&mut conn)
+            .await?;
+
+        Ok(taxon)
+    }
+
+    pub async fn vernacular_names(&self, name_id: &Uuid) -> Result<Vec<VernacularName>, Error> {
+        use schema::{vernacular_names, name_vernacular_names};
+        let mut conn = self.pool.get().await?;
+
+        let names = name_vernacular_names::table
+            .inner_join(vernacular_names::table)
+            .select((vernacular_names::vernacular_name, vernacular_names::language))
+            .filter(name_vernacular_names::name_id.eq(name_id))
+            .load::<VernacularName>(&mut conn)
+            .await?;
+
+        Ok(names)
+    }
+
+    pub async fn synonyms(&self, name_id: &Uuid) -> Result<Vec<Taxon>, Error> {
+        use schema::{taxon_history, taxa};
+        let mut conn = self.pool.get().await?;
+
+        let (old_taxa, new_taxa) = diesel::alias!(taxa as old_taxa, taxa as new_taxa);
+
+        let synonyms = taxon_history::table
+            .inner_join(old_taxa.on(taxon_history::old_taxon_id.eq(old_taxa.field(taxa::id))))
+            .inner_join(new_taxa.on(taxon_history::new_taxon_id.eq(new_taxa.field(taxa::id))))
+            .filter(new_taxa.field(taxa::name_id).eq(name_id))
+            .select(old_taxa.fields(taxa::all_columns))
+            .load::<Taxon>(&mut conn)
+            .await?;
+
+        Ok(synonyms)
+    }
+
     pub async fn assembly_summary(&self, name_ids: &Vec<Uuid>) -> Result<Vec<AssemblySummary>, Error> {
         use schema::assemblies::dsl::*;
         let mut conn = self.pool.get().await?;

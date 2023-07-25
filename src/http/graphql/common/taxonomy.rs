@@ -1,7 +1,24 @@
-use async_graphql::SimpleObject;
+use async_graphql::{SimpleObject, Enum};
 use serde::{Serialize, Deserialize};
 
 use crate::database::models;
+use crate::database::species;
+
+
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
+pub struct VernacularName {
+    name: String,
+    language: Option<String>,
+}
+
+impl From<species::VernacularName> for VernacularName {
+    fn from(value: species::VernacularName) -> Self {
+        Self {
+            name: value.name,
+            language: value.language,
+        }
+    }
+}
 
 
 /// Taxonomic information of a species.
@@ -12,7 +29,9 @@ pub struct Taxonomy {
     /// The species name without authors
     pub canonical_name: Option<String>,
     /// The species name authority
-    pub authorship: Option<String>,
+    pub authority: Option<String>,
+    /// The taxonomic status of the species
+    pub status: TaxonomicStatus,
 
     pub kingdom: Option<String>,
     pub phylum: Option<String>,
@@ -25,6 +44,7 @@ pub struct Taxonomy {
 
     /// Renamed taxonomy for the same species
     pub synonyms: Vec<Taxonomy>,
+    pub vernacular_names: Vec<VernacularName>,
 }
 
 impl From<models::Taxon> for Taxonomy {
@@ -33,7 +53,8 @@ impl From<models::Taxon> for Taxonomy {
             vernacular_group: derive_vernacular_group(&value),
             scientific_name: value.scientific_name,
             canonical_name: value.canonical_name,
-            authorship: value.species_authority,
+            authority: value.species_authority,
+            status: value.status.into(),
             kingdom: value.kingdom,
             phylum: value.phylum,
             class: value.class,
@@ -41,7 +62,37 @@ impl From<models::Taxon> for Taxonomy {
             family: value.family,
             genus: value.genus,
             synonyms: vec![],
+            vernacular_names: vec![],
         }
+    }
+}
+
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
+pub enum TaxonomicStatus {
+    Valid,
+    Undescribed,
+    SpeciesInquirenda,
+    Hybrid,
+    Synonym,
+    Invalid,
+}
+
+impl From<models::TaxonomicStatus> for TaxonomicStatus {
+    fn from(value: models::TaxonomicStatus) -> Self {
+        match value {
+            models::TaxonomicStatus::Valid => TaxonomicStatus::Valid,
+            models::TaxonomicStatus::Undescribed => TaxonomicStatus::Undescribed,
+            models::TaxonomicStatus::SpeciesInquirenda => TaxonomicStatus::SpeciesInquirenda,
+            models::TaxonomicStatus::Hybrid => TaxonomicStatus::Hybrid,
+            models::TaxonomicStatus::Synonym => TaxonomicStatus::Synonym,
+            models::TaxonomicStatus::Invalid => TaxonomicStatus::Invalid,
+        }
+    }
+}
+
+impl Default for TaxonomicStatus {
+    fn default() -> Self {
+        TaxonomicStatus::Invalid
     }
 }
 

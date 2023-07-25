@@ -58,7 +58,12 @@ impl Species {
     #[instrument(skip(self, ctx))]
     async fn taxonomy(&self, ctx: &Context<'_>) -> Result<Taxonomy, Error> {
         let state = ctx.data::<State>().unwrap();
-        let taxonomy = state.database.taxonomy(&self.name).await?;
+        let synonyms = state.database.species.synonyms(&self.name.id).await?;
+        let vernacular_names = state.database.species.vernacular_names(&self.name.id).await?;
+
+        let mut taxonomy: Taxonomy = state.database.species.taxonomy(&self.name.id).await?.into();
+        taxonomy.synonyms = synonyms.into_iter().map(|s| s.into()).collect();
+        taxonomy.vernacular_names = vernacular_names.into_iter().map(|s| s.into()).collect();
 
         Ok(taxonomy)
     }
