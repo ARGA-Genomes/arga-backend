@@ -5,6 +5,7 @@ use tracing::{info, instrument};
 
 use crate::database::schema;
 use crate::database::models::{Job, JobStatus};
+use crate::workers::threaded_job::ThreadedJob;
 
 use super::taxa_importer::TaxaImporter;
 use super::synonym_importer::SynonymImporter;
@@ -141,6 +142,7 @@ pub struct Allocator {
     specimen_importer: ActorOwn<SpecimenImporter>,
     marker_importer: ActorOwn<MarkerImporter>,
     region_importer: ActorOwn<RegionImporter>,
+    threaded_job: ActorOwn<ThreadedJob>,
 }
 
 impl Allocator {
@@ -163,6 +165,7 @@ impl Allocator {
             specimen_importer: actor!(cx, SpecimenImporter::init(), ret_nop!()),
             marker_importer: actor!(cx, MarkerImporter::init(), ret_nop!()),
             region_importer: actor!(cx, RegionImporter::init(), ret_nop!()),
+            threaded_job: actor!(cx, ThreadedJob::init(), ret_nop!()),
         })
     }
 
@@ -180,6 +183,7 @@ impl Allocator {
                 "import_specimen" => ret_some_to!([self.specimen_importer], import() as (Job)),
                 "import_marker" => ret_some_to!([self.marker_importer], import() as (Job)),
                 "import_region" => ret_some_to!([self.region_importer], import() as (Job)),
+                "import_collection" => ret_some_to!([self.threaded_job], run() as (Job)),
                 _ => panic!("Unknown job worker: {}", job.worker)
             };
 

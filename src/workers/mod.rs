@@ -1,4 +1,11 @@
+mod error;
+mod extractors;
+mod matchers;
+mod importers;
+
 mod manager;
+mod threaded_job;
+
 mod tokio_bridge;
 mod taxa_importer;
 mod synonym_importer;

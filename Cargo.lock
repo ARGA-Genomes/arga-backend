@@ -146,6 +146,7 @@ dependencies = [
  "heck",
  "hyper",
  "itertools 0.11.0",
+ "latlon",
  "opentelemetry",
  "opentelemetry-otlp",
  "polars",
@@ -2009,6 +2010,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49409df3e3bf0856b916e2ceaca09ee28e6871cf7d9ce97a692cacfdb2a25a47"
 dependencies = [
  "wasm-bindgen",
+]
+
+[[package]]
+name = "latlon"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d42b0e12043f68bfbe58fa335878a1504eb7ee741099e28f0c4eee28c515fbf0"
+dependencies = [
+ "geo-types",
+ "lazy_static",
+ "regex",
 ]
 
 [[package]]
