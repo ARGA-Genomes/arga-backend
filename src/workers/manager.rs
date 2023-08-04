@@ -183,6 +183,8 @@ impl Allocator {
                 "import_specimen" => ret_some_to!([self.specimen_importer], import() as (Job)),
                 "import_marker" => ret_some_to!([self.marker_importer], import() as (Job)),
                 "import_region" => ret_some_to!([self.region_importer], import() as (Job)),
+
+                "import_taxon" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_collection" => ret_some_to!([self.threaded_job], run() as (Job)),
                 _ => panic!("Unknown job worker: {}", job.worker)
             };

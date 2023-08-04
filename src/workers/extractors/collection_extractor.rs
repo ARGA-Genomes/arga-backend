@@ -96,12 +96,12 @@ pub struct CollectionExtract {
 }
 
 
-// Extract collection events and other related data from a CSV file
-//
-// Every collection event by it's very action must have a specimen associated with
-// it and a parent event tracking common event metadata. A specimen can be further
-// used by other events but a collection event will *always* create a new specimen
-// since it is the _collection_ of a particular specimen that it describes.
+/// Extract collection events and other related data from a CSV file
+///
+/// Every collection event by it's very action must have a specimen associated with
+/// it and a parent event tracking common event metadata. A specimen can be further
+/// used by other events but a collection event will *always* create a new specimen
+/// since it is the _collection_ of a particular specimen that it describes.
 pub fn extract(path: PathBuf, list: &NameList, pool: &mut PgPool) -> Result<CollectionExtract, Error> {
     let mut records: Vec<Record> = Vec::new();
     for row in csv::Reader::from_path(&path)?.deserialize() {

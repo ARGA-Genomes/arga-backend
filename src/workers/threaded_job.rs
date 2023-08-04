@@ -9,7 +9,7 @@ use tracing::{info, error};
 use crate::database::models::Job;
 
 use super::error::Error;
-use super::importers::collection_importer;
+use super::importers::{collection_importer, taxon_importer};
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -19,6 +19,7 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 struct ImportJobData {
     name: String,
     description: Option<String>,
+    url: Option<String>,
     tmp_name: String,
 }
 
@@ -79,6 +80,10 @@ impl ThreadedJob {
         let path = Path::new(&tmp_path).join(&data.tmp_name);
 
         match worker {
+            "import_taxon" => {
+                let source = taxon_importer::get_or_create_dataset(&data.name, &data.description, &data.url, pool)?;
+                taxon_importer::import(path, &source, pool)?;
+            }
             "import_collection" => {
                 let list = collection_importer::create_dataset(&data.name, &data.description, pool)?;
                 collection_importer::import(path, &list, pool)?;
