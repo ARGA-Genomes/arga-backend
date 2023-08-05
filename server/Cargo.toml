@@ -1,0 +1,42 @@
+[package]
+name = "arga-backend"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+arga-core = { path = "../core" }
+
+anyhow = "1.0.68"
+argon2 = { version = "0.5.0", features = ["zeroize"] }
+async-graphql = { version = "5.0.5", features = ["tracing", "tokio"] }
+async-graphql-axum = "5.0.5"
+async-trait = "0.1.64"
+axum = { version = "0.6.4", features = ["macros", "multipart"] }
+axum-login = "0.4.1"
+chrono = { version = "0.4.24", features = ["serde"] }
+diesel = { version = "2.1.0", features = ["uuid", "serde_json", "chrono", "postgres", "r2d2"] }
+diesel-async = { version = "0.3.2", features = ["postgres", "bb8"] }
+dotenvy = "0.15.6"
+eyre = "0.6.8"
+futures = "0.3.26"
+geo-types = "0.7.9"
+geojson = "0.24.0"
+geozero = { version = "0.9.9", features = ["with-postgis-diesel", "with-geojson", "postgres-types", "with-postgis-postgres"] }
+hyper = "0.14.23"
+opentelemetry = { version = "0.18.0", features = ["metrics", "rt-tokio"] }
+opentelemetry-otlp = { version = "0.11.0", features = ["metrics"] }
+reqwest = { version = "0.11.14", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tantivy = "0.19.2"
+thiserror = "1.0.38"
+tokio = { version = "1.24.2", features = ["full"] }
+tokio-util = { version = "0.7.7", features = ["io"] }
+tower-http = { version = "0.3.5", features = ["cors", "trace", "limit"] }
+tracing = "0.1.37"
+tracing-opentelemetry = { version = "0.18.0", features = ["metrics"] }
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+url = "2.3.1"
+uuid = { version = "1.2.2", features = ["serde", "v4"] }

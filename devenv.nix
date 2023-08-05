@@ -6,6 +6,7 @@
     protobuf
     diesel-cli
     openssl
+    cargo-udeps
   ];
 
   languages.rust.enable = true;
