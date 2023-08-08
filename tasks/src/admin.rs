@@ -2,11 +2,11 @@ use argon2::{Argon2, PasswordHasher};
 use argon2::password_hash::SaltString;
 use argon2::password_hash::rand_core::OsRng;
 
-use axum_login::secrecy::{SecretString, ExposeSecret};
-use diesel::prelude::*;
-use diesel_async::RunQueryDsl;
+use diesel::*;
+use diesel::RunQueryDsl;
+use diesel::r2d2::{ConnectionManager, Pool};
 
-use arga_backend::database::{schema, Database};
+use arga_core::schema;
 
 
 /// Create a new admin user
@@ -14,18 +14,17 @@ use arga_backend::database::{schema, Database};
 /// Admin users can access the admin curation frontend but other than that
 /// its not used within the rest of the backend since the vast majority is
 /// open access
-pub async fn create_admin(name: &str, email: &str, password: &str) {
-    let password = SecretString::new(password.to_string());
-
+pub fn create_admin(name: &str, email: &str, password: &str) {
     use schema::users::dsl as dsl;
 
-    let db_host = arga_backend::database::get_database_url();
-    let database = Database::connect(&db_host).await.expect("Failed to connect to the database");
-    let mut pool = database.pool.get().await.unwrap();
+    let url = arga_core::get_database_url();
+    let manager = ConnectionManager::<PgConnection>::new(url);
+    let pool = Pool::builder().build(manager).expect("Could not build connection pool");
+    let mut conn = pool.get().expect("Could not checkout connection");
 
     let argon2 = Argon2::default();
     let salt = SaltString::generate(&mut OsRng);
-    let hash = argon2.hash_password(&password.expose_secret().as_bytes(), &salt).unwrap().to_string();
+    let hash = argon2.hash_password(&password.as_bytes(), &salt).unwrap().to_string();
 
     diesel::insert_into(dsl::users)
         .values((
@@ -35,6 +34,6 @@ pub async fn create_admin(name: &str, email: &str, password: &str) {
             dsl::password_salt.eq(salt.to_string()),
             dsl::user_role.eq("admin"),
         ))
-        .execute(&mut pool)
-        .await.unwrap();
+        .execute(&mut conn)
+        .expect("Failed to insert admin user");
 }

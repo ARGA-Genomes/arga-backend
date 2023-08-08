@@ -1,10 +1,11 @@
-use diesel::{Insertable, FromSqlRow, AsExpression};
+use diesel::*;
+use diesel::RunQueryDsl;
 use diesel::pg::{Pg, sql_types};
 use diesel::serialize::ToSql;
 use diesel::deserialize::FromSql;
-use diesel_async::RunQueryDsl;
+use diesel::r2d2::{ConnectionManager, Pool};
 
-use arga_backend::database::{schema, Database};
+use arga_core::schema;
 use serde::{Deserialize, Serialize};
 use tracing::info;
 use uuid::Uuid;
@@ -41,12 +42,13 @@ impl FromSql<sql_types::Jsonb, Pg> for ImportJobData {
 
 
 /// Queue an import job for a dataset.
-pub async fn import(worker: &str, name: &str, path: &str) -> Result<(), anyhow::Error> {
+pub fn import(worker: &str, name: &str, path: &str) {
     use schema::jobs;
 
-    let db_host = arga_backend::database::get_database_url();
-    let database = Database::connect(&db_host).await?;
-    let mut conn = database.pool.get().await?;
+    let url = arga_core::get_database_url();
+    let manager = ConnectionManager::<PgConnection>::new(url);
+    let pool = Pool::builder().build(manager).expect("Could not build connection pool");
+    let mut conn = pool.get().expect("Could not checkout connection");
 
     let import_data = ImportJobData {
         name: name.to_string(),
@@ -61,8 +63,7 @@ pub async fn import(worker: &str, name: &str, path: &str) -> Result<(), anyhow::
         })
         .returning(jobs::id)
         .get_result::<Uuid>(&mut conn)
-        .await?;
+        .unwrap();
 
     info!(?id, name, worker, path, "Job queued");
-    Ok(())
 }

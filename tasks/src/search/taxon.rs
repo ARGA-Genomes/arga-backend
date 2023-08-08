@@ -1,15 +1,18 @@
 use serde::Deserialize;
 use serde::Serialize;
 
-use diesel::prelude::*;
-use diesel::QueryDsl;
-use diesel_async::RunQueryDsl;
+use diesel::*;
+use diesel::RunQueryDsl;
+use diesel::r2d2::{ConnectionManager, Pool};
 
 use uuid::Uuid;
+use anyhow::Error;
 
-use crate::database::models::TaxonomicStatus;
-use crate::database::{schema, schema_gnl, Database};
-use crate::http::Error;
+use arga_core::models::TaxonomicStatus;
+use arga_core::{schema, schema_gnl};
+
+
+type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
 #[derive(Debug, Queryable, Serialize, Deserialize)]
@@ -30,9 +33,9 @@ pub struct SpeciesDoc {
     pub genus: Option<String>,
 }
 
-pub async fn get_species(db: &Database) -> Result<Vec<SpeciesDoc>, Error> {
+pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
     use schema_gnl::{species, synonyms, species_vernacular_names};
-    let mut conn = db.pool.get().await.unwrap();
+    let mut conn = pool.get()?;
 
     let docs = species::table
         .left_join(synonyms::table)
@@ -54,16 +57,15 @@ pub async fn get_species(db: &Database) -> Result<Vec<SpeciesDoc>, Error> {
             species::genus,
         ))
         .filter(species::status.eq_any(&[TaxonomicStatus::Valid]))
-        .load::<SpeciesDoc>(&mut conn)
-        .await?;
+        .load::<SpeciesDoc>(&mut conn)?;
 
     Ok(docs)
 }
 
-pub async fn get_undescribed_species(db: &Database) -> Result<Vec<SpeciesDoc>, Error> {
+pub fn get_undescribed_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
     use schema::taxa;
     use schema_gnl::{species, synonyms, species_vernacular_names};
-    let mut conn = db.pool.get().await.unwrap();
+    let mut conn = pool.get()?;
 
     let docs = taxa::table
         .left_join(species::table)
@@ -86,8 +88,7 @@ pub async fn get_undescribed_species(db: &Database) -> Result<Vec<SpeciesDoc>, E
             taxa::genus,
         ))
         .filter(taxa::status.eq_any(&[TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
-        .load::<SpeciesDoc>(&mut conn)
-        .await?;
+        .load::<SpeciesDoc>(&mut conn)?;
 
     Ok(docs)
 }

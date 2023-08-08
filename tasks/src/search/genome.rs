@@ -1,15 +1,18 @@
 use serde::Deserialize;
 use serde::Serialize;
 
-use diesel::prelude::*;
-use diesel::QueryDsl;
-use diesel_async::RunQueryDsl;
+use diesel::*;
+use diesel::RunQueryDsl;
+use diesel::r2d2::{ConnectionManager, Pool};
 
 use uuid::Uuid;
+use anyhow::Error;
 
-use crate::database::models::TaxonomicStatus;
-use crate::database::{schema, Database};
-use crate::http::Error;
+use arga_core::models::TaxonomicStatus;
+use arga_core::schema;
+
+
+type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
 #[derive(Debug, Queryable, Serialize, Deserialize)]
@@ -25,9 +28,9 @@ pub struct GenomeDoc {
     pub release_date: Option<String>,
 }
 
-pub async fn get_genomes(db: &Database) -> Result<Vec<GenomeDoc>, Error> {
+pub fn get_genomes(pool: &PgPool) -> Result<Vec<GenomeDoc>, Error> {
     use schema::{assemblies, names, taxa};
-    let mut conn = db.pool.get().await.unwrap();
+    let mut conn = pool.get()?;
 
     let docs = names::table
         .inner_join(taxa::table)
@@ -43,8 +46,7 @@ pub async fn get_genomes(db: &Database) -> Result<Vec<GenomeDoc>, Error> {
             assemblies::event_date,
         ))
         .filter(taxa::status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
-        .load::<GenomeDoc>(&mut conn)
-        .await?;
+        .load::<GenomeDoc>(&mut conn)?;
 
     Ok(docs)
 }

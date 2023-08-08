@@ -1,3 +1,5 @@
+use clap::Parser;
+
 pub mod admin;
 pub mod dataset;
 pub mod search;
@@ -8,7 +10,7 @@ pub mod search;
 #[command(author, version, about, long_about = None)]
 struct Cli {
    #[command(subcommand)]
-   command: Option<Commands>,
+   command: Commands,
 }
 
 #[derive(clap::Subcommand)]
@@ -39,18 +41,14 @@ enum Commands {
 }
 
 
-#[tokio::main]
-async fn main() -> Result<(), anyhow::Error> {
-    dotenv().ok();
+fn main() {
+    dotenvy::dotenv().ok();
 
     let cli = Cli::parse();
 
     match &cli.command {
-        Some(Commands::CreateAdmin { name, email, password }) => tasks::admin::create_admin(name, email, password).await,
-        Some(Commands::Search(command)) => search::process_command(command).await,
-        Some(Commands::Dataset { worker, name, path }) => tasks::dataset::import(worker, name, path).await?,
-        None => serve().await,
+        Commands::CreateAdmin { name, email, password } => admin::create_admin(name, email, password),
+        Commands::Search(command) => search::process_command(command),
+        Commands::Dataset { worker, name, path } => dataset::import(worker, name, path),
     }
-
-    Ok(())
 }
