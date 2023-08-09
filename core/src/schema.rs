@@ -2,10 +2,6 @@
 
 pub mod sql_types {
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "bushfire_type"))]
-    pub struct BushfireType;
-
-    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "geometry"))]
     pub struct Geometry;
 
@@ -96,41 +92,6 @@ diesel::table! {
         title -> Nullable<Varchar>,
         owner -> Nullable<Varchar>,
         attributes -> Nullable<Jsonb>,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::BushfireType;
-    use super::sql_types::Geometry;
-
-    bushfires (id) {
-        id -> Int8,
-        fire_type -> BushfireType,
-        state -> Varchar,
-        ignition_date -> Nullable<Timestamptz>,
-        capture_method -> Nullable<Varchar>,
-        area_ha -> Nullable<Float8>,
-        perimeter_km -> Nullable<Float8>,
-        geom -> Nullable<Geometry>,
-    }
-}
-
-diesel::table! {
-    bushfires_intersection (id) {
-        id -> Int8,
-        overlay_id -> Int8,
-        bushfire_id -> Int8,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::Geometry;
-
-    bushfires_overlay (id) {
-        id -> Int8,
-        geom -> Nullable<Geometry>,
     }
 }
 
@@ -488,40 +449,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    user_taxa (id) {
-        id -> Uuid,
-        taxa_lists_id -> Uuid,
-        name_id -> Uuid,
-        scientific_name -> Nullable<Varchar>,
-        scientific_name_authorship -> Nullable<Varchar>,
-        canonical_name -> Nullable<Varchar>,
-        specific_epithet -> Nullable<Varchar>,
-        infraspecific_epithet -> Nullable<Varchar>,
-        taxon_rank -> Nullable<Text>,
-        name_according_to -> Nullable<Text>,
-        name_published_in -> Nullable<Text>,
-        taxonomic_status -> Nullable<Varchar>,
-        taxon_remarks -> Nullable<Text>,
-        kingdom -> Nullable<Varchar>,
-        phylum -> Nullable<Varchar>,
-        class -> Nullable<Varchar>,
-        order -> Nullable<Varchar>,
-        family -> Nullable<Varchar>,
-        genus -> Nullable<Varchar>,
-    }
-}
-
-diesel::table! {
-    user_taxa_lists (id) {
-        id -> Uuid,
-        #[max_length = 255]
-        name -> Varchar,
-        description -> Nullable<Text>,
-        priority -> Int4,
-    }
-}
-
-diesel::table! {
     users (id) {
         id -> Uuid,
         #[max_length = 255]
@@ -548,8 +475,6 @@ diesel::table! {
 diesel::joinable!(assemblies -> names (name_id));
 diesel::joinable!(assembly_stats -> assemblies (assembly_id));
 diesel::joinable!(biosamples -> names (name_id));
-diesel::joinable!(bushfires_intersection -> bushfires (bushfire_id));
-diesel::joinable!(bushfires_intersection -> bushfires_overlay (overlay_id));
 diesel::joinable!(collection_events -> events (event_id));
 diesel::joinable!(collection_events -> organisms (organism_id));
 diesel::joinable!(collection_events -> specimens (specimen_id));
@@ -572,16 +497,11 @@ diesel::joinable!(taxa -> taxon_source (source));
 diesel::joinable!(taxon_photos -> names (name_id));
 diesel::joinable!(taxon_remarks -> taxa (taxon_id));
 diesel::joinable!(trace_files -> names (name_id));
-diesel::joinable!(user_taxa -> names (name_id));
-diesel::joinable!(user_taxa -> user_taxa_lists (taxa_lists_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     assemblies,
     assembly_stats,
     biosamples,
-    bushfires,
-    bushfires_intersection,
-    bushfires_overlay,
     collection_events,
     conservation_statuses,
     events,
@@ -604,8 +524,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     taxon_remarks,
     taxon_source,
     trace_files,
-    user_taxa,
-    user_taxa_lists,
     users,
     vernacular_names,
 );

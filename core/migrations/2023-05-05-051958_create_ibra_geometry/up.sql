@@ -1,3 +1,5 @@
+CREATE EXTENSION postgis;
+
 CREATE TABLE ibra (
     ogc_fid integer PRIMARY KEY,
     reg_code_7 character varying,

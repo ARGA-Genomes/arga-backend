@@ -1,1 +1,0 @@
-DROP MATERIALIZED VIEW ranked_taxa;

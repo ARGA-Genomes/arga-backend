@@ -17,4 +17,6 @@
   services.postgres.settings = {
     max_wal_size = "10GB";
   };
+
+  dotenv.disableHint = true;
 }
