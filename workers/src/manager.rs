@@ -13,7 +13,6 @@ use super::vernacular_importer::VernacularImporter;
 use super::conservation_status_importer::ConservationStatusImporter;
 use super::specimen_importer::SpecimenImporter;
 use super::marker_importer::MarkerImporter;
-use super::region_importer::RegionImporter;
 use super::tokio_bridge::TokioHandle;
 
 
@@ -141,7 +140,6 @@ pub struct Allocator {
     conservation_status_importer: ActorOwn<ConservationStatusImporter>,
     specimen_importer: ActorOwn<SpecimenImporter>,
     marker_importer: ActorOwn<MarkerImporter>,
-    region_importer: ActorOwn<RegionImporter>,
     threaded_job: ActorOwn<ThreadedJob>,
 }
 
@@ -164,7 +162,6 @@ impl Allocator {
             conservation_status_importer: actor!(cx, ConservationStatusImporter::init(), ret_nop!()),
             specimen_importer: actor!(cx, SpecimenImporter::init(), ret_nop!()),
             marker_importer: actor!(cx, MarkerImporter::init(), ret_nop!()),
-            region_importer: actor!(cx, RegionImporter::init(), ret_nop!()),
             threaded_job: actor!(cx, ThreadedJob::init(), ret_nop!()),
         })
     }
@@ -182,9 +179,9 @@ impl Allocator {
                 "import_conservation_status" => ret_some_to!([self.conservation_status_importer], import() as (Job)),
                 "import_specimen" => ret_some_to!([self.specimen_importer], import() as (Job)),
                 "import_marker" => ret_some_to!([self.marker_importer], import() as (Job)),
-                "import_region" => ret_some_to!([self.region_importer], import() as (Job)),
 
                 "import_taxon" => ret_some_to!([self.threaded_job], run() as (Job)),
+                "import_region" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_collection" => ret_some_to!([self.threaded_job], run() as (Job)),
                 _ => panic!("Unknown job worker: {}", job.worker)
             };

@@ -18,4 +18,7 @@ pub enum Error {
 pub enum ParseError {
     #[error("failed to parse coordinates: {0}")]
     Coordinates(String),
+
+    #[error("invalid value: {0}")]
+    InvalidValue(String),
 }

@@ -288,6 +288,8 @@ pub struct CommonName {
 pub enum RegionType {
     Ibra,
     Imcra,
+    State,
+    DrainageBasin,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -295,6 +297,7 @@ pub enum RegionType {
 pub struct Regions {
     pub id: Uuid,
     pub name_id: Uuid,
+    pub list_id: Uuid,
     pub region_type: RegionType,
     pub values: Vec<String>,
 }

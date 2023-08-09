@@ -326,6 +326,7 @@ diesel::table! {
         name_id -> Uuid,
         region_type -> RegionType,
         values -> Array<Nullable<Text>>,
+        list_id -> Uuid,
     }
 }
 
@@ -558,6 +559,7 @@ diesel::joinable!(markers -> names (name_id));
 diesel::joinable!(name_vernacular_names -> names (name_id));
 diesel::joinable!(name_vernacular_names -> vernacular_names (vernacular_name_id));
 diesel::joinable!(organisms -> names (name_id));
+diesel::joinable!(regions -> name_lists (list_id));
 diesel::joinable!(regions -> names (name_id));
 diesel::joinable!(sequencing_events -> events (event_id));
 diesel::joinable!(sequencing_events -> organisms (organism_id));
