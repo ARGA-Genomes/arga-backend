@@ -40,7 +40,8 @@ pub fn match_names(records: &Vec<NameRecord>, pool: &mut PgPool) -> HashMap<Stri
 
         let results = names::table
             .select((names::id, names::scientific_name, names::canonical_name))
-            .filter(names::scientific_name.eq_any(all_names))
+            .filter(names::scientific_name.eq_any(&all_names))
+            .or_filter(names::canonical_name.eq_any(&all_names))
             .load::<NameMatch>(&mut conn)?;
 
         Ok::<Vec<NameMatch>, Error>(results)

@@ -9,7 +9,12 @@ use tracing::{info, error};
 use arga_core::models::Job;
 
 use super::error::Error;
-use super::importers::{collection_importer, taxon_importer, region_importer};
+use super::importers::{
+    collection_importer,
+    taxon_importer,
+    region_importer,
+    conservation_status_importer
+};
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -87,6 +92,10 @@ impl ThreadedJob {
             "import_region" => {
                 let source = region_importer::get_or_create_dataset(&data.name, &data.description, pool)?;
                 region_importer::import(path, &source, pool)?;
+            }
+            "import_conservation_status" => {
+                let source = conservation_status_importer::get_or_create_dataset(&data.name, &data.description, pool)?;
+                conservation_status_importer::import(path, &source, pool)?;
             }
             "import_collection" => {
                 let list = collection_importer::create_dataset(&data.name, &data.description, pool)?;
