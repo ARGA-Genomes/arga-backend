@@ -43,9 +43,7 @@ impl GetListNames for Database {
 
     #[instrument(skip(self))]
     async fn list_names(&self, list: &NameList, filters: &Filters, pagination: &Pagination) -> Result<Vec<Name>, Self::Error> {
-        use schema::names;
-        use schema::user_taxa as taxa;
-        use schema::conservation_statuses;
+        use schema::{names, taxa, conservation_statuses};
         let mut conn = self.pool.get().await?;
 
         let offset = pagination.page_size * (pagination.page - 1);
@@ -108,9 +106,7 @@ impl GetListStats for Database {
     type Error = Error;
 
     async fn list_stats(&self, list: &NameList, filters: &Filters) -> Result<ListStats, Self::Error> {
-        use schema::names;
-        use schema::user_taxa as taxa;
-        use schema::conservation_statuses;
+        use schema::{names, taxa, conservation_statuses};
         let mut conn = self.pool.get().await?;
 
         let mut query = conservation_statuses::table

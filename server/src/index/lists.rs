@@ -2,7 +2,7 @@ use async_graphql::{SimpleObject, InputObject};
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 
-use crate::database::models::{NameList, Name, TaxonPhoto, UserTaxon};
+use crate::database::models::{NameList, Name, TaxonPhoto, Taxon};
 
 
 #[derive(Debug)]
@@ -38,7 +38,7 @@ pub trait GetListNames {
 #[async_trait]
 pub trait GetListTaxa {
     type Error;
-    async fn list_taxa(&self, names: &Vec<Name>) -> Result<Vec<UserTaxon>, Self::Error>;
+    async fn list_taxa(&self, names: &Vec<Name>) -> Result<Vec<Taxon>, Self::Error>;
 }
 
 #[async_trait]
