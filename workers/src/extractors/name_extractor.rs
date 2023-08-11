@@ -20,7 +20,7 @@ struct Record {
 
 
 /// Extract names from a CSV file
-pub fn extract(path: PathBuf) -> Result<Vec<Name>, Error> {
+pub fn extract(path: &PathBuf) -> Result<Vec<Name>, Error> {
     let mut records: Vec<Record> = Vec::new();
     for row in csv::Reader::from_path(&path)?.deserialize() {
         records.push(row?);

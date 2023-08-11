@@ -8,7 +8,6 @@ use arga_core::models::{Job, JobStatus};
 
 use super::threaded_job::ThreadedJob;
 use super::taxa_importer::TaxaImporter;
-use super::synonym_importer::SynonymImporter;
 use super::specimen_importer::SpecimenImporter;
 use super::marker_importer::MarkerImporter;
 use super::tokio_bridge::TokioHandle;
@@ -133,7 +132,6 @@ pub struct Allocator {
     pool: Pool<AsyncPgConnection>,
 
     taxa_importer: ActorOwn<TaxaImporter>,
-    synonym_importer: ActorOwn<SynonymImporter>,
     specimen_importer: ActorOwn<SpecimenImporter>,
     marker_importer: ActorOwn<MarkerImporter>,
     threaded_job: ActorOwn<ThreadedJob>,
@@ -153,7 +151,6 @@ impl Allocator {
             pool: pool.unwrap(),
 
             taxa_importer: actor!(cx, TaxaImporter::init(), ret_nop!()),
-            synonym_importer: actor!(cx, SynonymImporter::init(), ret_nop!()),
             specimen_importer: actor!(cx, SpecimenImporter::init(), ret_nop!()),
             marker_importer: actor!(cx, MarkerImporter::init(), ret_nop!()),
             threaded_job: actor!(cx, ThreadedJob::init(), ret_nop!()),
@@ -168,11 +165,11 @@ impl Allocator {
 
             let ret = match job.worker.as_str() {
                 "import_csv" => ret_some_to!([self.taxa_importer], import() as (Job)),
-                "import_synonym" => ret_some_to!([self.synonym_importer], import() as (Job)),
                 "import_specimen" => ret_some_to!([self.specimen_importer], import() as (Job)),
                 "import_marker" => ret_some_to!([self.marker_importer], import() as (Job)),
 
                 "import_taxon" => ret_some_to!([self.threaded_job], run() as (Job)),
+                "import_synonym" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_vernacular" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_region" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_conservation_status" => ret_some_to!([self.threaded_job], run() as (Job)),

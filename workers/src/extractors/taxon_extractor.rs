@@ -83,7 +83,7 @@ impl From<Record> for NameRecord {
 
 
 /// Extract names and taxonomy from a CSV file
-pub fn extract(path: PathBuf, source: &TaxonSource, pool: &mut PgPool) -> Result<Vec<Taxon>, Error> {
+pub fn extract(path: &PathBuf, source: &TaxonSource, pool: &mut PgPool) -> Result<Vec<Taxon>, Error> {
     let mut records: Vec<Record> = Vec::new();
     for row in csv::Reader::from_path(&path)?.deserialize() {
         records.push(row?);

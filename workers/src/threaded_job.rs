@@ -8,12 +8,12 @@ use tracing::{info, error};
 
 use arga_core::models::Job;
 
-use crate::importers::vernacular_importer;
-
 use super::error::Error;
 use super::importers::{
     collection_importer,
     taxon_importer,
+    synonym_importer,
+    vernacular_importer,
     region_importer,
     conservation_status_importer
 };
@@ -90,6 +90,10 @@ impl ThreadedJob {
             "import_taxon" => {
                 let source = taxon_importer::get_or_create_dataset(&data.name, &data.description, &data.url, pool)?;
                 taxon_importer::import(path, &source, pool)?;
+            }
+            "import_synonym" => {
+                let source = taxon_importer::get_or_create_dataset(&data.name, &data.description, &data.url, pool)?;
+                synonym_importer::import(path, &source, pool)?;
             }
             "import_vernacular" => {
                 vernacular_importer::import(path, pool)?;

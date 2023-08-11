@@ -43,17 +43,17 @@ pub fn get_or_create_dataset(
 pub fn import(path: PathBuf, source: &TaxonSource, pool: &mut PgPool) -> Result<(), Error> {
     // we always want to extract and import the names completely first because
     // other extractors rely on using the matcher to retreive the associated name id
-    let names = name_extractor::extract(path.clone())?;
+    let names = name_extractor::extract(&path)?;
     import_names(&names, pool)?;
 
-    let taxa = taxon_extractor::extract(path, source, pool)?;
+    let taxa = taxon_extractor::extract(&path, source, pool)?;
     import_taxa(&taxa, pool)?;
 
     Ok(())
 }
 
 
-fn import_names(records: &Vec<Name>, pool: &mut PgPool) -> Result<(), Error> {
+pub fn import_names(records: &Vec<Name>, pool: &mut PgPool) -> Result<(), Error> {
     use schema::names;
 
     info!(total=records.len(), "Importing names");
@@ -76,7 +76,7 @@ fn import_names(records: &Vec<Name>, pool: &mut PgPool) -> Result<(), Error> {
 }
 
 
-fn import_taxa(records: &Vec<Taxon>, pool: &mut PgPool) -> Result<(), Error> {
+pub fn import_taxa(records: &Vec<Taxon>, pool: &mut PgPool) -> Result<(), Error> {
     use schema::taxa;
 
     info!(total=records.len(), "Importing taxa");
