@@ -11,7 +11,6 @@ mod taxa_importer;
 mod synonym_importer;
 mod specimen_importer;
 mod marker_importer;
-mod vernacular_importer;
 
 use std::time::{Instant, Duration};
 
