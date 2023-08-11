@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use arga_core::models::Name;
 use crate::error::Error;
-use crate::extractors::utils::extract_authority;
+use crate::extractors::utils::decompose_scientific_name;
 
 
 #[derive(Debug, Clone, Deserialize)]
@@ -38,7 +38,7 @@ fn extract_names(records: &Vec<Record>) -> Vec<Name> {
         // fallback to extracting the authority from the scientific name if a species value isn't present
         let species_authority = match &row.authority {
             Some(authority) => Some(authority.clone()),
-            None => extract_authority(&row.canonical_name, &Some(row.scientific_name.clone())),
+            None => decompose_scientific_name(&row.scientific_name).map(|v| v.authority)
         };
 
         Name {

@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 use arga_core::models::{TaxonSource, Taxon, TaxonomicStatus};
 use crate::error::Error;
-use crate::extractors::utils::extract_authority;
+use crate::extractors::utils::{extract_authority, decompose_scientific_name};
 use crate::matchers::name_matcher::{match_records, NameRecord, NameMatch};
 
 
@@ -105,22 +105,28 @@ fn extract_taxa(source: &TaxonSource, records: &MatchedRecords) -> Vec<Taxon> {
         let family_authority = extract_authority(&row.family, &row.family_full);
         let genus_authority = extract_authority(&row.genus, &row.genus_full);
 
-        // if genus isn't supplied try to extract it from the scientific name
+        // if certain fields making up a scientific name can't be found try
+        // to extract it from the scientific name
+        let decomposed = decompose_scientific_name(&row.scientific_name);
+
         let genus = match &row.genus {
             Some(genus) => Some(genus.clone()),
-            None => extract_genus(&row.scientific_name),
+            None => decomposed.clone().map(|v| v.genus),
         };
 
-        // if specific epithet isn't supplied try to extract it from the scientific name
         let specific_epithet = match &row.specific_epithet {
             Some(specific_epithet) => Some(specific_epithet.clone()),
-            None => extract_specific_epithet(&row.scientific_name),
+            None => decomposed.clone().map(|v| v.specific_epithet),
         };
 
-        // fallback to extracting the authority from the scientific name if a species value isn't present
+        let subspecific_epithet = match &row.subspecific_epithet {
+            Some(subspecific_epithet) => Some(subspecific_epithet.clone()),
+            None => decomposed.clone().and_then(|v| v.subspecific_epithet),
+        };
+
         let species_authority = match &row.species {
             Some(_) => extract_authority(&row.canonical_name, &row.species),
-            None => extract_authority(&row.canonical_name, &Some(row.scientific_name.clone())),
+            None => decomposed.map(|v| v.authority)
         };
 
         Taxon {
@@ -147,7 +153,7 @@ fn extract_taxa(source: &TaxonSource, records: &MatchedRecords) -> Vec<Taxon> {
             subfamily: row.subfamily.clone(),
             subtribe: row.subtribe.clone(),
             subgenus: row.subgenus.clone(),
-            subspecific_epithet: row.subspecific_epithet.clone(),
+            subspecific_epithet,
 
             superclass: row.superclass.clone(),
             superorder: row.superorder.clone(),

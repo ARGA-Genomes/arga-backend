@@ -28,3 +28,5 @@ rayon = "1.7.0"
 polars = { version = "0.29.0", features = ["lazy", "rows", "streaming", "parquet"] }
 stakker = { version = "0.2.6" }
 tokio = { version = "1.24.2", features = ["full"] }
+regex = "1.9.3"
+once_cell = "1.18.0"
