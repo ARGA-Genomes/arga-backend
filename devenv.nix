@@ -5,7 +5,6 @@
     rust-analyzer
     protobuf
     diesel-cli
-    openssl
     cargo-udeps
   ];
 

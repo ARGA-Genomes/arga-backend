@@ -114,6 +114,11 @@ fn extract_taxa(source: &TaxonSource, records: &MatchedRecords) -> Vec<Taxon> {
             None => decomposed.clone().map(|v| v.genus),
         };
 
+        let subgenus = match &row.subgenus {
+            Some(subgenus) => Some(subgenus.clone()),
+            None => decomposed.clone().and_then(|v| v.subgenus),
+        };
+
         let specific_epithet = match &row.specific_epithet {
             Some(specific_epithet) => Some(specific_epithet.clone()),
             None => decomposed.clone().map(|v| v.specific_epithet),
@@ -126,7 +131,12 @@ fn extract_taxa(source: &TaxonSource, records: &MatchedRecords) -> Vec<Taxon> {
 
         let species_authority = match &row.species {
             Some(_) => extract_authority(&row.canonical_name, &row.species),
-            None => decomposed.map(|v| v.authority)
+            None => decomposed.clone().map(|v| v.authority)
+        };
+
+        let canonical_name = match &row.canonical_name {
+            Some(canonical_name) => Some(canonical_name.clone()),
+            None => decomposed.map(|v| v.canonical_name())
         };
 
         Taxon {
@@ -136,7 +146,7 @@ fn extract_taxa(source: &TaxonSource, records: &MatchedRecords) -> Vec<Taxon> {
 
             status: str_to_taxonomic_status(&row.taxonomic_status),
             scientific_name: row.scientific_name.clone(),
-            canonical_name: row.canonical_name.clone(),
+            canonical_name,
 
             kingdom: row.kingdom.clone(),
             phylum: row.phylum.clone(),
@@ -152,7 +162,7 @@ fn extract_taxa(source: &TaxonSource, records: &MatchedRecords) -> Vec<Taxon> {
             suborder: row.suborder.clone(),
             subfamily: row.subfamily.clone(),
             subtribe: row.subtribe.clone(),
-            subgenus: row.subgenus.clone(),
+            subgenus,
             subspecific_epithet,
 
             superclass: row.superclass.clone(),
@@ -172,24 +182,6 @@ fn extract_taxa(source: &TaxonSource, records: &MatchedRecords) -> Vec<Taxon> {
 
     info!(taxa=taxa.len(), "Extracting taxa finished");
     taxa
-}
-
-
-fn extract_genus(scientific_name: &str) -> Option<String> {
-    match scientific_name.split_once(" ") {
-        Some((genus, _rest)) => Some(genus.to_string()),
-        None => None,
-    }
-}
-
-fn extract_specific_epithet(scientific_name: &str) -> Option<String> {
-    match scientific_name.split_once(" ") {
-        Some((_genus, rest)) => match rest.split_once(" ") {
-            Some((specific_epithet, _rest)) => Some(specific_epithet.to_string()),
-            None => None,
-        }
-        None => None,
-    }
 }
 
 

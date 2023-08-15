@@ -35,16 +35,24 @@ fn extract_names(records: &Vec<Record>) -> Vec<Name> {
     info!(total=records.len(), "Extracting names");
 
     let names = records.par_iter().map(|row| {
-        // fallback to extracting the authority from the scientific name if a species value isn't present
+        // if certain fields making up a scientific name can't be found try
+        // to extract it from the scientific name
+        let decomposed = decompose_scientific_name(&row.scientific_name);
+
         let species_authority = match &row.authority {
             Some(authority) => Some(authority.clone()),
-            None => decompose_scientific_name(&row.scientific_name).map(|v| v.authority)
+            None => decomposed.clone().map(|v| v.authority)
+        };
+
+        let canonical_name = match &row.canonical_name {
+            Some(canonical_name) => Some(canonical_name.clone()),
+            None => decomposed.map(|v| v.canonical_name())
         };
 
         Name {
             id: Uuid::new_v4(),
             scientific_name: row.scientific_name.clone(),
-            canonical_name: row.canonical_name.clone(),
+            canonical_name,
             authorship: species_authority,
         }
     }).collect::<Vec<Name>>();
