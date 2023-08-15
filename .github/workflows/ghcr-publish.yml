@@ -49,29 +49,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-
       - name: Log in to the GitHub container registry
         uses: redhat-actions/podman-login@v1
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v1
-
-      - name: Install rust-cache
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
 
       - name: Build container image
         id: build-image

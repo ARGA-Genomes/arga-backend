@@ -7,7 +7,7 @@ WORKDIR /usr/src/arga-backend
 ENV DATABASE_URL=postgres://localhost/arga
 CMD ["diesel", "migration", "run"]
 
-COPY ./migrations ./migrations
-COPY ./diesel.toml .
+COPY ./core/migrations ./migrations
+COPY ./core/diesel.toml .
 
 RUN cargo install diesel_cli --no-default-features --features "postgres"
