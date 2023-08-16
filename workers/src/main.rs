@@ -7,7 +7,6 @@ mod manager;
 mod threaded_job;
 
 mod tokio_bridge;
-mod taxa_importer;
 mod specimen_importer;
 mod marker_importer;
 

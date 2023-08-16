@@ -132,6 +132,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    datasets (id) {
+        id -> Uuid,
+        name -> Varchar,
+        description -> Nullable<Text>,
+        url -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     events (id) {
         id -> Uuid,
         parent_event_id -> Nullable<Uuid>,
@@ -195,6 +204,19 @@ diesel::table! {
         water_type -> Nullable<Varchar>,
         area_km2 -> Nullable<Float8>,
         wkb_geometry -> Nullable<Geometry>,
+    }
+}
+
+diesel::table! {
+    indigenous_knowledge (id) {
+        id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
+        name -> Varchar,
+        food_use -> Bool,
+        medicinal_use -> Bool,
+        cultural_connection -> Bool,
+        last_updated -> Timestamptz,
     }
 }
 
@@ -480,6 +502,8 @@ diesel::joinable!(collection_events -> organisms (organism_id));
 diesel::joinable!(collection_events -> specimens (specimen_id));
 diesel::joinable!(conservation_statuses -> name_lists (list_id));
 diesel::joinable!(conservation_statuses -> names (name_id));
+diesel::joinable!(indigenous_knowledge -> datasets (dataset_id));
+diesel::joinable!(indigenous_knowledge -> names (name_id));
 diesel::joinable!(markers -> names (name_id));
 diesel::joinable!(name_vernacular_names -> names (name_id));
 diesel::joinable!(name_vernacular_names -> vernacular_names (vernacular_name_id));
@@ -504,10 +528,12 @@ diesel::allow_tables_to_appear_in_same_query!(
     biosamples,
     collection_events,
     conservation_statuses,
+    datasets,
     events,
     ibra,
     imcra_mesoscale,
     imcra_provincial,
+    indigenous_knowledge,
     jobs,
     markers,
     name_lists,

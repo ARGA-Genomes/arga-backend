@@ -5,4 +5,5 @@ pub mod taxon_history_extractor;
 pub mod vernacular_extractor;
 pub mod region_extractor;
 pub mod conservation_status_extractor;
+pub mod indigenous_knowledge_extractor;
 pub mod collection_extractor;

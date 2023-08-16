@@ -7,6 +7,15 @@ use super::{schema, schema_gnl};
 
 
 #[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::datasets)]
+pub struct Dataset {
+    pub id: Uuid,
+    pub name: String,
+    pub description: Option<String>,
+    pub url: Option<String>,
+}
+
+#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::taxon_source)]
 pub struct TaxonSource {
     pub id: Uuid,
@@ -260,6 +269,20 @@ pub struct ConservationStatus {
     pub status: String,
     pub state: Option<String>,
     pub source: Option<String>,
+}
+
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::indigenous_knowledge)]
+pub struct IndigenousKnowledge {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub name: String,
+    pub food_use: bool,
+    pub medicinal_use: bool,
+    pub cultural_connection: bool,
+    pub last_updated: chrono::NaiveDateTime,
 }
 
 
