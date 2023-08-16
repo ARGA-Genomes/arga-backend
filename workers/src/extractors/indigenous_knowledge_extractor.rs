@@ -25,6 +25,7 @@ struct Record {
     medicinal_use: String,
     cultural_connection: String,
     last_updated: String,
+    source_url: Option<String>,
 }
 
 impl From<Record> for NameRecord {
@@ -65,6 +66,7 @@ fn extract_indigenous_knowledge(source: &Dataset, records: &MatchedRecords) -> R
             medicinal_use: row.medicinal_use.to_lowercase() == "true",
             cultural_connection: row.cultural_connection.to_lowercase() == "true",
             last_updated: chrono::NaiveDateTime::parse_from_str(&row.last_updated, "%Y-%m-%dT%H:%M:%SZ").unwrap(),
+            source_url: row.source_url.clone(),
         })
     }).collect();
     let records = records?;

@@ -217,6 +217,7 @@ diesel::table! {
         medicinal_use -> Bool,
         cultural_connection -> Bool,
         last_updated -> Timestamptz,
+        source_url -> Nullable<Varchar>,
     }
 }
 

@@ -8,5 +8,6 @@ CREATE TABLE indigenous_knowledge (
     medicinal_use boolean NOT NULL,
     cultural_connection boolean NOT NULL,
 
-    last_updated timestamp with time zone NOT NULL
+    last_updated timestamp with time zone NOT NULL,
+    source_url varchar
 );

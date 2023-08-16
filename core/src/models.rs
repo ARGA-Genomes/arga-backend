@@ -283,6 +283,7 @@ pub struct IndigenousKnowledge {
     pub medicinal_use: bool,
     pub cultural_connection: bool,
     pub last_updated: chrono::NaiveDateTime,
+    pub source_url: Option<String>,
 }
 
 
