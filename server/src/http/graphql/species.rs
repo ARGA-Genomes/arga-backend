@@ -1,7 +1,9 @@
+use arga_core::models::IndigenousKnowledge;
 use async_graphql::*;
 use tracing::instrument;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use uuid::Uuid;
 
 use crate::http::Error;
 use crate::http::Context as State;
@@ -34,6 +36,30 @@ pub struct Species {
     pub name: ArgaName,
     pub all_names: Vec<ArgaName>,
 }
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct IndigenousEcologicalTrait {
+    pub id: String,
+    pub name: String,
+    pub food_use: bool,
+    pub medicinal_use: bool,
+    pub cultural_connection: bool,
+    pub source_url: Option<String>,
+}
+
+impl From<IndigenousKnowledge> for IndigenousEcologicalTrait {
+    fn from(value: IndigenousKnowledge) -> Self {
+        Self {
+            id: value.id.to_string(),
+            name: value.name,
+            food_use: value.food_use,
+            medicinal_use: value.medicinal_use,
+            cultural_connection: value.cultural_connection,
+            source_url: value.source_url,
+        }
+    }
+}
+
 
 #[Object]
 impl Species {
@@ -138,6 +164,14 @@ impl Species {
         let markers = state.database.markers.species(&self.canonical_name).await?;
         let markers = markers.into_iter().map(|m| m.into()).collect();
         Ok(markers)
+    }
+
+    async fn indigenous_ecological_knowledge(&self, ctx: &Context<'_>) -> Result<Vec<IndigenousEcologicalTrait>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let name_ids: Vec<Uuid> = self.all_names.iter().map(|name| name.id.clone()).collect();
+        let records = state.database.species.indigenous_knowledge(&name_ids).await?;
+        let traits = records.into_iter().map(|r| r.into()).collect();
+        Ok(traits)
     }
 }
 

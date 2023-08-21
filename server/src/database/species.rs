@@ -1,3 +1,4 @@
+use arga_core::models::IndigenousKnowledge;
 use async_trait::async_trait;
 
 use diesel::prelude::*;
@@ -123,6 +124,18 @@ impl SpeciesProvider {
             .await?;
 
         Ok(summaries)
+    }
+
+    pub async fn indigenous_knowledge(&self, name_ids: &Vec<Uuid>) -> Result<Vec<IndigenousKnowledge>, Error> {
+        use schema::indigenous_knowledge::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let records = indigenous_knowledge
+            .filter(name_id.eq_any(name_ids))
+            .load::<IndigenousKnowledge>(&mut conn)
+            .await?;
+
+        Ok(records)
     }
 }
 
