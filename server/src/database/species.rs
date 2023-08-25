@@ -126,13 +126,17 @@ impl SpeciesProvider {
         Ok(summaries)
     }
 
-    pub async fn indigenous_knowledge(&self, name_ids: &Vec<Uuid>) -> Result<Vec<IndigenousKnowledge>, Error> {
+    pub async fn indigenous_knowledge(&self, name_ids: &Vec<Uuid>) -> Result<Vec<(IndigenousKnowledge, String)>, Error> {
+        use schema::datasets;
         use schema::indigenous_knowledge::dsl::*;
+
         let mut conn = self.pool.get().await?;
 
         let records = indigenous_knowledge
+            .inner_join(datasets::table)
+            .select((indigenous_knowledge::all_columns(), datasets::name))
             .filter(name_id.eq_any(name_ids))
-            .load::<IndigenousKnowledge>(&mut conn)
+            .load::<(IndigenousKnowledge, String)>(&mut conn)
             .await?;
 
         Ok(records)

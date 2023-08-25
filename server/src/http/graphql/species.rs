@@ -41,17 +41,20 @@ pub struct Species {
 pub struct IndigenousEcologicalTrait {
     pub id: String,
     pub name: String,
+    pub dataset_name: String,
     pub food_use: bool,
     pub medicinal_use: bool,
     pub cultural_connection: bool,
     pub source_url: Option<String>,
 }
 
-impl From<IndigenousKnowledge> for IndigenousEcologicalTrait {
-    fn from(value: IndigenousKnowledge) -> Self {
+impl From<(IndigenousKnowledge, String)> for IndigenousEcologicalTrait {
+    fn from(source: (IndigenousKnowledge, String)) -> Self {
+        let (value, dataset_name) = source;
         Self {
             id: value.id.to_string(),
             name: value.name,
+            dataset_name,
             food_use: value.food_use,
             medicinal_use: value.medicinal_use,
             cultural_connection: value.cultural_connection,
