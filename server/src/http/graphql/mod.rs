@@ -11,6 +11,7 @@ pub mod species;
 pub mod stats;
 pub mod maps;
 pub mod lists;
+pub mod datasets;
 pub mod traces;
 pub mod assembly;
 pub mod assemblies;
@@ -41,6 +42,7 @@ use self::species::Species;
 use self::stats::Statistics;
 use self::maps::Maps;
 use self::lists::{Lists, FilterItem};
+use self::datasets::Datasets;
 use self::extensions::ErrorLogging;
 use self::traces::Traces;
 use self::assembly::Assembly;
@@ -97,6 +99,11 @@ impl Query {
 
     async fn maps(&self, tolerance: Option<f32>) -> Maps {
         Maps { tolerance }
+    }
+
+    async fn datasets(&self, ctx: &Context<'_>, name: String) -> Result<Datasets, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Datasets::new(&state.database, &name).await
     }
 
     async fn lists(
