@@ -18,6 +18,13 @@ pub struct OverviewProvider {
 }
 
 impl OverviewProvider {
+    pub async fn all_species(&self) -> Result<Overview, Error> {
+        use schema::names::dsl::*;
+        let mut conn = self.pool.get().await?;
+        let total: i64 = names.count().get_result(&mut conn).await?;
+        Ok(Overview { total })
+    }
+
     pub async fn animals(&self) -> Result<Overview, Error> {
         use schema::{assemblies, names, taxa};
         let mut conn = self.pool.get().await?;
@@ -26,6 +33,40 @@ impl OverviewProvider {
             .inner_join(names::table)
             .inner_join(taxa::table.on(names::id.eq(taxa::name_id)))
             .filter(taxa::kingdom.eq("Animalia"))
+            .count()
+            .get_result(&mut conn)
+            .await?;
+
+        Ok(Overview {
+            total,
+        })
+    }
+
+    pub async fn plants(&self) -> Result<Overview, Error> {
+        use schema::{assemblies, names, taxa};
+        let mut conn = self.pool.get().await?;
+
+        let total: i64 = assemblies::table
+            .inner_join(names::table)
+            .inner_join(taxa::table.on(names::id.eq(taxa::name_id)))
+            .filter(taxa::kingdom.eq("Plantae"))
+            .count()
+            .get_result(&mut conn)
+            .await?;
+
+        Ok(Overview {
+            total,
+        })
+    }
+
+    pub async fn fungi(&self) -> Result<Overview, Error> {
+        use schema::{assemblies, names, taxa};
+        let mut conn = self.pool.get().await?;
+
+        let total: i64 = assemblies::table
+            .inner_join(names::table)
+            .inner_join(taxa::table.on(names::id.eq(taxa::name_id)))
+            .filter(taxa::kingdom.eq("Fungi"))
             .count()
             .get_result(&mut conn)
             .await?;

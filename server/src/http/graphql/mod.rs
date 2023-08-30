@@ -18,6 +18,7 @@ pub mod assemblies;
 pub mod specimen;
 pub mod marker;
 pub mod markers;
+pub mod taxa;
 pub mod extensions;
 
 use axum::{Extension, Router};
@@ -31,7 +32,7 @@ use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 
 
 use crate::http::Context as State;
-use crate::index::lists::{Filters, Pagination};
+use self::common::FilterItem;
 use self::overview::Overview;
 use self::search::Search;
 use self::class::Class;
@@ -41,7 +42,6 @@ use self::genus::Genus;
 use self::species::Species;
 use self::stats::Statistics;
 use self::maps::Maps;
-use self::lists::{Lists, FilterItem};
 use self::datasets::Datasets;
 use self::extensions::ErrorLogging;
 use self::traces::Traces;
@@ -50,6 +50,7 @@ use self::assemblies::Assemblies;
 use self::specimen::Specimen;
 use self::marker::Marker;
 use self::markers::Markers;
+use self::taxa::Taxa;
 
 use super::error::Error;
 
@@ -106,28 +107,6 @@ impl Query {
         Datasets::new(&state.database, &name).await
     }
 
-    async fn lists(
-        &self,
-        ctx: &Context<'_>,
-        name: String,
-        filters: Option<Vec<FilterItem>>,
-        pagination: Option<Pagination>,
-    ) -> Result<Lists, Error>
-    {
-        let state = ctx.data::<State>().unwrap();
-
-        let filters = match filters {
-            Some(items) => Filters {
-                items: items.into_iter().map(|item| item.into()).collect(),
-            },
-            None => Filters::default(),
-        };
-
-        let pagination = pagination.unwrap_or_else(|| Pagination { page: 1, page_size: 20 });
-
-        Lists::new(&state.database, name, filters, pagination).await
-    }
-
     async fn traces(&self, uuid: String) -> Traces {
         let uuid = uuid::Uuid::parse_str(&uuid).unwrap();
         Traces { uuid }
@@ -154,6 +133,10 @@ impl Query {
 
     async fn markers(&self) -> Markers {
         Markers {}
+    }
+
+    async fn taxa(&self, filters: Vec<FilterItem>) -> Taxa {
+        Taxa::new(filters)
     }
 }
 

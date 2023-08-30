@@ -27,7 +27,7 @@ impl AssemblyProvider {
     }
 
     /// Get all species that have an assembly record associated with its name
-    pub async fn species(&self, page: i64) -> PageResult<Uuid> {
+    pub async fn species(&self, page: i64, per_page: i64) -> PageResult<Uuid> {
         use schema::{taxa, names, assemblies};
         let mut conn = self.pool.get().await?;
 
@@ -39,6 +39,7 @@ impl AssemblyProvider {
             .group_by(names::id)
             .order_by(names::scientific_name)
             .paginate(page)
+            .per_page(per_page)
             .load::<(Uuid, i64)>(&mut conn)
             .await?;
 
