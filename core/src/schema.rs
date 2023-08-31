@@ -134,9 +134,17 @@ diesel::table! {
 diesel::table! {
     datasets (id) {
         id -> Uuid,
+        source_id -> Uuid,
+        global_id -> Varchar,
         name -> Varchar,
+        short_name -> Nullable<Varchar>,
         description -> Nullable<Text>,
         url -> Nullable<Varchar>,
+        citation -> Nullable<Varchar>,
+        license -> Nullable<Varchar>,
+        rights_holder -> Nullable<Varchar>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -346,6 +354,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    sources (id) {
+        id -> Uuid,
+        name -> Varchar,
+        author -> Varchar,
+        rights_holder -> Varchar,
+        access_rights -> Varchar,
+        license -> Varchar,
+    }
+}
+
+diesel::table! {
     specimens (id) {
         id -> Uuid,
         list_id -> Uuid,
@@ -503,6 +522,7 @@ diesel::joinable!(collection_events -> organisms (organism_id));
 diesel::joinable!(collection_events -> specimens (specimen_id));
 diesel::joinable!(conservation_statuses -> name_lists (list_id));
 diesel::joinable!(conservation_statuses -> names (name_id));
+diesel::joinable!(datasets -> sources (source_id));
 diesel::joinable!(indigenous_knowledge -> datasets (dataset_id));
 diesel::joinable!(indigenous_knowledge -> names (name_id));
 diesel::joinable!(markers -> names (name_id));
@@ -544,6 +564,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     regions,
     sequencing_events,
     sequencing_run_events,
+    sources,
     specimens,
     taxa,
     taxon_history,

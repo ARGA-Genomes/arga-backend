@@ -10,6 +10,8 @@ use arga_core::models::Job;
 
 use super::error::Error;
 use super::importers::{
+    source_importer,
+    dataset_importer,
     collection_importer,
     taxon_importer,
     synonym_importer,
@@ -88,6 +90,8 @@ impl ThreadedJob {
         let path = Path::new(&tmp_path).join(&data.tmp_name);
 
         match worker {
+            "import_source" => source_importer::import(path, pool)?,
+            "import_dataset" => dataset_importer::import(path, pool)?,
             "import_taxon" => {
                 let source = taxon_importer::get_or_create_dataset(&data.name, &data.description, &data.url, pool)?;
                 taxon_importer::import(path, &source, pool)?;
@@ -107,10 +111,7 @@ impl ThreadedJob {
                 let source = conservation_status_importer::get_or_create_dataset(&data.name, &data.description, pool)?;
                 conservation_status_importer::import(path, &source, pool)?;
             }
-            "import_indigenous_knowledge" => {
-                let source = indigenous_knowledge_importer::get_or_create_dataset(&data.name, &data.description, pool)?;
-                indigenous_knowledge_importer::import(path, &source, pool)?;
-            }
+            "import_indigenous_knowledge" => indigenous_knowledge_importer::import(path, pool)?,
             "import_collection" => {
                 let list = collection_importer::create_dataset(&data.name, &data.description, pool)?;
                 collection_importer::import(path, &list, pool)?;

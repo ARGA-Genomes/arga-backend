@@ -164,6 +164,8 @@ impl Allocator {
                 "import_specimen" => ret_some_to!([self.specimen_importer], import() as (Job)),
                 "import_marker" => ret_some_to!([self.marker_importer], import() as (Job)),
 
+                "import_source" => ret_some_to!([self.threaded_job], run() as (Job)),
+                "import_dataset" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_taxon" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_synonym" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_vernacular" => ret_some_to!([self.threaded_job], run() as (Job)),
