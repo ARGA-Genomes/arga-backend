@@ -17,7 +17,7 @@ pub struct Source {
     pub license: String,
 }
 
-#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[derive(Queryable, Insertable, Debug, Clone, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::datasets)]
 pub struct Dataset {
     pub id: Uuid,

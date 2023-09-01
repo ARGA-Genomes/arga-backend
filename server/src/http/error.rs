@@ -23,9 +23,8 @@ pub enum Error {
     #[error(transparent)]
     Solr(#[from] crate::index::providers::solr::Error),
 
-    // #[error("an error occurred with the database service")]
     #[error(transparent)]
-    Database(#[from] crate::database::Error),
+    Database(crate::database::Error),
 
     #[error(transparent)]
     SearchIndex(#[from] crate::index::providers::search::Error),
@@ -35,6 +34,17 @@ pub enum Error {
 
     #[error("upstream request timeout")]
     GatewayTimeout,
+}
+
+impl From<crate::database::Error> for Error {
+    fn from(err: crate::database::Error) -> Self {
+        // we want to treate not found errors a little differently so that we can
+        // log the resource attempting to load
+        match err {
+            crate::database::Error::NotFound(resource) => Error::NotFound(resource),
+            err => Error::Database(err),
+        }
+    }
 }
 
 

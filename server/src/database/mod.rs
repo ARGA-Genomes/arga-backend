@@ -35,10 +35,15 @@ pub type PgPool = Pool<AsyncPgConnection>;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("the record '{0}' could not found")]
+    NotFound(String),
+
     #[error(transparent)]
     Connection(#[from] diesel::result::Error),
+
     #[error(transparent)]
     Pool(#[from] diesel_async::pooled_connection::PoolError),
+
     #[error(transparent)]
     GetPool(#[from] diesel_async::pooled_connection::bb8::RunError),
 }
@@ -48,11 +53,13 @@ impl From<diesel::result::Error> for HttpError {
         HttpError::Database(Error::Connection(err))
     }
 }
+
 impl From<diesel_async::pooled_connection::PoolError> for HttpError {
     fn from(err: diesel_async::pooled_connection::PoolError) -> Self {
         HttpError::Database(Error::Pool(err))
     }
 }
+
 impl From<diesel_async::pooled_connection::bb8::RunError> for HttpError {
     fn from(err: diesel_async::pooled_connection::bb8::RunError) -> Self {
         HttpError::Database(Error::GetPool(err))

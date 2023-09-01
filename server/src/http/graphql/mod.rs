@@ -42,7 +42,7 @@ use self::genus::Genus;
 use self::species::Species;
 use self::stats::Statistics;
 use self::maps::Maps;
-use self::datasets::Datasets;
+use self::datasets::Dataset;
 use self::extensions::ErrorLogging;
 use self::traces::Traces;
 use self::assembly::Assembly;
@@ -102,9 +102,9 @@ impl Query {
         Maps { tolerance }
     }
 
-    async fn datasets(&self, ctx: &Context<'_>, name: String) -> Result<Datasets, Error> {
+    async fn dataset(&self, ctx: &Context<'_>, name: String) -> Result<Dataset, Error> {
         let state = ctx.data::<State>().unwrap();
-        Datasets::new(&state.database, &name).await
+        Dataset::new(&state.database, &name).await
     }
 
     async fn traces(&self, uuid: String) -> Traces {
