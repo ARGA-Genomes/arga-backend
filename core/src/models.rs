@@ -83,8 +83,6 @@ pub enum TaxonomicVernacularGroup {
     Mammals,
     Seaweeds,
     HigherPlants,
-
-    None,
 }
 
 #[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
@@ -141,10 +139,10 @@ impl Taxon {
     pub fn subphylum_str(&self) -> Option<&str> { self.subphylum.as_ref().map(String::as_str) }
     pub fn subclass_str(&self) -> Option<&str> { self.subclass.as_ref().map(String::as_str) }
 
-    pub fn vernacular_group(&self) -> TaxonomicVernacularGroup {
+    pub fn vernacular_group(&self) -> Option<TaxonomicVernacularGroup> {
         use TaxonomicVernacularGroup as Group;
 
-        match self.kingdom_str() {
+        Some(match self.kingdom_str() {
             Some("Archaea") => Group::Bacteria,
             Some("Bacteria") => match self.phylum_str() {
                 Some("Cyanobacteria") => Group::Cyanobacteria,
@@ -181,8 +179,8 @@ impl Taxon {
                 Some("Chlorophyta") => Group::GreenAlgae,
                 _ => Group::HigherPlants,
             }
-            _ => Group::None,
-        }
+            _ => return None,
+        })
     }
 }
 

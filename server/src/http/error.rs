@@ -34,6 +34,9 @@ pub enum Error {
 
     #[error("upstream request timeout")]
     GatewayTimeout,
+
+    #[error(transparent)]
+    GraphQL(#[from] async_graphql::DeserializerError),
 }
 
 impl From<crate::database::Error> for Error {
@@ -52,6 +55,7 @@ impl Error {
     fn status_code(&self) -> StatusCode {
         match self {
             Error::MissingParam(_) => StatusCode::BAD_REQUEST,
+            Error::GraphQL(_) => StatusCode::BAD_REQUEST,
             Error::NotFound(_) => StatusCode::NOT_FOUND,
 
             Error::Configuration(_, _) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -61,7 +65,7 @@ impl Error {
             Error::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::SearchIndex(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Timeout => StatusCode::REQUEST_TIMEOUT,
-            Error::GatewayTimeout => StatusCode::GATEWAY_TIMEOUT
+            Error::GatewayTimeout => StatusCode::GATEWAY_TIMEOUT,
         }
     }
 }
@@ -95,6 +99,9 @@ impl IntoResponse for Error {
             Error::GatewayTimeout => {
                 tracing::debug!("Gateway timeout");
                 error!("Gateway timeout");
+            },
+            Error::GraphQL(err) => {
+                error!(?err, "Deserializer error")
             },
 
             _ => {}

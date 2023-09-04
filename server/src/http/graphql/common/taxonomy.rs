@@ -40,7 +40,7 @@ pub struct Taxonomy {
     pub family: Option<String>,
     pub genus: Option<String>,
 
-    pub vernacular_group: TaxonomicVernacularGroup,
+    pub vernacular_group: Option<TaxonomicVernacularGroup>,
 
     /// Renamed taxonomy for the same species
     pub synonyms: Vec<Taxonomy>,
@@ -50,7 +50,7 @@ pub struct Taxonomy {
 impl From<models::Taxon> for Taxonomy {
     fn from(value: models::Taxon) -> Self {
         Self {
-            vernacular_group: value.vernacular_group().into(),
+            vernacular_group: value.vernacular_group().map(|v| v.into()),
             scientific_name: value.scientific_name,
             canonical_name: value.canonical_name,
             authority: value.species_authority,
@@ -108,10 +108,4 @@ pub enum TaxonomicVernacularGroup {
     Mammals,
     Seaweeds,
     HigherPlants,
-
-    None,
-}
-
-impl Default for TaxonomicVernacularGroup {
-    fn default() -> Self { TaxonomicVernacularGroup::None }
 }

@@ -135,7 +135,7 @@ impl Query {
         Markers {}
     }
 
-    async fn taxa(&self, filters: Vec<FilterItem>) -> Taxa {
+    async fn taxa(&self, filters: Vec<FilterItem>) -> Result<Taxa, Error> {
         Taxa::new(filters)
     }
 }

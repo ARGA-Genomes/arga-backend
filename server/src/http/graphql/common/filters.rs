@@ -1,7 +1,9 @@
-use async_graphql::{Enum, InputObject};
+use async_graphql::{Enum, InputObject, from_value, Value};
 use serde::{Serialize, Deserialize};
 
+use crate::http::Error;
 use crate::database::extensions::filters::{Filter, FilterKind};
+use super::taxonomy::TaxonomicVernacularGroup;
 
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -13,6 +15,8 @@ pub enum FilterType {
     Family,
     Tribe,
     Genus,
+
+    VernacularGroup,
 }
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -31,8 +35,10 @@ pub struct FilterItem {
 
 
 /// Converts a graphql filter into the common filter enum
-impl From<FilterItem> for Filter {
-    fn from(source: FilterItem) -> Self {
+impl TryFrom<FilterItem> for Filter {
+    type Error = Error;
+
+    fn try_from(source: FilterItem) -> Result<Self, Self::Error> {
         let kind = match source.filter {
             FilterType::Kingdom => FilterKind::Kingdom(source.value),
             FilterType::Phylum => FilterKind::Phylum(source.value),
@@ -41,16 +47,24 @@ impl From<FilterItem> for Filter {
             FilterType::Family => FilterKind::Family(source.value),
             FilterType::Tribe => FilterKind::Tribe(source.value),
             FilterType::Genus => FilterKind::Genus(source.value),
+
+            FilterType::VernacularGroup => FilterKind::VernacularGroup(
+                from_value::<TaxonomicVernacularGroup>(Value::String(source.value))?.into()
+            ),
         };
 
-        match source.action {
+        Ok(match source.action {
             FilterAction::Include => Filter::Include(kind),
             FilterAction::Exclude => Filter::Exclude(kind),
-        }
+        })
     }
 }
 
 
-pub fn convert_filters(items: Vec<FilterItem>) -> Vec<Filter> {
-    items.into_iter().map(|f| f.into()).collect()
+pub fn convert_filters(items: Vec<FilterItem>) -> Result<Vec<Filter>, Error> {
+    let mut filters = Vec::new();
+    for item in items {
+        filters.push(item.try_into()?);
+    }
+    Ok(filters)
 }

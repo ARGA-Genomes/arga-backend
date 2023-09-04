@@ -15,8 +15,10 @@ pub struct Taxa {
 #[Object]
 impl Taxa {
     #[graphql(skip)]
-    pub fn new(filters: Vec<FilterItem>) -> Taxa {
-        Taxa { filters: convert_filters(filters) }
+    pub fn new(filters: Vec<FilterItem>) -> Result<Taxa, Error> {
+        Ok(Taxa {
+            filters: convert_filters(filters)?,
+        })
     }
 
     async fn species(&self, ctx: &Context<'_>, page: i64, per_page: i64) -> Result<Page<SpeciesCard>, Error> {
