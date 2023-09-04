@@ -40,7 +40,7 @@ pub struct Taxonomy {
     pub family: Option<String>,
     pub genus: Option<String>,
 
-    pub vernacular_group: Option<String>,
+    pub vernacular_group: TaxonomicVernacularGroup,
 
     /// Renamed taxonomy for the same species
     pub synonyms: Vec<Taxonomy>,
@@ -50,7 +50,7 @@ pub struct Taxonomy {
 impl From<models::Taxon> for Taxonomy {
     fn from(value: models::Taxon) -> Self {
         Self {
-            vernacular_group: derive_vernacular_group(&value),
+            vernacular_group: value.vernacular_group().into(),
             scientific_name: value.scientific_name,
             canonical_name: value.canonical_name,
             authority: value.species_authority,
@@ -67,7 +67,8 @@ impl From<models::Taxon> for Taxonomy {
     }
 }
 
-#[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "models::TaxonomicStatus")]
 pub enum TaxonomicStatus {
     Valid,
     Undescribed,
@@ -77,51 +78,40 @@ pub enum TaxonomicStatus {
     Invalid,
 }
 
-impl From<models::TaxonomicStatus> for TaxonomicStatus {
-    fn from(value: models::TaxonomicStatus) -> Self {
-        match value {
-            models::TaxonomicStatus::Valid => TaxonomicStatus::Valid,
-            models::TaxonomicStatus::Undescribed => TaxonomicStatus::Undescribed,
-            models::TaxonomicStatus::SpeciesInquirenda => TaxonomicStatus::SpeciesInquirenda,
-            models::TaxonomicStatus::Hybrid => TaxonomicStatus::Hybrid,
-            models::TaxonomicStatus::Synonym => TaxonomicStatus::Synonym,
-            models::TaxonomicStatus::Invalid => TaxonomicStatus::Invalid,
-        }
-    }
-}
-
 impl Default for TaxonomicStatus {
-    fn default() -> Self {
-        TaxonomicStatus::Invalid
-    }
+    fn default() -> Self { TaxonomicStatus::Invalid }
 }
 
 
-fn derive_vernacular_group(taxon: &models::Taxon) -> Option<String> {
-    match taxon.kingdom.as_ref().map(|k| k.as_str()) {
-        Some("Archaea") => Some("bacteria".into()),
-        Some("Bacteria") => Some("bacteria".into()),
-        Some("Protozoa") => Some("protists and other unicellular organisms".into()),
-        Some("Fungi") => Some("mushrooms and other fungi".into()),
-        Some("Animalia") => match taxon.phylum.as_ref().map(|k| k.as_str()) {
-            Some("Mollusca") => Some("molluscs".into()),
-            Some("Arthropoda") => match taxon.class.as_ref().map(|k| k.as_str()) {
-                Some("Insecta") => Some("insects".into()),
-                _ => None,
-            }
-            Some("Chordata") => match taxon.class.as_ref().map(|k| k.as_str()) {
-                Some("Amphibia") => Some("frogs and other amphibians".into()),
-                Some("Aves") => Some("birds".into()),
-                Some("Mammalia") => Some("mammals".into()),
-                _ => None,
-            }
-            _ => None,
-        }
-        Some("Chromista") => Some("seaweeds and other algae".into()),
-        Some("Plantae") => match taxon.phylum.as_ref().map(|k| k.as_str()) {
-            Some("Rhodophyta") => Some("seaweeds and other algae".into()),
-            _ => Some("higher plants".into()),
-        }
-        _ => None,
-    }
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "models::TaxonomicVernacularGroup")]
+pub enum TaxonomicVernacularGroup {
+    FloweringPlants,
+    Animals,
+    BrownAlgae,
+    RedAlgae,
+    GreenAlgae,
+    Crustaceans,
+    Echinoderms,
+    FinFishes,
+    CoralsAndJellyfishes,
+    Cyanobacteria,
+    Molluscs,
+    SharksAndRays,
+    Insects,
+    Fungi,
+
+    Bacteria,
+    ProtistsAndOtherUnicellularOrganisms,
+    FrogsAndOtherAmphibians,
+    Birds,
+    Mammals,
+    Seaweeds,
+    HigherPlants,
+
+    None,
+}
+
+impl Default for TaxonomicVernacularGroup {
+    fn default() -> Self { TaxonomicVernacularGroup::None }
 }

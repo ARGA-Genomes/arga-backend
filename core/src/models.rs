@@ -60,6 +60,33 @@ impl Default for TaxonomicStatus {
     }
 }
 
+pub enum TaxonomicVernacularGroup {
+    FloweringPlants,
+    Animals,
+    BrownAlgae,
+    RedAlgae,
+    GreenAlgae,
+    Crustaceans,
+    Echinoderms,
+    FinFishes,
+    CoralsAndJellyfishes,
+    Cyanobacteria,
+    Molluscs,
+    SharksAndRays,
+    Insects,
+    Fungi,
+
+    Bacteria,
+    ProtistsAndOtherUnicellularOrganisms,
+    FrogsAndOtherAmphibians,
+    Birds,
+    Mammals,
+    Seaweeds,
+    HigherPlants,
+
+    None,
+}
+
 #[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::taxa)]
 pub struct Taxon {
@@ -100,6 +127,63 @@ pub struct Taxon {
 
     // pub name_according_to: Option<String>,
     // pub name_published_in: Option<String>,
+}
+
+impl Taxon {
+    pub fn kingdom_str(&self) -> Option<&str> { self.kingdom.as_ref().map(String::as_str) }
+    pub fn phylum_str(&self) -> Option<&str> { self.phylum.as_ref().map(String::as_str) }
+    pub fn class_str(&self) -> Option<&str> { self.class.as_ref().map(String::as_str) }
+    pub fn order_str(&self) -> Option<&str> { self.order.as_ref().map(String::as_str) }
+    pub fn family_str(&self) -> Option<&str> { self.family.as_ref().map(String::as_str) }
+    pub fn tribe_str(&self) -> Option<&str> { self.tribe.as_ref().map(String::as_str) }
+    pub fn genus_str(&self) -> Option<&str> { self.genus.as_ref().map(String::as_str) }
+
+    pub fn subphylum_str(&self) -> Option<&str> { self.subphylum.as_ref().map(String::as_str) }
+    pub fn subclass_str(&self) -> Option<&str> { self.subclass.as_ref().map(String::as_str) }
+
+    pub fn vernacular_group(&self) -> TaxonomicVernacularGroup {
+        use TaxonomicVernacularGroup as Group;
+
+        match self.kingdom_str() {
+            Some("Archaea") => Group::Bacteria,
+            Some("Bacteria") => match self.phylum_str() {
+                Some("Cyanobacteria") => Group::Cyanobacteria,
+                _ => Group::Bacteria,
+            },
+            Some("Protozoa") => Group::ProtistsAndOtherUnicellularOrganisms,
+            Some("Fungi") => Group::Fungi,
+            Some("Animalia") => match self.phylum_str() {
+                Some("Echinodermata") => Group::Echinoderms,
+                Some("Cnidaria") => Group::CoralsAndJellyfishes,
+                Some("Mollusca") => Group::Molluscs,
+                Some("Arthropoda") => match (self.subphylum_str(), self.class_str()) {
+                    (Some("Crustacea"), None) => Group::Crustaceans,
+                    (None, Some("Insecta")) => Group::Insects,
+                    _ => Group::Animals,
+                }
+                Some("Chordata") => match self.class_str() {
+                    Some("Amphibia") => Group::FrogsAndOtherAmphibians,
+                    Some("Aves") => Group::Birds,
+                    Some("Mammalia") => Group::Mammals,
+                    Some("Actinopterygii") => Group::FinFishes,
+                    Some("Chondrichthyes") => match self.subclass_str() {
+                        Some("Elasmobranchii") => Group::SharksAndRays,
+                        _ => Group::Animals,
+                    },
+                    _ => Group::Animals,
+                }
+                _ => Group::Animals,
+            }
+            Some("Chromista") => Group::Seaweeds,
+            Some("Plantae") => match self.phylum_str() {
+                Some("Phaeophyceae") => Group::BrownAlgae,
+                Some("Rhodophyta") => Group::RedAlgae,
+                Some("Chlorophyta") => Group::GreenAlgae,
+                _ => Group::HigherPlants,
+            }
+            _ => Group::None,
+        }
+    }
 }
 
 #[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
