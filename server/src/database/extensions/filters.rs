@@ -8,11 +8,16 @@ use diesel::sql_types::{Bool, Nullable};
 pub enum FilterKind {
     Kingdom(String),
     Phylum(String),
+    Class(String),
+    Order(String),
+    Family(String),
+    Tribe(String),
     Genus(String),
 }
 
 pub enum Filter {
     Include(FilterKind),
+    Exclude(FilterKind),
 }
 
 
@@ -25,7 +30,20 @@ pub fn with_filter(filter: &Filter) -> BoxedTaxaExpression {
         Filter::Include(kind) => match kind {
             FilterKind::Kingdom(value) => Box::new(taxa::kingdom.eq(value)),
             FilterKind::Phylum(value) => Box::new(taxa::phylum.eq(value)),
+            FilterKind::Class(value) => Box::new(taxa::class.eq(value)),
+            FilterKind::Order(value) => Box::new(taxa::order.eq(value)),
+            FilterKind::Family(value) => Box::new(taxa::family.eq(value)),
+            FilterKind::Tribe(value) => Box::new(taxa::tribe.eq(value)),
             FilterKind::Genus(value) => Box::new(taxa::genus.eq(value)),
+        }
+        Filter::Exclude(kind) => match kind {
+            FilterKind::Kingdom(value) => Box::new(taxa::kingdom.ne(value)),
+            FilterKind::Phylum(value) => Box::new(taxa::phylum.ne(value)),
+            FilterKind::Class(value) => Box::new(taxa::class.ne(value)),
+            FilterKind::Order(value) => Box::new(taxa::order.ne(value)),
+            FilterKind::Family(value) => Box::new(taxa::family.ne(value)),
+            FilterKind::Tribe(value) => Box::new(taxa::tribe.ne(value)),
+            FilterKind::Genus(value) => Box::new(taxa::genus.ne(value)),
         }
     }
 }

@@ -8,12 +8,17 @@ use crate::database::extensions::filters::{Filter, FilterKind};
 pub enum FilterType {
     Kingdom,
     Phylum,
+    Class,
+    Order,
+    Family,
+    Tribe,
     Genus,
 }
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
 pub enum FilterAction {
     Include,
+    Exclude,
 }
 
 /// An all purpose filter to apply the query.
@@ -31,11 +36,16 @@ impl From<FilterItem> for Filter {
         let kind = match source.filter {
             FilterType::Kingdom => FilterKind::Kingdom(source.value),
             FilterType::Phylum => FilterKind::Phylum(source.value),
+            FilterType::Class => FilterKind::Class(source.value),
+            FilterType::Order => FilterKind::Order(source.value),
+            FilterType::Family => FilterKind::Family(source.value),
+            FilterType::Tribe => FilterKind::Tribe(source.value),
             FilterType::Genus => FilterKind::Genus(source.value),
         };
 
         match source.action {
             FilterAction::Include => Filter::Include(kind),
+            FilterAction::Exclude => Filter::Exclude(kind),
         }
     }
 }
