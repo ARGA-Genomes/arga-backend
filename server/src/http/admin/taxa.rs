@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use arga_core::models::Taxon;
 use axum::extract::{State, Query, Path};
 use axum::{Json, Router};
 use axum::routing::{get, post, put};
@@ -14,7 +13,7 @@ use crate::database::extensions::{pagination, Paginate};
 use crate::http::Context;
 use crate::http::error::InternalError;
 use crate::database::{schema, Database};
-use crate::database::models::Name;
+use crate::database::models::{Name, TaxonSource};
 
 
 #[derive(Debug, Serialize)]
@@ -70,6 +69,14 @@ async fn taxa(
         .await?;
 
     Ok(Json(page.into()))
+}
+
+
+async fn datasets(State(database): State<Database>) -> Result<Json<Vec<TaxonSource>>, InternalError> {
+    use schema::taxon_source::dsl::*;
+    let mut conn = database.pool.get().await?;
+    let dataset = taxon_source.load::<TaxonSource>(&mut conn).await?;
+    Ok(Json(dataset))
 }
 
 
@@ -271,6 +278,7 @@ async fn taxa(
 pub(crate) fn router() -> Router<Context> {
     Router::new()
         .route("/api/admin/taxa", get(taxa))
+        .route("/api/admin/taxa/datasets", get(datasets))
         // .route("/api/admin/user_taxa", get(user_taxa_lists))
         // .route("/api/admin/user_taxa", post(create_user_taxa_list))
         // .route("/api/admin/user_taxa/:uuid", get(show_user_taxa_list))
