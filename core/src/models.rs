@@ -322,8 +322,8 @@ pub enum RegionType {
 #[diesel(table_name = schema::regions)]
 pub struct Regions {
     pub id: Uuid,
+    pub dataset_id: Uuid,
     pub name_id: Uuid,
-    pub list_id: Uuid,
     pub region_type: RegionType,
     pub values: Vec<String>,
 }

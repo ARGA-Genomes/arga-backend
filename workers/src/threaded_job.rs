@@ -100,13 +100,8 @@ impl ThreadedJob {
                 let source = taxon_importer::get_or_create_dataset(&data.name, &data.description, &data.url, pool)?;
                 synonym_importer::import(path, &source, pool)?;
             }
-            "import_vernacular" => {
-                vernacular_importer::import(path, pool)?;
-            }
-            "import_region" => {
-                let source = region_importer::get_or_create_dataset(&data.name, &data.description, pool)?;
-                region_importer::import(path, &source, pool)?;
-            }
+            "import_vernacular" => vernacular_importer::import(path, pool)?,
+            "import_region" => region_importer::import(path, pool)?,
             "import_conservation_status" => {
                 let source = conservation_status_importer::get_or_create_dataset(&data.name, &data.description, pool)?;
                 conservation_status_importer::import(path, &source, pool)?;
