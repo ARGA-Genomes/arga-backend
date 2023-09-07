@@ -26,7 +26,7 @@ impl Taxa {
         let helper = SpeciesHelper::new(&state.database);
 
         let page = state.database.taxa.species(&self.filters, page, per_page).await?;
-        let cards = helper.cards(page.records).await?;
+        let cards = helper.filtered_cards(page.records).await?;
 
         Ok(Page {
             records: cards,

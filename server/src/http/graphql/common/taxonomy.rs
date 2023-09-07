@@ -67,6 +67,26 @@ impl From<models::Taxon> for Taxonomy {
     }
 }
 
+impl From<models::FilteredTaxon> for Taxonomy {
+    fn from(value: models::FilteredTaxon) -> Self {
+        Self {
+            vernacular_group: None,
+            scientific_name: value.scientific_name,
+            canonical_name: value.canonical_name,
+            authority: value.species_authority,
+            status: value.status.into(),
+            kingdom: value.kingdom,
+            phylum: value.phylum,
+            class: value.class,
+            order: value.order,
+            family: value.family,
+            genus: value.genus,
+            synonyms: vec![],
+            vernacular_names: vec![],
+        }
+    }
+}
+
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[graphql(remote = "models::TaxonomicStatus")]
 pub enum TaxonomicStatus {

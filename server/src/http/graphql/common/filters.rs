@@ -2,7 +2,7 @@ use async_graphql::{Enum, InputObject, from_value, Value};
 use serde::{Serialize, Deserialize};
 
 use crate::http::Error;
-use crate::database::extensions::filters::{Filter, FilterKind};
+use crate::database::extensions::filters::{Filter, FilterKind, Classification};
 use super::taxonomy::TaxonomicVernacularGroup;
 
 
@@ -17,6 +17,11 @@ pub enum FilterType {
     Genus,
 
     VernacularGroup,
+    Ecology,
+    Ibra,
+    Imcra,
+    State,
+    DrainageBasin,
 }
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -40,17 +45,23 @@ impl TryFrom<FilterItem> for Filter {
 
     fn try_from(source: FilterItem) -> Result<Self, Self::Error> {
         let kind = match source.filter {
-            FilterType::Kingdom => FilterKind::Kingdom(source.value),
-            FilterType::Phylum => FilterKind::Phylum(source.value),
-            FilterType::Class => FilterKind::Class(source.value),
-            FilterType::Order => FilterKind::Order(source.value),
-            FilterType::Family => FilterKind::Family(source.value),
-            FilterType::Tribe => FilterKind::Tribe(source.value),
-            FilterType::Genus => FilterKind::Genus(source.value),
+            FilterType::Kingdom => FilterKind::Classification(Classification::Kingdom(source.value)),
+            FilterType::Phylum => FilterKind::Classification(Classification::Phylum(source.value)),
+            FilterType::Class => FilterKind::Classification(Classification::Class(source.value)),
+            FilterType::Order => FilterKind::Classification(Classification::Order(source.value)),
+            FilterType::Family => FilterKind::Classification(Classification::Family(source.value)),
+            FilterType::Tribe => FilterKind::Classification(Classification::Tribe(source.value)),
+            FilterType::Genus => FilterKind::Classification(Classification::Genus(source.value)),
 
             FilterType::VernacularGroup => FilterKind::VernacularGroup(
                 from_value::<TaxonomicVernacularGroup>(Value::String(source.value))?.into()
             ),
+
+            FilterType::Ecology => FilterKind::Ecology(source.value),
+            FilterType::Ibra => FilterKind::Ibra(source.value),
+            FilterType::Imcra => FilterKind::Imcra(source.value),
+            FilterType::State => FilterKind::State(source.value),
+            FilterType::DrainageBasin => FilterKind::DrainageBasin(source.value),
         };
 
         Ok(match source.action {

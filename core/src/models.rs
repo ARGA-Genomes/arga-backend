@@ -127,6 +127,37 @@ pub struct Taxon {
     // pub name_published_in: Option<String>,
 }
 
+#[derive(Queryable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema_gnl::taxa_filter)]
+pub struct FilteredTaxon {
+    pub id: Uuid,
+    pub name_id: Uuid,
+    pub status: TaxonomicStatus,
+    pub scientific_name: String,
+    pub canonical_name: Option<String>,
+
+    pub kingdom: Option<String>,
+    pub phylum: Option<String>,
+    pub class: Option<String>,
+    pub order: Option<String>,
+    pub family: Option<String>,
+    pub tribe: Option<String>,
+    pub genus: Option<String>,
+    pub specific_epithet: Option<String>,
+
+    pub subphylum: Option<String>,
+    pub subclass: Option<String>,
+
+    pub species_authority: Option<String>,
+
+    pub ecology: Option<Vec<String>>,
+    pub ibra: Option<Vec<String>>,
+    pub imcra: Option<Vec<String>>,
+    pub state: Option<Vec<String>>,
+    pub drainage_basin: Option<Vec<String>>,
+}
+
+
 impl Taxon {
     pub fn kingdom_str(&self) -> Option<&str> { self.kingdom.as_ref().map(String::as_str) }
     pub fn phylum_str(&self) -> Option<&str> { self.phylum.as_ref().map(String::as_str) }

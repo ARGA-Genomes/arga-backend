@@ -151,6 +151,32 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    taxa_filter (id) {
+        id -> Uuid,
+        name_id -> Uuid,
+        status -> crate::schema::sql_types::TaxonomicStatus,
+        scientific_name -> Varchar,
+        canonical_name -> Nullable<Varchar>,
+        kingdom -> Nullable<Varchar>,
+        phylum -> Nullable<Varchar>,
+        class -> Nullable<Varchar>,
+        order -> Nullable<Varchar>,
+        family -> Nullable<Varchar>,
+        tribe -> Nullable<Varchar>,
+        genus -> Nullable<Varchar>,
+        specific_epithet -> Nullable<Varchar>,
+        subphylum -> Nullable<Varchar>,
+        subclass -> Nullable<Varchar>,
+        species_authority -> Nullable<Varchar>,
+        ecology -> Nullable<Array<Text>>,
+        ibra -> Nullable<Array<Text>>,
+        imcra -> Nullable<Array<Text>>,
+        state -> Nullable<Array<Text>>,
+        drainage_basin -> Nullable<Array<Text>>,
+    }
+}
+
 
 use super::schema::{names, assemblies, taxa};
 
