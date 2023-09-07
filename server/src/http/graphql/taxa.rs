@@ -33,4 +33,47 @@ impl Taxa {
             total: page.total,
         })
     }
+
+    async fn filter_options(&self) -> FilterOptions {
+        FilterOptions { filters: self.filters.clone() }
+    }
+}
+
+
+pub struct FilterOptions {
+    filters: Vec<Filter>,
+}
+
+#[Object]
+impl FilterOptions {
+    async fn ecology(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let options = state.database.taxa.ecology_options(&self.filters).await?;
+        Ok(options)
+    }
+
+    async fn ibra(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let options = state.database.taxa.ibra_options(&self.filters).await?;
+        Ok(options)
+    }
+
+    async fn imcra(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let options = state.database.taxa.imcra_options(&self.filters).await?;
+        Ok(options)
+    }
+
+    async fn state(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let options = state.database.taxa.state_options(&self.filters).await?;
+        Ok(options)
+    }
+
+    async fn drainage_basin(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let options = state.database.taxa.drainage_basin_options(&self.filters).await?;
+        Ok(options)
+    }
+
 }

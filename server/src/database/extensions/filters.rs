@@ -2,11 +2,12 @@ use diesel::pg::Pg;
 use diesel::prelude::*;
 
 // use arga_core::schema::{taxa, ecology, names};
-use arga_core::schema_gnl::taxa_filter as taxa;
+use arga_core::{schema_gnl::taxa_filter as taxa, models::TaxonomicStatus};
 use arga_core::models::TaxonomicVernacularGroup;
 use diesel::sql_types::{Bool, Nullable};
 
 
+#[derive(Clone)]
 pub enum FilterKind {
     Classification(Classification),
     VernacularGroup(TaxonomicVernacularGroup),
@@ -18,6 +19,7 @@ pub enum FilterKind {
 }
 
 
+#[derive(Clone)]
 pub enum Classification {
     Kingdom(String),
     Phylum(String),
@@ -29,9 +31,19 @@ pub enum Classification {
 }
 
 
+#[derive(Clone)]
 pub enum Filter {
     Include(FilterKind),
     Exclude(FilterKind),
+}
+
+
+pub fn filter_taxa(filters: &Vec<Filter>) -> taxa::BoxedQuery<Pg> {
+    taxa::table
+        .select(taxa::all_columns)
+        .filter(taxa::status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+        .filter(with_filters(&filters).unwrap())
+        .into_boxed()
 }
 
 

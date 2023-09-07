@@ -60,6 +60,7 @@ impl Default for TaxonomicStatus {
     }
 }
 
+#[derive(Clone)]
 pub enum TaxonomicVernacularGroup {
     FloweringPlants,
     Animals,

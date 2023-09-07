@@ -1,12 +1,17 @@
 use arga_core::models::FilteredTaxon;
 use diesel::prelude::*;
+use diesel::sql_types::{Text, Array, Nullable};
 use diesel_async::RunQueryDsl;
 
 use crate::database::extensions::filters::{with_filters, Filter};
 
 use super::extensions::Paginate;
-use super::{schema, schema_gnl, PgPool, PageResult};
+use super::extensions::filters::filter_taxa;
+use super::{schema, schema_gnl, PgPool, PageResult, Error};
 use super::models::{Taxon, TaxonomicStatus};
+
+
+sql_function!(fn unnest(x: Nullable<Array<Text>>) -> Text);
 
 
 #[derive(Clone)]
@@ -30,5 +35,76 @@ impl TaxaProvider {
             .await?;
 
         Ok(species.into())
+    }
+
+
+    pub async fn ecology_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
+        use schema_gnl::taxa_filter;
+        let mut conn = self.pool.get().await?;
+
+        let mut options = filter_taxa(filters)
+            .select(unnest(taxa_filter::ecology))
+            .distinct()
+            .load::<String>(&mut conn)
+            .await?;
+
+        options.sort();
+        Ok(options)
+    }
+
+    pub async fn ibra_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
+        use schema_gnl::taxa_filter;
+        let mut conn = self.pool.get().await?;
+
+        let mut options = filter_taxa(filters)
+            .select(unnest(taxa_filter::ibra))
+            .distinct()
+            .load::<String>(&mut conn)
+            .await?;
+
+        options.sort();
+        Ok(options)
+    }
+
+    pub async fn imcra_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
+        use schema_gnl::taxa_filter;
+        let mut conn = self.pool.get().await?;
+
+        let mut options = filter_taxa(filters)
+            .select(unnest(taxa_filter::ibra))
+            .distinct()
+            .load::<String>(&mut conn)
+            .await?;
+
+        options.sort();
+        Ok(options)
+    }
+
+    pub async fn state_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
+        use schema_gnl::taxa_filter;
+        let mut conn = self.pool.get().await?;
+
+        let mut options = filter_taxa(filters)
+            .select(unnest(taxa_filter::state))
+            .distinct()
+            .load::<String>(&mut conn)
+            .await?;
+
+        options.sort();
+        Ok(options)
+    }
+
+    pub async fn drainage_basin_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
+        use schema_gnl::taxa_filter;
+        let mut conn = self.pool.get().await?;
+
+        let mut options = filter_taxa(filters)
+            .select(unnest(taxa_filter::drainage_basin))
+            .distinct()
+            .load::<String>(&mut conn)
+            .await?;
+
+        options.sort();
+        Ok(options)
     }
 }
