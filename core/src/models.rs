@@ -330,6 +330,16 @@ pub struct Regions {
 
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::ecology)]
+pub struct Ecology {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub values: Vec<String>,
+}
+
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::taxon_photos)]
 pub struct TaxonPhoto {
     pub id: Uuid,

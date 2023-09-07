@@ -149,6 +149,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    ecology (id) {
+        id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
+        values -> Array<Nullable<Text>>,
+    }
+}
+
+diesel::table! {
     events (id) {
         id -> Uuid,
         parent_event_id -> Nullable<Uuid>,
@@ -523,6 +532,8 @@ diesel::joinable!(collection_events -> specimens (specimen_id));
 diesel::joinable!(conservation_statuses -> name_lists (list_id));
 diesel::joinable!(conservation_statuses -> names (name_id));
 diesel::joinable!(datasets -> sources (source_id));
+diesel::joinable!(ecology -> datasets (dataset_id));
+diesel::joinable!(ecology -> names (name_id));
 diesel::joinable!(indigenous_knowledge -> datasets (dataset_id));
 diesel::joinable!(indigenous_knowledge -> names (name_id));
 diesel::joinable!(markers -> names (name_id));
@@ -550,6 +561,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     collection_events,
     conservation_statuses,
     datasets,
+    ecology,
     events,
     ibra,
     imcra_mesoscale,

@@ -170,6 +170,7 @@ impl Allocator {
                 "import_synonym" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_vernacular" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_region" => ret_some_to!([self.threaded_job], run() as (Job)),
+                "import_ecology" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_conservation_status" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_indigenous_knowledge" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_collection" => ret_some_to!([self.threaded_job], run() as (Job)),

@@ -17,6 +17,7 @@ use super::importers::{
     synonym_importer,
     vernacular_importer,
     region_importer,
+    ecology_importer,
     conservation_status_importer,
     indigenous_knowledge_importer,
 };
@@ -102,6 +103,7 @@ impl ThreadedJob {
             }
             "import_vernacular" => vernacular_importer::import(path, pool)?,
             "import_region" => region_importer::import(path, pool)?,
+            "import_ecology" => ecology_importer::import(path, pool)?,
             "import_conservation_status" => {
                 let source = conservation_status_importer::get_or_create_dataset(&data.name, &data.description, pool)?;
                 conservation_status_importer::import(path, &source, pool)?;
