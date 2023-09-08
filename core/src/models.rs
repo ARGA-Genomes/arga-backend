@@ -6,7 +6,7 @@ use uuid::Uuid;
 use super::{schema, schema_gnl};
 
 
-#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[derive(Queryable, Insertable, Debug, Clone, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::sources)]
 pub struct Source {
     pub id: Uuid,
