@@ -1,7 +1,7 @@
 CREATE TABLE names (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     scientific_name varchar NOT NULL,
-    canonical_name varchar,
+    canonical_name varchar NOT NULL,
     authorship varchar
 );
 COMMENT ON TABLE names IS 'All taxa names. Unique names used to associated attributes for specific taxonomic names';

@@ -27,7 +27,7 @@ pub struct Taxonomy {
     /// The species scientific name
     pub scientific_name: String,
     /// The species name without authors
-    pub canonical_name: Option<String>,
+    pub canonical_name: String,
     /// The species name authority
     pub authority: Option<String>,
     /// The taxonomic status of the species
@@ -90,16 +90,17 @@ impl From<models::FilteredTaxon> for Taxonomy {
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[graphql(remote = "models::TaxonomicStatus")]
 pub enum TaxonomicStatus {
-    Valid,
+    Accepted,
     Undescribed,
     SpeciesInquirenda,
+    ManuscriptName,
     Hybrid,
     Synonym,
-    Invalid,
+    Unaccepted,
 }
 
 impl Default for TaxonomicStatus {
-    fn default() -> Self { TaxonomicStatus::Invalid }
+    fn default() -> Self { TaxonomicStatus::Unaccepted }
 }
 
 

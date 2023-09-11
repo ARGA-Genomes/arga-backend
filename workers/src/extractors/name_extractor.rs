@@ -52,7 +52,7 @@ fn extract_names(records: &Vec<Record>) -> Vec<Name> {
         Name {
             id: Uuid::new_v4(),
             scientific_name: row.scientific_name.clone(),
-            canonical_name,
+            canonical_name: canonical_name.unwrap_or_else(|| row.scientific_name.clone()),
             authorship: species_authority,
         }
     }).collect::<Vec<Name>>();

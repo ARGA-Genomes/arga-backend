@@ -94,12 +94,12 @@ fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
     for chunk in species.chunks(1_000_000) {
         for species in chunk {
             let mut doc = doc!(
+                canonical_name => species.canonical_name.clone(),
                 data_type => DataType::Taxon.to_string(),
                 name_id => species.name_id.to_string(),
                 status => serde_json::to_string(&species.status)?,
             );
 
-            if let Some(name) = &species.canonical_name { doc.add_text(canonical_name, name); }
             if let Some(names) = &species.subspecies {
                 for name in names {
                     doc.add_text(subspecies, name);
@@ -154,13 +154,13 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
     for chunk in records.chunks(1_000_000) {
         for genome in chunk {
             let mut doc = doc!(
+                canonical_name => genome.canonical_name.clone(),
                 data_type => DataType::Genome.to_string(),
                 name_id => genome.name_id.to_string(),
                 status => serde_json::to_string(&genome.status)?,
                 accession => genome.accession.clone(),
             );
 
-            if let Some(value) = &genome.canonical_name { doc.add_text(canonical_name, value); }
             if let Some(value) = &genome.genome_rep { doc.add_text(genome_rep, value); }
             if let Some(value) = &genome.level { doc.add_text(level, value); }
             if let Some(value) = &genome.reference_genome {
@@ -202,13 +202,13 @@ fn index_loci(schema: &Schema, index: &Index) -> Result<(), Error> {
     for chunk in records.chunks(1_000_000) {
         for locus in chunk {
             let mut doc = doc!(
+                canonical_name => locus.canonical_name.clone(),
                 data_type => DataType::Locus.to_string(),
                 name_id => locus.name_id.to_string(),
                 status => serde_json::to_string(&locus.status)?,
                 accession => locus.accession.clone(),
             );
 
-            if let Some(value) = &locus.canonical_name { doc.add_text(canonical_name, value); }
             if let Some(value) = &locus.locus_type { doc.add_text(locus_type, value); }
 
             index_writer.add_document(doc)?;

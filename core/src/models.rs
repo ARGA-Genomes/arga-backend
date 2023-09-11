@@ -34,29 +34,21 @@ pub struct Dataset {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
-#[diesel(table_name = schema::taxon_source)]
-pub struct TaxonSource {
-    pub id: Uuid,
-    pub name: String,
-    pub description: Option<String>,
-    pub url: Option<String>,
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::TaxonomicStatus"]
 pub enum TaxonomicStatus {
-    Valid,
+    Accepted,
     Undescribed,
     SpeciesInquirenda,
+    ManuscriptName,
     Hybrid,
     Synonym,
-    Invalid,
+    Unaccepted,
 }
 
 impl Default for TaxonomicStatus {
     fn default() -> Self {
-        TaxonomicStatus::Invalid
+        TaxonomicStatus::Unaccepted
     }
 }
 
@@ -90,12 +82,12 @@ pub enum TaxonomicVernacularGroup {
 #[diesel(table_name = schema::taxa)]
 pub struct Taxon {
     pub id: Uuid,
-    pub source: Uuid,
+    pub dataset_id: Uuid,
     pub name_id: Uuid,
 
     pub status: TaxonomicStatus,
     pub scientific_name: String,
-    pub canonical_name: Option<String>,
+    pub canonical_name: String,
 
     pub kingdom: Option<String>,
     pub phylum: Option<String>,
@@ -123,9 +115,6 @@ pub struct Taxon {
     pub family_authority: Option<String>,
     pub genus_authority: Option<String>,
     pub species_authority: Option<String>,
-
-    // pub name_according_to: Option<String>,
-    // pub name_published_in: Option<String>,
 }
 
 #[derive(Queryable, Debug, Default, Serialize, Deserialize)]
@@ -135,7 +124,7 @@ pub struct FilteredTaxon {
     pub name_id: Uuid,
     pub status: TaxonomicStatus,
     pub scientific_name: String,
-    pub canonical_name: Option<String>,
+    pub canonical_name: String,
 
     pub kingdom: Option<String>,
     pub phylum: Option<String>,
@@ -325,7 +314,7 @@ pub struct Job {
 pub struct Name {
     pub id: Uuid,
     pub scientific_name: String,
-    pub canonical_name: Option<String>,
+    pub canonical_name: String,
     pub authorship: Option<String>,
 }
 

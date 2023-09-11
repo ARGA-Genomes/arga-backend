@@ -9,7 +9,7 @@ use tracing::info;
 use uuid::Uuid;
 
 use arga_core::models::IndigenousKnowledge;
-use crate::error::{Error, ParseError};
+use crate::error::Error;
 use crate::matchers::dataset_matcher::{match_datasets, DatasetRecord, DatasetMap};
 use crate::matchers::name_matcher::{match_records, NameRecord, NameMatch};
 
@@ -22,7 +22,8 @@ type MatchedRecords = Vec<(NameMatch, Record)>;
 #[serde(rename_all = "camelCase")]
 struct Record {
     global_id: String,
-    canonical_name: String,
+    scientific_name: Option<String>,
+    canonical_name: Option<String>,
     vernacular_name: String,
     food_use: String,
     medicinal_use: String,
@@ -36,8 +37,8 @@ struct Record {
 impl From<Record> for NameRecord {
     fn from(value: Record) -> Self {
         Self {
-            scientific_name: value.canonical_name,
-            canonical_name: None,
+            scientific_name: value.scientific_name,
+            canonical_name: value.canonical_name,
         }
     }
 }

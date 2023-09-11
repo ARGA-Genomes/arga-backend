@@ -12,7 +12,7 @@ use super::{schema, Database, Error};
 use super::models::Name;
 
 
-sql_function!(fn lower(x: Nullable<Text>) -> Nullable<Text>);
+sql_function!(fn lower(x: Text) -> Text);
 
 
 #[async_trait]

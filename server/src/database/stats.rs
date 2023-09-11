@@ -88,7 +88,7 @@ impl StatsProvider {
 
         let (valid, total): (i64, i64) = taxa
             .select((
-                sum_if(status.eq(TaxonomicStatus::Valid)),
+                sum_if(status.eq(TaxonomicStatus::Accepted)),
                 diesel::dsl::count_star()
             ))
             .filter(genus.eq(name))
@@ -113,9 +113,9 @@ impl StatsProvider {
             .inner_join(names::table)
             .inner_join(taxa::table.on(names::id.eq(taxa::name_id)))
             .filter(taxa::genus.eq(genus_value))
-            .filter(taxa::status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .group_by(names::canonical_name)
-            .select((names::canonical_name, count_star()))
+            .select((names::canonical_name.nullable(), count_star()))
             .load::<BreakdownItem>(&mut conn)
             .await?;
 
@@ -129,7 +129,7 @@ impl StatsProvider {
 
         let total_genera: i64 = taxa
             .filter(family.eq(family_value))
-            .filter(status.eq(TaxonomicStatus::Valid))
+            .filter(status.eq(TaxonomicStatus::Accepted))
             .group_by(genus)
             .count()
             .get_result(&mut conn)
@@ -148,7 +148,7 @@ impl StatsProvider {
 
         let genera = taxa
             .filter(genus.eq(name))
-            .filter(status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .group_by(genus)
             .select((genus, diesel::dsl::count_star()))
             .load::<BreakdownItem>(&mut conn)
@@ -165,7 +165,7 @@ impl StatsProvider {
 
         let total: i64 = taxa
             .filter(order.eq(name))
-            .filter(status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .group_by(family)
             .count()
             .get_result(&mut conn)
@@ -184,7 +184,7 @@ impl StatsProvider {
 
         let families = taxa
             .filter(order.eq(name))
-            .filter(status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .group_by(family)
             .select((family, diesel::dsl::count_star()))
             .load::<BreakdownItem>(&mut conn)
@@ -201,7 +201,7 @@ impl StatsProvider {
 
         let total: i64 = taxa
             .filter(class.eq(name))
-            .filter(status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .group_by(order)
             .count()
             .get_result(&mut conn)
@@ -220,7 +220,7 @@ impl StatsProvider {
 
         let orders = taxa
             .filter(class.eq(name))
-            .filter(status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .group_by(order)
             .select((order, diesel::dsl::count_star()))
             .load::<BreakdownItem>(&mut conn)

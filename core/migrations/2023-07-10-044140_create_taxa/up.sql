@@ -1,31 +1,22 @@
-CREATE TABLE taxon_source (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    name varchar NOT NULL,
-    description varchar,
-    url varchar
-);
-
-CREATE UNIQUE INDEX taxon_source_name ON taxon_source (name);
-
-
 CREATE TYPE taxonomic_status AS ENUM (
-  'valid',
+  'accepted',
   'undescribed',
   'species_inquirenda',
+  'manuscript_name',
   'hybrid',
   'synonym',
-  'invalid'
+  'unaccepted'
 );
 
 
 CREATE TABLE taxa (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    source uuid REFERENCES taxon_source NOT NULL,
+    dataset_id uuid REFERENCES datasets NOT NULL,
     name_id uuid REFERENCES names NOT NULL,
 
     status taxonomic_status NOT NULL,
     scientific_name varchar NOT NULL,
-    canonical_name varchar,
+    canonical_name varchar NOT NULL,
 
     kingdom varchar,
     phylum varchar,
@@ -53,12 +44,9 @@ CREATE TABLE taxa (
     family_authority varchar,
     genus_authority varchar,
     species_authority varchar
-
-    -- name_according_to varchar,
-    -- name_published_in varchar
 );
 
-CREATE UNIQUE INDEX taxa_unique_name ON taxa (scientific_name);
+CREATE UNIQUE INDEX taxa_unique_name ON taxa (scientific_name, dataset_id);
 
 
 CREATE TABLE taxon_history (

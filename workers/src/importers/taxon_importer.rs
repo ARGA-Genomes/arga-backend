@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use tracing::info;
 
 use arga_core::schema;
-use arga_core::models::{TaxonSource, Name, Taxon};
+use arga_core::models::{Name, Taxon};
 use crate::error::Error;
 use crate::extractors::{name_extractor, taxon_extractor};
 
@@ -14,39 +14,13 @@ use crate::extractors::{name_extractor, taxon_extractor};
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
-pub fn get_or_create_dataset(
-    name: &str,
-    description: &Option<String>,
-    url: &Option<String>,
-    pool: &mut PgPool,
-) -> Result<TaxonSource, Error>
-{
-    use schema::taxon_source;
-    let mut conn = pool.get()?;
-
-    if let Some(source) = taxon_source::table.filter(taxon_source::name.eq(name)).get_result(&mut conn).optional()? {
-        return Ok(source);
-    }
-
-    let source = diesel::insert_into(taxon_source::table)
-        .values((
-            taxon_source::name.eq(name),
-            taxon_source::description.eq(description),
-            taxon_source::url.eq(url),
-        ))
-        .get_result(&mut conn)?;
-
-    Ok(source)
-}
-
-
-pub fn import(path: PathBuf, source: &TaxonSource, pool: &mut PgPool) -> Result<(), Error> {
+pub fn import(path: PathBuf, pool: &mut PgPool) -> Result<(), Error> {
     // we always want to extract and import the names completely first because
     // other extractors rely on using the matcher to retreive the associated name id
     let names = name_extractor::extract(&path)?;
     import_names(&names, pool)?;
 
-    let taxa = taxon_extractor::extract(&path, source, pool)?;
+    let taxa = taxon_extractor::extract(&path, pool)?;
     import_taxa(&taxa, pool)?;
 
     Ok(())

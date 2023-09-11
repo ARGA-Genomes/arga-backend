@@ -300,7 +300,7 @@ diesel::table! {
     names (id) {
         id -> Uuid,
         scientific_name -> Varchar,
-        canonical_name -> Nullable<Varchar>,
+        canonical_name -> Varchar,
         authorship -> Nullable<Varchar>,
     }
 }
@@ -399,11 +399,11 @@ diesel::table! {
 
     taxa (id) {
         id -> Uuid,
-        source -> Uuid,
+        dataset_id -> Uuid,
         name_id -> Uuid,
         status -> TaxonomicStatus,
         scientific_name -> Varchar,
-        canonical_name -> Nullable<Varchar>,
+        canonical_name -> Varchar,
         kingdom -> Nullable<Varchar>,
         phylum -> Nullable<Varchar>,
         class -> Nullable<Varchar>,
@@ -459,15 +459,6 @@ diesel::table! {
         taxon_id -> Uuid,
         remark -> Varchar,
         created_at -> Timestamptz,
-    }
-}
-
-diesel::table! {
-    taxon_source (id) {
-        id -> Uuid,
-        name -> Varchar,
-        description -> Nullable<Varchar>,
-        url -> Nullable<Varchar>,
     }
 }
 
@@ -548,8 +539,8 @@ diesel::joinable!(sequencing_events -> specimens (specimen_id));
 diesel::joinable!(sequencing_run_events -> sequencing_events (sequencing_event_id));
 diesel::joinable!(specimens -> name_lists (list_id));
 diesel::joinable!(specimens -> names (name_id));
+diesel::joinable!(taxa -> datasets (dataset_id));
 diesel::joinable!(taxa -> names (name_id));
-diesel::joinable!(taxa -> taxon_source (source));
 diesel::joinable!(taxon_photos -> names (name_id));
 diesel::joinable!(taxon_remarks -> taxa (taxon_id));
 diesel::joinable!(trace_files -> names (name_id));
@@ -582,7 +573,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     taxon_history,
     taxon_photos,
     taxon_remarks,
-    taxon_source,
     trace_files,
     users,
     vernacular_names,

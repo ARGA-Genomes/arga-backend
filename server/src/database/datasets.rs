@@ -39,7 +39,7 @@ impl DatasetProvider {
         let species = taxa::table
             .left_join(iek::table.on(taxa::name_id.eq(iek::name_id)))
             .filter(iek::dataset_id.eq(dataset.id))
-            .filter(taxa::status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .select(taxa::all_columns)
             .order_by(taxa::scientific_name)
             .paginate(page)

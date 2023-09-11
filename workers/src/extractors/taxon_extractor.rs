@@ -7,9 +7,10 @@ use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{TaxonSource, Taxon, TaxonomicStatus};
+use arga_core::models::{Taxon, TaxonomicStatus};
 use crate::error::Error;
 use crate::extractors::utils::{extract_authority, decompose_scientific_name};
+use crate::matchers::dataset_matcher::{DatasetMap, match_datasets, DatasetRecord};
 use crate::matchers::name_matcher::{match_records, NameRecord, NameMatch};
 
 
@@ -20,10 +21,11 @@ type MatchedRecords = Vec<(NameMatch, Record)>;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Record {
+    dataset_id: String,
     scientific_name: String,
-    // authority: Option<String>,
     canonical_name: Option<String>,
     // rank: Option<String>,
+    species_authority: Option<String>,
 
     kingdom: Option<String>,
     phylum: Option<String>,
@@ -75,32 +77,41 @@ struct Record {
 impl From<Record> for NameRecord {
     fn from(value: Record) -> Self {
         Self {
-            scientific_name: value.scientific_name,
+            scientific_name: Some(value.scientific_name),
             canonical_name: value.canonical_name,
         }
     }
 }
 
+impl From<Record> for DatasetRecord {
+    fn from(value: Record) -> Self {
+        Self { global_id: value.dataset_id }
+    }
+}
+
 
 /// Extract names and taxonomy from a CSV file
-pub fn extract(path: &PathBuf, source: &TaxonSource, pool: &mut PgPool) -> Result<Vec<Taxon>, Error> {
+pub fn extract(path: &PathBuf, pool: &mut PgPool) -> Result<Vec<Taxon>, Error> {
     let mut records: Vec<Record> = Vec::new();
     for row in csv::Reader::from_path(&path)?.deserialize() {
         records.push(row?);
     }
 
+    // match the records to a dataset
+    let sources = match_datasets(&records, pool);
+
     // match the records to names in the database. this will filter out any names
     // that could not be matched
     let records = match_records(records, pool);
-    let taxa = extract_taxa(source, &records);
+    let taxa = extract_taxa(&sources, &records);
     Ok(taxa)
 }
 
 
-fn extract_taxa(source: &TaxonSource, records: &MatchedRecords) -> Vec<Taxon> {
+fn extract_taxa(datasets: &DatasetMap, records: &MatchedRecords) -> Vec<Taxon> {
     info!(total=records.len(), "Extracting taxa");
 
-    let taxa = records.par_iter().map(|(name, row)| {
+    let taxa = records.par_iter().filter_map(|(name, row)| {
         let order_authority = extract_authority(&row.order, &row.order_full);
         let family_authority = extract_authority(&row.family, &row.family_full);
         let genus_authority = extract_authority(&row.genus, &row.genus_full);
@@ -129,9 +140,12 @@ fn extract_taxa(source: &TaxonSource, records: &MatchedRecords) -> Vec<Taxon> {
             None => decomposed.clone().and_then(|v| v.subspecific_epithet),
         };
 
-        let species_authority = match &row.species {
-            Some(_) => extract_authority(&row.canonical_name, &row.species),
-            None => decomposed.clone().map(|v| v.authority)
+        let species_authority = match &row.species_authority {
+            Some(authority) => Some(authority.clone()),
+            None => match &row.species {
+                Some(_) => extract_authority(&row.canonical_name, &row.species),
+                None => decomposed.clone().map(|v| v.authority),
+            },
         };
 
         let canonical_name = match &row.canonical_name {
@@ -139,44 +153,44 @@ fn extract_taxa(source: &TaxonSource, records: &MatchedRecords) -> Vec<Taxon> {
             None => decomposed.map(|v| v.canonical_name())
         };
 
-        Taxon {
-            id: Uuid::new_v4(),
-            source: source.id.clone(),
-            name_id: name.id.clone(),
+        match datasets.get(&row.dataset_id) {
+            Some(dataset) => Some(Taxon {
+                id: Uuid::new_v4(),
+                dataset_id: dataset.id.clone(),
+                name_id: name.id.clone(),
 
-            status: str_to_taxonomic_status(&row.taxonomic_status),
-            scientific_name: row.scientific_name.clone(),
-            canonical_name,
+                status: str_to_taxonomic_status(&row.taxonomic_status),
+                scientific_name: row.scientific_name.clone(),
+                canonical_name: canonical_name.unwrap_or_else(|| row.scientific_name.clone()),
 
-            kingdom: row.kingdom.clone(),
-            phylum: row.phylum.clone(),
-            class: row.class.clone(),
-            order: row.order.clone(),
-            family: row.family.clone(),
-            tribe: row.tribe.clone(),
-            genus,
-            specific_epithet,
+                kingdom: row.kingdom.clone(),
+                phylum: row.phylum.clone(),
+                class: row.class.clone(),
+                order: row.order.clone(),
+                family: row.family.clone(),
+                tribe: row.tribe.clone(),
+                genus,
+                specific_epithet,
 
-            subphylum: row.subphylum.clone(),
-            subclass: row.subclass.clone(),
-            suborder: row.suborder.clone(),
-            subfamily: row.subfamily.clone(),
-            subtribe: row.subtribe.clone(),
-            subgenus,
-            subspecific_epithet,
+                subphylum: row.subphylum.clone(),
+                subclass: row.subclass.clone(),
+                suborder: row.suborder.clone(),
+                subfamily: row.subfamily.clone(),
+                subtribe: row.subtribe.clone(),
+                subgenus,
+                subspecific_epithet,
 
-            superclass: row.superclass.clone(),
-            superorder: row.superorder.clone(),
-            superfamily: row.superfamily.clone(),
-            supertribe: row.supertribe.clone(),
+                superclass: row.superclass.clone(),
+                superorder: row.superorder.clone(),
+                superfamily: row.superfamily.clone(),
+                supertribe: row.supertribe.clone(),
 
-            order_authority,
-            family_authority,
-            genus_authority,
-            species_authority,
-
-            // name_according_to: row.name_according_to.clone(),
-            // name_published_in: row.name_published_in.clone(),
+                order_authority,
+                family_authority,
+                genus_authority,
+                species_authority,
+            }),
+            None => None,
         }
     }).collect::<Vec<Taxon>>();
 
@@ -189,27 +203,27 @@ fn extract_taxa(source: &TaxonSource, records: &MatchedRecords) -> Vec<Taxon> {
 fn str_to_taxonomic_status(value: &Option<String>) -> TaxonomicStatus {
     match value {
         Some(status) => match status.to_lowercase().as_str() {
-            "valid" => TaxonomicStatus::Valid,
-            "valid name" => TaxonomicStatus::Valid,
-            "accepted" => TaxonomicStatus::Valid,
-            "accepted name" => TaxonomicStatus::Valid,
+            "valid" => TaxonomicStatus::Accepted,
+            "valid name" => TaxonomicStatus::Accepted,
+            "accepted" => TaxonomicStatus::Accepted,
+            "accepted name" => TaxonomicStatus::Accepted,
 
             "undescribed" => TaxonomicStatus::Undescribed,
             "species inquirenda" => TaxonomicStatus::SpeciesInquirenda,
+            "manuscript name" => TaxonomicStatus::ManuscriptName,
             "hybrid" => TaxonomicStatus::Hybrid,
 
             "synonym" => TaxonomicStatus::Synonym,
             "junior synonym" => TaxonomicStatus::Synonym,
             "later synonym" => TaxonomicStatus::Synonym,
 
+            "invalid" => TaxonomicStatus::Unaccepted,
+            "invalid name" => TaxonomicStatus::Unaccepted,
+            "unaccepted" => TaxonomicStatus::Unaccepted,
+            "unaccepted name" => TaxonomicStatus::Unaccepted,
 
-            "invalid" => TaxonomicStatus::Invalid,
-            "invalid name" => TaxonomicStatus::Invalid,
-            "unaccepted" => TaxonomicStatus::Invalid,
-            "unaccepted name" => TaxonomicStatus::Invalid,
-
-            _ => TaxonomicStatus::Invalid,
+            _ => TaxonomicStatus::Unaccepted,
         },
-        None => TaxonomicStatus::Invalid,
+        None => TaxonomicStatus::Unaccepted,
     }
 }

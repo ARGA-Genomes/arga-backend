@@ -321,7 +321,7 @@ fn names_into_filter(names: &Vec<Name>) -> String {
     // craft a single filter by joining them all with OR since the default
     // will treat it as an AND query
     let names = names.into_iter().map(|name| {
-        format!("\"{}\"", name.canonical_name.clone().unwrap_or_else(|| name.scientific_name.clone()))
+        format!("\"{}\"", name.canonical_name.clone())
     }).collect::<Vec<String>>();
     names.join(" OR ")
 }

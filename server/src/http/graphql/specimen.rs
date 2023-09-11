@@ -47,7 +47,7 @@ impl SpecimenQuery {
         })
     }
 
-    async fn canonical_name(&self, ctx: &Context<'_>) -> Result<Option<String>, Error> {
+    async fn canonical_name(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let state = ctx.data::<State>().unwrap();
         let name = state.database.find_by_name_id(&self.specimen.name_id).await?;
         Ok(name.canonical_name)

@@ -34,7 +34,7 @@ impl AssemblyProvider {
         let records = names::table
             .inner_join(assemblies::table)
             .inner_join(taxa::table)
-            .filter(taxa::status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .select(names::id)
             .group_by(names::id)
             .order_by(names::scientific_name)

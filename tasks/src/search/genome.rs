@@ -19,7 +19,7 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 pub struct GenomeDoc {
     pub name_id: Uuid,
     pub status: TaxonomicStatus,
-    pub canonical_name: Option<String>,
+    pub canonical_name: String,
 
     pub accession: String,
     pub genome_rep: Option<String>,
@@ -45,7 +45,7 @@ pub fn get_genomes(pool: &PgPool) -> Result<Vec<GenomeDoc>, Error> {
             assemblies::refseq_category,
             assemblies::event_date,
         ))
-        .filter(taxa::status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
+        .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
         .load::<GenomeDoc>(&mut conn)?;
 
     Ok(docs)

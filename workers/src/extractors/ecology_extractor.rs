@@ -29,7 +29,7 @@ struct Record {
 impl From<Record> for NameRecord {
     fn from(value: Record) -> Self {
         Self {
-            scientific_name: value.scientific_name,
+            scientific_name: Some(value.scientific_name),
             canonical_name: value.canonical_name,
         }
     }

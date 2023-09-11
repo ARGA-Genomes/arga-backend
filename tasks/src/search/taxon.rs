@@ -20,7 +20,7 @@ pub struct SpeciesDoc {
     pub name_id: Uuid,
     pub status: TaxonomicStatus,
 
-    pub canonical_name: Option<String>,
+    pub canonical_name: String,
     pub subspecies: Option<Vec<String>>,
     pub synonyms: Option<Vec<String>>,
     pub vernacular_names: Option<Vec<String>>,
@@ -56,7 +56,7 @@ pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
             species::family,
             species::genus,
         ))
-        .filter(species::status.eq_any(&[TaxonomicStatus::Valid]))
+        .filter(species::status.eq_any(&[TaxonomicStatus::Accepted]))
         .load::<SpeciesDoc>(&mut conn)?;
 
     Ok(docs)

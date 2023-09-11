@@ -106,12 +106,7 @@ impl Species {
     async fn data(&self, ctx: &Context<'_>) -> Result<Vec<GenomicData>, Error> {
         let state = ctx.data::<State>().unwrap();
         let taxonomy = state.database.taxonomy(&self.name).await?;
-
-        let data = if let Some(canonical_name) = taxonomy.canonical_name {
-            state.solr.genomic_data(&canonical_name).await?
-        } else {
-            vec![]
-        };
+        let data = state.solr.genomic_data(&taxonomy.canonical_name).await?;
 
         Ok(data)
     }

@@ -117,7 +117,7 @@ struct Record {
 struct NameMatch {
     id: Uuid,
     scientific_name: String,
-    canonical_name: Option<String>,
+    canonical_name: String,
 }
 
 
@@ -207,9 +207,7 @@ fn match_names(records: &Vec<Record>, pool: &mut PgPool) -> HashMap<String, Uuid
         if let Ok(names) = chunk {
             for name_match in names {
                 id_map.insert(name_match.scientific_name, name_match.id);
-                if let Some(canonical_name) = name_match.canonical_name {
-                    id_map.insert(canonical_name, name_match.id);
-                }
+                id_map.insert(name_match.canonical_name, name_match.id);
             }
         }
     }

@@ -13,7 +13,7 @@ use crate::database::extensions::{pagination, Paginate};
 use crate::http::Context;
 use crate::http::error::InternalError;
 use crate::database::{schema, Database};
-use crate::database::models::{Name, TaxonSource};
+use crate::database::models::{Name, Dataset};
 
 
 #[derive(Debug, Serialize)]
@@ -56,9 +56,9 @@ async fn taxa(
         query = query.filter(canonical_name.ilike(q));
     }
 
-    if let Some(dataset_id) = params.get("dataset_id") {
-        let uuid = Uuid::parse_str(dataset_id)?;
-        query = query.filter(source.eq(uuid));
+    if let Some(dataset) = params.get("dataset_id") {
+        let uuid = Uuid::parse_str(dataset)?;
+        query = query.filter(dataset_id.eq(uuid));
     }
 
     let page = query
@@ -72,10 +72,10 @@ async fn taxa(
 }
 
 
-async fn datasets(State(database): State<Database>) -> Result<Json<Vec<TaxonSource>>, InternalError> {
-    use schema::taxon_source::dsl::*;
+async fn datasets(State(database): State<Database>) -> Result<Json<Vec<Dataset>>, InternalError> {
+    use schema::datasets::dsl::*;
     let mut conn = database.pool.get().await?;
-    let dataset = taxon_source.load::<TaxonSource>(&mut conn).await?;
+    let dataset = datasets.load::<Dataset>(&mut conn).await?;
     Ok(Json(dataset))
 }
 

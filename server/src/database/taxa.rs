@@ -26,7 +26,7 @@ impl TaxaProvider {
 
         let species = taxa_filter::table
             .select(taxa_filter::all_columns)
-            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .filter(with_filters(&filters).unwrap())
             .order_by(taxa_filter::scientific_name)
             .paginate(page)

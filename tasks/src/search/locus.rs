@@ -19,7 +19,7 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 pub struct LocusDoc {
     pub name_id: Uuid,
     pub status: TaxonomicStatus,
-    pub canonical_name: Option<String>,
+    pub canonical_name: String,
 
     pub accession: String,
     pub locus_type: Option<String>,
@@ -39,7 +39,7 @@ pub fn get_loci(pool: &PgPool) -> Result<Vec<LocusDoc>, Error> {
             markers::accession,
             markers::type_,
         ))
-        .filter(taxa::status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
+        .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
         .load::<LocusDoc>(&mut conn)?;
 
     Ok(docs)

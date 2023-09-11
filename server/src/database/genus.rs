@@ -34,7 +34,7 @@ impl GenusProvider {
 
         let species = taxa
             .filter(genus.eq(genus_name))
-            .filter(status.eq_any(&[TaxonomicStatus::Valid, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .order_by(scientific_name)
             .paginate(page)
             .load::<(Taxon, i64)>(&mut conn)

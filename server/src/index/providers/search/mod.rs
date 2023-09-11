@@ -331,8 +331,8 @@ impl SearchIndex {
             // corrupted or wrongly used, so only process results that have all mandatory fields
             if let (Some(data_type), Some(name_id)) = (data_type, name_id) {
                 let status = match get_text(&doc, self.common.status) {
-                    None => TaxonomicStatus::Invalid,
-                    Some(value) => serde_json::from_str(&value).unwrap_or(TaxonomicStatus::Invalid),
+                    None => TaxonomicStatus::Accepted,
+                    Some(value) => serde_json::from_str(&value).unwrap_or(TaxonomicStatus::Accepted),
                 };
 
                 let item = match data_type {
