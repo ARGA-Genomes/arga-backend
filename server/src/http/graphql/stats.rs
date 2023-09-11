@@ -95,6 +95,19 @@ impl Statistics {
             breakdown: breakdown.orders,
         })
     }
+
+    #[instrument(skip(self, ctx))]
+    async fn dataset(&self, ctx: &Context<'_>, name: String) -> Result<DatasetStatistics, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let stats = state.database.stats.dataset(&name).await?;
+        let breakdown = state.database.stats.dataset_breakdown(&name).await?;
+
+        Ok(DatasetStatistics {
+            total_species: stats.total_species,
+            species_with_data: stats.total_species_with_data,
+            breakdown: breakdown.species,
+        })
+    }
 }
 
 
@@ -164,5 +177,18 @@ pub struct ClassStatistics {
     pub orders_with_data: usize,
 
     /// A breakdown of orders and the amount of data for it
+    pub breakdown: Vec<BreakdownItem>,
+}
+
+
+#[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatasetStatistics {
+    /// The total amount of species
+    pub total_species: usize,
+    /// The total amount of species that have data records
+    pub species_with_data: usize,
+
+    /// A breakdown of species and the amount of data for it
     pub breakdown: Vec<BreakdownItem>,
 }

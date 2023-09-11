@@ -3,6 +3,8 @@ use clap::Parser;
 pub mod admin;
 pub mod dataset;
 pub mod search;
+pub mod data;
+pub mod reports;
 
 
 /// The ARGA backend
@@ -37,7 +39,15 @@ enum Commands {
         name: String,
         /// The path to the file being imported
         path: String,
-    }
+    },
+
+    /// Perform tasks on raw data sets
+    #[command(subcommand)]
+    Data(data::Command),
+
+    /// Create reports related to the database
+    #[command(subcommand)]
+    Reports(reports::Command),
 }
 
 
@@ -49,6 +59,8 @@ fn main() {
     match &cli.command {
         Commands::CreateAdmin { name, email, password } => admin::create_admin(name, email, password),
         Commands::Search(command) => search::process_command(command),
+        Commands::Data(command) => data::process_command(command),
+        Commands::Reports(command) => reports::process_command(command),
         Commands::Dataset { worker, name, path } => dataset::import(worker, name, path),
     }
 }

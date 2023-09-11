@@ -10,3 +10,4 @@ pub mod ecology_extractor;
 pub mod conservation_status_extractor;
 pub mod indigenous_knowledge_extractor;
 pub mod collection_extractor;
+pub mod sequence_extractor;

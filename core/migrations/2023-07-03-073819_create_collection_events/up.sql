@@ -4,7 +4,7 @@ CREATE TABLE collection_events (
     specimen_id uuid REFERENCES specimens NOT NULL,
     organism_id uuid REFERENCES organisms,
 
-    occurrence_id varchar,
+    accession varchar,
     catalog_number varchar,
     record_number varchar,
     individual_count varchar,
@@ -19,5 +19,12 @@ CREATE TABLE collection_events (
     pathway varchar,
     occurrence_status varchar,
     preparation varchar,
-    other_catalog_numbers varchar
+    other_catalog_numbers varchar,
+
+    env_broad_scale varchar,
+    ref_biomaterial varchar,
+    source_mat_id varchar,
+    specific_host varchar,
+    strain varchar,
+    isolate varchar
 );

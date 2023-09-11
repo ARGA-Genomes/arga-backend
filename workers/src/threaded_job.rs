@@ -13,6 +13,7 @@ use super::importers::{
     source_importer,
     dataset_importer,
     collection_importer,
+    sequence_importer,
     taxon_importer,
     synonym_importer,
     vernacular_importer,
@@ -99,13 +100,16 @@ impl ThreadedJob {
             "import_region" => region_importer::import(path, pool)?,
             "import_ecology" => ecology_importer::import(path, pool)?,
             "import_conservation_status" => {
+                info!(name=data.name, "Importing conservation status");
                 let source = conservation_status_importer::get_or_create_dataset(&data.name, &data.description, pool)?;
                 conservation_status_importer::import(path, &source, pool)?;
             }
             "import_indigenous_knowledge" => indigenous_knowledge_importer::import(path, pool)?,
-            "import_collection" => {
-                let list = collection_importer::create_dataset(&data.name, &data.description, pool)?;
-                collection_importer::import(path, &list, pool)?;
+            "import_collection" => collection_importer::import(path, &data.name, pool)?,
+            "import_sequence" => {
+                info!(name=data.name, "Importing sequence events");
+                let source = sequence_importer::get_or_create_dataset(&data.name, &data.description, pool)?;
+                sequence_importer::import(path, &source, pool)?;
             }
             _ => {}
         }

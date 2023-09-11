@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use csv::DeserializeRecordsIntoIter;
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
 use rayon::prelude::*;
@@ -7,7 +8,7 @@ use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{NameList, Specimen, Event, CollectionEvent, Organism};
+use arga_core::models::{Specimen, Event, CollectionEvent, Organism, Dataset};
 use crate::error::Error;
 use crate::extractors::utils::parse_lat_lng;
 use crate::matchers::name_matcher::{match_records, NameMatch, NameRecord};
@@ -52,9 +53,8 @@ struct Record {
     field_notes: Option<String>,
     event_remarks: Option<String>,
 
-    // occurrence block
-    #[serde(rename(deserialize = "occurrenceID"))]
-    occurrence_id: Option<String>,
+    // collection event block
+    accession: Option<String>,
     record_number: Option<String>,
     individual_count: Option<String>,
     organism_quantity: Option<String>,
@@ -69,6 +69,12 @@ struct Record {
     occurrence_status: Option<String>,
     preparation: Option<String>,
     other_catalog_numbers: Option<String>,
+    env_broad_scale: Option<String>,
+    ref_biomaterial: Option<String>,
+    source_mat_id: Option<String>,
+    specific_host: Option<String>,
+    strain: Option<String>,
+    isolate: Option<String>,
 
     // organism block
     organism_name: Option<String>,
@@ -96,27 +102,65 @@ pub struct CollectionExtract {
 }
 
 
+pub struct CollectionExtractIterator {
+    pool: PgPool,
+    dataset: Dataset,
+    reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
+}
+
+impl Iterator for CollectionExtractIterator {
+    type Item = Result<CollectionExtract, Error>;
+
+    /// Return a large chunk of collection events extracted from a CSV reader
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut records: Vec<Record> = Vec::with_capacity(1_000_000);
+
+        // take the next million records and return early with an error result
+        // if parsing failed
+        for row in self.reader.by_ref().take(1_000_000) {
+            match row {
+                Ok(record) => records.push(record),
+                Err(err) => return Some(Err(err.into()))
+            }
+        }
+
+        // if empth we've reached the end, otherwise do the expensive work
+        // of extracting the chunk of data within the iterator call
+        if records.is_empty() {
+            None
+        } else {
+            Some(extract_chunk(records, &self.dataset, &mut self.pool))
+        }
+    }
+}
+
+
 /// Extract collection events and other related data from a CSV file
 ///
 /// Every collection event by it's very action must have a specimen associated with
 /// it and a parent event tracking common event metadata. A specimen can be further
 /// used by other events but a collection event will *always* create a new specimen
 /// since it is the _collection_ of a particular specimen that it describes.
-pub fn extract(path: PathBuf, list: &NameList, pool: &mut PgPool) -> Result<CollectionExtract, Error> {
-    let mut records: Vec<Record> = Vec::new();
-    for row in csv::Reader::from_path(&path)?.deserialize() {
-        records.push(row?);
-    }
+pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<CollectionExtractIterator, Error> {
+    let reader = csv::Reader::from_path(&path)?.into_deserialize();
+    Ok(CollectionExtractIterator {
+        pool: pool.clone(),
+        dataset: dataset.clone(),
+        reader,
+    })
+}
 
+
+fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, pool: &mut PgPool) -> Result<CollectionExtract, Error> {
     // match the records to names in the database. this will filter out any names
     // that could not be matched
-    let records = match_records(records, pool);
+    let records = match_records(chunk, pool);
 
     // extract all the records associated with a collection event.
     // these extraction method return results in the same order as the input records
     // which makes it possible to zip the various extractions to get any associated ids
     // if necessary
-    let specimens = extract_specimens(list, &records);
+    let specimens = extract_specimens(dataset, &records);
     let organisms = extract_organisms(&records);
     let events = extract_events(&records);
 
@@ -132,7 +176,7 @@ pub fn extract(path: PathBuf, list: &NameList, pool: &mut PgPool) -> Result<Coll
 }
 
 
-fn extract_specimens(list: &NameList, records: &MatchedRecords) -> Vec<Specimen> {
+fn extract_specimens(dataset: &Dataset, records: &MatchedRecords) -> Vec<Specimen> {
     info!(total=records.len(), "Extracting specimens");
 
     let specimens = records.par_iter().map(|(name, row)| {
@@ -143,9 +187,9 @@ fn extract_specimens(list: &NameList, records: &MatchedRecords) -> Vec<Specimen>
 
         Specimen {
             id: Uuid::new_v4(),
-            list_id: list.id.clone(),
+            dataset_id: dataset.id.clone(),
             name_id: name.id.clone(),
-            type_status: row.type_status.clone().unwrap_or("unspecified".to_string()),
+            type_status: row.type_status.clone(),
             institution_name: row.institution_name.clone(),
             institution_code: row.institution_code.clone(),
             collection_code: row.collection_code.clone(),
@@ -232,7 +276,7 @@ fn extract_collection_events(
             specimen_id: specimen.id.clone(),
             organism_id: organism.clone().map(|o| o.id),
 
-            occurrence_id: row.occurrence_id.clone(),
+            accession: row.accession.clone(),
             catalog_number: row.catalog_number.clone(),
             record_number: row.record_number.clone(),
             individual_count: row.individual_count.clone(),
@@ -248,6 +292,12 @@ fn extract_collection_events(
             occurrence_status: row.occurrence_status.clone(),
             preparation: row.preparation.clone(),
             other_catalog_numbers: row.other_catalog_numbers.clone(),
+            env_broad_scale: row.env_broad_scale.clone(),
+            ref_biomaterial: row.ref_biomaterial.clone(),
+            source_mat_id: row.source_mat_id.clone(),
+            specific_host: row.specific_host.clone(),
+            strain: row.strain.clone(),
+            isolate: row.isolate.clone(),
         }
     }).collect::<Vec<CollectionEvent>>();
 

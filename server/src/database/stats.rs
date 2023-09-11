@@ -1,3 +1,4 @@
+use arga_core::models::Dataset;
 use async_graphql::SimpleObject;
 
 use diesel::prelude::*;
@@ -52,7 +53,6 @@ pub struct ClassBreakdown {
     pub orders: Vec<BreakdownItem>,
 }
 
-
 #[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OrderStats {
@@ -66,6 +66,22 @@ pub struct OrderStats {
 pub struct OrderBreakdown {
     pub families: Vec<BreakdownItem>,
 }
+
+
+#[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatasetStats {
+    /// The total amount of species in the order
+    pub total_species: usize,
+    pub total_species_with_data: usize,
+}
+
+#[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatasetBreakdown {
+    pub species: Vec<BreakdownItem>,
+}
+
 
 #[derive(Clone, Debug, SimpleObject, Serialize, Deserialize, Queryable)]
 #[serde(rename_all = "camelCase")]
@@ -228,6 +244,40 @@ impl StatsProvider {
 
         Ok(ClassBreakdown {
             orders,
+        })
+    }
+
+    pub async fn dataset(&self, name: &str) -> Result<DatasetStats, Error> {
+        use schema::{datasets, taxa, indigenous_knowledge as iek};
+        let mut conn = self.pool.get().await?;
+
+        let dataset = datasets::table
+            .filter(datasets::name.eq(&name))
+            .get_result::<Dataset>(&mut conn)
+            .await?;
+
+        let total: i64 = taxa::table
+            .left_join(iek::table.on(taxa::name_id.eq(iek::name_id)))
+            .filter(iek::dataset_id.eq(dataset.id))
+            .count()
+            .get_result(&mut conn)
+            .await?;
+
+        Ok(DatasetStats {
+            // this can never be negative due to the count
+            total_species: total as usize,
+            total_species_with_data: 0,
+        })
+    }
+
+    pub async fn dataset_breakdown(&self, name: &str) -> Result<DatasetBreakdown, Error> {
+        use schema::taxa::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let species = vec![];
+
+        Ok(DatasetBreakdown {
+            species,
         })
     }
 }

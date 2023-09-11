@@ -423,20 +423,20 @@ pub struct IndigenousKnowledge {
 #[diesel(table_name = schema::specimens)]
 pub struct Specimen {
     pub id: Uuid,
-    pub list_id: Uuid,
+    pub dataset_id: Uuid,
     pub name_id: Uuid,
-    pub type_status: String,
+    pub type_status: Option<String>,
     pub institution_name: Option<String>,
+    pub institution_code: Option<String>,
+    pub collection_code: Option<String>,
+    pub catalog_number: Option<String>,
     pub organism_id: Option<String>,
     pub locality: Option<String>,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub recorded_by: Option<String>,
     pub details: Option<String>,
     pub remarks: Option<String>,
-    pub institution_code: Option<String>,
-    pub collection_code: Option<String>,
-    pub catalog_number: Option<String>,
-    pub recorded_by: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -477,7 +477,7 @@ pub struct CollectionEvent {
     pub specimen_id: Uuid,
     pub organism_id: Option<Uuid>,
 
-    pub occurrence_id: Option<String>,
+    pub accession: Option<String>,
     pub catalog_number: Option<String>,
     pub record_number: Option<String>,
     pub individual_count: Option<String>,
@@ -493,6 +493,13 @@ pub struct CollectionEvent {
     pub occurrence_status: Option<String>,
     pub preparation: Option<String>,
     pub other_catalog_numbers: Option<String>,
+
+    pub env_broad_scale: Option<String>,
+    pub ref_biomaterial: Option<String>,
+    pub source_mat_id: Option<String>,
+    pub specific_host: Option<String>,
+    pub strain: Option<String>,
+    pub isolate: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -626,7 +633,7 @@ pub struct AssemblyStats {
 }
 
 
-#[derive(Debug, Queryable, Insertable, Default)]
+#[derive(Debug, Queryable, Insertable, Default, Clone)]
 #[diesel(table_name = schema::biosamples)]
 pub struct BioSample {
     pub id: Uuid,

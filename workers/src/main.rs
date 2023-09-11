@@ -7,8 +7,8 @@ mod manager;
 mod threaded_job;
 
 mod tokio_bridge;
-mod specimen_importer;
-mod marker_importer;
+// mod specimen_importer;
+// mod marker_importer;
 
 use std::time::{Instant, Duration};
 

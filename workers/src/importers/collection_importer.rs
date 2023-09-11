@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use tracing::info;
 
 use arga_core::schema;
-use arga_core::models::{NameList, NameListType, Specimen, Event, CollectionEvent, Organism};
+use arga_core::models::{Specimen, Event, CollectionEvent, Organism, Dataset};
 use crate::error::Error;
 use crate::extractors::collection_extractor;
 
@@ -14,34 +14,33 @@ use crate::extractors::collection_extractor;
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
-pub fn create_dataset(list_name: &str, list_description: &Option<String>, pool: &mut PgPool) -> Result<NameList, Error> {
-    use schema::name_lists::dsl::*;
+pub fn get_dataset(global_id: &str, pool: &mut PgPool) -> Result<Dataset, Error> {
+    use schema::datasets;
     let mut conn = pool.get()?;
-
-    let source = diesel::insert_into(name_lists)
-        .values((
-            list_type.eq(NameListType::Specimen),
-            name.eq(list_name),
-            description.eq(list_description),
-        ))
-        .get_result(&mut conn)?;
-
-    Ok(source)
+    let dataset = datasets::table.filter(datasets::global_id.eq(global_id)).get_result::<Dataset>(&mut conn)?;
+    Ok(dataset)
 }
 
-pub fn import(path: PathBuf, list: &NameList, pool: &mut PgPool) -> Result<(), Error> {
-    let extract = collection_extractor::extract(path, list, pool)?;
 
-    // the extractors generate UUIDs and associate all records in the extract
-    // so we must import them in a specific order to not trigger referential integrity
-    // errors in the database.
-    // right now we don't want to cross polinate datasets when it comes to linking
-    // specimens or events to other specimens so this approach works for us as that
-    // means every collection import should always create new records
-    import_specimens(extract.specimens, pool)?;
-    import_organisms(extract.organisms, pool)?;
-    import_events(extract.events, pool)?;
-    import_collection_events(extract.collection_events, pool)?;
+pub fn import(path: PathBuf, global_id: &str, pool: &mut PgPool) -> Result<(), Error> {
+    info!("Extracting collection events");
+
+    let dataset = get_dataset(global_id, pool)?;
+    let extractor = collection_extractor::extract(path, &dataset, pool)?;
+
+    for extract in extractor {
+        let extract = extract?;
+        // the extractors generate UUIDs and associate all records in the extract
+        // so we must import them in a specific order to not trigger referential integrity
+        // errors in the database.
+        // right now we don't want to cross polinate datasets when it comes to linking
+        // specimens or events to other specimens so this approach works for us as that
+        // means every collection import should always create new records
+        import_specimens(extract.specimens, pool)?;
+        import_organisms(extract.organisms, pool)?;
+        import_events(extract.events, pool)?;
+        import_collection_events(extract.collection_events, pool)?;
+    }
 
     Ok(())
 }

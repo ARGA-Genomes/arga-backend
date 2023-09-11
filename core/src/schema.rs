@@ -101,7 +101,7 @@ diesel::table! {
         event_id -> Uuid,
         specimen_id -> Uuid,
         organism_id -> Nullable<Uuid>,
-        occurrence_id -> Nullable<Varchar>,
+        accession -> Nullable<Varchar>,
         catalog_number -> Nullable<Varchar>,
         record_number -> Nullable<Varchar>,
         individual_count -> Nullable<Varchar>,
@@ -117,6 +117,12 @@ diesel::table! {
         occurrence_status -> Nullable<Varchar>,
         preparation -> Nullable<Varchar>,
         other_catalog_numbers -> Nullable<Varchar>,
+        env_broad_scale -> Nullable<Varchar>,
+        ref_biomaterial -> Nullable<Varchar>,
+        source_mat_id -> Nullable<Varchar>,
+        specific_host -> Nullable<Varchar>,
+        strain -> Nullable<Varchar>,
+        isolate -> Nullable<Varchar>,
     }
 }
 
@@ -376,20 +382,20 @@ diesel::table! {
 diesel::table! {
     specimens (id) {
         id -> Uuid,
-        list_id -> Uuid,
+        dataset_id -> Uuid,
         name_id -> Uuid,
-        type_status -> Varchar,
+        type_status -> Nullable<Varchar>,
         institution_name -> Nullable<Varchar>,
+        institution_code -> Nullable<Varchar>,
+        collection_code -> Nullable<Varchar>,
+        catalog_number -> Nullable<Varchar>,
         organism_id -> Nullable<Varchar>,
         locality -> Nullable<Varchar>,
         latitude -> Nullable<Float8>,
         longitude -> Nullable<Float8>,
+        recorded_by -> Nullable<Varchar>,
         details -> Nullable<Varchar>,
         remarks -> Nullable<Varchar>,
-        institution_code -> Nullable<Varchar>,
-        collection_code -> Nullable<Varchar>,
-        catalog_number -> Nullable<Varchar>,
-        recorded_by -> Nullable<Varchar>,
     }
 }
 
@@ -537,7 +543,7 @@ diesel::joinable!(sequencing_events -> events (event_id));
 diesel::joinable!(sequencing_events -> organisms (organism_id));
 diesel::joinable!(sequencing_events -> specimens (specimen_id));
 diesel::joinable!(sequencing_run_events -> sequencing_events (sequencing_event_id));
-diesel::joinable!(specimens -> name_lists (list_id));
+diesel::joinable!(specimens -> datasets (dataset_id));
 diesel::joinable!(specimens -> names (name_id));
 diesel::joinable!(taxa -> datasets (dataset_id));
 diesel::joinable!(taxa -> names (name_id));

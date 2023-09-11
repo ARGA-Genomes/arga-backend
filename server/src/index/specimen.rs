@@ -7,7 +7,7 @@ use uuid::Uuid;
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
 pub struct SpecimenDetails {
     pub id: String,
-    pub type_status: String,
+    pub type_status: Option<String>,
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
     pub collection_code: Option<String>,
