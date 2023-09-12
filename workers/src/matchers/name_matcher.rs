@@ -11,6 +11,7 @@ use arga_core::schema;
 use crate::error::Error;
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
+pub type NameMap = HashMap<String, NameMatch>;
 
 
 #[derive(Debug, Deserialize)]
@@ -27,6 +28,26 @@ pub struct NameMatch {
     pub canonical_name: String,
 }
 
+
+pub fn name_map(pool: &mut PgPool) -> Result<NameMap, Error> {
+    use schema::names::dsl::*;
+    info!("Creating name map");
+
+    let mut conn = pool.get()?;
+
+    let results = names
+        .select((id, scientific_name, canonical_name))
+        .load::<NameMatch>(&mut conn)?;
+
+    let mut map = NameMap::new();
+    for name_match in results {
+        map.insert(name_match.scientific_name.clone(), name_match.clone());
+        map.insert(name_match.canonical_name.clone(), name_match);
+    }
+
+    info!(total=map.len(), "Creating name map finished");
+    Ok(map)
+}
 
 pub fn match_names(records: &Vec<NameRecord>, pool: &mut PgPool) -> HashMap<String, NameMatch> {
     use schema::names;
@@ -106,4 +127,34 @@ where T: Clone + Into<NameRecord>
     }
 
     matched
+}
+
+
+pub fn match_records_mapped<T>(records: Vec<T>, names: &NameMap) -> Result<Vec<(NameMatch, T)>, Error>
+where T: Clone + Into<NameRecord>
+{
+    // associate the records with the matched name
+    let mut matched: Vec<(NameMatch, T)> = Vec::with_capacity(records.len());
+    for record in records {
+        let name_record = record.clone().into();
+
+        // try to match on scientific name first and fall back to matching by
+        // canonical name if not provided. importantly this does not try to match
+        // by canonical name if a match for scientific name was not found. it only
+        // tries an alternative column to match on as scientific names are often not
+        // provided.
+        // If scientific names are provided then it will only attempt to match on that.
+        if let Some(scientific_name) = name_record.scientific_name {
+            if let Some(name) = names.get(&scientific_name) {
+                matched.push((name.clone(), record));
+            }
+        }
+        else if let Some(canonical_name) = name_record.canonical_name {
+            if let Some(name) = names.get(&canonical_name) {
+                matched.push((name.clone(), record));
+            }
+        }
+    }
+
+    Ok(matched)
 }

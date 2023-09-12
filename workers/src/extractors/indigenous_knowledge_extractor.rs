@@ -12,6 +12,7 @@ use arga_core::models::IndigenousKnowledge;
 use crate::error::Error;
 use crate::matchers::dataset_matcher::{match_datasets, DatasetRecord, DatasetMap};
 use crate::matchers::name_matcher::{match_records, NameRecord, NameMatch};
+use super::utils::naive_date_time_from_str;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -49,13 +50,6 @@ impl From<Record> for DatasetRecord {
             global_id: value.global_id,
         }
     }
-}
-
-fn naive_date_time_from_str<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
-where D: serde::Deserializer<'de>
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%SZ").map_err(serde::de::Error::custom)
 }
 
 

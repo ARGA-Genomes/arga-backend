@@ -11,7 +11,7 @@ pub struct SpecimenDetails {
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
     pub collection_code: Option<String>,
-    pub catalog_number: Option<String>,
+    pub material_sample_id: Option<String>,
     pub recorded_by: Option<String>,
     pub organism_id: Option<String>,
     pub locality: Option<String>,
@@ -50,7 +50,6 @@ pub trait GetSpecimenOrganism {
 pub struct Event {
     pub id: String,
 
-    pub event_id: Option<String>,
     pub field_number: Option<String>,
     pub event_date: Option<String>,
 
@@ -96,7 +95,7 @@ pub struct CollectionEvent {
 pub struct SequencingEvent {
     pub id: String,
     pub organism_id: Option<String>,
-    pub sequence_id: Option<String>,
+    pub accession: Option<String>,
     pub genbank_accession: Option<String>,
     pub target_gene: Option<String>,
     pub dna_sequence: Option<String>,

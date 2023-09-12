@@ -1,5 +1,7 @@
+use chrono::{NaiveDateTime, NaiveDate};
 use once_cell::sync::Lazy;
 use regex::Regex;
+use serde::Deserialize;
 
 use crate::error::{Error, ParseError};
 
@@ -47,6 +49,9 @@ pub struct Coordinates {
 }
 
 pub fn parse_lat_lng(lat_long: &str) -> Result<Coordinates, Error> {
+    let chars: &[_] = &['(', ')'];
+    let lat_long = lat_long.trim_matches(chars);
+
     let coord = match latlon::parse(lat_long) {
         Ok(point) => Ok(point),
         Err(err) => Err(ParseError::Coordinates(err.to_string())),
@@ -55,6 +60,28 @@ pub fn parse_lat_lng(lat_long: &str) -> Result<Coordinates, Error> {
     Ok(Coordinates {
         latitude: coord.y(),
         longitude: coord.x(),
+    })
+}
+
+
+pub fn naive_date_time_from_str<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
+where D: serde::Deserializer<'de>
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%SZ").map_err(serde::de::Error::custom)
+}
+
+pub fn naive_date_from_str_opt<'de, D>(deserializer: D) -> Result<Option<NaiveDate>, D::Error>
+where D: serde::Deserializer<'de>
+{
+    let s: Option<String> = Deserialize::deserialize(deserializer)?;
+
+    Ok(match s {
+        None => None,
+        Some(s) => match NaiveDate::parse_from_str(&s, "%Y-%m-%d") {
+            Ok(date) => Some(date),
+            Err(_) => None,
+        },
     })
 }
 

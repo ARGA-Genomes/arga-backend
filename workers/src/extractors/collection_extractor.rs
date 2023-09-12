@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use chrono::{NaiveDate, NaiveTime};
 use csv::DeserializeRecordsIntoIter;
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
@@ -11,7 +12,8 @@ use uuid::Uuid;
 use arga_core::models::{Specimen, Event, CollectionEvent, Organism, Dataset};
 use crate::error::Error;
 use crate::extractors::utils::parse_lat_lng;
-use crate::matchers::name_matcher::{match_records, NameMatch, NameRecord};
+use crate::matchers::name_matcher::{NameMatch, NameRecord, match_records_mapped, NameMap, name_map};
+use super::utils::naive_date_from_str_opt;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -29,22 +31,36 @@ struct Record {
     collection_code: Option<String>,
     catalog_number: Option<String>,
     recorded_by: Option<String>,
+    identified_by: Option<String>,
     #[serde(rename(deserialize = "organismID"))]
     organism_id: Option<String>,
+    #[serde(rename(deserialize = "materialSampleID"))]
+    material_sample_id: Option<String>,
+    details: Option<String>,
+    remarks: Option<String>,
+    identification_remarks: Option<String>,
+
+    // location block
     locality: Option<String>,
+    country: Option<String>,
+    country_code: Option<String>,
+    state_province: Option<String>,
+    county: Option<String>,
+    municipality: Option<String>,
     latitude: Option<f64>,
     longitude: Option<f64>,
     verbatim_lat_long: Option<String>,
-    details: Option<String>,
-    remarks: Option<String>,
+    elevation: Option<f64>,
+    depth: Option<f64>,
+    elevation_accuracy: Option<f64>,
+    depth_accuracy: Option<f64>,
+    location_source: Option<String>,
 
     // event block
-    #[serde(rename(deserialize = "eventID"))]
-    event_id: Option<String>,
-    // #[serde(rename(deserialize = "parentEventID"))]
-    // parent_event_id: Option<String>,
     field_number: Option<String>,
-    event_date: Option<chrono::DateTime<chrono::Utc>>,
+    #[serde(deserialize_with = "naive_date_from_str_opt")]
+    event_date: Option<NaiveDate>,
+    // event_time: Option<NaiveTime>,
     habitat: Option<String>,
     sampling_protocol: Option<String>,
     sampling_size_value: Option<String>,
@@ -105,6 +121,7 @@ pub struct CollectionExtract {
 pub struct CollectionExtractIterator {
     pool: PgPool,
     dataset: Dataset,
+    names: NameMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
 
@@ -113,6 +130,7 @@ impl Iterator for CollectionExtractIterator {
 
     /// Return a large chunk of collection events extracted from a CSV reader
     fn next(&mut self) -> Option<Self::Item> {
+        info!("Deserialising CSV");
         let mut records: Vec<Record> = Vec::with_capacity(1_000_000);
 
         // take the next million records and return early with an error result
@@ -124,12 +142,14 @@ impl Iterator for CollectionExtractIterator {
             }
         }
 
+        info!(total=records.len(), "Deserialising CSV finished");
+
         // if empth we've reached the end, otherwise do the expensive work
         // of extracting the chunk of data within the iterator call
         if records.is_empty() {
             None
         } else {
-            Some(extract_chunk(records, &self.dataset, &mut self.pool))
+            Some(extract_chunk(records, &self.dataset, &self.names, &mut self.pool))
         }
     }
 }
@@ -142,19 +162,22 @@ impl Iterator for CollectionExtractIterator {
 /// used by other events but a collection event will *always* create a new specimen
 /// since it is the _collection_ of a particular specimen that it describes.
 pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<CollectionExtractIterator, Error> {
+    let names = name_map(pool)?;
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
+
     Ok(CollectionExtractIterator {
         pool: pool.clone(),
         dataset: dataset.clone(),
+        names,
         reader,
     })
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, pool: &mut PgPool) -> Result<CollectionExtract, Error> {
+fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, names: &NameMap, pool: &mut PgPool) -> Result<CollectionExtract, Error> {
     // match the records to names in the database. this will filter out any names
     // that could not be matched
-    let records = match_records(chunk, pool);
+    let records = match_records_mapped(chunk, names)?;
 
     // extract all the records associated with a collection event.
     // these extraction method return results in the same order as the input records
@@ -193,7 +216,7 @@ fn extract_specimens(dataset: &Dataset, records: &MatchedRecords) -> Vec<Specime
             institution_name: row.institution_name.clone(),
             institution_code: row.institution_code.clone(),
             collection_code: row.collection_code.clone(),
-            catalog_number: row.catalog_number.clone(),
+            material_sample_id: row.material_sample_id.clone(),
             recorded_by: row.recorded_by.clone(),
             organism_id: row.organism_id.clone(),
             locality: row.locality.clone(),
@@ -201,6 +224,18 @@ fn extract_specimens(dataset: &Dataset, records: &MatchedRecords) -> Vec<Specime
             longitude: row.longitude.or_else(|| coords.clone().map(|c| c.longitude)),
             details: row.details.clone(),
             remarks: row.remarks.clone(),
+            country: row.country.clone(),
+            country_code: row.country_code.clone(),
+            state_province: row.state_province.clone(),
+            county: row.county.clone(),
+            municipality: row.municipality.clone(),
+            elevation: row.elevation.clone(),
+            depth: row.depth.clone(),
+            elevation_accuracy: row.elevation_accuracy.clone(),
+            depth_accuracy: row.depth_accuracy.clone(),
+            location_source: row.location_source.clone(),
+            identified_by: row.identified_by.clone(),
+            identification_remarks: row.identification_remarks.clone(),
         }
     }).collect::<Vec<Specimen>>();
 
@@ -239,10 +274,9 @@ fn extract_events(records: &MatchedRecords) -> Vec<Event> {
     let events = records.par_iter().map(|(_name, row)| {
         Event {
             id: Uuid::new_v4(),
-            parent_event_id: None,
-            event_id: row.event_id.clone(),
             field_number: row.field_number.clone(),
-            event_date: row.event_date.map(|d| d.date_naive()).clone(),
+            event_date: row.event_date.clone(),
+            event_time: None,
             habitat: row.habitat.clone(),
             sampling_protocol: row.sampling_protocol.clone(),
             sampling_size_value: row.sampling_size_value.clone(),

@@ -429,14 +429,26 @@ pub struct Specimen {
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
     pub collection_code: Option<String>,
-    pub catalog_number: Option<String>,
+    pub material_sample_id: Option<String>,
     pub organism_id: Option<String>,
     pub locality: Option<String>,
+    pub country: Option<String>,
+    pub country_code: Option<String>,
+    pub state_province: Option<String>,
+    pub county: Option<String>,
+    pub municipality: Option<String>,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub elevation: Option<f64>,
+    pub depth: Option<f64>,
+    pub elevation_accuracy: Option<f64>,
+    pub depth_accuracy: Option<f64>,
+    pub location_source: Option<String>,
     pub recorded_by: Option<String>,
+    pub identified_by: Option<String>,
     pub details: Option<String>,
     pub remarks: Option<String>,
+    pub identification_remarks: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -456,10 +468,9 @@ pub struct Organism {
 #[diesel(table_name = schema::events)]
 pub struct Event {
     pub id: Uuid,
-    pub parent_event_id: Option<Uuid>,
-    pub event_id: Option<String>,
     pub field_number: Option<String>,
     pub event_date: Option<chrono::NaiveDate>,
+    pub event_time: Option<chrono::NaiveTime>,
     pub habitat: Option<String>,
     pub sampling_protocol: Option<String>,
     pub sampling_size_value: Option<String>,
@@ -506,11 +517,12 @@ pub struct CollectionEvent {
 #[diesel(table_name = schema::sequencing_events)]
 pub struct SequencingEvent {
     pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
     pub event_id: Uuid,
-    pub specimen_id: Uuid,
     pub organism_id: Option<Uuid>,
 
-    pub sequence_id: Option<String>,
+    pub accession: Option<String>,
     pub genbank_accession: Option<String>,
     pub target_gene: Option<String>,
     pub dna_sequence: Option<String>,

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use chrono::{DateTime, Utc, NaiveDateTime};
+use chrono::NaiveDateTime;
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
 use rayon::prelude::*;
@@ -11,6 +11,7 @@ use uuid::Uuid;
 use arga_core::models::Dataset;
 use crate::error::Error;
 use crate::matchers::source_matcher::{match_sources, SourceRecord, SourceMap};
+use super::utils::naive_date_time_from_str;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -41,13 +42,6 @@ impl From<Record> for SourceRecord {
             name: value.source_name,
         }
     }
-}
-
-fn naive_date_time_from_str<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
-where D: serde::Deserializer<'de>
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    NaiveDateTime::parse_from_str(&s, "%m/%d/%Y %H:%M:%S").map_err(serde::de::Error::custom)
 }
 
 

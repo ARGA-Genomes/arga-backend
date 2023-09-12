@@ -42,6 +42,7 @@ pub fn import(path: PathBuf, global_id: &str, pool: &mut PgPool) -> Result<(), E
         import_collection_events(extract.collection_events, pool)?;
     }
 
+    info!("Import finished");
     Ok(())
 }
 

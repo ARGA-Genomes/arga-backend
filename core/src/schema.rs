@@ -166,10 +166,9 @@ diesel::table! {
 diesel::table! {
     events (id) {
         id -> Uuid,
-        parent_event_id -> Nullable<Uuid>,
-        event_id -> Nullable<Varchar>,
         field_number -> Nullable<Varchar>,
         event_date -> Nullable<Date>,
+        event_time -> Nullable<Time>,
         habitat -> Nullable<Varchar>,
         sampling_protocol -> Nullable<Varchar>,
         sampling_size_value -> Nullable<Varchar>,
@@ -340,10 +339,11 @@ diesel::table! {
 diesel::table! {
     sequencing_events (id) {
         id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
         event_id -> Uuid,
-        specimen_id -> Uuid,
         organism_id -> Nullable<Uuid>,
-        sequence_id -> Nullable<Varchar>,
+        accession -> Nullable<Varchar>,
         genbank_accession -> Nullable<Varchar>,
         target_gene -> Nullable<Varchar>,
         dna_sequence -> Nullable<Text>,
@@ -388,14 +388,26 @@ diesel::table! {
         institution_name -> Nullable<Varchar>,
         institution_code -> Nullable<Varchar>,
         collection_code -> Nullable<Varchar>,
-        catalog_number -> Nullable<Varchar>,
+        material_sample_id -> Nullable<Varchar>,
         organism_id -> Nullable<Varchar>,
         locality -> Nullable<Varchar>,
+        country -> Nullable<Varchar>,
+        country_code -> Nullable<Varchar>,
+        state_province -> Nullable<Varchar>,
+        county -> Nullable<Varchar>,
+        municipality -> Nullable<Varchar>,
         latitude -> Nullable<Float8>,
         longitude -> Nullable<Float8>,
+        elevation -> Nullable<Float8>,
+        depth -> Nullable<Float8>,
+        elevation_accuracy -> Nullable<Float8>,
+        depth_accuracy -> Nullable<Float8>,
+        location_source -> Nullable<Varchar>,
         recorded_by -> Nullable<Varchar>,
+        identified_by -> Nullable<Varchar>,
         details -> Nullable<Varchar>,
         remarks -> Nullable<Varchar>,
+        identification_remarks -> Nullable<Varchar>,
     }
 }
 
@@ -539,9 +551,10 @@ diesel::joinable!(name_vernacular_names -> vernacular_names (vernacular_name_id)
 diesel::joinable!(organisms -> names (name_id));
 diesel::joinable!(regions -> datasets (dataset_id));
 diesel::joinable!(regions -> names (name_id));
+diesel::joinable!(sequencing_events -> datasets (dataset_id));
 diesel::joinable!(sequencing_events -> events (event_id));
+diesel::joinable!(sequencing_events -> names (name_id));
 diesel::joinable!(sequencing_events -> organisms (organism_id));
-diesel::joinable!(sequencing_events -> specimens (specimen_id));
 diesel::joinable!(sequencing_run_events -> sequencing_events (sequencing_event_id));
 diesel::joinable!(specimens -> datasets (dataset_id));
 diesel::joinable!(specimens -> names (name_id));

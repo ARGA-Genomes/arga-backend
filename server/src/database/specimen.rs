@@ -36,7 +36,7 @@ impl From<Specimen> for specimen::SpecimenDetails {
             institution_name: value.institution_name,
             institution_code: value.institution_code,
             collection_code: value.collection_code,
-            catalog_number: value.catalog_number,
+            material_sample_id: value.material_sample_id,
             recorded_by: value.recorded_by,
             organism_id: value.organism_id,
             locality: value.locality,
@@ -106,7 +106,7 @@ impl GetSpecimenEvents for Database {
 
         // get all sequencing events
         let sequencing = sequencing_events::table
-            .filter(sequencing_events::specimen_id.eq(specimen_id))
+            .filter(sequencing_events::name_id.eq(specimen_id))
             .load::<SequencingEvent>(&mut conn)
             .await?;
 
@@ -160,7 +160,6 @@ impl From<Event> for specimen::Event {
     fn from(value: Event) -> Self {
         Self {
             id: value.id.to_string(),
-            event_id: value.event_id,
             field_number: value.field_number,
             event_date: value.event_date.map(|d| d.to_string()),
             habitat: value.habitat,
@@ -204,7 +203,7 @@ impl From<SequencingEvent> for specimen::SequencingEvent {
         Self {
             id: value.id.to_string(),
             organism_id: value.organism_id.map(|uuid| uuid.to_string()),
-            sequence_id: value.sequence_id,
+            accession: value.accession,
             genbank_accession: value.genbank_accession,
             target_gene: value.target_gene,
             dna_sequence: value.dna_sequence,
