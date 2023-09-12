@@ -529,6 +529,18 @@ pub struct AccessionEvent {
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::subsample_events)]
+pub struct SubsampleEvent {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub event_id: Uuid,
+
+    pub accession: Option<String>,
+    pub preparation_type: Option<String>,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::sequencing_events)]
 pub struct SequencingEvent {
     pub id: Uuid,

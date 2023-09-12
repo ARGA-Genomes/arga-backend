@@ -426,6 +426,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    subsample_events (id) {
+        id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
+        event_id -> Uuid,
+        accession -> Nullable<Varchar>,
+        preparation_type -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::TaxonomicStatus;
 
@@ -575,6 +586,9 @@ diesel::joinable!(sequencing_events -> organisms (organism_id));
 diesel::joinable!(sequencing_run_events -> sequencing_events (sequencing_event_id));
 diesel::joinable!(specimens -> datasets (dataset_id));
 diesel::joinable!(specimens -> names (name_id));
+diesel::joinable!(subsample_events -> datasets (dataset_id));
+diesel::joinable!(subsample_events -> events (event_id));
+diesel::joinable!(subsample_events -> names (name_id));
 diesel::joinable!(taxa -> datasets (dataset_id));
 diesel::joinable!(taxa -> names (name_id));
 diesel::joinable!(taxon_photos -> names (name_id));
@@ -606,6 +620,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     sequencing_run_events,
     sources,
     specimens,
+    subsample_events,
     taxa,
     taxon_history,
     taxon_photos,

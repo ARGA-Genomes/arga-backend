@@ -175,6 +175,7 @@ impl Allocator {
                 "import_indigenous_knowledge" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_collection" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_accession" => ret_some_to!([self.threaded_job], run() as (Job)),
+                "import_subsample" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_sequence" => ret_some_to!([self.threaded_job], run() as (Job)),
                 _ => panic!("Unknown job worker: {}", job.worker)
             };
