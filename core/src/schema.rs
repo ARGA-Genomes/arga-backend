@@ -23,6 +23,20 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    accession_events (id) {
+        id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
+        event_id -> Uuid,
+        accession -> Nullable<Varchar>,
+        material_sample_id -> Nullable<Varchar>,
+        institution_name -> Nullable<Varchar>,
+        institution_code -> Nullable<Varchar>,
+        type_status -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     assemblies (id) {
         id -> Uuid,
         name_id -> Uuid,
@@ -532,6 +546,9 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(accession_events -> datasets (dataset_id));
+diesel::joinable!(accession_events -> events (event_id));
+diesel::joinable!(accession_events -> names (name_id));
 diesel::joinable!(assemblies -> names (name_id));
 diesel::joinable!(assembly_stats -> assemblies (assembly_id));
 diesel::joinable!(biosamples -> names (name_id));
@@ -565,6 +582,7 @@ diesel::joinable!(taxon_remarks -> taxa (taxon_id));
 diesel::joinable!(trace_files -> names (name_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    accession_events,
     assemblies,
     assembly_stats,
     biosamples,

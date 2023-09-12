@@ -13,6 +13,7 @@ use super::importers::{
     source_importer,
     dataset_importer,
     collection_importer,
+    accession_importer,
     sequence_importer,
     taxon_importer,
     synonym_importer,
@@ -106,6 +107,7 @@ impl ThreadedJob {
             }
             "import_indigenous_knowledge" => indigenous_knowledge_importer::import(path, pool)?,
             "import_collection" => collection_importer::import(path, &data.name, pool)?,
+            "import_accession" => accession_importer::import(path, &data.name, pool)?,
             "import_sequence" => {
                 info!(name=data.name, "Importing sequence events");
                 let source = sequence_importer::get_or_create_dataset(&data.name, &data.description, pool)?;

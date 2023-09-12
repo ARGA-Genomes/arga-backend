@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use chrono::{NaiveDate, NaiveTime};
+use chrono::NaiveDate;
 use csv::DeserializeRecordsIntoIter;
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
