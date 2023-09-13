@@ -14,3 +14,4 @@ pub mod dna_extraction_importer;
 pub mod sequence_importer;
 pub mod assembly_importer;
 pub mod annotation_importer;
+pub mod deposition_importer;

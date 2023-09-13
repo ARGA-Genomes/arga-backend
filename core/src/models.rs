@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc, NaiveDateTime};
+use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate};
 use diesel::{Queryable, Insertable};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
@@ -639,6 +639,37 @@ pub struct AnnotationEvent {
     pub coverage: Option<String>,
     pub replicons: Option<i64>,
     pub standard_operating_procedures: Option<String>,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::deposition_events)]
+pub struct DepositionEvent {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub event_id: Uuid,
+
+    pub accession: Option<String>,
+    pub genbank_accession: Option<String>,
+    pub material_sample_id: Option<String>,
+    pub submitted_by: Option<String>,
+
+    pub collection_name: Option<String>,
+    pub collection_code: Option<String>,
+    pub institution_name: Option<String>,
+
+    pub data_type: Option<String>,
+    pub excluded_from_refseq: Option<String>,
+    pub asm_not_live_date: Option<String>,
+    pub source_uri: Option<String>,
+
+    pub title: Option<String>,
+    pub url: Option<String>,
+    pub funding_attribution: Option<String>,
+    pub rights_holder: Option<String>,
+    pub access_rights: Option<String>,
+    pub reference: Option<String>,
+    pub last_updated: Option<NaiveDate>,
 }
 
 

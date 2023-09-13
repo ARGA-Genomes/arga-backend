@@ -197,6 +197,33 @@ diesel::table! {
 }
 
 diesel::table! {
+    deposition_events (id) {
+        id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
+        event_id -> Uuid,
+        accession -> Nullable<Varchar>,
+        genbank_accession -> Nullable<Varchar>,
+        material_sample_id -> Nullable<Varchar>,
+        submitted_by -> Nullable<Varchar>,
+        collection_name -> Nullable<Varchar>,
+        collection_code -> Nullable<Varchar>,
+        institution_name -> Nullable<Varchar>,
+        data_type -> Nullable<Varchar>,
+        excluded_from_refseq -> Nullable<Varchar>,
+        asm_not_live_date -> Nullable<Varchar>,
+        source_uri -> Nullable<Varchar>,
+        title -> Nullable<Varchar>,
+        url -> Nullable<Varchar>,
+        funding_attribution -> Nullable<Varchar>,
+        rights_holder -> Nullable<Varchar>,
+        access_rights -> Nullable<Varchar>,
+        reference -> Nullable<Varchar>,
+        last_updated -> Nullable<Date>,
+    }
+}
+
+diesel::table! {
     dna_extraction_events (id) {
         id -> Uuid,
         dataset_id -> Uuid,
@@ -634,6 +661,9 @@ diesel::joinable!(collection_events -> specimens (specimen_id));
 diesel::joinable!(conservation_statuses -> name_lists (list_id));
 diesel::joinable!(conservation_statuses -> names (name_id));
 diesel::joinable!(datasets -> sources (source_id));
+diesel::joinable!(deposition_events -> datasets (dataset_id));
+diesel::joinable!(deposition_events -> events (event_id));
+diesel::joinable!(deposition_events -> names (name_id));
 diesel::joinable!(dna_extraction_events -> datasets (dataset_id));
 diesel::joinable!(dna_extraction_events -> events (event_id));
 diesel::joinable!(dna_extraction_events -> names (name_id));
@@ -672,6 +702,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     collection_events,
     conservation_statuses,
     datasets,
+    deposition_events,
     dna_extraction_events,
     ecology,
     events,

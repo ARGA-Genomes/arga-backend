@@ -19,6 +19,7 @@ use super::importers::{
     sequence_importer,
     assembly_importer,
     annotation_importer,
+    deposition_importer,
     taxon_importer,
     synonym_importer,
     vernacular_importer,
@@ -117,6 +118,7 @@ impl ThreadedJob {
             "import_sequence" => sequence_importer::import(path, &data.name, pool)?,
             "import_assembly" => assembly_importer::import(path, &data.name, pool)?,
             "import_annotation" => annotation_importer::import(path, &data.name, pool)?,
+            "import_deposition" => deposition_importer::import(path, &data.name, pool)?,
             _ => {}
         }
 

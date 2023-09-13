@@ -9,7 +9,7 @@ use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{Event, Dataset, AnnotationEvent};
+use arga_core::models::{Event, Dataset, DepositionEvent};
 use crate::error::Error;
 use crate::matchers::name_matcher::{NameMatch, NameRecord, match_records_mapped, NameMap, name_map};
 
@@ -26,6 +26,9 @@ struct Record {
     scientific_name: Option<String>,
     canonical_name: Option<String>,
     accession: Option<String>,
+    genbank_accession: Option<String>,
+    material_sample_id: Option<String>,
+    submitted_by: Option<String>,
 
     // event block
     field_number: Option<String>,
@@ -42,12 +45,25 @@ struct Record {
     field_notes: Option<String>,
     event_remarks: Option<String>,
 
-    // assembly block
-    genome_representation: Option<String>,
-    genome_release_type: Option<String>,
-    sequencing_coverage: Option<String>,
-    num_replicons: Option<i64>,
-    sop: Option<String>,
+    // deposition block
+    collection_name: Option<String>,
+    collection_code: Option<String>,
+    institution_name: Option<String>,
+    data_type: Option<String>,
+    excluded_from_refseq: Option<String>,
+    asm_not_live_date: Option<String>,
+    source_uri: Option<String>,
+
+    title: Option<String>,
+    url: Option<String>,
+    funding_attribution: Option<String>,
+    rights_holder: Option<String>,
+    access_rights: Option<String>,
+    reference: Option<String>,
+
+    #[serde(default)]
+    #[serde(deserialize_with = "naive_date_from_str_opt")]
+    last_updated: Option<NaiveDate>,
 }
 
 impl From<Record> for NameRecord {
@@ -60,20 +76,20 @@ impl From<Record> for NameRecord {
 }
 
 
-pub struct AnnotationExtract {
+pub struct DepositionExtract {
     pub events: Vec<Event>,
-    pub annotation_events: Vec<AnnotationEvent>,
+    pub deposition_events: Vec<DepositionEvent>,
 }
 
 
-pub struct AnnotationExtractIterator {
+pub struct DepositionExtractIterator {
     dataset: Dataset,
     names: NameMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
 
-impl Iterator for AnnotationExtractIterator {
-    type Item = Result<AnnotationExtract, Error>;
+impl Iterator for DepositionExtractIterator {
+    type Item = Result<DepositionExtract, Error>;
 
     /// Return a large chunk of events extracted from a CSV reader
     fn next(&mut self) -> Option<Self::Item> {
@@ -103,11 +119,11 @@ impl Iterator for AnnotationExtractIterator {
 
 
 /// Extract events and other related data from a CSV file
-pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<AnnotationExtractIterator, Error> {
+pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<DepositionExtractIterator, Error> {
     let names = name_map(pool)?;
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
-    Ok(AnnotationExtractIterator {
+    Ok(DepositionExtractIterator {
         dataset: dataset.clone(),
         names,
         reader,
@@ -115,17 +131,17 @@ pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<An
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, names: &NameMap) -> Result<AnnotationExtract, Error> {
+fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, names: &NameMap) -> Result<DepositionExtract, Error> {
     // match the records to names in the database. this will filter out any names
     // that could not be matched
     let records = match_records_mapped(chunk, names)?;
 
     let events = extract_events(&records);
-    let annotation_events = extract_annotation_events(records, dataset, &events);
+    let deposition_events = extract_deposition_events(records, dataset, &events);
 
-    Ok(AnnotationExtract {
+    Ok(DepositionExtract {
         events,
-        annotation_events,
+        deposition_events,
     })
 }
 
@@ -154,28 +170,40 @@ fn extract_events(records: &MatchedRecords) -> Vec<Event> {
 }
 
 
-fn extract_annotation_events(records: MatchedRecords, dataset: &Dataset, events: &Vec<Event>) -> Vec<AnnotationEvent>
+fn extract_deposition_events(records: MatchedRecords, dataset: &Dataset, events: &Vec<Event>) -> Vec<DepositionEvent>
 {
-    info!(total=records.len(), "Extracting annotation events");
+    info!(total=records.len(), "Extracting deposition events");
 
-    let annotations = (records, events).into_par_iter().map(|(record, event)| {
+    let depositions = (records, events).into_par_iter().map(|(record, event)| {
         let (name, row) = record;
 
-        AnnotationEvent {
+        DepositionEvent {
             id: Uuid::new_v4(),
             dataset_id: dataset.id.clone(),
             event_id: event.id.clone(),
             name_id: name.id,
 
             accession: row.accession,
-            representation: row.genome_representation,
-            release_type: row.genome_release_type,
-            coverage: row.sequencing_coverage,
-            replicons: row.num_replicons,
-            standard_operating_procedures: row.sop,
+            genbank_accession: row.genbank_accession,
+            material_sample_id: row.material_sample_id,
+            submitted_by: row.submitted_by,
+            collection_name: row.collection_name,
+            collection_code: row.collection_code,
+            institution_name: row.institution_name,
+            data_type: row.data_type,
+            excluded_from_refseq: row.excluded_from_refseq,
+            asm_not_live_date: row.asm_not_live_date,
+            source_uri: row.source_uri,
+            title: row.title,
+            url: row.url,
+            funding_attribution: row.funding_attribution,
+            rights_holder: row.rights_holder,
+            access_rights: row.access_rights,
+            reference: row.reference,
+            last_updated: row.last_updated,
         }
-    }).collect::<Vec<AnnotationEvent>>();
+    }).collect::<Vec<DepositionEvent>>();
 
-    info!(annotation_events=annotations.len(), "Extracting annotation events finished");
-    annotations
+    info!(deposition_events=depositions.len(), "Extracting deposition events finished");
+    depositions
 }
