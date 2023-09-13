@@ -18,6 +18,7 @@ use super::importers::{
     dna_extraction_importer,
     sequence_importer,
     assembly_importer,
+    annotation_importer,
     taxon_importer,
     synonym_importer,
     vernacular_importer,
@@ -115,6 +116,7 @@ impl ThreadedJob {
             "import_dna_extraction" => dna_extraction_importer::import(path, &data.name, pool)?,
             "import_sequence" => sequence_importer::import(path, &data.name, pool)?,
             "import_assembly" => assembly_importer::import(path, &data.name, pool)?,
+            "import_annotation" => annotation_importer::import(path, &data.name, pool)?,
             _ => {}
         }
 

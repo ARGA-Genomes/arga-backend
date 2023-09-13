@@ -625,6 +625,22 @@ pub struct AssemblyEvent {
     pub quality: Option<String>,
 }
 
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::annotation_events)]
+pub struct AnnotationEvent {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub event_id: Uuid,
+
+    pub accession: Option<String>,
+    pub representation: Option<String>,
+    pub release_type: Option<String>,
+    pub coverage: Option<String>,
+    pub replicons: Option<i64>,
+    pub standard_operating_procedures: Option<String>,
+}
+
 
 // postgres arrays allows nulls to be entered into an array
 // so diesel will treat it as an array of optional numbers.

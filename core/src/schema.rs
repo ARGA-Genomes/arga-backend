@@ -37,6 +37,21 @@ diesel::table! {
 }
 
 diesel::table! {
+    annotation_events (id) {
+        id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
+        event_id -> Uuid,
+        accession -> Nullable<Varchar>,
+        representation -> Nullable<Varchar>,
+        release_type -> Nullable<Varchar>,
+        coverage -> Nullable<Varchar>,
+        replicons -> Nullable<Int8>,
+        standard_operating_procedures -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     assemblies (id) {
         id -> Uuid,
         name_id -> Uuid,
@@ -604,6 +619,9 @@ diesel::table! {
 diesel::joinable!(accession_events -> datasets (dataset_id));
 diesel::joinable!(accession_events -> events (event_id));
 diesel::joinable!(accession_events -> names (name_id));
+diesel::joinable!(annotation_events -> datasets (dataset_id));
+diesel::joinable!(annotation_events -> events (event_id));
+diesel::joinable!(annotation_events -> names (name_id));
 diesel::joinable!(assemblies -> names (name_id));
 diesel::joinable!(assembly_events -> datasets (dataset_id));
 diesel::joinable!(assembly_events -> events (event_id));
@@ -646,6 +664,7 @@ diesel::joinable!(trace_files -> names (name_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     accession_events,
+    annotation_events,
     assemblies,
     assembly_events,
     assembly_stats,
