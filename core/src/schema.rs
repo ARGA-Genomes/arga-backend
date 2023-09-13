@@ -67,6 +67,19 @@ diesel::table! {
 }
 
 diesel::table! {
+    assembly_events (id) {
+        id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
+        event_id -> Uuid,
+        accession -> Nullable<Varchar>,
+        name -> Nullable<Varchar>,
+        version_status -> Nullable<Varchar>,
+        quality -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     assembly_stats (id) {
         id -> Uuid,
         assembly_id -> Uuid,
@@ -376,9 +389,15 @@ diesel::table! {
         dataset_id -> Uuid,
         name_id -> Uuid,
         event_id -> Uuid,
-        organism_id -> Nullable<Uuid>,
         accession -> Nullable<Varchar>,
         genbank_accession -> Nullable<Varchar>,
+        sequenced_by -> Nullable<Varchar>,
+        material_sample_id -> Nullable<Varchar>,
+        concentration -> Nullable<Float8>,
+        amplicon_size -> Nullable<Int8>,
+        estimated_size -> Nullable<Int8>,
+        bait_set_name -> Nullable<Varchar>,
+        bait_set_reference -> Nullable<Varchar>,
         target_gene -> Nullable<Varchar>,
         dna_sequence -> Nullable<Text>,
     }
@@ -393,12 +412,17 @@ diesel::table! {
         trace_link -> Nullable<Varchar>,
         sequencing_date -> Nullable<Timestamp>,
         sequencing_center -> Nullable<Varchar>,
+        sequencing_center_code -> Nullable<Varchar>,
+        sequencing_method -> Nullable<Varchar>,
         target_gene -> Nullable<Varchar>,
         direction -> Nullable<Varchar>,
         pcr_primer_name_forward -> Nullable<Varchar>,
         pcr_primer_name_reverse -> Nullable<Varchar>,
         sequence_primer_forward_name -> Nullable<Varchar>,
         sequence_primer_reverse_name -> Nullable<Varchar>,
+        library_protocol -> Nullable<Varchar>,
+        analysis_description -> Nullable<Varchar>,
+        analysis_software -> Nullable<Varchar>,
     }
 }
 
@@ -581,6 +605,9 @@ diesel::joinable!(accession_events -> datasets (dataset_id));
 diesel::joinable!(accession_events -> events (event_id));
 diesel::joinable!(accession_events -> names (name_id));
 diesel::joinable!(assemblies -> names (name_id));
+diesel::joinable!(assembly_events -> datasets (dataset_id));
+diesel::joinable!(assembly_events -> events (event_id));
+diesel::joinable!(assembly_events -> names (name_id));
 diesel::joinable!(assembly_stats -> assemblies (assembly_id));
 diesel::joinable!(biosamples -> names (name_id));
 diesel::joinable!(collection_events -> events (event_id));
@@ -605,7 +632,6 @@ diesel::joinable!(regions -> names (name_id));
 diesel::joinable!(sequencing_events -> datasets (dataset_id));
 diesel::joinable!(sequencing_events -> events (event_id));
 diesel::joinable!(sequencing_events -> names (name_id));
-diesel::joinable!(sequencing_events -> organisms (organism_id));
 diesel::joinable!(sequencing_run_events -> sequencing_events (sequencing_event_id));
 diesel::joinable!(specimens -> datasets (dataset_id));
 diesel::joinable!(specimens -> names (name_id));
@@ -621,6 +647,7 @@ diesel::joinable!(trace_files -> names (name_id));
 diesel::allow_tables_to_appear_in_same_query!(
     accession_events,
     assemblies,
+    assembly_events,
     assembly_stats,
     biosamples,
     collection_events,

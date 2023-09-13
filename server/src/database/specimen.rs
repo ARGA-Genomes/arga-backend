@@ -202,7 +202,6 @@ impl From<SequencingEvent> for specimen::SequencingEvent {
     fn from(value: SequencingEvent) -> Self {
         Self {
             id: value.id.to_string(),
-            organism_id: value.organism_id.map(|uuid| uuid.to_string()),
             accession: value.accession,
             genbank_accession: value.genbank_accession,
             target_gene: value.target_gene,

@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, NaiveDateTime};
 use diesel::{Queryable, Insertable};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
@@ -570,10 +570,18 @@ pub struct SequencingEvent {
     pub dataset_id: Uuid,
     pub name_id: Uuid,
     pub event_id: Uuid,
-    pub organism_id: Option<Uuid>,
 
     pub accession: Option<String>,
     pub genbank_accession: Option<String>,
+    pub sequenced_by: Option<String>,
+    pub material_sample_id: Option<String>,
+
+    pub concentration: Option<f64>,
+    pub amplicon_size: Option<i64>,
+    pub estimated_size: Option<i64>,
+    pub bait_set_name: Option<String>,
+    pub bait_set_reference: Option<String>,
+
     pub target_gene: Option<String>,
     pub dna_sequence: Option<String>,
 }
@@ -587,14 +595,34 @@ pub struct SequencingRunEvent {
     pub trace_id: Option<String>,
     pub trace_name: Option<String>,
     pub trace_link: Option<String>,
-    pub sequencing_date: Option<chrono::NaiveDateTime>,
+    pub sequencing_date: Option<NaiveDateTime>,
     pub sequencing_center: Option<String>,
+    pub sequencing_center_code: Option<String>,
+    pub sequencing_method: Option<String>,
     pub target_gene: Option<String>,
     pub direction: Option<String>,
     pub pcr_primer_name_forward: Option<String>,
     pub pcr_primer_name_reverse: Option<String>,
     pub sequence_primer_forward_name: Option<String>,
     pub sequence_primer_reverse_name: Option<String>,
+
+    pub library_protocol: Option<String>,
+    pub analysis_description: Option<String>,
+    pub analysis_software: Option<String>,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::assembly_events)]
+pub struct AssemblyEvent {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub event_id: Uuid,
+
+    pub accession: Option<String>,
+    pub name: Option<String>,
+    pub version_status: Option<String>,
+    pub quality: Option<String>,
 }
 
 

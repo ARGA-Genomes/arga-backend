@@ -14,3 +14,4 @@ pub mod accession_extractor;
 pub mod subsample_extractor;
 pub mod dna_extraction_extractor;
 pub mod sequence_extractor;
+pub mod assembly_extractor;

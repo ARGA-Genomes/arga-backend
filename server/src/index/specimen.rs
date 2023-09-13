@@ -94,7 +94,6 @@ pub struct CollectionEvent {
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
 pub struct SequencingEvent {
     pub id: String,
-    pub organism_id: Option<String>,
     pub accession: Option<String>,
     pub genbank_accession: Option<String>,
     pub target_gene: Option<String>,
