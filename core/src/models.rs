@@ -541,6 +541,29 @@ pub struct SubsampleEvent {
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::dna_extraction_events)]
+pub struct DnaExtractionEvent {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub event_id: Uuid,
+
+    pub accession: Option<String>,
+    pub extracted_by: Option<String>,
+
+    pub preservation_type: Option<String>,
+    pub preparation_type: Option<String>,
+    pub extraction_method: Option<String>,
+    pub measurement_method: Option<String>,
+    pub concentration_method: Option<String>,
+    pub quality: Option<String>,
+
+    pub concentration: Option<f64>,
+    pub absorbance_260_230: Option<f64>,
+    pub absorbance_260_280: Option<f64>,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::sequencing_events)]
 pub struct SequencingEvent {
     pub id: Uuid,

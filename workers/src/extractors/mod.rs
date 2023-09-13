@@ -12,4 +12,5 @@ pub mod indigenous_knowledge_extractor;
 pub mod collection_extractor;
 pub mod accession_extractor;
 pub mod subsample_extractor;
+pub mod dna_extraction_extractor;
 pub mod sequence_extractor;

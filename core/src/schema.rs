@@ -169,6 +169,26 @@ diesel::table! {
 }
 
 diesel::table! {
+    dna_extraction_events (id) {
+        id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
+        event_id -> Uuid,
+        accession -> Nullable<Varchar>,
+        extracted_by -> Nullable<Varchar>,
+        preservation_type -> Nullable<Varchar>,
+        preparation_type -> Nullable<Varchar>,
+        extraction_method -> Nullable<Varchar>,
+        measurement_method -> Nullable<Varchar>,
+        concentration_method -> Nullable<Varchar>,
+        quality -> Nullable<Varchar>,
+        concentration -> Nullable<Float8>,
+        absorbance_260_230 -> Nullable<Float8>,
+        absorbance_260_280 -> Nullable<Float8>,
+    }
+}
+
+diesel::table! {
     ecology (id) {
         id -> Uuid,
         dataset_id -> Uuid,
@@ -569,6 +589,9 @@ diesel::joinable!(collection_events -> specimens (specimen_id));
 diesel::joinable!(conservation_statuses -> name_lists (list_id));
 diesel::joinable!(conservation_statuses -> names (name_id));
 diesel::joinable!(datasets -> sources (source_id));
+diesel::joinable!(dna_extraction_events -> datasets (dataset_id));
+diesel::joinable!(dna_extraction_events -> events (event_id));
+diesel::joinable!(dna_extraction_events -> names (name_id));
 diesel::joinable!(ecology -> datasets (dataset_id));
 diesel::joinable!(ecology -> names (name_id));
 diesel::joinable!(indigenous_knowledge -> datasets (dataset_id));
@@ -603,6 +626,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     collection_events,
     conservation_statuses,
     datasets,
+    dna_extraction_events,
     ecology,
     events,
     ibra,

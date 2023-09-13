@@ -10,4 +10,5 @@ pub mod indigenous_knowledge_importer;
 pub mod collection_importer;
 pub mod accession_importer;
 pub mod subsample_importer;
+pub mod dna_extraction_importer;
 pub mod sequence_importer;
