@@ -20,6 +20,7 @@ pub mod specimen;
 pub mod marker;
 pub mod markers;
 pub mod taxa;
+pub mod subsample;
 pub mod extensions;
 
 use axum::{Extension, Router};
@@ -30,6 +31,7 @@ use async_graphql::{Object, EmptySubscription, EmptyMutation, Schema, Context};
 use async_graphql::extensions::Tracing;
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
+use uuid::Uuid;
 
 
 use crate::http::Context as State;
@@ -53,6 +55,7 @@ use self::specimen::Specimen;
 use self::marker::Marker;
 use self::markers::Markers;
 use self::taxa::Taxa;
+use self::subsample::Subsample;
 
 use super::error::Error;
 
@@ -146,6 +149,11 @@ impl Query {
 
     async fn taxa(&self, filters: Vec<FilterItem>) -> Result<Taxa, Error> {
         Taxa::new(filters)
+    }
+
+    async fn subsample(&self, ctx: &Context<'_>, subsample_id: Uuid) -> Result<Subsample, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Subsample::new(&state.database, &subsample_id).await
     }
 }
 

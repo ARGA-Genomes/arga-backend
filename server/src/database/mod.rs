@@ -18,6 +18,7 @@ pub mod markers;
 pub mod overview;
 pub mod taxa;
 pub mod specimens;
+pub mod subsamples;
 
 pub use arga_core::{schema, schema_gnl, models, get_database_url};
 
@@ -90,6 +91,7 @@ pub struct Database {
     pub datasets: datasets::DatasetProvider,
     pub taxa: taxa::TaxaProvider,
     pub specimens: specimens::SpecimenProvider,
+    pub subsamples: subsamples::SubsampleProvider,
 }
 
 impl Database {
@@ -113,6 +115,7 @@ impl Database {
             datasets: datasets::DatasetProvider { pool: pool.clone() },
             taxa: taxa::TaxaProvider { pool: pool.clone() },
             specimens: specimens::SpecimenProvider { pool: pool.clone() },
+            subsamples: subsamples::SubsampleProvider { pool: pool.clone() },
             pool
         })
     }
