@@ -21,6 +21,7 @@ pub mod marker;
 pub mod markers;
 pub mod taxa;
 pub mod subsample;
+pub mod dna_extract;
 pub mod extensions;
 
 use axum::{Extension, Router};
@@ -56,6 +57,7 @@ use self::marker::Marker;
 use self::markers::Markers;
 use self::taxa::Taxa;
 use self::subsample::Subsample;
+use self::dna_extract::DnaExtract;
 
 use super::error::Error;
 
@@ -154,6 +156,11 @@ impl Query {
     async fn subsample(&self, ctx: &Context<'_>, subsample_id: Uuid) -> Result<Subsample, Error> {
         let state = ctx.data::<State>().unwrap();
         Subsample::new(&state.database, &subsample_id).await
+    }
+
+    async fn dna_extract(&self, ctx: &Context<'_>, dna_extract_id: Uuid) -> Result<DnaExtract, Error> {
+        let state = ctx.data::<State>().unwrap();
+        DnaExtract::new(&state.database, &dna_extract_id).await
     }
 }
 
