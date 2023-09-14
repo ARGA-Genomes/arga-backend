@@ -118,12 +118,12 @@ impl Species {
         Ok(photos)
     }
 
-    #[instrument(skip(self, ctx))]
-    async fn specimens(&self, ctx: &Context<'_>) -> Result<Vec<SpecimenDetails>, Error> {
-        let state = ctx.data::<State>().unwrap();
-        let specimens = state.database.specimens(&self.name).await?;
-        Ok(specimens)
-    }
+    // #[instrument(skip(self, ctx))]
+    // async fn specimens(&self, ctx: &Context<'_>) -> Result<Vec<SpecimenDetails>, Error> {
+    //     let state = ctx.data::<State>().unwrap();
+    //     let specimens = state.database.specimens(&self.name).await?;
+    //     Ok(specimens)
+    // }
 
     #[instrument(skip(self, ctx))]
     async fn conservation(&self, ctx: &Context<'_>) -> Result<Vec<ConservationStatus>> {

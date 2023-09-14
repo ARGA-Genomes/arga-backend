@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 /// A specimen of a specific species.
-#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SpecimenDetails {
     pub id: String,
     pub type_status: Option<String>,

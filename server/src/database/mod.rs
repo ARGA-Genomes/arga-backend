@@ -17,6 +17,7 @@ pub mod specimen;
 pub mod markers;
 pub mod overview;
 pub mod taxa;
+pub mod specimens;
 
 pub use arga_core::{schema, schema_gnl, models, get_database_url};
 
@@ -88,6 +89,7 @@ pub struct Database {
     pub sources: sources::SourceProvider,
     pub datasets: datasets::DatasetProvider,
     pub taxa: taxa::TaxaProvider,
+    pub specimens: specimens::SpecimenProvider,
 }
 
 impl Database {
@@ -110,6 +112,7 @@ impl Database {
             sources: sources::SourceProvider { pool: pool.clone() },
             datasets: datasets::DatasetProvider { pool: pool.clone() },
             taxa: taxa::TaxaProvider { pool: pool.clone() },
+            specimens: specimens::SpecimenProvider { pool: pool.clone() },
             pool
         })
     }
