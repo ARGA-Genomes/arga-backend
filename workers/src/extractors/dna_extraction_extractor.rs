@@ -9,23 +9,21 @@ use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{Event, Dataset, DnaExtractionEvent};
+use arga_core::models::{Event, Dataset, DnaExtractionEvent, DnaExtract};
 use crate::error::Error;
-use crate::matchers::name_matcher::{NameMatch, NameRecord, match_records_mapped, NameMap, name_map};
+use crate::matchers::subsample_matcher::{SubsampleMatch, SubsampleRecord, SubsampleMap, subsample_map, match_records_mapped};
 
 use super::utils::naive_date_from_str_opt;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
-type MatchedRecords = Vec<(NameMatch, Record)>;
+type MatchedRecords = Vec<(SubsampleMatch, Record)>;
 
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Record {
-    scientific_name: Option<String>,
-    canonical_name: Option<String>,
-    accession: Option<String>,
+    accession: String,
 
     // event block
     field_number: Option<String>,
@@ -55,25 +53,23 @@ struct Record {
     absorbance_260_280: Option<f64>,
 }
 
-impl From<Record> for NameRecord {
+impl From<Record> for SubsampleRecord {
     fn from(value: Record) -> Self {
-        Self {
-            scientific_name: value.scientific_name,
-            canonical_name: value.canonical_name,
-        }
+        Self { accession: value.accession }
     }
 }
 
 
 pub struct DnaExtractionExtract {
     pub events: Vec<Event>,
+    pub dna_extracts: Vec<DnaExtract>,
     pub dna_extraction_events: Vec<DnaExtractionEvent>,
 }
 
 
 pub struct DnaExtractionExtractIterator {
     dataset: Dataset,
-    names: NameMap,
+    subsamples: SubsampleMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
 
@@ -101,7 +97,7 @@ impl Iterator for DnaExtractionExtractIterator {
         if records.is_empty() {
             None
         } else {
-            Some(extract_chunk(records, &self.dataset, &self.names))
+            Some(extract_chunk(records, &self.dataset, &self.subsamples))
         }
     }
 }
@@ -109,27 +105,29 @@ impl Iterator for DnaExtractionExtractIterator {
 
 /// Extract events and other related data from a CSV file
 pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<DnaExtractionExtractIterator, Error> {
-    let names = name_map(pool)?;
+    let subsamples = subsample_map(&dataset.id, pool)?;
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(DnaExtractionExtractIterator {
         dataset: dataset.clone(),
-        names,
+        subsamples,
         reader,
     })
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, names: &NameMap) -> Result<DnaExtractionExtract, Error> {
-    // match the records to names in the database. this will filter out any names
+fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, subsamples: &SubsampleMap) -> Result<DnaExtractionExtract, Error> {
+    // match the records to names in the database. this will filter out any subsamples
     // that could not be matched
-    let records = match_records_mapped(chunk, names)?;
+    let records = match_records_mapped(chunk, subsamples);
 
     let events = extract_events(&records);
-    let dna_extraction_events = extract_dna_extraction_events(records, dataset, &events);
+    let dna_extracts = extract_dna_extracts(&records);
+    let dna_extraction_events = extract_dna_extraction_events(records, &dna_extracts, &events);
 
     Ok(DnaExtractionExtract {
         events,
+        dna_extracts,
         dna_extraction_events,
     })
 }
@@ -159,21 +157,38 @@ fn extract_events(records: &MatchedRecords) -> Vec<Event> {
 }
 
 
-fn extract_dna_extraction_events(records: MatchedRecords, dataset: &Dataset, events: &Vec<Event>) -> Vec<DnaExtractionEvent>
+fn extract_dna_extracts(records: &MatchedRecords) -> Vec<DnaExtract> {
+    info!(total=records.len(), "Extracting dna extracts");
+
+    let dna_extracts = records.par_iter().map(|(subsample, row)| {
+        DnaExtract {
+            id: Uuid::new_v4(),
+            dataset_id: subsample.dataset_id.clone(),
+            name_id: subsample.name_id.clone(),
+            subsample_id: subsample.id.clone(),
+            accession: row.accession.clone(),
+        }
+    }).collect::<Vec<DnaExtract>>();
+
+    info!(dna_extracts=dna_extracts.len(), "Extracting dna extracts finished");
+    dna_extracts
+}
+
+
+fn extract_dna_extraction_events(records: MatchedRecords, extracts: &Vec<DnaExtract>, events: &Vec<Event>) -> Vec<DnaExtractionEvent>
 {
     info!(total=records.len(), "Extracting dna extraction events");
 
-    let extractions = (records, events).into_par_iter().map(|(record, event)| {
-        let (name, row) = record;
+    let extractions = (records, extracts, events).into_par_iter().map(|(record, extract, event)| {
+        let (_subsample, row) = record;
 
         DnaExtractionEvent {
             id: Uuid::new_v4(),
-            dataset_id: dataset.id.clone(),
+            dna_extract_id: extract.id.clone(),
             event_id: event.id.clone(),
-            name_id: name.id,
 
-            accession: row.accession,
             extracted_by: row.extracted_by,
+
             preservation_type: row.preservation_type,
             preparation_type: row.preparation_type,
             extraction_method: row.extraction_method,

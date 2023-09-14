@@ -2,12 +2,18 @@ CREATE TABLE specimens (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
     name_id uuid REFERENCES names NOT NULL,
-    type_status varchar,
+
+    accession varchar NOT NULL,
+    material_sample_id varchar,
+    organism_id varchar,
+
     institution_name varchar,
     institution_code varchar,
     collection_code varchar,
-    material_sample_id varchar,
-    organism_id varchar,
+    recorded_by varchar,
+    identified_by varchar,
+
+    type_status varchar,
     locality varchar,
     country varchar,
     country_code varchar,
@@ -21,8 +27,7 @@ CREATE TABLE specimens (
     elevation_accuracy float,
     depth_accuracy float,
     location_source varchar,
-    recorded_by varchar,
-    identified_by varchar,
+
     details varchar,
     remarks varchar,
     identification_remarks varchar

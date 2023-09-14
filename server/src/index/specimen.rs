@@ -73,7 +73,6 @@ pub enum EventDetails {
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
 pub struct CollectionEvent {
     pub id: String,
-    pub organism_id: Option<String>,
     pub catalog_number: Option<String>,
     pub record_number: Option<String>,
     pub individual_count: Option<String>,
@@ -94,8 +93,6 @@ pub struct CollectionEvent {
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
 pub struct SequencingEvent {
     pub id: String,
-    pub accession: Option<String>,
-    pub genbank_accession: Option<String>,
     pub target_gene: Option<String>,
     pub dna_sequence: Option<String>,
     pub runs: Vec<SequencingRunEvent>,

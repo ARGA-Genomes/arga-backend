@@ -425,12 +425,18 @@ pub struct Specimen {
     pub id: Uuid,
     pub dataset_id: Uuid,
     pub name_id: Uuid,
-    pub type_status: Option<String>,
+
+    pub accession: String,
+    pub material_sample_id: Option<String>,
+    pub organism_id: Option<String>,
+
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
     pub collection_code: Option<String>,
-    pub material_sample_id: Option<String>,
-    pub organism_id: Option<String>,
+    pub recorded_by: Option<String>,
+    pub identified_by: Option<String>,
+
+    pub type_status: Option<String>,
     pub locality: Option<String>,
     pub country: Option<String>,
     pub country_code: Option<String>,
@@ -444,12 +450,49 @@ pub struct Specimen {
     pub elevation_accuracy: Option<f64>,
     pub depth_accuracy: Option<f64>,
     pub location_source: Option<String>,
-    pub recorded_by: Option<String>,
-    pub identified_by: Option<String>,
+
     pub details: Option<String>,
     pub remarks: Option<String>,
     pub identification_remarks: Option<String>,
 }
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::subsamples)]
+pub struct Subsample {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub specimen_id: Uuid,
+
+    pub accession: String,
+    pub material_sample_id: Option<String>,
+    pub institution_name: Option<String>,
+    pub institution_code: Option<String>,
+    pub type_status: Option<String>,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::dna_extracts)]
+pub struct DnaExtract {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub subsample_id: Uuid,
+    pub accession: String,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::sequences)]
+pub struct Sequence {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub dna_extract_id: Uuid,
+
+    pub accession: String,
+    pub genbank_accession: Option<String>,
+}
+
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::organisms)]
@@ -484,11 +527,9 @@ pub struct Event {
 #[diesel(table_name = schema::collection_events)]
 pub struct CollectionEvent {
     pub id: Uuid,
-    pub event_id: Uuid,
     pub specimen_id: Uuid,
-    pub organism_id: Option<Uuid>,
+    pub event_id: Uuid,
 
-    pub accession: Option<String>,
     pub catalog_number: Option<String>,
     pub record_number: Option<String>,
     pub individual_count: Option<String>,
@@ -517,11 +558,9 @@ pub struct CollectionEvent {
 #[diesel(table_name = schema::accession_events)]
 pub struct AccessionEvent {
     pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
+    pub specimen_id: Uuid,
     pub event_id: Uuid,
 
-    pub accession: Option<String>,
     pub material_sample_id: Option<String>,
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
@@ -532,11 +571,8 @@ pub struct AccessionEvent {
 #[diesel(table_name = schema::subsample_events)]
 pub struct SubsampleEvent {
     pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
+    pub subsample_id: Uuid,
     pub event_id: Uuid,
-
-    pub accession: Option<String>,
     pub preparation_type: Option<String>,
 }
 
@@ -544,11 +580,9 @@ pub struct SubsampleEvent {
 #[diesel(table_name = schema::dna_extraction_events)]
 pub struct DnaExtractionEvent {
     pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
+    pub dna_extract_id: Uuid,
     pub event_id: Uuid,
 
-    pub accession: Option<String>,
     pub extracted_by: Option<String>,
 
     pub preservation_type: Option<String>,
@@ -567,12 +601,9 @@ pub struct DnaExtractionEvent {
 #[diesel(table_name = schema::sequencing_events)]
 pub struct SequencingEvent {
     pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
+    pub sequence_id: Uuid,
     pub event_id: Uuid,
 
-    pub accession: Option<String>,
-    pub genbank_accession: Option<String>,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
 
@@ -615,11 +646,9 @@ pub struct SequencingRunEvent {
 #[diesel(table_name = schema::assembly_events)]
 pub struct AssemblyEvent {
     pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
+    pub sequence_id: Uuid,
     pub event_id: Uuid,
 
-    pub accession: Option<String>,
     pub name: Option<String>,
     pub version_status: Option<String>,
     pub quality: Option<String>,
@@ -629,11 +658,9 @@ pub struct AssemblyEvent {
 #[diesel(table_name = schema::annotation_events)]
 pub struct AnnotationEvent {
     pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
+    pub sequence_id: Uuid,
     pub event_id: Uuid,
 
-    pub accession: Option<String>,
     pub representation: Option<String>,
     pub release_type: Option<String>,
     pub coverage: Option<String>,
@@ -645,12 +672,9 @@ pub struct AnnotationEvent {
 #[diesel(table_name = schema::deposition_events)]
 pub struct DepositionEvent {
     pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
+    pub sequence_id: Uuid,
     pub event_id: Uuid,
 
-    pub accession: Option<String>,
-    pub genbank_accession: Option<String>,
     pub material_sample_id: Option<String>,
     pub submitted_by: Option<String>,
 

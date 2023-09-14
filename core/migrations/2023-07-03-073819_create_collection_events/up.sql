@@ -1,10 +1,8 @@
 CREATE TABLE collection_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_id uuid REFERENCES events ON DELETE CASCADE NOT NULL,
     specimen_id uuid REFERENCES specimens ON DELETE CASCADE NOT NULL ,
-    organism_id uuid REFERENCES organisms,
+    event_id uuid REFERENCES events ON DELETE CASCADE NOT NULL,
 
-    accession varchar,
     catalog_number varchar,
     record_number varchar,
     individual_count varchar,
@@ -31,4 +29,3 @@ CREATE TABLE collection_events (
 
 CREATE INDEX collection_events_event_id ON collection_events (event_id);
 CREATE INDEX collection_events_specimen_id ON collection_events (specimen_id);
-CREATE INDEX collection_events_organism_id ON collection_events (organism_id);

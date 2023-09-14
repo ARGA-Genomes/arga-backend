@@ -7,7 +7,7 @@ use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::database::models::{Specimen, Organism, Event, CollectionEvent, SequencingEvent, SequencingRunEvent};
-use crate::index::specimen::{self, GetSpecimen, GetSpecimenOrganism, GetSpecimenEvents, EventDetails};
+use crate::index::specimen::{self, GetSpecimen, GetSpecimenEvents, EventDetails};
 use super::{schema, Database, Error};
 
 
@@ -49,25 +49,6 @@ impl From<Specimen> for specimen::SpecimenDetails {
 }
 
 
-#[async_trait]
-impl GetSpecimenOrganism for Database {
-    type Error = Error;
-
-    async fn get_specimen_organism(&self, specimen_id: &Uuid) -> Result<specimen::Organism, Self::Error> {
-        use schema::{collection_events, organisms};
-        let mut conn = self.pool.get().await?;
-
-        let organism = collection_events::table
-            .inner_join(organisms::table)
-            .select(organisms::all_columns)
-            .filter(collection_events::specimen_id.eq(specimen_id))
-            .get_result::<Organism>(&mut conn)
-            .await?;
-
-        Ok(organism.into())
-    }
-}
-
 impl From<Organism> for specimen::Organism {
     fn from(value: Organism) -> Self {
         Self {
@@ -88,7 +69,7 @@ impl GetSpecimenEvents for Database {
     type Error = Error;
 
     async fn get_specimen_events(&self, specimen_id: &Uuid) -> Result<Vec<specimen::Event>, Self::Error> {
-        use schema::{events, collection_events, sequencing_events, sequencing_run_events};
+        use schema::{events, collection_events, subsamples, dna_extracts, sequences, sequencing_events, sequencing_run_events};
         let mut conn = self.pool.get().await?;
 
         let mut event_map: HashMap<Uuid, Vec<EventDetails>> = HashMap::new();
@@ -106,7 +87,11 @@ impl GetSpecimenEvents for Database {
 
         // get all sequencing events
         let sequencing = sequencing_events::table
-            .filter(sequencing_events::name_id.eq(specimen_id))
+            .inner_join(sequences::table)
+            .inner_join(dna_extracts::table.on(dna_extracts::id.eq(sequences::dna_extract_id)))
+            .inner_join(subsamples::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
+            .select(sequencing_events::all_columns)
+            .filter(subsamples::specimen_id.eq(specimen_id))
             .load::<SequencingEvent>(&mut conn)
             .await?;
 
@@ -178,7 +163,6 @@ impl From<CollectionEvent> for specimen::CollectionEvent {
     fn from(value: CollectionEvent) -> Self {
         Self {
             id: value.id.to_string(),
-            organism_id: value.organism_id.map(|uuid| uuid.to_string()),
             catalog_number: value.catalog_number,
             record_number: value.record_number,
             individual_count: value.individual_count,
@@ -202,8 +186,6 @@ impl From<SequencingEvent> for specimen::SequencingEvent {
     fn from(value: SequencingEvent) -> Self {
         Self {
             id: value.id.to_string(),
-            accession: value.accession,
-            genbank_accession: value.genbank_accession,
             target_gene: value.target_gene,
             dna_sequence: value.dna_sequence,
             runs: Vec::new(),

@@ -11,22 +11,21 @@ use uuid::Uuid;
 
 use arga_core::models::{Event, Dataset, DepositionEvent};
 use crate::error::Error;
-use crate::matchers::name_matcher::{NameMatch, NameRecord, match_records_mapped, NameMap, name_map};
+use crate::matchers::sequence_matcher::{SequenceMatch, SequenceRecord, SequenceMap, sequence_map, match_records_mapped};
 
 use super::utils::naive_date_from_str_opt;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
-type MatchedRecords = Vec<(NameMatch, Record)>;
+type MatchedRecords = Vec<(SequenceMatch, Record)>;
 
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Record {
+    accession: String,
     scientific_name: Option<String>,
     canonical_name: Option<String>,
-    accession: Option<String>,
-    genbank_accession: Option<String>,
     material_sample_id: Option<String>,
     submitted_by: Option<String>,
 
@@ -66,12 +65,9 @@ struct Record {
     last_updated: Option<NaiveDate>,
 }
 
-impl From<Record> for NameRecord {
+impl From<Record> for SequenceRecord {
     fn from(value: Record) -> Self {
-        Self {
-            scientific_name: value.scientific_name,
-            canonical_name: value.canonical_name,
-        }
+        Self { accession: value.accession }
     }
 }
 
@@ -84,7 +80,7 @@ pub struct DepositionExtract {
 
 pub struct DepositionExtractIterator {
     dataset: Dataset,
-    names: NameMap,
+    sequences: SequenceMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
 
@@ -112,7 +108,7 @@ impl Iterator for DepositionExtractIterator {
         if records.is_empty() {
             None
         } else {
-            Some(extract_chunk(records, &self.dataset, &self.names))
+            Some(extract_chunk(records, &self.dataset, &self.sequences))
         }
     }
 }
@@ -120,21 +116,21 @@ impl Iterator for DepositionExtractIterator {
 
 /// Extract events and other related data from a CSV file
 pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<DepositionExtractIterator, Error> {
-    let names = name_map(pool)?;
+    let sequences = sequence_map(&dataset.id, pool)?;
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(DepositionExtractIterator {
         dataset: dataset.clone(),
-        names,
+        sequences,
         reader,
     })
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, names: &NameMap) -> Result<DepositionExtract, Error> {
+fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, sequences: &SequenceMap) -> Result<DepositionExtract, Error> {
     // match the records to names in the database. this will filter out any names
     // that could not be matched
-    let records = match_records_mapped(chunk, names)?;
+    let records = match_records_mapped(chunk, sequences);
 
     let events = extract_events(&records);
     let deposition_events = extract_deposition_events(records, dataset, &events);
@@ -175,25 +171,25 @@ fn extract_deposition_events(records: MatchedRecords, dataset: &Dataset, events:
     info!(total=records.len(), "Extracting deposition events");
 
     let depositions = (records, events).into_par_iter().map(|(record, event)| {
-        let (name, row) = record;
+        let (sequence, row) = record;
 
         DepositionEvent {
             id: Uuid::new_v4(),
-            dataset_id: dataset.id.clone(),
+            sequence_id: sequence.id.clone(),
             event_id: event.id.clone(),
-            name_id: name.id,
 
-            accession: row.accession,
-            genbank_accession: row.genbank_accession,
             material_sample_id: row.material_sample_id,
             submitted_by: row.submitted_by,
+
             collection_name: row.collection_name,
             collection_code: row.collection_code,
             institution_name: row.institution_name,
+
             data_type: row.data_type,
             excluded_from_refseq: row.excluded_from_refseq,
             asm_not_live_date: row.asm_not_live_date,
             source_uri: row.source_uri,
+
             title: row.title,
             url: row.url,
             funding_attribution: row.funding_attribution,

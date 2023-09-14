@@ -23,8 +23,10 @@ type MatchedRecords = Vec<(NameMatch, Record)>;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Record {
-    scientific_name: String,
+    scientific_name: Option<String>,
     canonical_name: Option<String>,
+    accession: String,
+
     type_status: Option<String>,
     institution_name: Option<String>,
     institution_code: Option<String>,
@@ -70,7 +72,6 @@ struct Record {
     event_remarks: Option<String>,
 
     // collection event block
-    accession: Option<String>,
     record_number: Option<String>,
     individual_count: Option<String>,
     organism_quantity: Option<String>,
@@ -103,7 +104,7 @@ struct Record {
 impl From<Record> for NameRecord {
     fn from(value: Record) -> Self {
         Self {
-            scientific_name: Some(value.scientific_name),
+            scientific_name: value.scientific_name,
             canonical_name: value.canonical_name,
         }
     }
@@ -183,11 +184,11 @@ fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, names: &NameMap, pool: &
     // these extraction method return results in the same order as the input records
     // which makes it possible to zip the various extractions to get any associated ids
     // if necessary
-    let specimens = extract_specimens(dataset, &records);
     let organisms = extract_organisms(&records);
     let events = extract_events(&records);
+    let specimens = extract_specimens(dataset, &records);
 
-    let collection_events = extract_collection_events(&records, &specimens, &events, &organisms);
+    let collection_events = extract_collection_events(records, &specimens, &events, &organisms);
     let organisms = organisms.into_iter().filter_map(|o| o).collect::<Vec<Organism>>();
 
     Ok(CollectionExtract {
@@ -212,18 +213,21 @@ fn extract_specimens(dataset: &Dataset, records: &MatchedRecords) -> Vec<Specime
             id: Uuid::new_v4(),
             dataset_id: dataset.id.clone(),
             name_id: name.id.clone(),
-            type_status: row.type_status.clone(),
+
+            accession: row.accession.clone(),
+            material_sample_id: row.material_sample_id.clone(),
+            organism_id: row.organism_id.clone(),
+
             institution_name: row.institution_name.clone(),
             institution_code: row.institution_code.clone(),
             collection_code: row.collection_code.clone(),
-            material_sample_id: row.material_sample_id.clone(),
             recorded_by: row.recorded_by.clone(),
-            organism_id: row.organism_id.clone(),
+            identified_by: row.identified_by.clone(),
+
+            type_status: row.type_status.clone(),
             locality: row.locality.clone(),
             latitude: row.latitude.or_else(|| coords.clone().map(|c| c.latitude)),
             longitude: row.longitude.or_else(|| coords.clone().map(|c| c.longitude)),
-            details: row.details.clone(),
-            remarks: row.remarks.clone(),
             country: row.country.clone(),
             country_code: row.country_code.clone(),
             state_province: row.state_province.clone(),
@@ -234,7 +238,9 @@ fn extract_specimens(dataset: &Dataset, records: &MatchedRecords) -> Vec<Specime
             elevation_accuracy: row.elevation_accuracy.clone(),
             depth_accuracy: row.depth_accuracy.clone(),
             location_source: row.location_source.clone(),
-            identified_by: row.identified_by.clone(),
+
+            details: row.details.clone(),
+            remarks: row.remarks.clone(),
             identification_remarks: row.identification_remarks.clone(),
         }
     }).collect::<Vec<Specimen>>();
@@ -293,7 +299,7 @@ fn extract_events(records: &MatchedRecords) -> Vec<Event> {
 
 
 fn extract_collection_events(
-    records: &MatchedRecords,
+    records: MatchedRecords,
     specimens: &Vec<Specimen>,
     events: &Vec<Event>,
     organisms: &Vec<Option<Organism>>,
@@ -308,30 +314,29 @@ fn extract_collection_events(
             id: Uuid::new_v4(),
             event_id: event.id.clone(),
             specimen_id: specimen.id.clone(),
-            organism_id: organism.clone().map(|o| o.id),
 
-            accession: row.accession.clone(),
-            catalog_number: row.catalog_number.clone(),
-            record_number: row.record_number.clone(),
-            individual_count: row.individual_count.clone(),
-            organism_quantity: row.organism_quantity.clone(),
-            organism_quantity_type: row.organism_quantity_type.clone(),
-            sex: row.sex.clone(),
-            life_stage: row.life_stage.clone(),
-            reproductive_condition: row.reproductive_condition.clone(),
-            behavior: row.behavior.clone(),
-            establishment_means: row.establishment_means.clone(),
-            degree_of_establishment: row.degree_of_establishment.clone(),
-            pathway: row.pathway.clone(),
-            occurrence_status: row.occurrence_status.clone(),
-            preparation: row.preparation.clone(),
-            other_catalog_numbers: row.other_catalog_numbers.clone(),
-            env_broad_scale: row.env_broad_scale.clone(),
-            ref_biomaterial: row.ref_biomaterial.clone(),
-            source_mat_id: row.source_mat_id.clone(),
-            specific_host: row.specific_host.clone(),
-            strain: row.strain.clone(),
-            isolate: row.isolate.clone(),
+            catalog_number: row.catalog_number,
+            record_number: row.record_number,
+            individual_count: row.individual_count,
+            organism_quantity: row.organism_quantity,
+            organism_quantity_type: row.organism_quantity_type,
+            sex: row.sex,
+            life_stage: row.life_stage,
+            reproductive_condition: row.reproductive_condition,
+            behavior: row.behavior,
+            establishment_means: row.establishment_means,
+            degree_of_establishment: row.degree_of_establishment,
+            pathway: row.pathway,
+            occurrence_status: row.occurrence_status,
+            preparation: row.preparation,
+            other_catalog_numbers: row.other_catalog_numbers,
+
+            env_broad_scale: row.env_broad_scale,
+            ref_biomaterial: row.ref_biomaterial,
+            source_mat_id: row.source_mat_id,
+            specific_host: row.specific_host,
+            strain: row.strain,
+            isolate: row.isolate,
         }
     }).collect::<Vec<CollectionEvent>>();
 

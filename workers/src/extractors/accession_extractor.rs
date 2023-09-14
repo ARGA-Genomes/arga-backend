@@ -11,24 +11,24 @@ use uuid::Uuid;
 
 use arga_core::models::{Event, Dataset, AccessionEvent};
 use crate::error::Error;
-use crate::matchers::name_matcher::{NameMatch, NameRecord, match_records_mapped, NameMap, name_map};
+use crate::matchers::specimen_matcher::{SpecimenMatch, SpecimenRecord, SpecimenMap, specimen_map, match_records_mapped};
 
 use super::utils::naive_date_from_str_opt;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
-type MatchedRecords = Vec<(NameMatch, Record)>;
+type MatchedRecords = Vec<(SpecimenMatch, Record)>;
 
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Record {
+    accession: String,
     scientific_name: Option<String>,
     canonical_name: Option<String>,
     institution_name: Option<String>,
     institution_code: Option<String>,
     type_status: Option<String>,
-    accession: Option<String>,
 
     #[serde(rename(deserialize = "materialSampleID"))]
     material_sample_id: Option<String>,
@@ -49,12 +49,9 @@ struct Record {
     event_remarks: Option<String>,
 }
 
-impl From<Record> for NameRecord {
+impl From<Record> for SpecimenRecord {
     fn from(value: Record) -> Self {
-        Self {
-            scientific_name: value.scientific_name,
-            canonical_name: value.canonical_name,
-        }
+        Self { accession: value.accession }
     }
 }
 
@@ -68,7 +65,7 @@ pub struct AccessionExtract {
 pub struct AccessionExtractIterator {
     pool: PgPool,
     dataset: Dataset,
-    names: NameMap,
+    specimens: SpecimenMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
 
@@ -96,7 +93,7 @@ impl Iterator for AccessionExtractIterator {
         if records.is_empty() {
             None
         } else {
-            Some(extract_chunk(records, &self.dataset, &self.names, &mut self.pool))
+            Some(extract_chunk(records, &self.dataset, &self.specimens, &mut self.pool))
         }
     }
 }
@@ -104,22 +101,22 @@ impl Iterator for AccessionExtractIterator {
 
 /// Extract accession events and other related data from a CSV file
 pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<AccessionExtractIterator, Error> {
-    let names = name_map(pool)?;
+    let specimens = specimen_map(&dataset.id, pool)?;
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(AccessionExtractIterator {
         pool: pool.clone(),
         dataset: dataset.clone(),
-        names,
+        specimens,
         reader,
     })
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, names: &NameMap, pool: &mut PgPool) -> Result<AccessionExtract, Error> {
-    // match the records to names in the database. this will filter out any names
+fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, specimens: &SpecimenMap, pool: &mut PgPool) -> Result<AccessionExtract, Error> {
+    // match the records to specimens in the database. this will filter out any accessions
     // that could not be matched
-    let records = match_records_mapped(chunk, names)?;
+    let records = match_records_mapped(chunk, specimens);
 
     let events = extract_events(&records);
     let accession_events = extract_accession_events(&records, dataset, &events);
@@ -160,15 +157,13 @@ fn extract_accession_events(records: &MatchedRecords, dataset: &Dataset, events:
     info!(total=records.len(), "Extracting accession events");
 
     let accessions = (records, events).into_par_iter().map(|(record, event)| {
-        let (name, row) = record;
+        let (specimen, row) = record;
 
         AccessionEvent {
             id: Uuid::new_v4(),
-            dataset_id: dataset.id.clone(),
-            name_id: name.id.clone(),
+            specimen_id: specimen.id.clone(),
             event_id: event.id.clone(),
 
-            accession: row.accession.clone(),
             material_sample_id: row.material_sample_id.clone(),
             institution_name: row.institution_name.clone(),
             institution_code: row.institution_code.clone(),
