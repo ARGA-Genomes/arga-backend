@@ -20,6 +20,7 @@ pub mod taxa;
 pub mod specimens;
 pub mod subsamples;
 pub mod dna_extracts;
+pub mod sequences;
 
 pub use arga_core::{schema, schema_gnl, models, get_database_url};
 
@@ -94,6 +95,7 @@ pub struct Database {
     pub specimens: specimens::SpecimenProvider,
     pub subsamples: subsamples::SubsampleProvider,
     pub dna_extracts: dna_extracts::DnaExtractProvider,
+    pub sequences: sequences::SequenceProvider,
 }
 
 impl Database {
@@ -119,6 +121,7 @@ impl Database {
             specimens: specimens::SpecimenProvider { pool: pool.clone() },
             subsamples: subsamples::SubsampleProvider { pool: pool.clone() },
             dna_extracts: dna_extracts::DnaExtractProvider { pool: pool.clone() },
+            sequences: sequences::SequenceProvider { pool: pool.clone() },
             pool
         })
     }

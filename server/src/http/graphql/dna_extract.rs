@@ -29,7 +29,7 @@ struct DnaExtractQuery {
 impl DnaExtractQuery {
     async fn events(&self, ctx: &Context<'_>) -> Result<DnaExtractEvents, Error> {
         let state = ctx.data::<State>().unwrap();
-        let extracts = state.database.dna_extracts.dna_extractions_events(&self.dna_extract.id).await?;
+        let extracts = state.database.dna_extracts.dna_extraction_events(&self.dna_extract.id).await?;
 
         Ok(DnaExtractEvents {
             dna_extracts: extracts.into_iter().map(|r| r.into()).collect(),

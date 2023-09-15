@@ -28,7 +28,7 @@ impl DnaExtractProvider {
         Ok(dna_extract?)
     }
 
-    pub async fn dna_extractions_events(&self, dna_extract_id: &Uuid) -> Result<Vec<DnaExtractionEvent>, Error> {
+    pub async fn dna_extraction_events(&self, dna_extract_id: &Uuid) -> Result<Vec<DnaExtractionEvent>, Error> {
         use schema::dna_extraction_events;
         let mut conn = self.pool.get().await?;
 
