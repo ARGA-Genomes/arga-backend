@@ -7,7 +7,8 @@ CREATE TABLE annotation_events (
     release_type varchar,
     coverage varchar,
     replicons bigint,
-    standard_operating_procedures varchar
+    standard_operating_procedures varchar,
+    annotated_by varchar
 );
 
 CREATE INDEX annotation_events_sequence_id ON annotation_events (sequence_id);

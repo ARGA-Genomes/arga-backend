@@ -21,11 +21,10 @@ type MatchedRecords = Vec<(SequenceMatch, Record)>;
 
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct Record {
     accession: String,
-    scientific_name: Option<String>,
-    canonical_name: Option<String>,
+    sequence_accession: Option<String>,
+    submitted_by: Option<String>,
 
     // event block
     field_number: Option<String>,
@@ -46,11 +45,16 @@ struct Record {
     assembly_name: Option<String>,
     version_status: Option<String>,
     assembly_quality: Option<String>,
+    assembly_type: Option<String>,
 }
 
 impl From<Record> for SequenceRecord {
     fn from(value: Record) -> Self {
-        Self { accession: value.accession }
+        let accession = match value.sequence_accession {
+            Some(accession) => accession,
+            None => value.accession,
+        };
+        Self { accession }
     }
 }
 
@@ -164,6 +168,8 @@ fn extract_assembly_events(records: MatchedRecords, dataset: &Dataset, events: &
             name: row.assembly_name,
             version_status: row.version_status,
             quality: row.assembly_quality,
+            assembly_type: row.assembly_type,
+            submitted_by: row.submitted_by,
         }
     }).collect::<Vec<AssemblyEvent>>();
 

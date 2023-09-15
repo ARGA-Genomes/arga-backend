@@ -5,7 +5,9 @@ CREATE TABLE assembly_events (
 
     name varchar,
     version_status varchar,
-    quality varchar
+    quality varchar,
+    assembly_type varchar,
+    submitted_by varchar,
 );
 
 CREATE INDEX assembly_events_sequence_id ON assembly_events (sequence_id);

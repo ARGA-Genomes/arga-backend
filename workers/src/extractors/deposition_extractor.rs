@@ -21,11 +21,9 @@ type MatchedRecords = Vec<(SequenceMatch, Record)>;
 
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct Record {
     accession: String,
-    scientific_name: Option<String>,
-    canonical_name: Option<String>,
+    sequence_accession: Option<String>,
     material_sample_id: Option<String>,
     submitted_by: Option<String>,
 
@@ -67,7 +65,11 @@ struct Record {
 
 impl From<Record> for SequenceRecord {
     fn from(value: Record) -> Self {
-        Self { accession: value.accession }
+        let accession = match value.sequence_accession {
+            Some(accession) => accession,
+            None => value.accession,
+        };
+        Self { accession }
     }
 }
 

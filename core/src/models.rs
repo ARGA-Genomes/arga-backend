@@ -652,6 +652,8 @@ pub struct AssemblyEvent {
     pub name: Option<String>,
     pub version_status: Option<String>,
     pub quality: Option<String>,
+    pub assembly_type: Option<String>,
+    pub submitted_by: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -666,6 +668,7 @@ pub struct AnnotationEvent {
     pub coverage: Option<String>,
     pub replicons: Option<i64>,
     pub standard_operating_procedures: Option<String>,
+    pub annotated_by: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]

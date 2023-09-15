@@ -21,11 +21,10 @@ type MatchedRecords = Vec<(SequenceMatch, Record)>;
 
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct Record {
     accession: String,
-    scientific_name: Option<String>,
-    canonical_name: Option<String>,
+    sequence_accession: Option<String>,
+    annotated_by: Option<String>,
 
     // event block
     field_number: Option<String>,
@@ -52,7 +51,11 @@ struct Record {
 
 impl From<Record> for SequenceRecord {
     fn from(value: Record) -> Self {
-        Self { accession: value.accession }
+        let accession = match value.sequence_accession {
+            Some(accession) => accession,
+            None => value.accession,
+        };
+        Self { accession }
     }
 }
 
@@ -168,6 +171,7 @@ fn extract_annotation_events(records: MatchedRecords, dataset: &Dataset, events:
             coverage: row.sequencing_coverage,
             replicons: row.num_replicons,
             standard_operating_procedures: row.sop,
+            annotated_by: row.annotated_by,
         }
     }).collect::<Vec<AnnotationEvent>>();
 

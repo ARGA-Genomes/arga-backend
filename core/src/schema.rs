@@ -44,6 +44,7 @@ diesel::table! {
         coverage -> Nullable<Varchar>,
         replicons -> Nullable<Int8>,
         standard_operating_procedures -> Nullable<Varchar>,
+        annotated_by -> Nullable<Varchar>,
     }
 }
 
@@ -85,6 +86,8 @@ diesel::table! {
         name -> Nullable<Varchar>,
         version_status -> Nullable<Varchar>,
         quality -> Nullable<Varchar>,
+        assembly_type -> Nullable<Varchar>,
+        submitted_by -> Nullable<Varchar>,
     }
 }
 

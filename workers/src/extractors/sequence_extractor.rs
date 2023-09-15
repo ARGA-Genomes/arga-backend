@@ -21,28 +21,25 @@ type MatchedRecords = Vec<(DnaExtractMatch, Record)>;
 
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct Record {
     accession: String,
-
-    // event block
-    field_number: Option<String>,
+    sequence_accession: Option<String>,
+    genbank_accession: Option<String>,
+    material_sample_id: Option<String>,
 
     #[serde(default)]
     #[serde(deserialize_with = "naive_date_from_str_opt")]
     event_date: Option<NaiveDate>,
     event_time: Option<NaiveTime>,
+    field_number: Option<String>,
+    field_notes: Option<String>,
+    event_remarks: Option<String>,
     habitat: Option<String>,
     sampling_protocol: Option<String>,
     sampling_size_value: Option<String>,
     sampling_size_unit: Option<String>,
     sampling_effort: Option<String>,
-    field_notes: Option<String>,
-    event_remarks: Option<String>,
 
-    // dna block
-    genbank_accession: Option<String>,
-    material_sample_id: Option<String>,
     sequenced_by: Option<String>,
     target_gene: Option<String>,
     dna_sequence: Option<String>,
@@ -66,7 +63,17 @@ struct Record {
 
 impl From<Record> for DnaExtractRecord {
     fn from(value: Record) -> Self {
-        Self { accession: value.accession }
+        // a dataset can be made up of multiple different datasets
+        // which might have different accessioned IDs for different stages.
+        // for example, with NCBI the event chain starts with BioSamples
+        // that have an ID of SAMNxxx, and later is referenced in Genbank and RefSeq
+        // via the matierial sample id, and instead having its own accession
+        // id of GCAxxx and GCFxxx respectively
+        let accession = match value.material_sample_id {
+            Some(sample_id) => sample_id,
+            None => value.accession,
+        };
+        Self { accession }
     }
 }
 
@@ -79,7 +86,6 @@ pub struct SequencingExtract {
 
 
 pub struct SequencingExtractIterator {
-    dataset: Dataset,
     dna_extracts: DnaExtractMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
@@ -108,7 +114,7 @@ impl Iterator for SequencingExtractIterator {
         if records.is_empty() {
             None
         } else {
-            Some(extract_chunk(records, &self.dataset, &self.dna_extracts))
+            Some(extract_chunk(records, &self.dna_extracts))
         }
     }
 }
@@ -120,14 +126,13 @@ pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<Se
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(SequencingExtractIterator {
-        dataset: dataset.clone(),
         dna_extracts,
         reader,
     })
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, extracts: &DnaExtractMap) -> Result<SequencingExtract, Error> {
+fn extract_chunk(chunk: Vec<Record>, extracts: &DnaExtractMap) -> Result<SequencingExtract, Error> {
     // match the records to dna extracts in the database. this will filter out any subsamples
     // that could not be matched
     let records = match_records_mapped(chunk, extracts);
@@ -172,13 +177,18 @@ fn extract_sequences(records: &MatchedRecords) -> Vec<Sequence> {
     info!(total=records.len(), "Extracting sequences");
 
     let sequences = records.par_iter().map(|(dna_extract, row)| {
+        let accession = match &row.sequence_accession {
+            Some(accession) => accession.clone(),
+            None => row.accession.clone(),
+        };
+
         Sequence {
             id: Uuid::new_v4(),
             dataset_id: dna_extract.dataset_id.clone(),
             name_id: dna_extract.name_id.clone(),
             dna_extract_id: dna_extract.id.clone(),
 
-            accession: row.accession.clone(),
+            accession,
             genbank_accession: row.genbank_accession.clone(),
         }
     }).collect::<Vec<Sequence>>();
