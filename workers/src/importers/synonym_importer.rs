@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use tracing::info;
 
 use arga_core::schema;
-use arga_core::models::{TaxonomicStatus, TaxonHistory};
+use arga_core::models::{TaxonomicStatus, TaxonHistory, Dataset};
 use crate::error::Error;
 use crate::extractors::{name_extractor, taxon_extractor, taxon_history_extractor};
 
@@ -16,7 +16,17 @@ use super::taxon_importer::{import_taxa, import_names};
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
-pub fn import(path: PathBuf, pool: &mut PgPool) -> Result<(), Error> {
+pub fn get_dataset(global_id: &str, pool: &mut PgPool) -> Result<Dataset, Error> {
+    use schema::datasets;
+    let mut conn = pool.get()?;
+    let dataset = datasets::table.filter(datasets::global_id.eq(global_id)).get_result::<Dataset>(&mut conn)?;
+    Ok(dataset)
+}
+
+
+pub fn import(path: PathBuf, global_id: &str, pool: &mut PgPool) -> Result<(), Error> {
+    let dataset = get_dataset(global_id, pool)?;
+
     // synonyms are a superset of a taxonomy and taxon history, so we import the synonym
     // name and taxonomy before building the history
     let names = name_extractor::extract(&path)?;
@@ -24,7 +34,7 @@ pub fn import(path: PathBuf, pool: &mut PgPool) -> Result<(), Error> {
 
     // after extracting the taxa we make sure that all of them have a taxonomic status
     // of synonym since we are explicitly importing synonyms here
-    let mut taxa = taxon_extractor::extract(&path, pool)?;
+    let mut taxa = taxon_extractor::extract(&path, &dataset, pool)?;
     for taxon in taxa.iter_mut() {
         taxon.status = TaxonomicStatus::Synonym;
     }

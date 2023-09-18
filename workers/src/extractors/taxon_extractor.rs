@@ -7,10 +7,9 @@ use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{Taxon, TaxonomicStatus};
+use arga_core::models::{Taxon, TaxonomicStatus, Dataset};
 use crate::error::Error;
 use crate::extractors::utils::{extract_authority, decompose_scientific_name};
-use crate::matchers::dataset_matcher::{DatasetMap, match_datasets, DatasetRecord};
 use crate::matchers::name_matcher::{match_records, NameRecord, NameMatch};
 
 
@@ -21,7 +20,6 @@ type MatchedRecords = Vec<(NameMatch, Record)>;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Record {
-    dataset_id: String,
     scientific_name: String,
     canonical_name: Option<String>,
     // rank: Option<String>,
@@ -83,35 +81,26 @@ impl From<Record> for NameRecord {
     }
 }
 
-impl From<Record> for DatasetRecord {
-    fn from(value: Record) -> Self {
-        Self { global_id: value.dataset_id }
-    }
-}
-
 
 /// Extract names and taxonomy from a CSV file
-pub fn extract(path: &PathBuf, pool: &mut PgPool) -> Result<Vec<Taxon>, Error> {
+pub fn extract(path: &PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<Vec<Taxon>, Error> {
     let mut records: Vec<Record> = Vec::new();
     for row in csv::Reader::from_path(&path)?.deserialize() {
         records.push(row?);
     }
 
-    // match the records to a dataset
-    let sources = match_datasets(&records, pool);
-
     // match the records to names in the database. this will filter out any names
     // that could not be matched
     let records = match_records(records, pool);
-    let taxa = extract_taxa(&sources, &records);
+    let taxa = extract_taxa(&dataset, &records);
     Ok(taxa)
 }
 
 
-fn extract_taxa(datasets: &DatasetMap, records: &MatchedRecords) -> Vec<Taxon> {
+fn extract_taxa(dataset: &Dataset, records: &MatchedRecords) -> Vec<Taxon> {
     info!(total=records.len(), "Extracting taxa");
 
-    let taxa = records.par_iter().filter_map(|(name, row)| {
+    let taxa = records.par_iter().map(|(name, row)| {
         let order_authority = extract_authority(&row.order, &row.order_full);
         let family_authority = extract_authority(&row.family, &row.family_full);
         let genus_authority = extract_authority(&row.genus, &row.genus_full);
@@ -153,44 +142,41 @@ fn extract_taxa(datasets: &DatasetMap, records: &MatchedRecords) -> Vec<Taxon> {
             None => decomposed.map(|v| v.canonical_name())
         };
 
-        match datasets.get(&row.dataset_id) {
-            Some(dataset) => Some(Taxon {
-                id: Uuid::new_v4(),
-                dataset_id: dataset.id.clone(),
-                name_id: name.id.clone(),
+        Taxon {
+            id: Uuid::new_v4(),
+            dataset_id: dataset.id.clone(),
+            name_id: name.id.clone(),
 
-                status: str_to_taxonomic_status(&row.taxonomic_status),
-                scientific_name: row.scientific_name.clone(),
-                canonical_name: canonical_name.unwrap_or_else(|| row.scientific_name.clone()),
+            status: str_to_taxonomic_status(&row.taxonomic_status),
+            scientific_name: row.scientific_name.clone(),
+            canonical_name: canonical_name.unwrap_or_else(|| row.scientific_name.clone()),
 
-                kingdom: row.kingdom.clone(),
-                phylum: row.phylum.clone(),
-                class: row.class.clone(),
-                order: row.order.clone(),
-                family: row.family.clone(),
-                tribe: row.tribe.clone(),
-                genus,
-                specific_epithet,
+            kingdom: row.kingdom.clone(),
+            phylum: row.phylum.clone(),
+            class: row.class.clone(),
+            order: row.order.clone(),
+            family: row.family.clone(),
+            tribe: row.tribe.clone(),
+            genus,
+            specific_epithet,
 
-                subphylum: row.subphylum.clone(),
-                subclass: row.subclass.clone(),
-                suborder: row.suborder.clone(),
-                subfamily: row.subfamily.clone(),
-                subtribe: row.subtribe.clone(),
-                subgenus,
-                subspecific_epithet,
+            subphylum: row.subphylum.clone(),
+            subclass: row.subclass.clone(),
+            suborder: row.suborder.clone(),
+            subfamily: row.subfamily.clone(),
+            subtribe: row.subtribe.clone(),
+            subgenus,
+            subspecific_epithet,
 
-                superclass: row.superclass.clone(),
-                superorder: row.superorder.clone(),
-                superfamily: row.superfamily.clone(),
-                supertribe: row.supertribe.clone(),
+            superclass: row.superclass.clone(),
+            superorder: row.superorder.clone(),
+            superfamily: row.superfamily.clone(),
+            supertribe: row.supertribe.clone(),
 
-                order_authority,
-                family_authority,
-                genus_authority,
-                species_authority,
-            }),
-            None => None,
+            order_authority,
+            family_authority,
+            genus_authority,
+            species_authority,
         }
     }).collect::<Vec<Taxon>>();
 

@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use tracing::info;
 
 use arga_core::schema;
-use arga_core::models::{Name, Taxon};
+use arga_core::models::{Name, Taxon, Dataset};
 use crate::error::Error;
 use crate::extractors::{name_extractor, taxon_extractor};
 
@@ -14,13 +14,23 @@ use crate::extractors::{name_extractor, taxon_extractor};
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
-pub fn import(path: PathBuf, pool: &mut PgPool) -> Result<(), Error> {
+pub fn get_dataset(global_id: &str, pool: &mut PgPool) -> Result<Dataset, Error> {
+    use schema::datasets;
+    let mut conn = pool.get()?;
+    let dataset = datasets::table.filter(datasets::global_id.eq(global_id)).get_result::<Dataset>(&mut conn)?;
+    Ok(dataset)
+}
+
+
+pub fn import(path: PathBuf, global_id: &str, pool: &mut PgPool) -> Result<(), Error> {
+    let dataset = get_dataset(global_id, pool)?;
+
     // we always want to extract and import the names completely first because
     // other extractors rely on using the matcher to retreive the associated name id
     let names = name_extractor::extract(&path)?;
     import_names(&names, pool)?;
 
-    let taxa = taxon_extractor::extract(&path, pool)?;
+    let taxa = taxon_extractor::extract(&path, &dataset, pool)?;
     import_taxa(&taxa, pool)?;
 
     Ok(())

@@ -100,8 +100,8 @@ impl ThreadedJob {
         match worker {
             "import_source" => source_importer::import(path, pool)?,
             "import_dataset" => dataset_importer::import(path, pool)?,
-            "import_taxon" => taxon_importer::import(path, pool)?,
-            "import_synonym" => synonym_importer::import(path, pool)?,
+            "import_taxon" => taxon_importer::import(path, &data.name, pool)?,
+            "import_synonym" => synonym_importer::import(path, &data.name, pool)?,
             "import_vernacular" => vernacular_importer::import(path, pool)?,
             "import_region" => region_importer::import(path, pool)?,
             "import_ecology" => ecology_importer::import(path, pool)?,
