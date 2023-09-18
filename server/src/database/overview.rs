@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
-use crate::database::schema;
+use crate::database::{schema, schema_gnl};
 use crate::http::Error;
 
 use super::PgPool;
@@ -76,10 +76,10 @@ impl OverviewProvider {
         })
     }
 
-    pub async fn genomes(&self) -> Result<Overview, Error> {
-        use schema::assemblies;
+    pub async fn sequences(&self) -> Result<Overview, Error> {
+        use schema::sequences::dsl::*;
         let mut conn = self.pool.get().await?;
-        let total: i64 = assemblies::table.count().get_result(&mut conn).await?;
+        let total: i64 = sequences.count().get_result(&mut conn).await?;
 
         Ok(Overview {
             total,
@@ -87,27 +87,9 @@ impl OverviewProvider {
     }
 
     pub async fn whole_genomes(&self) -> Result<Overview, Error> {
-        use schema::assemblies::dsl::*;
+        use schema_gnl::whole_genomes::dsl::*;
         let mut conn = self.pool.get().await?;
-        let total: i64 = assemblies
-            .filter(genome_rep.eq("Full"))
-            .count()
-            .get_result(&mut conn)
-            .await?;
-
-        Ok(Overview {
-            total,
-        })
-    }
-
-    pub async fn partial_genomes(&self) -> Result<Overview, Error> {
-        use schema::assemblies::dsl::*;
-        let mut conn = self.pool.get().await?;
-        let total: i64 = assemblies
-            .filter(genome_rep.eq("Partial"))
-            .count()
-            .get_result(&mut conn)
-            .await?;
+        let total: i64 = whole_genomes.count().get_result(&mut conn).await?;
 
         Ok(Overview {
             total,
@@ -115,9 +97,9 @@ impl OverviewProvider {
     }
 
     pub async fn markers(&self) -> Result<Overview, Error> {
-        use schema::markers;
+        use schema_gnl::markers::dsl::*;
         let mut conn = self.pool.get().await?;
-        let total: i64 = markers::table.count().get_result(&mut conn).await?;
+        let total: i64 = markers.count().get_result(&mut conn).await?;
 
         Ok(Overview {
             total,

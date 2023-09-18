@@ -107,7 +107,7 @@ impl SpeciesProvider {
     }
 
     pub async fn marker_summary(&self, name_ids: &Vec<Uuid>) -> Result<Vec<MarkerSummary>, Error> {
-        use schema::markers::dsl::*;
+        use schema_gnl::markers::dsl::*;
         let mut conn = self.pool.get().await?;
 
         // get the total amounts of assembly records for each name

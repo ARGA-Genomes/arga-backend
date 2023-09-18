@@ -201,15 +201,14 @@ fn index_loci(schema: &Schema, index: &Index) -> Result<(), Error> {
 
     for chunk in records.chunks(1_000_000) {
         for locus in chunk {
-            let mut doc = doc!(
+            let doc = doc!(
                 canonical_name => locus.canonical_name.clone(),
                 data_type => DataType::Locus.to_string(),
                 name_id => locus.name_id.to_string(),
                 status => serde_json::to_string(&locus.status)?,
                 accession => locus.accession.clone(),
+                locus_type => locus.locus_type.clone(),
             );
-
-            if let Some(value) = &locus.locus_type { doc.add_text(locus_type, value); }
 
             index_writer.add_document(doc)?;
         }

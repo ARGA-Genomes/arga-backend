@@ -349,30 +349,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    markers (id) {
-        id -> Uuid,
-        name_id -> Uuid,
-        created_at -> Timestamptz,
-        updated_at -> Timestamptz,
-        accession -> Varchar,
-        material_sample_id -> Nullable<Varchar>,
-        gb_acs -> Nullable<Varchar>,
-        marker_code -> Nullable<Varchar>,
-        nucleotide -> Nullable<Text>,
-        recorded_by -> Nullable<Varchar>,
-        list_id -> Uuid,
-        version -> Nullable<Varchar>,
-        basepairs -> Nullable<Int8>,
-        #[sql_name = "type"]
-        type_ -> Nullable<Varchar>,
-        shape -> Nullable<Varchar>,
-        source_url -> Nullable<Varchar>,
-        fasta_url -> Nullable<Varchar>,
-        extra_data -> Nullable<Jsonb>,
-    }
-}
-
-diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::NameListType;
 
@@ -690,7 +666,6 @@ diesel::joinable!(ecology -> datasets (dataset_id));
 diesel::joinable!(ecology -> names (name_id));
 diesel::joinable!(indigenous_knowledge -> datasets (dataset_id));
 diesel::joinable!(indigenous_knowledge -> names (name_id));
-diesel::joinable!(markers -> names (name_id));
 diesel::joinable!(name_vernacular_names -> names (name_id));
 diesel::joinable!(name_vernacular_names -> vernacular_names (vernacular_name_id));
 diesel::joinable!(organisms -> names (name_id));
@@ -735,7 +710,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     imcra_provincial,
     indigenous_knowledge,
     jobs,
-    markers,
     name_lists,
     name_vernacular_names,
     names,

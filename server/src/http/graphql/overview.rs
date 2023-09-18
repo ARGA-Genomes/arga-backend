@@ -15,9 +15,9 @@ impl Overview {
         Ok(state.database.overview.animals().await?.total)
     }
 
-    async fn genomes(&self, ctx: &Context<'_>) -> Result<i64, Error> {
+    async fn sequences(&self, ctx: &Context<'_>) -> Result<i64, Error> {
         let state = ctx.data::<State>().unwrap();
-        Ok(state.database.overview.genomes().await?.total)
+        Ok(state.database.overview.sequences().await?.total)
     }
 
     async fn markers(&self, ctx: &Context<'_>) -> Result<i64, Error> {
@@ -43,17 +43,6 @@ impl Overview {
     async fn whole_genomes(&self, ctx: &Context<'_>) -> Result<i64, Error> {
         let state = ctx.data::<State>().unwrap();
         Ok(state.database.overview.whole_genomes().await?.total)
-    }
-    /// Returns the amount of partial genomes in the index
-    async fn partial_genomes(&self, ctx: &Context<'_>) -> Result<i64, Error> {
-        let state = ctx.data::<State>().unwrap();
-        Ok(state.database.overview.partial_genomes().await?.total)
-    }
-
-    /// Returns the amount of barcodes in the index
-    async fn barcodes(&self, ctx: &Context<'_>) -> Result<i64, Error> {
-        let state = ctx.data::<State>().unwrap();
-        Ok(state.database.overview.markers().await?.total)
     }
 
     /// Returns the amount of records

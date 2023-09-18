@@ -1,3 +1,4 @@
+use arga_core::schema_gnl;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -22,11 +23,12 @@ pub struct LocusDoc {
     pub canonical_name: String,
 
     pub accession: String,
-    pub locus_type: Option<String>,
+    pub locus_type: String,
 }
 
 pub fn get_loci(pool: &PgPool) -> Result<Vec<LocusDoc>, Error> {
-    use schema::{markers, names, taxa};
+    use schema::{names, taxa};
+    use schema_gnl::markers;
     let mut conn = pool.get()?;
 
     let docs = names::table
@@ -37,7 +39,7 @@ pub fn get_loci(pool: &PgPool) -> Result<Vec<LocusDoc>, Error> {
             taxa::status,
             taxa::canonical_name,
             markers::accession,
-            markers::type_,
+            markers::target_gene,
         ))
         .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
         .load::<LocusDoc>(&mut conn)?;

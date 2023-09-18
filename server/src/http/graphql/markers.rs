@@ -1,5 +1,6 @@
 use async_graphql::*;
 use tracing::instrument;
+use uuid::Uuid;
 
 use crate::database::models;
 use crate::http::Error;
@@ -10,39 +11,26 @@ pub struct Markers;
 
 #[derive(SimpleObject)]
 pub struct SpeciesMarker {
-    pub id: String,
+    pub sequence_id: Uuid,
+    pub dna_extract_id: Uuid,
+    pub dataset_name: String,
+
     pub accession: String,
+    pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
-    pub gb_acs: Option<String>,
-    pub marker_code: Option<String>,
-    pub nucleotide: Option<String>,
-    pub recorded_by: Option<String>,
-    pub version: Option<String>,
-    pub basepairs: Option<i64>,
-    pub type_: Option<String>,
-    pub shape: Option<String>,
-    pub source_url: Option<String>,
-    pub fasta_url: Option<String>,
-    pub extra_data: Option<serde_json::Value>,
+    pub target_gene: String,
 }
 
 impl From<models::Marker> for SpeciesMarker {
     fn from(value: models::Marker) -> Self {
         Self {
-            id: value.id.to_string(),
+            sequence_id: value.sequence_id,
+            dna_extract_id: value.dna_extract_id,
+            dataset_name: value.dataset_name,
             accession: value.accession,
+            sequenced_by: value.sequenced_by,
             material_sample_id: value.material_sample_id,
-            gb_acs: value.gb_acs,
-            marker_code: value.marker_code,
-            nucleotide: value.nucleotide,
-            recorded_by: value.recorded_by,
-            version: value.version,
-            basepairs: value.basepairs,
-            type_: value.type_,
-            shape: value.shape,
-            source_url: value.source_url,
-            fasta_url: value.fasta_url,
-            extra_data: value.extra_data,
+            target_gene: value.target_gene,
         }
     }
 }

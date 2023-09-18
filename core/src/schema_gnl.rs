@@ -203,6 +203,20 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    markers (sequence_id) {
+        sequence_id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
+        dna_extract_id -> Uuid,
+        dataset_name -> Varchar,
+        accession -> Varchar,
+        sequenced_by -> Nullable<Varchar>,
+        material_sample_id -> Nullable<Varchar>,
+        target_gene -> Varchar,
+    }
+}
+
 
 use super::schema::{datasets, names, assemblies, taxa};
 
@@ -213,6 +227,9 @@ diesel::joinable!(taxa -> synonyms (id));
 diesel::joinable!(taxa -> species_vernacular_names (id));
 diesel::joinable!(whole_genomes -> datasets (dataset_id));
 diesel::joinable!(whole_genomes -> names (name_id));
+diesel::joinable!(markers -> datasets (dataset_id));
+diesel::joinable!(markers -> names (name_id));
+diesel::joinable!(markers -> taxa (name_id));
 
 diesel::joinable!(ranked_taxa -> assemblies (name_id));
 diesel::joinable!(ranked_taxa -> names (name_id));
@@ -224,11 +241,22 @@ diesel::allow_tables_to_appear_in_same_query!(
     species_vernacular_names,
     undescribed_species,
     whole_genomes,
+    markers
 );
 
 diesel::allow_tables_to_appear_in_same_query!(
     datasets,
     whole_genomes,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    datasets,
+    markers,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    taxa,
+    markers,
 );
 
 diesel::allow_tables_to_appear_in_same_query!(

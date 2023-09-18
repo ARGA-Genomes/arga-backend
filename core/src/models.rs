@@ -818,28 +818,18 @@ pub struct BioSample {
 
 
 #[derive(Debug, Clone, Queryable, Insertable, Default)]
-#[diesel(table_name = schema::markers)]
+#[diesel(table_name = schema_gnl::markers)]
 pub struct Marker {
-    pub id: Uuid,
+    pub sequence_id: Uuid,
+    pub dataset_id: Uuid,
     pub name_id: Uuid,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
+    pub dna_extract_id: Uuid,
 
+    pub dataset_name: String,
     pub accession: String,
+    pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
-    pub gb_acs: Option<String>,
-    pub marker_code: Option<String>,
-    pub nucleotide: Option<String>,
-    pub recorded_by: Option<String>,
-
-    pub list_id: Uuid,
-    pub version: Option<String>,
-    pub basepairs: Option<i64>,
-    pub type_: Option<String>,
-    pub shape: Option<String>,
-    pub source_url: Option<String>,
-    pub fasta_url: Option<String>,
-    pub extra_data: Option<serde_json::Value>,
+    pub target_gene: String,
 }
 
 

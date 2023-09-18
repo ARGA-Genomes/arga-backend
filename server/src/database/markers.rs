@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
-use crate::{database::{schema, models::Marker}, http::Error};
+use crate::{database::{schema, schema_gnl, models::Marker}, http::Error};
 
 use super::PgPool;
 
@@ -12,8 +12,17 @@ pub struct MarkerProvider {
 }
 
 impl MarkerProvider {
+    pub async fn find_by_accession(&self, accession: &str) -> Result<Marker, Error> {
+        use schema_gnl::markers;
+        let mut conn = self.pool.get().await?;
+
+        let marker = markers::table.filter(markers::accession.eq(accession)).get_result(&mut conn).await?;
+        Ok(marker)
+    }
+
     pub async fn species(&self, canonical_name: &str) -> Result<Vec<Marker>, Error> {
-        use schema::{markers, names};
+        use schema::names;
+        use schema_gnl::markers;
         let mut conn = self.pool.get().await?;
 
         let records = markers::table
