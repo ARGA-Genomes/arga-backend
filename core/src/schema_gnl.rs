@@ -177,24 +177,58 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    whole_genomes (sequence_id) {
+        sequence_id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
+        dna_extract_id -> Uuid,
+        dataset_name -> Varchar,
+        accession -> Varchar,
+        sequenced_by -> Nullable<Varchar>,
+        material_sample_id -> Nullable<Varchar>,
+        estimated_size -> Nullable<BigInt>,
+        assembled_by -> Nullable<Varchar>,
+        name -> Nullable<Varchar>,
+        version_status -> Nullable<Varchar>,
+        quality -> Nullable<Varchar>,
+        assembly_type -> Nullable<Varchar>,
+        genome_size -> Nullable<BigInt>,
+        annotated_by -> Nullable<Varchar>,
+        representation -> Nullable<Varchar>,
+        release_type -> Nullable<Varchar>,
+        deposited_by -> Nullable<Varchar>,
+        data_type -> Nullable<Varchar>,
+        excluded_from_refseq -> Nullable<Varchar>,
+    }
+}
 
-use super::schema::{names, assemblies, taxa};
+
+use super::schema::{datasets, names, assemblies, taxa};
 
 diesel::joinable!(species -> synonyms (id));
 diesel::joinable!(species -> species_vernacular_names (id));
 diesel::joinable!(taxa -> species (id));
 diesel::joinable!(taxa -> synonyms (id));
 diesel::joinable!(taxa -> species_vernacular_names (id));
+diesel::joinable!(whole_genomes -> datasets (dataset_id));
+diesel::joinable!(whole_genomes -> names (name_id));
 
 diesel::joinable!(ranked_taxa -> assemblies (name_id));
 diesel::joinable!(ranked_taxa -> names (name_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    names,
     species,
     synonyms,
     species_vernacular_names,
     undescribed_species,
-    names,
+    whole_genomes,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    datasets,
+    whole_genomes,
 );
 
 diesel::allow_tables_to_appear_in_same_query!(

@@ -8,6 +8,7 @@ CREATE TABLE assembly_events (
     quality varchar,
     assembly_type varchar,
     submitted_by varchar,
+    genome_size bigint
 );
 
 CREATE INDEX assembly_events_sequence_id ON assembly_events (sequence_id);

@@ -88,6 +88,7 @@ diesel::table! {
         quality -> Nullable<Varchar>,
         assembly_type -> Nullable<Varchar>,
         submitted_by -> Nullable<Varchar>,
+        genome_size -> Nullable<Int8>,
     }
 }
 

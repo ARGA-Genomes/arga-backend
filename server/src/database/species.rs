@@ -1,4 +1,3 @@
-use arga_core::models::IndigenousKnowledge;
 use async_trait::async_trait;
 
 use diesel::prelude::*;
@@ -9,12 +8,11 @@ use tracing::instrument;
 use uuid::Uuid;
 
 use crate::http::graphql::common::Taxonomy;
-use crate::index::specimen;
-use crate::index::species::{self, GetSpecies, GetRegions, GetMedia, GetSpecimens, GetConservationStatus, GetTraceFiles};
+use crate::index::species::{self, GetSpecies, GetRegions, GetMedia, GetConservationStatus, GetTraceFiles};
 
-use super::models::{Taxon, Name, RegionType, TaxonPhoto, Specimen, TraceFile, ConservationStatus};
-use super::extensions::sum_if;
-use super::{schema, Database, Error, PgPool};
+use super::models::{Taxon, Name, RegionType, TaxonPhoto, Specimen, TraceFile, ConservationStatus, IndigenousKnowledge, WholeGenome};
+use super::extensions::{sum_if, Paginate};
+use super::{schema, schema_gnl, Database, Error, PgPool, PageResult};
 
 
 #[derive(Debug, Clone, Default, Queryable, Serialize, Deserialize)]
@@ -137,6 +135,32 @@ impl SpeciesProvider {
             .select((indigenous_knowledge::all_columns(), datasets::name))
             .filter(name_id.eq_any(name_ids))
             .load::<(IndigenousKnowledge, String)>(&mut conn)
+            .await?;
+
+        Ok(records)
+    }
+
+    pub async fn specimens(&self, name: &Name, page: i64) -> PageResult<Specimen> {
+        use schema::specimens::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let records = specimens
+            .filter(name_id.eq(name.id))
+            .order((type_status, institution_name, institution_code))
+            .paginate(page)
+            .load::<(Specimen, i64)>(&mut conn)
+            .await?;
+
+        Ok(records.into())
+    }
+
+    pub async fn whole_genomes(&self, name: &Name) -> Result<Vec<WholeGenome>, Error> {
+        use schema_gnl::whole_genomes;
+        let mut conn = self.pool.get().await?;
+
+        let records = whole_genomes::table
+            .filter(whole_genomes::name_id.eq(name.id))
+            .load::<WholeGenome>(&mut conn)
             .await?;
 
         Ok(records)
@@ -289,27 +313,6 @@ impl GetMedia for Database {
         }
 
         Ok(photos)
-    }
-}
-
-
-#[async_trait]
-impl GetSpecimens for Database {
-    type Error = Error;
-
-    async fn specimens(&self, name: &Name) -> Result<Vec<specimen::SpecimenDetails>, Error> {
-        use schema::specimens::dsl::*;
-        let mut conn = self.pool.get().await?;
-
-        let records = specimens
-            .filter(name_id.eq(name.id))
-            .limit(20)
-            .order((type_status, institution_name, institution_code))
-            .load::<Specimen>(&mut conn)
-            .await?;
-
-        let results = records.into_iter().map(|r| r.into()).collect();
-        Ok(results)
     }
 }
 

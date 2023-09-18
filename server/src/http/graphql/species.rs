@@ -1,3 +1,4 @@
+use arga_core::models;
 use arga_core::models::IndigenousKnowledge;
 use async_graphql::*;
 use tracing::instrument;
@@ -11,11 +12,8 @@ use crate::http::Context as State;
 use crate::index::species::{
     ConservationStatus,
     GetConservationStatus,
-    GetSpecimens,
     GetTraceFiles,
-    GetWholeGenomes,
     TraceFile,
-    WholeGenome,
     GenomicData,
     Region,
     Photo,
@@ -24,11 +22,12 @@ use crate::index::species::{
     GetRegions,
     GetMedia,
 };
-use crate::index::specimen::SpecimenDetails;
 use crate::database::{schema, Database};
 use crate::database::models::Name as ArgaName;
+use super::common::Page;
 use super::common::Taxonomy;
 use super::markers::SpeciesMarker;
+use super::specimen::SpecimenDetails;
 
 
 pub struct Species {
@@ -118,12 +117,16 @@ impl Species {
         Ok(photos)
     }
 
-    // #[instrument(skip(self, ctx))]
-    // async fn specimens(&self, ctx: &Context<'_>) -> Result<Vec<SpecimenDetails>, Error> {
-    //     let state = ctx.data::<State>().unwrap();
-    //     let specimens = state.database.specimens(&self.name).await?;
-    //     Ok(specimens)
-    // }
+    #[instrument(skip(self, ctx))]
+    async fn specimens(&self, ctx: &Context<'_>, page: i64) -> Result<Page<SpecimenDetails>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let page = state.database.species.specimens(&self.name, page).await?;
+        let specimens = page.records.into_iter().map(|r| r.into()).collect();
+        Ok(Page {
+            records: specimens,
+            total: page.total,
+        })
+    }
 
     #[instrument(skip(self, ctx))]
     async fn conservation(&self, ctx: &Context<'_>) -> Result<Vec<ConservationStatus>> {
@@ -141,13 +144,9 @@ impl Species {
     #[instrument(skip(self, ctx))]
     async fn whole_genomes(&self, ctx: &Context<'_>) -> Result<Vec<WholeGenome>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let mut records = state.solr.reference_genomes(&self.all_names).await?;
-        let full = state.solr.full_genomes(&self.all_names).await?;
-        let partial = state.solr.partial_genomes(&self.all_names).await?;
-
-        records.extend(full);
-        records.extend(partial);
-        Ok(records)
+        let records = state.database.species.whole_genomes(&self.name).await?;
+        let sequences = records.into_iter().map(|r| r.into()).collect();
+        Ok(sequences)
     }
 
     #[instrument(skip(self, ctx))]
@@ -192,5 +191,59 @@ impl Regions {
         let state = ctx.data::<State>().unwrap();
         let regions = state.database.imcra(&self.name).await?;
         Ok(regions)
+    }
+}
+
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct WholeGenome {
+    pub sequence_id: Uuid,
+    pub dna_extract_id: Uuid,
+    pub dataset_name: String,
+
+    pub accession: String,
+    pub sequenced_by: Option<String>,
+    pub material_sample_id: Option<String>,
+    pub estimated_size: Option<i64>,
+
+    pub assembled_by: Option<String>,
+    pub name: Option<String>,
+    pub version_status: Option<String>,
+    pub quality: Option<String>,
+    pub assembly_type: Option<String>,
+    pub genome_size: Option<i64>,
+
+    pub annotated_by: Option<String>,
+    pub representation: Option<String>,
+    pub release_type: Option<String>,
+
+    pub deposited_by: Option<String>,
+    pub data_type: Option<String>,
+    pub excluded_from_refseq: Option<String>,
+}
+
+impl From<models::WholeGenome> for WholeGenome {
+    fn from(value: models::WholeGenome) -> Self {
+        Self {
+            sequence_id: value.sequence_id,
+            dna_extract_id: value.dna_extract_id,
+            dataset_name: value.dataset_name,
+            accession: value.accession,
+            sequenced_by: value.sequenced_by,
+            material_sample_id: value.material_sample_id,
+            estimated_size: value.estimated_size,
+            assembled_by: value.assembled_by,
+            name: value.name,
+            version_status: value.version_status,
+            quality: value.quality,
+            assembly_type: value.assembly_type,
+            genome_size: value.genome_size,
+            annotated_by: value.annotated_by,
+            representation: value.representation,
+            release_type: value.release_type,
+            deposited_by: value.deposited_by,
+            data_type: value.data_type,
+            excluded_from_refseq: value.excluded_from_refseq,
+        }
     }
 }

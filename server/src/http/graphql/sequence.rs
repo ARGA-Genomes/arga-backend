@@ -169,6 +169,7 @@ pub struct AssemblyEvent {
     pub name: Option<String>,
     pub version_status: Option<String>,
     pub quality: Option<String>,
+    pub genome_size: Option<i64>,
 }
 
 impl From<models::AssemblyEvent> for AssemblyEvent {
@@ -178,6 +179,7 @@ impl From<models::AssemblyEvent> for AssemblyEvent {
             name: value.name,
             version_status: value.version_status,
             quality: value.quality,
+            genome_size: value.genome_size,
         }
     }
 }

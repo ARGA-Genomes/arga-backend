@@ -654,6 +654,7 @@ pub struct AssemblyEvent {
     pub quality: Option<String>,
     pub assembly_type: Option<String>,
     pub submitted_by: Option<String>,
+    pub genome_size: Option<i64>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -839,4 +840,38 @@ pub struct Marker {
     pub source_url: Option<String>,
     pub fasta_url: Option<String>,
     pub extra_data: Option<serde_json::Value>,
+}
+
+
+/// Whole genomes are chromosome assemblies. For our model this requires
+/// at least an annotation event so that we can determine whether it is
+/// a full or partial genome based on the genome representation field.
+#[derive(Debug, Queryable, Default, Clone)]
+#[diesel(table_name = schema_gnl::whole_genomes)]
+pub struct WholeGenome {
+    pub sequence_id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub dna_extract_id: Uuid,
+
+    pub dataset_name: String,
+    pub accession: String,
+    pub sequenced_by: Option<String>,
+    pub material_sample_id: Option<String>,
+    pub estimated_size: Option<i64>,
+
+    pub assembled_by: Option<String>,
+    pub name: Option<String>,
+    pub version_status: Option<String>,
+    pub quality: Option<String>,
+    pub assembly_type: Option<String>,
+    pub genome_size: Option<i64>,
+
+    pub annotated_by: Option<String>,
+    pub representation: Option<String>,
+    pub release_type: Option<String>,
+
+    pub deposited_by: Option<String>,
+    pub data_type: Option<String>,
+    pub excluded_from_refseq: Option<String>,
 }

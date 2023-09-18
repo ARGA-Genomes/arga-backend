@@ -46,6 +46,7 @@ struct Record {
     version_status: Option<String>,
     assembly_quality: Option<String>,
     assembly_type: Option<String>,
+    genome_size: Option<i64>,
 }
 
 impl From<Record> for SequenceRecord {
@@ -169,6 +170,7 @@ fn extract_assembly_events(records: MatchedRecords, dataset: &Dataset, events: &
             version_status: row.version_status,
             quality: row.assembly_quality,
             assembly_type: row.assembly_type,
+            genome_size: row.genome_size,
             submitted_by: row.submitted_by,
         }
     }).collect::<Vec<AssemblyEvent>>();
