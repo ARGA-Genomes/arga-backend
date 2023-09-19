@@ -35,10 +35,13 @@ enum Commands {
     Dataset {
         /// The worker job type that should process the file
         worker: String,
-        /// The name to give this dataset
-        name: String,
+        /// The global ID of the dataset to process the data as
+        dataset: String,
         /// The path to the file being imported
         path: String,
+        /// A list of dataset global IDs that the import can use when
+        /// matching to existing data
+        isolation_context: Vec<String>,
     },
 
     /// Perform tasks on raw data sets
@@ -61,6 +64,6 @@ fn main() {
         Commands::Search(command) => search::process_command(command),
         Commands::Data(command) => data::process_command(command),
         Commands::Reports(command) => reports::process_command(command),
-        Commands::Dataset { worker, name, path } => dataset::import(worker, name, path),
+        Commands::Dataset { worker, dataset, isolation_context, path } => dataset::import(worker, dataset, isolation_context, path),
     }
 }

@@ -14,17 +14,7 @@ use crate::extractors::{name_extractor, taxon_extractor};
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
-pub fn get_dataset(global_id: &str, pool: &mut PgPool) -> Result<Dataset, Error> {
-    use schema::datasets;
-    let mut conn = pool.get()?;
-    let dataset = datasets::table.filter(datasets::global_id.eq(global_id)).get_result::<Dataset>(&mut conn)?;
-    Ok(dataset)
-}
-
-
-pub fn import(path: PathBuf, global_id: &str, pool: &mut PgPool) -> Result<(), Error> {
-    let dataset = get_dataset(global_id, pool)?;
-
+pub fn import(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<(), Error> {
     // we always want to extract and import the names completely first because
     // other extractors rely on using the matcher to retreive the associated name id
     let names = name_extractor::extract(&path)?;

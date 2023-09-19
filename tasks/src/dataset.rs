@@ -21,8 +21,8 @@ struct NewJob {
 #[derive(Debug, Deserialize, Serialize, AsExpression, FromSqlRow)]
 #[diesel(sql_type = sql_types::Jsonb)]
 struct ImportJobData {
-    name: String,
-    description: Option<String>,
+    dataset: String,
+    isolation_context: Vec<String>,
     tmp_name: String,
 }
 
@@ -42,7 +42,7 @@ impl FromSql<sql_types::Jsonb, Pg> for ImportJobData {
 
 
 /// Queue an import job for a dataset.
-pub fn import(worker: &str, name: &str, path: &str) {
+pub fn import(worker: &str, dataset: &str, context: &Vec<String>, path: &str) {
     use schema::jobs;
 
     let url = arga_core::get_database_url();
@@ -51,8 +51,8 @@ pub fn import(worker: &str, name: &str, path: &str) {
     let mut conn = pool.get().expect("Could not checkout connection");
 
     let import_data = ImportJobData {
-        name: name.to_string(),
-        description: None,
+        dataset: dataset.to_string(),
+        isolation_context: context.clone(),
         tmp_name: path.to_string(),
     };
 
@@ -65,5 +65,5 @@ pub fn import(worker: &str, name: &str, path: &str) {
         .get_result::<Uuid>(&mut conn)
         .unwrap();
 
-    info!(?id, name, worker, path, "Job queued");
+    info!(?id, dataset, ?context, worker, path, "Job queued");
 }

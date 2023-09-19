@@ -16,17 +16,7 @@ use super::taxon_importer::{import_taxa, import_names};
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
-pub fn get_dataset(global_id: &str, pool: &mut PgPool) -> Result<Dataset, Error> {
-    use schema::datasets;
-    let mut conn = pool.get()?;
-    let dataset = datasets::table.filter(datasets::global_id.eq(global_id)).get_result::<Dataset>(&mut conn)?;
-    Ok(dataset)
-}
-
-
-pub fn import(path: PathBuf, global_id: &str, pool: &mut PgPool) -> Result<(), Error> {
-    let dataset = get_dataset(global_id, pool)?;
-
+pub fn import(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<(), Error> {
     // synonyms are a superset of a taxonomy and taxon history, so we import the synonym
     // name and taxonomy before building the history
     let names = name_extractor::extract(&path)?;

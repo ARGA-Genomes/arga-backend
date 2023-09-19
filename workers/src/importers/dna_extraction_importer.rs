@@ -14,18 +14,9 @@ use crate::extractors::dna_extraction_extractor;
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
-pub fn get_dataset(global_id: &str, pool: &mut PgPool) -> Result<Dataset, Error> {
-    use schema::datasets;
-    let mut conn = pool.get()?;
-    let dataset = datasets::table.filter(datasets::global_id.eq(global_id)).get_result::<Dataset>(&mut conn)?;
-    Ok(dataset)
-}
-
-
-pub fn import(path: PathBuf, global_id: &str, pool: &mut PgPool) -> Result<(), Error> {
+pub fn import(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<(), Error> {
     info!("Extracting dna extraction events");
 
-    let dataset = get_dataset(global_id, pool)?;
     let extractor = dna_extraction_extractor::extract(path, &dataset, pool)?;
 
     for extract in extractor {

@@ -29,7 +29,7 @@ pub struct DnaExtractMatch {
 }
 
 
-pub fn dna_extract_map(dataset: &Uuid, pool: &mut PgPool) -> Result<DnaExtractMap, Error> {
+pub fn dna_extract_map(datasets: &Vec<Uuid>, pool: &mut PgPool) -> Result<DnaExtractMap, Error> {
     use schema::dna_extracts::dsl::*;
     info!("Creating dna extract map");
 
@@ -37,7 +37,7 @@ pub fn dna_extract_map(dataset: &Uuid, pool: &mut PgPool) -> Result<DnaExtractMa
 
     let results = dna_extracts
         .select((id, dataset_id, name_id, accession))
-        .filter(dataset_id.eq(dataset))
+        .filter(dataset_id.eq_any(datasets))
         .load::<DnaExtractMatch>(&mut conn)?;
 
     let mut map = DnaExtractMap::new();
