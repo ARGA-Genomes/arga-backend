@@ -169,6 +169,13 @@ impl Species {
         })
     }
 
+    async fn reference_genome(&self, ctx: &Context<'_>) -> Result<Option<WholeGenome>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let genome = state.database.species.reference_genome(&self.name).await?;
+        let genome = genome.map(|g| g.into());
+        Ok(genome)
+    }
+
     async fn indigenous_ecological_knowledge(&self, ctx: &Context<'_>) -> Result<Vec<IndigenousEcologicalTrait>, Error> {
         let state = ctx.data::<State>().unwrap();
         let name_ids: Vec<Uuid> = self.all_names.iter().map(|name| name.id.clone()).collect();

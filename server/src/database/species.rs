@@ -15,6 +15,9 @@ use super::extensions::{sum_if, Paginate};
 use super::{schema, schema_gnl, Database, Error, PgPool, PageResult};
 
 
+const NCBI_REFSEQ_DATASET_ID: &str = "ARGA:TL:0002002";
+
+
 #[derive(Debug, Clone, Default, Queryable, Serialize, Deserialize)]
 pub struct AssemblySummary {
     pub name_id: Uuid,
@@ -214,6 +217,22 @@ impl SpeciesProvider {
             .await?;
 
         Ok(records.into())
+    }
+
+    pub async fn reference_genome(&self, name: &Name) -> Result<Option<WholeGenome>, Error> {
+        use schema::datasets;
+        use schema_gnl::whole_genomes;
+        let mut conn = self.pool.get().await?;
+
+        let record = whole_genomes::table
+            .inner_join(datasets::table)
+            .select(whole_genomes::all_columns)
+            .filter(whole_genomes::name_id.eq(name.id))
+            .filter(datasets::global_id.eq(NCBI_REFSEQ_DATASET_ID))
+            .get_result::<WholeGenome>(&mut conn)
+            .await.optional()?;
+
+        Ok(record)
     }
 }
 
