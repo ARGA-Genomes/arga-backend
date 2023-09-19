@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::http::graphql::common::Taxonomy;
 use crate::index::species::{self, GetSpecies, GetRegions, GetMedia, GetConservationStatus, GetTraceFiles};
 
-use super::models::{Taxon, Name, RegionType, TaxonPhoto, Specimen, TraceFile, ConservationStatus, IndigenousKnowledge, WholeGenome};
+use super::models::{Taxon, Name, RegionType, TaxonPhoto, Specimen, TraceFile, ConservationStatus, IndigenousKnowledge, WholeGenome, Marker};
 use super::extensions::{sum_if, Paginate};
 use super::{schema, schema_gnl, Database, Error, PgPool, PageResult};
 
@@ -140,7 +140,7 @@ impl SpeciesProvider {
         Ok(records)
     }
 
-    pub async fn specimens(&self, name: &Name, page: i64) -> PageResult<Specimen> {
+    pub async fn specimens(&self, name: &Name, page: i64, page_size: i64) -> PageResult<Specimen> {
         use schema::specimens::dsl::*;
         let mut conn = self.pool.get().await?;
 
@@ -148,22 +148,41 @@ impl SpeciesProvider {
             .filter(name_id.eq(name.id))
             .order((type_status, institution_name, institution_code))
             .paginate(page)
+            .per_page(page_size)
             .load::<(Specimen, i64)>(&mut conn)
             .await?;
 
         Ok(records.into())
     }
 
-    pub async fn whole_genomes(&self, name: &Name) -> Result<Vec<WholeGenome>, Error> {
+    pub async fn whole_genomes(&self, name: &Name, page: i64, page_size: i64) -> PageResult<WholeGenome> {
         use schema_gnl::whole_genomes;
         let mut conn = self.pool.get().await?;
 
         let records = whole_genomes::table
             .filter(whole_genomes::name_id.eq(name.id))
-            .load::<WholeGenome>(&mut conn)
+            .order(whole_genomes::accession)
+            .paginate(page)
+            .per_page(page_size)
+            .load::<(WholeGenome, i64)>(&mut conn)
             .await?;
 
-        Ok(records)
+        Ok(records.into())
+    }
+
+    pub async fn markers(&self, name: &Name, page: i64, page_size: i64) -> PageResult<Marker> {
+        use schema_gnl::markers;
+        let mut conn = self.pool.get().await?;
+
+        let records = markers::table
+            .filter(markers::name_id.eq(name.id))
+            .order(markers::accession)
+            .paginate(page)
+            .per_page(page_size)
+            .load::<(Marker, i64)>(&mut conn)
+            .await?;
+
+        Ok(records.into())
     }
 }
 

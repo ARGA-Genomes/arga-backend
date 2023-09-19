@@ -118,9 +118,9 @@ impl Species {
     }
 
     #[instrument(skip(self, ctx))]
-    async fn specimens(&self, ctx: &Context<'_>, page: i64) -> Result<Page<SpecimenDetails>, Error> {
+    async fn specimens(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpecimenDetails>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let page = state.database.species.specimens(&self.name, page).await?;
+        let page = state.database.species.specimens(&self.name, page, page_size).await?;
         let specimens = page.records.into_iter().map(|r| r.into()).collect();
         Ok(Page {
             records: specimens,
@@ -142,11 +142,14 @@ impl Species {
     }
 
     #[instrument(skip(self, ctx))]
-    async fn whole_genomes(&self, ctx: &Context<'_>) -> Result<Vec<WholeGenome>, Error> {
+    async fn whole_genomes(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<WholeGenome>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let records = state.database.species.whole_genomes(&self.name).await?;
-        let sequences = records.into_iter().map(|r| r.into()).collect();
-        Ok(sequences)
+        let page = state.database.species.whole_genomes(&self.name, page, page_size).await?;
+        let sequences = page.records.into_iter().map(|r| r.into()).collect();
+        Ok(Page {
+            records: sequences,
+            total: page.total,
+        })
     }
 
     #[instrument(skip(self, ctx))]
@@ -156,11 +159,14 @@ impl Species {
         Ok(records)
     }
 
-    async fn markers(&self, ctx: &Context<'_>) -> Result<Vec<SpeciesMarker>, Error> {
+    async fn markers(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpeciesMarker>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let markers = state.database.markers.species(&self.canonical_name).await?;
-        let markers = markers.into_iter().map(|m| m.into()).collect();
-        Ok(markers)
+        let page = state.database.species.markers(&self.name, page, page_size).await?;
+        let markers = page.records.into_iter().map(|m| m.into()).collect();
+        Ok(Page {
+            records: markers,
+            total: page.total,
+        })
     }
 
     async fn indigenous_ecological_knowledge(&self, ctx: &Context<'_>) -> Result<Vec<IndigenousEcologicalTrait>, Error> {
