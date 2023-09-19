@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::http::graphql::common::Taxonomy;
 use crate::index::species::{self, GetSpecies, GetRegions, GetMedia, GetConservationStatus, GetTraceFiles};
 
-use super::models::{Taxon, Name, RegionType, TaxonPhoto, Specimen, TraceFile, ConservationStatus, IndigenousKnowledge, WholeGenome, Marker};
+use super::models::{Taxon, Name, RegionType, TaxonPhoto, TraceFile, ConservationStatus, IndigenousKnowledge, WholeGenome, Marker};
 use super::extensions::{sum_if, Paginate};
 use super::{schema, schema_gnl, Database, Error, PgPool, PageResult};
 
@@ -33,6 +33,20 @@ pub struct MarkerSummary {
 pub struct VernacularName {
     pub name: String,
     pub language: Option<String>,
+}
+
+#[derive(Debug, Queryable)]
+pub struct SpecimenSummary {
+    pub id: Uuid,
+    pub accession: String,
+    pub dataset_name: String,
+    pub type_status: Option<String>,
+    pub locality: Option<String>,
+    pub country: Option<String>,
+
+    pub sequences: i64,
+    pub whole_genomes: i64,
+    pub markers: i64,
 }
 
 
@@ -140,16 +154,33 @@ impl SpeciesProvider {
         Ok(records)
     }
 
-    pub async fn specimens(&self, name: &Name, page: i64, page_size: i64) -> PageResult<Specimen> {
-        use schema::specimens::dsl::*;
+    pub async fn specimens(&self, name: &Name, page: i64, page_size: i64) -> PageResult<SpecimenSummary> {
+        use schema::{specimens, datasets};
+        use schema_gnl::specimen_stats;
         let mut conn = self.pool.get().await?;
 
-        let records = specimens
-            .filter(name_id.eq(name.id))
-            .order((type_status, institution_name, institution_code))
+        let records = specimens::table
+            .inner_join(datasets::table)
+            .inner_join(specimen_stats::table)
+            .select((
+                specimens::id,
+                specimens::accession,
+                datasets::name,
+                specimens::type_status,
+                specimens::locality,
+                specimens::country,
+                specimen_stats::sequences,
+                specimen_stats::whole_genomes,
+                specimen_stats::markers,
+            ))
+            .filter(specimens::name_id.eq(name.id))
+            .order((
+                specimens::type_status.asc(),
+                specimen_stats::sequences.desc(),
+            ))
             .paginate(page)
             .per_page(page_size)
-            .load::<(Specimen, i64)>(&mut conn)
+            .load::<(SpecimenSummary, i64)>(&mut conn)
             .await?;
 
         Ok(records.into())

@@ -217,8 +217,17 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    specimen_stats (id) {
+        id -> Uuid,
+        sequences -> BigInt,
+        whole_genomes -> BigInt,
+        markers -> BigInt,
+    }
+}
 
-use super::schema::{datasets, names, assemblies, taxa};
+
+use super::schema::{datasets, names, assemblies, taxa, specimens};
 
 diesel::joinable!(species -> synonyms (id));
 diesel::joinable!(species -> species_vernacular_names (id));
@@ -230,6 +239,7 @@ diesel::joinable!(whole_genomes -> names (name_id));
 diesel::joinable!(markers -> datasets (dataset_id));
 diesel::joinable!(markers -> names (name_id));
 diesel::joinable!(markers -> taxa (name_id));
+diesel::joinable!(specimen_stats -> specimens (id));
 
 diesel::joinable!(ranked_taxa -> assemblies (name_id));
 diesel::joinable!(ranked_taxa -> names (name_id));
@@ -272,6 +282,16 @@ diesel::allow_tables_to_appear_in_same_query!(
 diesel::allow_tables_to_appear_in_same_query!(
     species_vernacular_names,
     taxa,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    specimen_stats,
+    specimens,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    specimen_stats,
+    datasets,
 );
 
 diesel::allow_tables_to_appear_in_same_query!(

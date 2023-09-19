@@ -24,10 +24,10 @@ use crate::index::species::{
 };
 use crate::database::{schema, Database};
 use crate::database::models::Name as ArgaName;
+use crate::database::species;
 use super::common::Page;
 use super::common::Taxonomy;
 use super::markers::SpeciesMarker;
-use super::specimen::SpecimenDetails;
 
 
 pub struct Species {
@@ -118,7 +118,7 @@ impl Species {
     }
 
     #[instrument(skip(self, ctx))]
-    async fn specimens(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpecimenDetails>, Error> {
+    async fn specimens(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpecimenSummary>, Error> {
         let state = ctx.data::<State>().unwrap();
         let page = state.database.species.specimens(&self.name, page, page_size).await?;
         let specimens = page.records.into_iter().map(|r| r.into()).collect();
@@ -250,6 +250,38 @@ impl From<models::WholeGenome> for WholeGenome {
             deposited_by: value.deposited_by,
             data_type: value.data_type,
             excluded_from_refseq: value.excluded_from_refseq,
+        }
+    }
+}
+
+
+/// A specimen from a specific species.
+#[derive(Clone, Debug, SimpleObject)]
+pub struct SpecimenSummary {
+    pub id: Uuid,
+    pub accession: String,
+    pub dataset_name: String,
+    pub type_status: Option<String>,
+    pub locality: Option<String>,
+    pub country: Option<String>,
+
+    pub sequences: i64,
+    pub whole_genomes: i64,
+    pub markers: i64,
+}
+
+impl From<species::SpecimenSummary> for SpecimenSummary {
+    fn from(value: species::SpecimenSummary) -> Self {
+        Self {
+            id: value.id,
+            accession: value.accession,
+            dataset_name: value.dataset_name,
+            type_status: value.type_status,
+            locality: value.locality,
+            country: value.country,
+            sequences: value.sequences,
+            whole_genomes: value.whole_genomes,
+            markers: value.markers,
         }
     }
 }
