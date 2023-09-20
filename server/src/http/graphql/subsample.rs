@@ -12,8 +12,8 @@ use crate::database::models;
 pub struct Subsample(SubsampleDetails, SubsampleQuery);
 
 impl Subsample {
-    pub async fn new(db: &Database, subsample_id: &Uuid) -> Result<Subsample, Error> {
-        let subsample = db.subsamples.find_by_id(&subsample_id).await?;
+    pub async fn new(db: &Database, accession: &str) -> Result<Subsample, Error> {
+        let subsample = db.subsamples.find_by_accession(&accession).await?;
         let details = subsample.clone().into();
         let query = SubsampleQuery { subsample };
         Ok(Subsample(details, query))

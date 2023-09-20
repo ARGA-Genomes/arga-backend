@@ -12,8 +12,8 @@ use crate::database::models;
 pub struct DnaExtract(DnaExtractDetails, DnaExtractQuery);
 
 impl DnaExtract {
-    pub async fn new(db: &Database, dna_extract_id: &Uuid) -> Result<DnaExtract, Error> {
-        let dna_extract = db.dna_extracts.find_by_id(&dna_extract_id).await?;
+    pub async fn new(db: &Database, accession: &String) -> Result<DnaExtract, Error> {
+        let dna_extract = db.dna_extracts.find_by_accession(&accession).await?;
         let details = dna_extract.clone().into();
         let query = DnaExtractQuery { dna_extract };
         Ok(DnaExtract(details, query))

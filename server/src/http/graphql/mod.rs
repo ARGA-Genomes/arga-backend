@@ -137,9 +137,9 @@ impl Query {
         Assemblies {}
     }
 
-    async fn specimen(&self, ctx: &Context<'_>, specimen_id: String) -> Result<Specimen, Error> {
+    async fn specimen(&self, ctx: &Context<'_>, accession: String) -> Result<Specimen, Error> {
         let state = ctx.data::<State>().unwrap();
-        Specimen::new(&state.database, &specimen_id).await
+        Specimen::new(&state.database, &accession).await
     }
 
     async fn marker(&self, ctx: &Context<'_>, accession: String) -> Result<Marker, Error> {
@@ -155,14 +155,14 @@ impl Query {
         Taxa::new(filters)
     }
 
-    async fn subsample(&self, ctx: &Context<'_>, subsample_id: Uuid) -> Result<Subsample, Error> {
+    async fn subsample(&self, ctx: &Context<'_>, accession: String) -> Result<Subsample, Error> {
         let state = ctx.data::<State>().unwrap();
-        Subsample::new(&state.database, &subsample_id).await
+        Subsample::new(&state.database, &accession).await
     }
 
-    async fn dna_extract(&self, ctx: &Context<'_>, dna_extract_id: Uuid) -> Result<DnaExtract, Error> {
+    async fn dna_extract(&self, ctx: &Context<'_>, accession: String) -> Result<DnaExtract, Error> {
         let state = ctx.data::<State>().unwrap();
-        DnaExtract::new(&state.database, &dna_extract_id).await
+        DnaExtract::new(&state.database, &accession).await
     }
 
     async fn sequence(&self, ctx: &Context<'_>, accession: String) -> Result<Sequence, Error> {

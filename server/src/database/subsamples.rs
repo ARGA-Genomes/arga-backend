@@ -12,6 +12,22 @@ pub struct SubsampleProvider {
 }
 
 impl SubsampleProvider {
+    pub async fn find_by_accession(&self, accession: &str) -> Result<Subsample, Error> {
+        use schema::subsamples;
+        let mut conn = self.pool.get().await?;
+
+        let subsample = subsamples::table
+            .filter(subsamples::accession.eq(accession))
+            .get_result::<Subsample>(&mut conn)
+            .await;
+
+        if let Err(diesel::result::Error::NotFound) = subsample {
+            return Err(Error::NotFound(accession.to_string()));
+        }
+
+        Ok(subsample?)
+    }
+
     pub async fn find_by_id(&self, subsample_id: &Uuid) -> Result<Subsample, Error> {
         use schema::subsamples;
         let mut conn = self.pool.get().await?;

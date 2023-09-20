@@ -12,6 +12,22 @@ pub struct DnaExtractProvider {
 }
 
 impl DnaExtractProvider {
+    pub async fn find_by_accession(&self, accession: &str) -> Result<DnaExtract, Error> {
+        use schema::dna_extracts;
+        let mut conn = self.pool.get().await?;
+
+        let dna_extract = dna_extracts::table
+            .filter(dna_extracts::accession.eq(accession))
+            .get_result::<DnaExtract>(&mut conn)
+            .await;
+
+        if let Err(diesel::result::Error::NotFound) = dna_extract {
+            return Err(Error::NotFound(accession.to_string()));
+        }
+
+        Ok(dna_extract?)
+    }
+
     pub async fn find_by_id(&self, dna_extract_id: &Uuid) -> Result<DnaExtract, Error> {
         use schema::dna_extracts;
         let mut conn = self.pool.get().await?;

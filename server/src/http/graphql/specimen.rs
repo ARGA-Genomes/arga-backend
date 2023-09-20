@@ -14,9 +14,8 @@ use crate::index::names::GetNames;
 pub struct Specimen(SpecimenDetails, SpecimenQuery);
 
 impl Specimen {
-    pub async fn new(db: &Database, specimen_id: &str) -> Result<Specimen, Error> {
-        let specimen_id = uuid::Uuid::parse_str(specimen_id).unwrap_or_default();
-        let specimen = db.specimens.find_by_id(&specimen_id).await?;
+    pub async fn new(db: &Database, accession: &str) -> Result<Specimen, Error> {
+        let specimen = db.specimens.find_by_accession(&accession).await?;
         let details = specimen.clone().into();
         let query = SpecimenQuery { specimen };
         Ok(Specimen(details, query))
