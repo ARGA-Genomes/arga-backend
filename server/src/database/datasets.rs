@@ -1,5 +1,6 @@
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use uuid::Uuid;
 
 use crate::database::Error;
 
@@ -14,6 +15,22 @@ pub struct DatasetProvider {
 }
 
 impl DatasetProvider {
+    pub async fn find_by_id(&self, id: &Uuid) -> Result<Dataset, Error> {
+        use schema::datasets;
+        let mut conn = self.pool.get().await?;
+
+        let dataset = datasets::table
+            .filter(datasets::id.eq(id))
+            .get_result::<Dataset>(&mut conn)
+            .await;
+
+        if let Err(diesel::result::Error::NotFound) = dataset {
+            return Err(Error::NotFound(id.to_string()));
+        }
+
+        Ok(dataset?)
+    }
+
     pub async fn find_by_name(&self, name: &str) -> Result<Dataset, Error> {
         use schema::datasets;
         let mut conn = self.pool.get().await?;

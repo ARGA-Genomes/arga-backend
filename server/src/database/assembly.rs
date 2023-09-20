@@ -2,7 +2,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::database::models::{Assembly, AssemblyStats, BioSample, TaxonomicStatus};
+use crate::database::models::{AssemblyEvent, Assembly, AssemblyStats, BioSample, TaxonomicStatus};
 use super::extensions::Paginate;
 use super::{schema, Error, PgPool, PageResult};
 
@@ -13,6 +13,21 @@ pub struct AssemblyProvider {
 }
 
 impl AssemblyProvider {
+    /// Get the assembly from the accession
+    pub async fn find_by_accession(&self, accession: &str) -> Result<AssemblyEvent, Error> {
+        use schema::{sequences, assembly_events};
+        let mut conn = self.pool.get().await?;
+
+        let assembly = assembly_events::table
+            .inner_join(sequences::table)
+            .select(assembly_events::all_columns)
+            .filter(sequences::accession.eq(accession))
+            .get_result::<AssemblyEvent>(&mut conn)
+            .await?;
+
+        Ok(assembly)
+    }
+
     /// Get the full assembly details
     pub async fn details(&self, accession: &str) -> Result<Assembly, Error> {
         use schema::assemblies;

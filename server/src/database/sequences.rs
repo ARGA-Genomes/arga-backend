@@ -13,6 +13,22 @@ pub struct SequenceProvider {
 }
 
 impl SequenceProvider {
+    pub async fn find_by_accession(&self, accession: &str) -> Result<Sequence, Error> {
+        use schema::sequences;
+        let mut conn = self.pool.get().await?;
+
+        let sequence = sequences::table
+            .filter(sequences::accession.eq(accession))
+            .get_result::<Sequence>(&mut conn)
+            .await;
+
+        if let Err(diesel::result::Error::NotFound) = sequence {
+            return Err(Error::NotFound(accession.to_string()));
+        }
+
+        Ok(sequence?)
+    }
+
     pub async fn find_by_id(&self, sequence_id: &Uuid) -> Result<Sequence, Error> {
         use schema::sequences;
         let mut conn = self.pool.get().await?;

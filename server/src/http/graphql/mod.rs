@@ -165,9 +165,9 @@ impl Query {
         DnaExtract::new(&state.database, &dna_extract_id).await
     }
 
-    async fn sequence(&self, ctx: &Context<'_>, sequence_id: Uuid) -> Result<Sequence, Error> {
+    async fn sequence(&self, ctx: &Context<'_>, accession: String) -> Result<Sequence, Error> {
         let state = ctx.data::<State>().unwrap();
-        Sequence::new(&state.database, &sequence_id).await
+        Sequence::new(&state.database, &accession).await
     }
 }
 

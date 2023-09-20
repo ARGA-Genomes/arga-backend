@@ -14,8 +14,8 @@ use crate::database::models;
 pub struct Sequence(SequenceDetails, SequenceQuery);
 
 impl Sequence {
-    pub async fn new(db: &Database, sequence_id: &Uuid) -> Result<Sequence, Error> {
-        let sequence = db.sequences.find_by_id(&sequence_id).await?;
+    pub async fn new(db: &Database, accession: &str) -> Result<Sequence, Error> {
+        let sequence = db.sequences.find_by_accession(&accession).await?;
         let details = sequence.clone().into();
         let query = SequenceQuery { sequence };
         Ok(Sequence(details, query))
@@ -29,6 +29,12 @@ struct SequenceQuery {
 
 #[Object]
 impl SequenceQuery {
+    async fn dataset_name(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let dataset = state.database.datasets.find_by_id(&self.sequence.dataset_id).await?;
+        Ok(dataset.name)
+    }
+
     async fn events(&self, ctx: &Context<'_>) -> Result<SequenceEvents, Error> {
         let state = ctx.data::<State>().unwrap();
         let sequencing = state.database.sequences.sequencing_events(&self.sequence.id).await?;
@@ -169,6 +175,8 @@ pub struct AssemblyEvent {
     pub name: Option<String>,
     pub version_status: Option<String>,
     pub quality: Option<String>,
+    pub assembly_type: Option<String>,
+    pub submitted_by: Option<String>,
     pub genome_size: Option<i64>,
 }
 
@@ -179,6 +187,8 @@ impl From<models::AssemblyEvent> for AssemblyEvent {
             name: value.name,
             version_status: value.version_status,
             quality: value.quality,
+            assembly_type: value.assembly_type,
+            submitted_by: value.submitted_by,
             genome_size: value.genome_size,
         }
     }
@@ -193,6 +203,7 @@ pub struct AnnotationEvent {
     pub coverage: Option<String>,
     pub replicons: Option<i64>,
     pub standard_operating_procedures: Option<String>,
+    pub annotated_by: Option<String>,
 }
 
 impl From<models::AnnotationEvent> for AnnotationEvent {
@@ -204,6 +215,7 @@ impl From<models::AnnotationEvent> for AnnotationEvent {
             coverage: value.coverage,
             replicons: value.replicons,
             standard_operating_procedures: value.standard_operating_procedures,
+            annotated_by: value.annotated_by,
         }
     }
 }
