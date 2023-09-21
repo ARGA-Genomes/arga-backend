@@ -10,12 +10,23 @@ use crate::http::Context as State;
 use crate::database::models;
 
 
+#[derive(OneofObject)]
+pub enum SequenceBy {
+    Id(Uuid),
+    Accession(String),
+    SpecimenAccession(String),
+}
+
 #[derive(MergedObject)]
 pub struct Sequence(SequenceDetails, SequenceQuery);
 
 impl Sequence {
-    pub async fn new(db: &Database, accession: &str) -> Result<Sequence, Error> {
-        let sequence = db.sequences.find_by_accession(&accession).await?;
+    pub async fn new(db: &Database, by: &SequenceBy) -> Result<Sequence, Error> {
+        let sequence = match by {
+            SequenceBy::Id(id) => db.sequences.find_by_id(&id).await?,
+            SequenceBy::Accession(accession) => db.sequences.find_by_accession(&accession).await?,
+            SequenceBy::SpecimenAccession(accession) => db.sequences.find_by_specimen_accession(&accession).await?,
+        };
         let details = sequence.clone().into();
         let query = SequenceQuery { sequence };
         Ok(Sequence(details, query))

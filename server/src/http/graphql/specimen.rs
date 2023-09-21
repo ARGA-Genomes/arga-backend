@@ -21,9 +21,9 @@ pub enum SpecimenBy {
 pub struct Specimen(SpecimenDetails, SpecimenQuery);
 
 impl Specimen {
-    pub async fn new(db: &Database, args: &Vec<SpecimenBy>) -> Result<Specimen, Error> {
-        let specimen = match &args[0] {
-            SpecimenBy::Id(specimen_id) => db.specimens.find_by_id(&specimen_id).await?,
+    pub async fn new(db: &Database, by: &SpecimenBy) -> Result<Specimen, Error> {
+        let specimen = match by {
+            SpecimenBy::Id(id) => db.specimens.find_by_id(&id).await?,
             SpecimenBy::Accession(accession) => db.specimens.find_by_accession(&accession).await?,
             SpecimenBy::SequenceAccession(accession) => db.specimens.find_by_sequence_accession(&accession).await?,
         };

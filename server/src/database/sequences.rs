@@ -13,6 +13,22 @@ pub struct SequenceProvider {
 }
 
 impl SequenceProvider {
+    pub async fn find_by_id(&self, sequence_id: &Uuid) -> Result<Sequence, Error> {
+        use schema::sequences;
+        let mut conn = self.pool.get().await?;
+
+        let sequence = sequences::table
+            .filter(sequences::id.eq(sequence_id))
+            .get_result::<Sequence>(&mut conn)
+            .await;
+
+        if let Err(diesel::result::Error::NotFound) = sequence {
+            return Err(Error::NotFound(sequence_id.to_string()));
+        }
+
+        Ok(sequence?)
+    }
+
     pub async fn find_by_accession(&self, accession: &str) -> Result<Sequence, Error> {
         use schema::sequences;
         let mut conn = self.pool.get().await?;
@@ -29,21 +45,26 @@ impl SequenceProvider {
         Ok(sequence?)
     }
 
-    pub async fn find_by_id(&self, sequence_id: &Uuid) -> Result<Sequence, Error> {
-        use schema::sequences;
+    pub async fn find_by_specimen_accession(&self, accession: &str) -> Result<Sequence, Error> {
+        use schema::{specimens, subsamples, dna_extracts, sequences};
         let mut conn = self.pool.get().await?;
 
-        let sequence = sequences::table
-            .filter(sequences::id.eq(sequence_id))
+        let sequence = specimens::table
+            .inner_join(subsamples::table)
+            .inner_join(dna_extracts::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
+            .inner_join(sequences::table.on(dna_extracts::id.eq(sequences::dna_extract_id)))
+            .select(sequences::all_columns)
+            .filter(specimens::accession.eq(accession))
             .get_result::<Sequence>(&mut conn)
             .await;
 
         if let Err(diesel::result::Error::NotFound) = sequence {
-            return Err(Error::NotFound(sequence_id.to_string()));
+            return Err(Error::NotFound(accession.to_string()));
         }
 
         Ok(sequence?)
     }
+
 
     pub async fn sequencing_events(&self, sequence_id: &Uuid) -> Result<Vec<SequencingEvent>, Error> {
         use schema::sequencing_events;

@@ -8,12 +8,23 @@ use crate::http::Context as State;
 use crate::database::models;
 
 
+#[derive(OneofObject)]
+pub enum DnaExtractBy {
+    Id(Uuid),
+    Accession(String),
+    SpecimenAccession(String),
+}
+
 #[derive(MergedObject)]
 pub struct DnaExtract(DnaExtractDetails, DnaExtractQuery);
 
 impl DnaExtract {
-    pub async fn new(db: &Database, accession: &String) -> Result<DnaExtract, Error> {
-        let dna_extract = db.dna_extracts.find_by_accession(&accession).await?;
+    pub async fn new(db: &Database, by: &DnaExtractBy) -> Result<DnaExtract, Error> {
+        let dna_extract = match by {
+            DnaExtractBy::Id(id) => db.dna_extracts.find_by_id(&id).await?,
+            DnaExtractBy::Accession(accession) => db.dna_extracts.find_by_accession(&accession).await?,
+            DnaExtractBy::SpecimenAccession(accession) => db.dna_extracts.find_by_specimen_accession(&accession).await?,
+        };
         let details = dna_extract.clone().into();
         let query = DnaExtractQuery { dna_extract };
         Ok(DnaExtract(details, query))

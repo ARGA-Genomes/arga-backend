@@ -12,6 +12,22 @@ pub struct SubsampleProvider {
 }
 
 impl SubsampleProvider {
+    pub async fn find_by_id(&self, subsample_id: &Uuid) -> Result<Subsample, Error> {
+        use schema::subsamples;
+        let mut conn = self.pool.get().await?;
+
+        let subsample = subsamples::table
+            .filter(subsamples::id.eq(subsample_id))
+            .get_result::<Subsample>(&mut conn)
+            .await;
+
+        if let Err(diesel::result::Error::NotFound) = subsample {
+            return Err(Error::NotFound(subsample_id.to_string()));
+        }
+
+        Ok(subsample?)
+    }
+
     pub async fn find_by_accession(&self, accession: &str) -> Result<Subsample, Error> {
         use schema::subsamples;
         let mut conn = self.pool.get().await?;
@@ -28,21 +44,24 @@ impl SubsampleProvider {
         Ok(subsample?)
     }
 
-    pub async fn find_by_id(&self, subsample_id: &Uuid) -> Result<Subsample, Error> {
-        use schema::subsamples;
+    pub async fn find_by_specimen_accession(&self, accession: &str) -> Result<Subsample, Error> {
+        use schema::{specimens, subsamples};
         let mut conn = self.pool.get().await?;
 
-        let subsample = subsamples::table
-            .filter(subsamples::id.eq(subsample_id))
+        let subsample = specimens::table
+            .inner_join(subsamples::table)
+            .select(subsamples::all_columns)
+            .filter(specimens::accession.eq(accession))
             .get_result::<Subsample>(&mut conn)
             .await;
 
         if let Err(diesel::result::Error::NotFound) = subsample {
-            return Err(Error::NotFound(subsample_id.to_string()));
+            return Err(Error::NotFound(accession.to_string()));
         }
 
         Ok(subsample?)
     }
+
 
     pub async fn subsample_events(&self, subsample_id: &Uuid) -> Result<Vec<SubsampleEvent>, Error> {
         use schema::subsample_events;

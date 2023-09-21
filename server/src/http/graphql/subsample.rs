@@ -8,12 +8,23 @@ use crate::http::Context as State;
 use crate::database::models;
 
 
+#[derive(OneofObject)]
+pub enum SubsampleBy {
+    Id(Uuid),
+    Accession(String),
+    SubsampleAccession(String),
+}
+
 #[derive(MergedObject)]
 pub struct Subsample(SubsampleDetails, SubsampleQuery);
 
 impl Subsample {
-    pub async fn new(db: &Database, accession: &str) -> Result<Subsample, Error> {
-        let subsample = db.subsamples.find_by_accession(&accession).await?;
+    pub async fn new(db: &Database, by: &SubsampleBy) -> Result<Subsample, Error> {
+        let subsample = match by {
+            SubsampleBy::Id(id) => db.subsamples.find_by_id(&id).await?,
+            SubsampleBy::Accession(accession) => db.subsamples.find_by_accession(&accession).await?,
+            SubsampleBy::SubsampleAccession(accession) => db.subsamples.find_by_specimen_accession(&accession).await?,
+        };
         let details = subsample.clone().into();
         let query = SubsampleQuery { subsample };
         Ok(Subsample(details, query))

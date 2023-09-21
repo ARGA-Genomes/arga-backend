@@ -137,7 +137,7 @@ impl Query {
         Assemblies {}
     }
 
-    async fn specimen(&self, ctx: &Context<'_>, by: Vec<specimen::SpecimenBy>) -> Result<Specimen, Error> {
+    async fn specimen(&self, ctx: &Context<'_>, by: specimen::SpecimenBy) -> Result<Specimen, Error> {
         let state = ctx.data::<State>().unwrap();
         Specimen::new(&state.database, &by).await
     }
@@ -155,19 +155,19 @@ impl Query {
         Taxa::new(filters)
     }
 
-    async fn subsample(&self, ctx: &Context<'_>, accession: String) -> Result<Subsample, Error> {
+    async fn subsample(&self, ctx: &Context<'_>, by: subsample::SubsampleBy) -> Result<Subsample, Error> {
         let state = ctx.data::<State>().unwrap();
-        Subsample::new(&state.database, &accession).await
+        Subsample::new(&state.database, &by).await
     }
 
-    async fn dna_extract(&self, ctx: &Context<'_>, accession: String) -> Result<DnaExtract, Error> {
+    async fn dna_extract(&self, ctx: &Context<'_>, by: dna_extract::DnaExtractBy) -> Result<DnaExtract, Error> {
         let state = ctx.data::<State>().unwrap();
-        DnaExtract::new(&state.database, &accession).await
+        DnaExtract::new(&state.database, &by).await
     }
 
-    async fn sequence(&self, ctx: &Context<'_>, accession: String) -> Result<Sequence, Error> {
+    async fn sequence(&self, ctx: &Context<'_>, by: sequence::SequenceBy) -> Result<Sequence, Error> {
         let state = ctx.data::<State>().unwrap();
-        Sequence::new(&state.database, &accession).await
+        Sequence::new(&state.database, &by).await
     }
 }
 
