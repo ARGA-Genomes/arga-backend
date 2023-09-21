@@ -23,7 +23,7 @@ impl Subsample {
         let subsample = match by {
             SubsampleBy::Id(id) => db.subsamples.find_by_id(&id).await?,
             SubsampleBy::Accession(accession) => db.subsamples.find_by_accession(&accession).await?,
-            SubsampleBy::SubsampleAccession(accession) => db.subsamples.find_by_specimen_accession(&accession).await?,
+            SubsampleBy::SpecimenAccession(accession) => db.subsamples.find_by_specimen_accession(&accession).await?,
         };
         let details = subsample.clone().into();
         let query = SubsampleQuery { subsample };
