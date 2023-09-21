@@ -137,9 +137,9 @@ impl Query {
         Assemblies {}
     }
 
-    async fn specimen(&self, ctx: &Context<'_>, accession: String) -> Result<Specimen, Error> {
+    async fn specimen(&self, ctx: &Context<'_>, by: Vec<specimen::SpecimenBy>) -> Result<Specimen, Error> {
         let state = ctx.data::<State>().unwrap();
-        Specimen::new(&state.database, &accession).await
+        Specimen::new(&state.database, &by).await
     }
 
     async fn marker(&self, ctx: &Context<'_>, accession: String) -> Result<Marker, Error> {

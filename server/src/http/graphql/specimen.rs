@@ -10,12 +10,23 @@ use crate::database::models;
 use crate::index::names::GetNames;
 
 
+#[derive(OneofObject)]
+pub enum SpecimenBy {
+    Id(Uuid),
+    Accession(String),
+    SequenceAccession(String),
+}
+
 #[derive(MergedObject)]
 pub struct Specimen(SpecimenDetails, SpecimenQuery);
 
 impl Specimen {
-    pub async fn new(db: &Database, accession: &str) -> Result<Specimen, Error> {
-        let specimen = db.specimens.find_by_accession(&accession).await?;
+    pub async fn new(db: &Database, args: &Vec<SpecimenBy>) -> Result<Specimen, Error> {
+        let specimen = match &args[0] {
+            SpecimenBy::Id(specimen_id) => db.specimens.find_by_id(&specimen_id).await?,
+            SpecimenBy::Accession(accession) => db.specimens.find_by_accession(&accession).await?,
+            SpecimenBy::SequenceAccession(accession) => db.specimens.find_by_sequence_accession(&accession).await?,
+        };
         let details = specimen.clone().into();
         let query = SpecimenQuery { specimen };
         Ok(Specimen(details, query))

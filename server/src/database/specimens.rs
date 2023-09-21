@@ -18,6 +18,22 @@ pub struct SpecimenProvider {
 }
 
 impl SpecimenProvider {
+    pub async fn find_by_id(&self, specimen_id: &Uuid) -> Result<Specimen, Error> {
+        use schema::specimens;
+        let mut conn = self.pool.get().await?;
+
+        let specimen = specimens::table
+            .filter(specimens::id.eq(specimen_id))
+            .get_result::<Specimen>(&mut conn)
+            .await;
+
+        if let Err(diesel::result::Error::NotFound) = specimen {
+            return Err(Error::NotFound(specimen_id.to_string()));
+        }
+
+        Ok(specimen?)
+    }
+
     pub async fn find_by_accession(&self, accession: &str) -> Result<Specimen, Error> {
         use schema::specimens;
         let mut conn = self.pool.get().await?;
@@ -34,17 +50,21 @@ impl SpecimenProvider {
         Ok(specimen?)
     }
 
-    pub async fn find_by_id(&self, specimen_id: &Uuid) -> Result<Specimen, Error> {
-        use schema::specimens;
+    pub async fn find_by_sequence_accession(&self, accession: &str) -> Result<Specimen, Error> {
+        use schema::{specimens, subsamples, dna_extracts, sequences};
         let mut conn = self.pool.get().await?;
 
         let specimen = specimens::table
-            .filter(specimens::id.eq(specimen_id))
+            .inner_join(subsamples::table)
+            .inner_join(dna_extracts::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
+            .inner_join(sequences::table.on(dna_extracts::id.eq(sequences::dna_extract_id)))
+            .select(specimens::all_columns)
+            .filter(sequences::accession.eq(accession))
             .get_result::<Specimen>(&mut conn)
             .await;
 
         if let Err(diesel::result::Error::NotFound) = specimen {
-            return Err(Error::NotFound(specimen_id.to_string()));
+            return Err(Error::NotFound(accession.to_string()));
         }
 
         Ok(specimen?)
