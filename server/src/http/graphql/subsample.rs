@@ -12,7 +12,7 @@ use crate::database::models;
 pub enum SubsampleBy {
     Id(Uuid),
     Accession(String),
-    SubsampleAccession(String),
+    SpecimenAccession(String),
 }
 
 #[derive(MergedObject)]
