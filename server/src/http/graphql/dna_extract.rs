@@ -11,8 +11,8 @@ use crate::database::models;
 #[derive(OneofObject)]
 pub enum DnaExtractBy {
     Id(Uuid),
-    Accession(String),
-    SpecimenAccession(String),
+    RecordId(String),
+    SpecimenRecordId(String),
 }
 
 #[derive(MergedObject)]
@@ -22,8 +22,8 @@ impl DnaExtract {
     pub async fn new(db: &Database, by: &DnaExtractBy) -> Result<Option<DnaExtract>, Error> {
         let dna_extract = match by {
             DnaExtractBy::Id(id) => db.dna_extracts.find_by_id(&id).await?,
-            DnaExtractBy::Accession(accession) => db.dna_extracts.find_by_accession(&accession).await?,
-            DnaExtractBy::SpecimenAccession(accession) => db.dna_extracts.find_by_specimen_accession(&accession).await?,
+            DnaExtractBy::RecordId(id) => db.dna_extracts.find_by_record_id(&id).await?,
+            DnaExtractBy::SpecimenRecordId(id) => db.dna_extracts.find_by_specimen_record_id(&id).await?,
         };
 
         match dna_extract {
@@ -84,6 +84,8 @@ pub struct DnaExtractEvents {
 pub struct DnaExtractionEvent {
     pub id: Uuid,
 
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub extracted_by: Option<String>,
 
     pub preservation_type: Option<String>,
@@ -102,6 +104,8 @@ impl From<models::DnaExtractionEvent> for DnaExtractionEvent {
     fn from(value: models::DnaExtractionEvent) -> Self {
         Self {
             id: value.id,
+            event_date: value.event_date,
+            event_time: value.event_time,
             extracted_by: value.extracted_by,
             preservation_type: value.preservation_type,
             preparation_type: value.preparation_type,

@@ -25,7 +25,7 @@ impl DnaExtractProvider {
         Ok(dna_extract)
     }
 
-    pub async fn find_by_accession(&self, record_id: &str) -> Result<Option<DnaExtract>, Error> {
+    pub async fn find_by_record_id(&self, record_id: &str) -> Result<Option<DnaExtract>, Error> {
         use schema::dna_extracts;
         let mut conn = self.pool.get().await?;
 
@@ -38,7 +38,7 @@ impl DnaExtractProvider {
         Ok(dna_extract)
     }
 
-    pub async fn find_by_specimen_accession(&self, record_id: &str) -> Result<Option<DnaExtract>, Error> {
+    pub async fn find_by_specimen_record_id(&self, record_id: &str) -> Result<Option<DnaExtract>, Error> {
         use schema::{specimens, subsamples, dna_extracts};
         let mut conn = self.pool.get().await?;
 

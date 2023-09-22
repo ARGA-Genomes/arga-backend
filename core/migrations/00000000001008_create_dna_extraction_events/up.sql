@@ -2,8 +2,8 @@ CREATE TABLE dna_extraction_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     dna_extract_id uuid REFERENCES dna_extracts ON DELETE CASCADE NOT NULL,
 
-    event_date date,
-    event_time time,
+    event_date varchar,
+    event_time varchar,
     extracted_by varchar,
 
     preservation_type varchar,

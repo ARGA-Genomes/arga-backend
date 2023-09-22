@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use chrono::{NaiveDate, NaiveTime};
+use chrono::NaiveDate;
 use csv::DeserializeRecordsIntoIter;
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
@@ -27,10 +27,8 @@ struct Record {
     material_sample_id: Option<String>,
     submitted_by: Option<String>,
 
-    #[serde(default)]
-    #[serde(deserialize_with = "naive_date_from_str_opt")]
-    event_date: Option<NaiveDate>,
-    event_time: Option<NaiveTime>,
+    event_date: Option<String>,
+    event_time: Option<String>,
 
     // deposition block
     collection_name: Option<String>,

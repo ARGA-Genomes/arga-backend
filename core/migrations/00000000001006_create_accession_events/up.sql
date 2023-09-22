@@ -2,8 +2,8 @@ CREATE TABLE accession_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     specimen_id uuid REFERENCES specimens ON DELETE CASCADE NOT NULL,
 
-    event_date date,
-    event_time time,
+    event_date varchar,
+    event_time varchar,
     accession varchar NOT NULL,
     accessioned_by varchar,
 

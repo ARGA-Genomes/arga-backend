@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate, NaiveTime};
+use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate};
 use diesel::{Queryable, Insertable};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
@@ -435,7 +435,7 @@ pub struct Specimen {
     pub collection_code: Option<String>,
     pub recorded_by: Option<String>,
     pub identified_by: Option<String>,
-    pub identified_date: Option<NaiveDate>,
+    pub identified_date: Option<String>,
 
     pub type_status: Option<String>,
     pub locality: Option<String>,
@@ -528,8 +528,8 @@ pub struct CollectionEvent {
     pub id: Uuid,
     pub specimen_id: Uuid,
 
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub collected_by: Option<String>,
 
     pub field_number: Option<String>,
@@ -571,8 +571,8 @@ pub struct AccessionEvent {
     pub id: Uuid,
     pub specimen_id: Uuid,
 
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub accession: String,
     pub accessioned_by: Option<String>,
     pub material_sample_id: Option<String>,
@@ -587,8 +587,8 @@ pub struct AccessionEvent {
 pub struct SubsampleEvent {
     pub id: Uuid,
     pub subsample_id: Uuid,
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub subsampled_by: Option<String>,
     pub preparation_type: Option<String>,
 }
@@ -599,8 +599,8 @@ pub struct DnaExtractionEvent {
     pub id: Uuid,
     pub dna_extract_id: Uuid,
 
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub extracted_by: Option<String>,
 
     pub preservation_type: Option<String>,
@@ -621,8 +621,8 @@ pub struct SequencingEvent {
     pub id: Uuid,
     pub sequence_id: Uuid,
 
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
 
@@ -667,8 +667,8 @@ pub struct AssemblyEvent {
     pub id: Uuid,
     pub sequence_id: Uuid,
 
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub assembled_by: Option<String>,
 
     pub name: Option<String>,
@@ -684,8 +684,8 @@ pub struct AnnotationEvent {
     pub id: Uuid,
     pub sequence_id: Uuid,
 
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub annotated_by: Option<String>,
 
     pub representation: Option<String>,
@@ -701,8 +701,8 @@ pub struct DepositionEvent {
     pub id: Uuid,
     pub sequence_id: Uuid,
 
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub accession: Option<String>,
     pub submitted_by: Option<String>,
     pub material_sample_id: Option<String>,

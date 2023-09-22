@@ -2,8 +2,8 @@ CREATE TABLE sequencing_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     sequence_id uuid REFERENCES sequences ON DELETE CASCADE NOT NULL,
 
-    event_date date,
-    event_time time,
+    event_date varchar,
+    event_time varchar,
     sequenced_by varchar,
     material_sample_id varchar,
 

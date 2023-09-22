@@ -1,6 +1,4 @@
 use async_graphql::*;
-use chrono::NaiveDate;
-use chrono::NaiveTime;
 use serde::Deserialize;
 use serde::Serialize;
 use uuid::Uuid;
@@ -54,8 +52,8 @@ impl AssemblyQuery {
 pub struct AssemblyDetails {
     pub id: Uuid,
     pub name: Option<String>,
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub version_status: Option<String>,
     pub quality: Option<String>,
     pub assembly_type: Option<String>,

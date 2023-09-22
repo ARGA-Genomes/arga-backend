@@ -12,7 +12,7 @@ CREATE TABLE specimens (
     collection_code varchar,
     recorded_by varchar,
     identified_by varchar,
-    identified_date date,
+    identified_date varchar,
 
     type_status varchar,
     locality varchar,

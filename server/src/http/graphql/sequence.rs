@@ -1,7 +1,6 @@
 use async_graphql::*;
 use chrono::NaiveDate;
 use chrono::NaiveDateTime;
-use chrono::NaiveTime;
 use uuid::Uuid;
 
 use crate::database::Database;
@@ -105,8 +104,8 @@ pub struct SequenceEvents {
 pub struct SequencingEvent {
     pub id: Uuid,
 
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
 
@@ -193,8 +192,8 @@ impl From<models::SequencingRunEvent> for SequencingRunEvent {
 pub struct AssemblyEvent {
     pub id: Uuid,
     pub name: Option<String>,
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub assembled_by: Option<String>,
     pub version_status: Option<String>,
     pub quality: Option<String>,
@@ -221,8 +220,8 @@ impl From<models::AssemblyEvent> for AssemblyEvent {
 #[derive(Clone, Debug, SimpleObject)]
 pub struct AnnotationEvent {
     pub id: Uuid,
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub annotated_by: Option<String>,
     pub representation: Option<String>,
     pub release_type: Option<String>,
@@ -251,8 +250,9 @@ impl From<models::AnnotationEvent> for AnnotationEvent {
 pub struct DataDepositionEvent {
     pub id: Uuid,
 
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
+    pub accession: Option<String>,
     pub submitted_by: Option<String>,
 
     pub material_sample_id: Option<String>,
@@ -281,6 +281,7 @@ impl From<models::DepositionEvent> for DataDepositionEvent {
             id: value.id,
             event_date: value.event_date,
             event_time: value.event_time,
+            accession: value.accession,
             submitted_by: value.submitted_by,
             material_sample_id: value.material_sample_id,
             collection_name: value.collection_name,

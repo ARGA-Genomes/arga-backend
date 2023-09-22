@@ -2,8 +2,8 @@ CREATE TABLE collection_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     specimen_id uuid REFERENCES specimens ON DELETE CASCADE NOT NULL ,
 
-    event_date date,
-    event_time time,
+    event_date varchar,
+    event_time varchar,
     collected_by varchar,
 
     field_number varchar,

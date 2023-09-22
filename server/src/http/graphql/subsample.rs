@@ -1,6 +1,4 @@
 use async_graphql::*;
-use chrono::NaiveDate;
-use chrono::NaiveTime;
 use uuid::Uuid;
 
 use crate::database::Database;
@@ -95,8 +93,8 @@ pub struct SubsampleEvents {
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SubsampleEvent {
     pub id: Uuid,
-    pub event_date: Option<NaiveDate>,
-    pub event_time: Option<NaiveTime>,
+    pub event_date: Option<String>,
+    pub event_time: Option<String>,
     pub subsampled_by: Option<String>,
     pub preparation_type: Option<String>,
 }

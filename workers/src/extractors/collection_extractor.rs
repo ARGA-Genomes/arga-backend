@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use chrono::{NaiveDate, NaiveTime};
 use csv::DeserializeRecordsIntoIter;
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
@@ -13,7 +12,6 @@ use arga_core::models::{Specimen, CollectionEvent, Dataset};
 use crate::error::Error;
 use crate::extractors::utils::parse_lat_lng;
 use crate::matchers::name_matcher::{NameMatch, NameRecord, match_records_mapped, NameMap, name_map};
-use super::utils::naive_date_from_str_opt;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -33,9 +31,7 @@ struct Record {
     catalog_number: Option<String>,
     collected_by: Option<String>,
     identified_by: Option<String>,
-    #[serde(default)]
-    #[serde(deserialize_with = "naive_date_from_str_opt")]
-    identified_date: Option<NaiveDate>,
+    identified_date: Option<String>,
     organism_id: Option<String>,
     material_sample_id: Option<String>,
     details: Option<String>,
@@ -58,15 +54,11 @@ struct Record {
     depth_accuracy: Option<f64>,
     location_source: Option<String>,
 
-    // event block
-    field_number: Option<String>,
-    #[serde(default)]
-    #[serde(deserialize_with = "naive_date_from_str_opt")]
-    event_date: Option<NaiveDate>,
-    event_time: Option<NaiveTime>,
-    field_notes: Option<String>,
-
     // collection event block
+    event_date: Option<String>,
+    event_time: Option<String>,
+    field_number: Option<String>,
+    field_notes: Option<String>,
     record_number: Option<String>,
     individual_count: Option<String>,
     organism_quantity: Option<String>,

@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use chrono::{NaiveDate, NaiveTime};
 use csv::DeserializeRecordsIntoIter;
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
@@ -13,8 +12,6 @@ use arga_core::models::{Dataset, AnnotationEvent};
 use crate::error::Error;
 use crate::matchers::sequence_matcher::{SequenceMatch, SequenceRecord, SequenceMap, sequence_map, match_records_mapped};
 
-use super::utils::naive_date_from_str_opt;
-
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 type MatchedRecords = Vec<(SequenceMatch, Record)>;
@@ -25,10 +22,8 @@ struct Record {
     sequence_record_id: String,
     annotated_by: Option<String>,
 
-    #[serde(default)]
-    #[serde(deserialize_with = "naive_date_from_str_opt")]
-    event_date: Option<NaiveDate>,
-    event_time: Option<NaiveTime>,
+    event_date: Option<String>,
+    event_time: Option<String>,
 
     // assembly block
     genome_representation: Option<String>,
