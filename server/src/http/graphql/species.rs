@@ -214,7 +214,8 @@ pub struct WholeGenome {
     pub dna_extract_id: Uuid,
     pub dataset_name: String,
 
-    pub accession: String,
+    pub record_id: String,
+    pub accession: Option<String>,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
     pub estimated_size: Option<i64>,
@@ -241,6 +242,7 @@ impl From<models::WholeGenome> for WholeGenome {
             sequence_id: value.sequence_id,
             dna_extract_id: value.dna_extract_id,
             dataset_name: value.dataset_name,
+            record_id: value.record_id,
             accession: value.accession,
             sequenced_by: value.sequenced_by,
             material_sample_id: value.material_sample_id,
@@ -267,6 +269,7 @@ impl From<models::WholeGenome> for WholeGenome {
 pub struct SpecimenSummary {
     pub id: Uuid,
     pub record_id: String,
+    pub accession: Option<String>,
     pub dataset_name: String,
     pub type_status: Option<String>,
     pub locality: Option<String>,
@@ -282,6 +285,7 @@ impl From<species::SpecimenSummary> for SpecimenSummary {
         Self {
             id: value.id,
             record_id: value.record_id,
+            accession: value.accession,
             dataset_name: value.dataset_name,
             type_status: value.type_status,
             locality: value.locality,

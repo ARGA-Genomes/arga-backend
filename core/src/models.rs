@@ -851,7 +851,8 @@ pub struct Marker {
     pub dna_extract_id: Uuid,
 
     pub dataset_name: String,
-    pub accession: String,
+    pub record_id: String,
+    pub accession: Option<String>,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
     pub target_gene: String,
@@ -870,7 +871,8 @@ pub struct WholeGenome {
     pub dna_extract_id: Uuid,
 
     pub dataset_name: String,
-    pub accession: String,
+    pub record_id: String,
+    pub accession: Option<String>,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
     pub estimated_size: Option<i64>,

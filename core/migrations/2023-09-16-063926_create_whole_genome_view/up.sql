@@ -6,6 +6,7 @@ SELECT
     sequences.dna_extract_id,
     datasets.name AS dataset_name,
     sequences.record_id,
+    deposition_events.accession,
     sequencing_events.sequenced_by,
     sequencing_events.material_sample_id,
     sequencing_events.estimated_size,

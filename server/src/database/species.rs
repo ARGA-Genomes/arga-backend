@@ -41,8 +41,9 @@ pub struct VernacularName {
 #[derive(Debug, Queryable)]
 pub struct SpecimenSummary {
     pub id: Uuid,
-    pub record_id: String,
     pub dataset_name: String,
+    pub record_id: String,
+    pub accession: Option<String>,
     pub type_status: Option<String>,
     pub locality: Option<String>,
     pub country: Option<String>,
@@ -158,17 +159,19 @@ impl SpeciesProvider {
     }
 
     pub async fn specimens(&self, name: &Name, page: i64, page_size: i64) -> PageResult<SpecimenSummary> {
-        use schema::{specimens, datasets};
+        use schema::{specimens, datasets, accession_events};
         use schema_gnl::specimen_stats;
         let mut conn = self.pool.get().await?;
 
         let records = specimens::table
             .inner_join(datasets::table)
             .inner_join(specimen_stats::table)
+            .left_join(accession_events::table)
             .select((
                 specimens::id,
-                specimens::record_id,
                 datasets::name,
+                specimens::record_id,
+                accession_events::accession.nullable(),
                 specimens::type_status,
                 specimens::locality,
                 specimens::country,

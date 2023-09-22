@@ -43,7 +43,8 @@ pub struct MarkerDetails {
     pub dna_extract_id: Uuid,
     pub dataset_name: String,
 
-    pub accession: String,
+    pub record_id: String,
+    pub accession: Option<String>,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
     pub target_gene: String,
@@ -55,6 +56,7 @@ impl From<models::Marker> for MarkerDetails {
             sequence_id: value.sequence_id,
             dna_extract_id: value.dna_extract_id,
             dataset_name: value.dataset_name,
+            record_id: value.record_id,
             accession: value.accession,
             sequenced_by: value.sequenced_by,
             material_sample_id: value.material_sample_id,

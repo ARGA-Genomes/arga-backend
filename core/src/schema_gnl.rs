@@ -184,7 +184,8 @@ diesel::table! {
         name_id -> Uuid,
         dna_extract_id -> Uuid,
         dataset_name -> Varchar,
-        accession -> Varchar,
+        record_id -> Varchar,
+        accession -> Nullable<Varchar>,
         sequenced_by -> Nullable<Varchar>,
         material_sample_id -> Nullable<Varchar>,
         estimated_size -> Nullable<BigInt>,
@@ -210,7 +211,8 @@ diesel::table! {
         name_id -> Uuid,
         dna_extract_id -> Uuid,
         dataset_name -> Varchar,
-        accession -> Varchar,
+        record_id -> Varchar,
+        accession -> Nullable<Varchar>,
         sequenced_by -> Nullable<Varchar>,
         material_sample_id -> Nullable<Varchar>,
         target_gene -> Varchar,
@@ -227,7 +229,7 @@ diesel::table! {
 }
 
 
-use super::schema::{datasets, names, assemblies, taxa, specimens};
+use super::schema::{datasets, names, assemblies, taxa, specimens, accession_events};
 
 diesel::joinable!(species -> synonyms (id));
 diesel::joinable!(species -> species_vernacular_names (id));
@@ -292,6 +294,11 @@ diesel::allow_tables_to_appear_in_same_query!(
 diesel::allow_tables_to_appear_in_same_query!(
     specimen_stats,
     datasets,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    specimen_stats,
+    accession_events,
 );
 
 diesel::allow_tables_to_appear_in_same_query!(

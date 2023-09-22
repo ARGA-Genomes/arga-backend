@@ -38,7 +38,7 @@ pub fn get_loci(pool: &PgPool) -> Result<Vec<LocusDoc>, Error> {
             taxa::name_id,
             taxa::status,
             taxa::canonical_name,
-            markers::accession,
+            markers::record_id,
             markers::target_gene,
         ))
         .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
