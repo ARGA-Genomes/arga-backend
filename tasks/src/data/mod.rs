@@ -1,4 +1,5 @@
 pub mod ncbi;
+pub mod bpa;
 
 
 #[derive(clap::Subcommand)]
@@ -6,6 +7,9 @@ pub enum Command {
     /// Extra processing for NCBI datasets
     #[command(subcommand)]
     Ncbi(ncbi::Command),
+    /// Extra processing for BPA datasets
+    #[command(subcommand)]
+    Bpa(bpa::Command),
 }
 
 pub fn process_command(command: &Command) {
@@ -13,6 +17,7 @@ pub fn process_command(command: &Command) {
 
     match command {
         Command::Ncbi(cmd) => ncbi::process_command(cmd),
+        Command::Bpa(cmd) => bpa::process_command(cmd),
     }
 }
 
