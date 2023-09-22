@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveTime};
 use csv::DeserializeRecordsIntoIter;
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
@@ -9,7 +9,7 @@ use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{Event, Dataset, AccessionEvent};
+use arga_core::models::{Dataset, AccessionEvent};
 use crate::error::Error;
 use crate::matchers::specimen_matcher::{SpecimenMatch, SpecimenRecord, SpecimenMap, specimen_map, match_records_mapped};
 
@@ -23,9 +23,8 @@ type MatchedRecords = Vec<(SpecimenMatch, Record)>;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Record {
+    record_id: String,
     accession: String,
-    scientific_name: Option<String>,
-    canonical_name: Option<String>,
     institution_name: Option<String>,
     institution_code: Option<String>,
     type_status: Option<String>,
@@ -33,38 +32,26 @@ struct Record {
     #[serde(rename(deserialize = "materialSampleID"))]
     material_sample_id: Option<String>,
 
-    // event block
-    field_number: Option<String>,
-
     #[serde(default)]
     #[serde(deserialize_with = "naive_date_from_str_opt")]
     event_date: Option<NaiveDate>,
-    // event_time: Option<NaiveTime>,
-    habitat: Option<String>,
-    sampling_protocol: Option<String>,
-    sampling_size_value: Option<String>,
-    sampling_size_unit: Option<String>,
-    sampling_effort: Option<String>,
-    field_notes: Option<String>,
-    event_remarks: Option<String>,
+    event_time: Option<NaiveTime>,
+    accessioned_by: Option<String>,
 }
 
 impl From<Record> for SpecimenRecord {
     fn from(value: Record) -> Self {
-        Self { accession: value.accession }
+        Self { record_id: value.record_id }
     }
 }
 
 
 pub struct AccessionExtract {
-    pub events: Vec<Event>,
     pub accession_events: Vec<AccessionEvent>,
 }
 
 
 pub struct AccessionExtractIterator {
-    pool: PgPool,
-    dataset: Dataset,
     specimens: SpecimenMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
@@ -93,7 +80,7 @@ impl Iterator for AccessionExtractIterator {
         if records.is_empty() {
             None
         } else {
-            Some(extract_chunk(records, &self.dataset, &self.specimens, &mut self.pool))
+            Some(extract_chunk(records, &self.specimens))
         }
     }
 }
@@ -105,69 +92,42 @@ pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<Ac
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(AccessionExtractIterator {
-        pool: pool.clone(),
-        dataset: dataset.clone(),
         specimens,
         reader,
     })
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, specimens: &SpecimenMap, pool: &mut PgPool) -> Result<AccessionExtract, Error> {
+fn extract_chunk(chunk: Vec<Record>, specimens: &SpecimenMap) -> Result<AccessionExtract, Error> {
     // match the records to specimens in the database. this will filter out any accessions
     // that could not be matched
     let records = match_records_mapped(chunk, specimens);
-
-    let events = extract_events(&records);
-    let accession_events = extract_accession_events(&records, dataset, &events);
+    let accession_events = extract_accession_events(records);
 
     Ok(AccessionExtract {
-        events,
         accession_events,
     })
 }
 
 
-fn extract_events(records: &MatchedRecords) -> Vec<Event> {
-    info!(total=records.len(), "Extracting events");
-
-    let events = records.par_iter().map(|(_name, row)| {
-        Event {
-            id: Uuid::new_v4(),
-            field_number: row.field_number.clone(),
-            event_date: row.event_date.clone(),
-            event_time: None,
-            habitat: row.habitat.clone(),
-            sampling_protocol: row.sampling_protocol.clone(),
-            sampling_size_value: row.sampling_size_value.clone(),
-            sampling_size_unit: row.sampling_size_unit.clone(),
-            sampling_effort: row.sampling_effort.clone(),
-            field_notes: row.field_notes.clone(),
-            event_remarks: row.event_remarks.clone(),
-        }
-    }).collect::<Vec<Event>>();
-
-    info!(events=events.len(), "Extracting events finished");
-    events
-}
-
-
-fn extract_accession_events(records: &MatchedRecords, dataset: &Dataset, events: &Vec<Event>) -> Vec<AccessionEvent>
+fn extract_accession_events(records: MatchedRecords) -> Vec<AccessionEvent>
 {
     info!(total=records.len(), "Extracting accession events");
 
-    let accessions = (records, events).into_par_iter().map(|(record, event)| {
+    let accessions = records.into_par_iter().map(|record| {
         let (specimen, row) = record;
 
         AccessionEvent {
             id: Uuid::new_v4(),
-            specimen_id: specimen.id.clone(),
-            event_id: event.id.clone(),
-
-            material_sample_id: row.material_sample_id.clone(),
-            institution_name: row.institution_name.clone(),
-            institution_code: row.institution_code.clone(),
-            type_status: row.type_status.clone(),
+            specimen_id: specimen.id,
+            event_date: row.event_date,
+            event_time: row.event_time,
+            accession: row.accession,
+            accessioned_by: row.accessioned_by,
+            material_sample_id: row.material_sample_id,
+            institution_name: row.institution_name,
+            institution_code: row.institution_code,
+            type_status: row.type_status,
         }
     }).collect::<Vec<AccessionEvent>>();
 

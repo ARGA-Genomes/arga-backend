@@ -3,7 +3,7 @@ CREATE TABLE specimens (
     dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
     name_id uuid REFERENCES names NOT NULL,
 
-    accession varchar NOT NULL,
+    record_id varchar NOT NULL,
     material_sample_id varchar,
     organism_id varchar,
 
@@ -12,6 +12,7 @@ CREATE TABLE specimens (
     collection_code varchar,
     recorded_by varchar,
     identified_by varchar,
+    identified_date date,
 
     type_status varchar,
     locality varchar,

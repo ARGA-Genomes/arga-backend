@@ -1,4 +1,6 @@
 use async_graphql::*;
+use chrono::NaiveDate;
+use chrono::NaiveTime;
 use uuid::Uuid;
 
 use crate::database::Database;
@@ -11,23 +13,30 @@ use crate::database::models;
 #[derive(OneofObject)]
 pub enum SubsampleBy {
     Id(Uuid),
-    Accession(String),
-    SpecimenAccession(String),
+    RecordId(String),
+    SpecimenRecordId(String),
 }
 
 #[derive(MergedObject)]
 pub struct Subsample(SubsampleDetails, SubsampleQuery);
 
 impl Subsample {
-    pub async fn new(db: &Database, by: &SubsampleBy) -> Result<Subsample, Error> {
+    pub async fn new(db: &Database, by: &SubsampleBy) -> Result<Option<Subsample>, Error> {
         let subsample = match by {
             SubsampleBy::Id(id) => db.subsamples.find_by_id(&id).await?,
-            SubsampleBy::Accession(accession) => db.subsamples.find_by_accession(&accession).await?,
-            SubsampleBy::SpecimenAccession(accession) => db.subsamples.find_by_specimen_accession(&accession).await?,
+            SubsampleBy::RecordId(id) => db.subsamples.find_by_record_id(&id).await?,
+            SubsampleBy::SpecimenRecordId(id) => db.subsamples.find_by_specimen_record_id(&id).await?,
         };
-        let details = subsample.clone().into();
-        let query = SubsampleQuery { subsample };
-        Ok(Subsample(details, query))
+
+        match subsample {
+            None => Ok(None),
+            Some(subsample) => {
+                let details = subsample.clone().into();
+                let query = SubsampleQuery { subsample };
+                Ok(Some(Subsample(details, query)))
+            }
+        }
+
     }
 }
 
@@ -55,7 +64,7 @@ pub struct SubsampleDetails {
     pub id: Uuid,
     pub specimen_id: Uuid,
 
-    pub accession: String,
+    pub record_id: String,
     pub material_sample_id: Option<String>,
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
@@ -67,7 +76,7 @@ impl From<models::Subsample> for SubsampleDetails {
         Self {
             id: value.id,
             specimen_id: value.specimen_id,
-            accession: value.accession,
+            record_id: value.record_id,
             material_sample_id: value.material_sample_id,
             institution_name: value.institution_name,
             institution_code: value.institution_code,
@@ -86,7 +95,9 @@ pub struct SubsampleEvents {
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SubsampleEvent {
     pub id: Uuid,
-    pub event_id: Uuid,
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
+    pub subsampled_by: Option<String>,
     pub preparation_type: Option<String>,
 }
 
@@ -94,7 +105,9 @@ impl From<models::SubsampleEvent> for SubsampleEvent {
     fn from(value: models::SubsampleEvent) -> Self {
         Self {
             id: value.id,
-            event_id: value.event_id,
+            event_date: value.event_date,
+            event_time: value.event_time,
+            subsampled_by: value.subsampled_by,
             preparation_type: value.preparation_type,
         }
     }

@@ -270,10 +270,7 @@ impl StatsProvider {
         })
     }
 
-    pub async fn dataset_breakdown(&self, name: &str) -> Result<DatasetBreakdown, Error> {
-        use schema::taxa::dsl::*;
-        let mut conn = self.pool.get().await?;
-
+    pub async fn dataset_breakdown(&self, _name: &str) -> Result<DatasetBreakdown, Error> {
         let species = vec![];
 
         Ok(DatasetBreakdown {

@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate};
+use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate, NaiveTime};
 use diesel::{Queryable, Insertable};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
@@ -426,7 +426,7 @@ pub struct Specimen {
     pub dataset_id: Uuid,
     pub name_id: Uuid,
 
-    pub accession: String,
+    pub record_id: String,
     pub material_sample_id: Option<String>,
     pub organism_id: Option<String>,
 
@@ -435,6 +435,7 @@ pub struct Specimen {
     pub collection_code: Option<String>,
     pub recorded_by: Option<String>,
     pub identified_by: Option<String>,
+    pub identified_date: Option<NaiveDate>,
 
     pub type_status: Option<String>,
     pub locality: Option<String>,
@@ -464,7 +465,7 @@ pub struct Subsample {
     pub name_id: Uuid,
     pub specimen_id: Uuid,
 
-    pub accession: String,
+    pub record_id: String,
     pub material_sample_id: Option<String>,
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
@@ -478,7 +479,7 @@ pub struct DnaExtract {
     pub dataset_id: Uuid,
     pub name_id: Uuid,
     pub subsample_id: Uuid,
-    pub accession: String,
+    pub record_id: String,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -488,9 +489,7 @@ pub struct Sequence {
     pub dataset_id: Uuid,
     pub name_id: Uuid,
     pub dna_extract_id: Uuid,
-
-    pub accession: String,
-    pub genbank_accession: Option<String>,
+    pub record_id: String,
 }
 
 
@@ -528,14 +527,20 @@ pub struct Event {
 pub struct CollectionEvent {
     pub id: Uuid,
     pub specimen_id: Uuid,
-    pub event_id: Uuid,
 
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
+    pub collected_by: Option<String>,
+
+    pub field_number: Option<String>,
     pub catalog_number: Option<String>,
     pub record_number: Option<String>,
     pub individual_count: Option<String>,
     pub organism_quantity: Option<String>,
     pub organism_quantity_type: Option<String>,
     pub sex: Option<String>,
+    pub genotypic_sex: Option<String>,
+    pub phenotypic_sex: Option<String>,
     pub life_stage: Option<String>,
     pub reproductive_condition: Option<String>,
     pub behavior: Option<String>,
@@ -547,11 +552,17 @@ pub struct CollectionEvent {
     pub other_catalog_numbers: Option<String>,
 
     pub env_broad_scale: Option<String>,
+    pub env_local_scale: Option<String>,
+    pub env_medium: Option<String>,
+    pub habitat: Option<String>,
     pub ref_biomaterial: Option<String>,
     pub source_mat_id: Option<String>,
     pub specific_host: Option<String>,
     pub strain: Option<String>,
     pub isolate: Option<String>,
+
+    pub field_notes: Option<String>,
+    pub remarks: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -559,9 +570,13 @@ pub struct CollectionEvent {
 pub struct AccessionEvent {
     pub id: Uuid,
     pub specimen_id: Uuid,
-    pub event_id: Uuid,
 
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
+    pub accession: String,
+    pub accessioned_by: Option<String>,
     pub material_sample_id: Option<String>,
+
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
     pub type_status: Option<String>,
@@ -572,7 +587,9 @@ pub struct AccessionEvent {
 pub struct SubsampleEvent {
     pub id: Uuid,
     pub subsample_id: Uuid,
-    pub event_id: Uuid,
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
+    pub subsampled_by: Option<String>,
     pub preparation_type: Option<String>,
 }
 
@@ -581,8 +598,9 @@ pub struct SubsampleEvent {
 pub struct DnaExtractionEvent {
     pub id: Uuid,
     pub dna_extract_id: Uuid,
-    pub event_id: Uuid,
 
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
     pub extracted_by: Option<String>,
 
     pub preservation_type: Option<String>,
@@ -602,8 +620,9 @@ pub struct DnaExtractionEvent {
 pub struct SequencingEvent {
     pub id: Uuid,
     pub sequence_id: Uuid,
-    pub event_id: Uuid,
 
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
 
@@ -647,13 +666,15 @@ pub struct SequencingRunEvent {
 pub struct AssemblyEvent {
     pub id: Uuid,
     pub sequence_id: Uuid,
-    pub event_id: Uuid,
+
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
+    pub assembled_by: Option<String>,
 
     pub name: Option<String>,
     pub version_status: Option<String>,
     pub quality: Option<String>,
     pub assembly_type: Option<String>,
-    pub submitted_by: Option<String>,
     pub genome_size: Option<i64>,
 }
 
@@ -662,14 +683,16 @@ pub struct AssemblyEvent {
 pub struct AnnotationEvent {
     pub id: Uuid,
     pub sequence_id: Uuid,
-    pub event_id: Uuid,
+
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
+    pub annotated_by: Option<String>,
 
     pub representation: Option<String>,
     pub release_type: Option<String>,
     pub coverage: Option<String>,
     pub replicons: Option<i64>,
     pub standard_operating_procedures: Option<String>,
-    pub annotated_by: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -677,10 +700,12 @@ pub struct AnnotationEvent {
 pub struct DepositionEvent {
     pub id: Uuid,
     pub sequence_id: Uuid,
-    pub event_id: Uuid,
 
-    pub material_sample_id: Option<String>,
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
+    pub accession: Option<String>,
     pub submitted_by: Option<String>,
+    pub material_sample_id: Option<String>,
 
     pub collection_name: Option<String>,
     pub collection_code: Option<String>,

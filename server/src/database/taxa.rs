@@ -7,8 +7,8 @@ use crate::database::extensions::filters::{with_filters, Filter};
 
 use super::extensions::Paginate;
 use super::extensions::filters::filter_taxa;
-use super::{schema, schema_gnl, PgPool, PageResult, Error};
-use super::models::{Taxon, TaxonomicStatus};
+use super::{schema_gnl, PgPool, PageResult, Error};
+use super::models::TaxonomicStatus;
 
 
 sql_function!(fn unnest(x: Nullable<Array<Text>>) -> Text);

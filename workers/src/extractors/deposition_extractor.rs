@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveTime};
 use csv::DeserializeRecordsIntoIter;
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
@@ -9,7 +9,7 @@ use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{Event, Dataset, DepositionEvent};
+use arga_core::models::{Dataset, DepositionEvent};
 use crate::error::Error;
 use crate::matchers::sequence_matcher::{SequenceMatch, SequenceRecord, SequenceMap, sequence_map, match_records_mapped};
 
@@ -22,25 +22,15 @@ type MatchedRecords = Vec<(SequenceMatch, Record)>;
 
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
-    accession: String,
-    sequence_accession: Option<String>,
+    sequence_record_id: String,
+    accession: Option<String>,
     material_sample_id: Option<String>,
     submitted_by: Option<String>,
-
-    // event block
-    field_number: Option<String>,
 
     #[serde(default)]
     #[serde(deserialize_with = "naive_date_from_str_opt")]
     event_date: Option<NaiveDate>,
-    // event_time: Option<NaiveTime>,
-    habitat: Option<String>,
-    sampling_protocol: Option<String>,
-    sampling_size_value: Option<String>,
-    sampling_size_unit: Option<String>,
-    sampling_effort: Option<String>,
-    field_notes: Option<String>,
-    event_remarks: Option<String>,
+    event_time: Option<NaiveTime>,
 
     // deposition block
     collection_name: Option<String>,
@@ -65,23 +55,17 @@ struct Record {
 
 impl From<Record> for SequenceRecord {
     fn from(value: Record) -> Self {
-        let accession = match value.sequence_accession {
-            Some(accession) => accession,
-            None => value.accession,
-        };
-        Self { accession }
+        Self { record_id: value.sequence_record_id }
     }
 }
 
 
 pub struct DepositionExtract {
-    pub events: Vec<Event>,
     pub deposition_events: Vec<DepositionEvent>,
 }
 
 
 pub struct DepositionExtractIterator {
-    dataset: Dataset,
     sequences: SequenceMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
@@ -110,7 +94,7 @@ impl Iterator for DepositionExtractIterator {
         if records.is_empty() {
             None
         } else {
-            Some(extract_chunk(records, &self.dataset, &self.sequences))
+            Some(extract_chunk(records, &self.sequences))
         }
     }
 }
@@ -122,67 +106,41 @@ pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<De
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(DepositionExtractIterator {
-        dataset: dataset.clone(),
         sequences,
         reader,
     })
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, sequences: &SequenceMap) -> Result<DepositionExtract, Error> {
+fn extract_chunk(chunk: Vec<Record>, sequences: &SequenceMap) -> Result<DepositionExtract, Error> {
     // match the records to names in the database. this will filter out any names
     // that could not be matched
     let records = match_records_mapped(chunk, sequences);
-
-    let events = extract_events(&records);
-    let deposition_events = extract_deposition_events(records, dataset, &events);
+    let deposition_events = extract_deposition_events(records);
 
     Ok(DepositionExtract {
-        events,
         deposition_events,
     })
 }
 
 
-fn extract_events(records: &MatchedRecords) -> Vec<Event> {
-    info!(total=records.len(), "Extracting events");
-
-    let events = records.par_iter().map(|(_name, row)| {
-        Event {
-            id: Uuid::new_v4(),
-            field_number: row.field_number.clone(),
-            event_date: row.event_date.clone(),
-            event_time: None,
-            habitat: row.habitat.clone(),
-            sampling_protocol: row.sampling_protocol.clone(),
-            sampling_size_value: row.sampling_size_value.clone(),
-            sampling_size_unit: row.sampling_size_unit.clone(),
-            sampling_effort: row.sampling_effort.clone(),
-            field_notes: row.field_notes.clone(),
-            event_remarks: row.event_remarks.clone(),
-        }
-    }).collect::<Vec<Event>>();
-
-    info!(events=events.len(), "Extracting events finished");
-    events
-}
-
-
-fn extract_deposition_events(records: MatchedRecords, dataset: &Dataset, events: &Vec<Event>) -> Vec<DepositionEvent>
+fn extract_deposition_events(records: MatchedRecords) -> Vec<DepositionEvent>
 {
     info!(total=records.len(), "Extracting deposition events");
 
-    let depositions = (records, events).into_par_iter().map(|(record, event)| {
+    let depositions = records.into_par_iter().map(|record| {
         let (sequence, row) = record;
 
         DepositionEvent {
             id: Uuid::new_v4(),
             sequence_id: sequence.id.clone(),
-            event_id: event.id.clone(),
 
-            material_sample_id: row.material_sample_id,
+            event_date: row.event_date,
+            event_time: row.event_time,
+            accession: row.accession,
             submitted_by: row.submitted_by,
 
+            material_sample_id: row.material_sample_id,
             collection_name: row.collection_name,
             collection_code: row.collection_code,
             institution_name: row.institution_name,

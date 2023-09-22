@@ -266,7 +266,7 @@ impl From<models::WholeGenome> for WholeGenome {
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SpecimenSummary {
     pub id: Uuid,
-    pub accession: String,
+    pub record_id: String,
     pub dataset_name: String,
     pub type_status: Option<String>,
     pub locality: Option<String>,
@@ -281,7 +281,7 @@ impl From<species::SpecimenSummary> for SpecimenSummary {
     fn from(value: species::SpecimenSummary) -> Self {
         Self {
             id: value.id,
-            accession: value.accession,
+            record_id: value.record_id,
             dataset_name: value.dataset_name,
             type_status: value.type_status,
             locality: value.locality,

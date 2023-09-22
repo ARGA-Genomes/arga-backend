@@ -26,7 +26,7 @@ use super::importers::{
     vernacular_importer,
     region_importer,
     ecology_importer,
-    conservation_status_importer,
+    // conservation_status_importer,
     indigenous_knowledge_importer,
 };
 

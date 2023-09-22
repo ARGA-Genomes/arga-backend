@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use async_trait::async_trait;
 
 use diesel::prelude::*;
@@ -7,7 +5,7 @@ use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::database::models::{Specimen, Organism, Event, CollectionEvent, SequencingEvent, SequencingRunEvent};
-use crate::index::specimen::{self, GetSpecimen, GetSpecimenEvents, EventDetails};
+use crate::index::specimen::{self, GetSpecimen};
 use super::{schema, Database, Error};
 
 
@@ -63,83 +61,6 @@ impl From<Organism> for specimen::Organism {
     }
 }
 
-
-#[async_trait]
-impl GetSpecimenEvents for Database {
-    type Error = Error;
-
-    async fn get_specimen_events(&self, specimen_id: &Uuid) -> Result<Vec<specimen::Event>, Self::Error> {
-        use schema::{events, collection_events, subsamples, dna_extracts, sequences, sequencing_events, sequencing_run_events};
-        let mut conn = self.pool.get().await?;
-
-        let mut event_map: HashMap<Uuid, Vec<EventDetails>> = HashMap::new();
-
-        // get all collection events
-        let collections = collection_events::table
-            .filter(collection_events::specimen_id.eq(specimen_id))
-            .load::<CollectionEvent>(&mut conn)
-            .await?;
-
-        for collection in collections.into_iter() {
-            let entry = event_map.entry(collection.event_id);
-            entry.or_default().push(EventDetails::Collection(collection.into()));
-        }
-
-        // get all sequencing events
-        let sequencing = sequencing_events::table
-            .inner_join(sequences::table)
-            .inner_join(dna_extracts::table.on(dna_extracts::id.eq(sequences::dna_extract_id)))
-            .inner_join(subsamples::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
-            .select(sequencing_events::all_columns)
-            .filter(subsamples::specimen_id.eq(specimen_id))
-            .load::<SequencingEvent>(&mut conn)
-            .await?;
-
-        let sequencing_ids: Vec<Uuid> = sequencing.iter().map(|s| s.id.clone()).collect();
-        let runs = sequencing_run_events::table
-            .filter(sequencing_run_events::sequencing_event_id.eq_any(sequencing_ids))
-            .load::<SequencingRunEvent>(&mut conn)
-            .await?;
-
-        let mut sequence_map: HashMap<Uuid, Vec<SequencingRunEvent>> = HashMap::new();
-        for run in runs {
-            let entry = sequence_map.entry(run.sequencing_event_id);
-            entry.or_default().push(run);
-        }
-
-        for sequencing in sequencing.into_iter() {
-            let uuid = sequencing.id.clone();
-            let event_id = sequencing.event_id.clone();
-
-            let mut sequencing = specimen::SequencingEvent::from(sequencing);
-            if let Some(runs) = sequence_map.remove(&uuid) {
-                sequencing.runs = runs.into_iter().map(|r| specimen::SequencingRunEvent::from(r)).collect();
-            }
-
-            let entry = event_map.entry(event_id);
-            entry.or_default().push(EventDetails::Sequencing(sequencing));
-        }
-
-        // add all sub events into their main event
-        let events = events::table
-            .filter(events::id.eq_any(event_map.keys()))
-            .load::<Event>(&mut conn)
-            .await?;
-
-        let mut extended_events = Vec::new();
-        for event in events {
-            let uuid = event.id.clone();
-            let mut ev = specimen::Event::from(event);
-
-            if let Some(collections) = event_map.remove(&uuid) {
-                ev.events = collections;
-            }
-            extended_events.push(ev);
-        }
-
-        Ok(extended_events)
-    }
-}
 
 impl From<Event> for specimen::Event {
     fn from(value: Event) -> Self {

@@ -13,39 +13,33 @@ pub struct SequenceProvider {
 }
 
 impl SequenceProvider {
-    pub async fn find_by_id(&self, sequence_id: &Uuid) -> Result<Sequence, Error> {
+    pub async fn find_by_id(&self, sequence_id: &Uuid) -> Result<Option<Sequence>, Error> {
         use schema::sequences;
         let mut conn = self.pool.get().await?;
 
         let sequence = sequences::table
             .filter(sequences::id.eq(sequence_id))
             .get_result::<Sequence>(&mut conn)
-            .await;
+            .await
+            .optional()?;
 
-        if let Err(diesel::result::Error::NotFound) = sequence {
-            return Err(Error::NotFound(sequence_id.to_string()));
-        }
-
-        Ok(sequence?)
+        Ok(sequence)
     }
 
-    pub async fn find_by_accession(&self, accession: &str) -> Result<Sequence, Error> {
+    pub async fn find_by_record_id(&self, record_id: &str) -> Result<Option<Sequence>, Error> {
         use schema::sequences;
         let mut conn = self.pool.get().await?;
 
         let sequence = sequences::table
-            .filter(sequences::accession.eq(accession))
+            .filter(sequences::record_id.eq(record_id))
             .get_result::<Sequence>(&mut conn)
-            .await;
+            .await
+            .optional()?;
 
-        if let Err(diesel::result::Error::NotFound) = sequence {
-            return Err(Error::NotFound(accession.to_string()));
-        }
-
-        Ok(sequence?)
+        Ok(sequence)
     }
 
-    pub async fn find_by_specimen_accession(&self, accession: &str) -> Result<Sequence, Error> {
+    pub async fn find_by_specimen_record_id(&self, record_id: &str) -> Result<Option<Sequence>, Error> {
         use schema::{specimens, subsamples, dna_extracts, sequences};
         let mut conn = self.pool.get().await?;
 
@@ -54,15 +48,12 @@ impl SequenceProvider {
             .inner_join(dna_extracts::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
             .inner_join(sequences::table.on(dna_extracts::id.eq(sequences::dna_extract_id)))
             .select(sequences::all_columns)
-            .filter(specimens::accession.eq(accession))
+            .filter(specimens::record_id.eq(record_id))
             .get_result::<Sequence>(&mut conn)
-            .await;
+            .await
+            .optional()?;
 
-        if let Err(diesel::result::Error::NotFound) = sequence {
-            return Err(Error::NotFound(accession.to_string()));
-        }
-
-        Ok(sequence?)
+        Ok(sequence)
     }
 
 

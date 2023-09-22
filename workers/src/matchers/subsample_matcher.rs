@@ -17,7 +17,7 @@ pub type SubsampleMap = HashMap<String, SubsampleMatch>;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SubsampleRecord {
-    pub accession: String,
+    pub record_id: String,
 }
 
 #[derive(Debug, Clone, Queryable, Deserialize)]
@@ -25,7 +25,7 @@ pub struct SubsampleMatch {
     pub id: Uuid,
     pub dataset_id: Uuid,
     pub name_id: Uuid,
-    pub accession: String,
+    pub record_id: String,
 }
 
 
@@ -36,13 +36,13 @@ pub fn subsample_map(dataset: &Uuid, pool: &mut PgPool) -> Result<SubsampleMap, 
     let mut conn = pool.get()?;
 
     let results = subsamples
-        .select((id, dataset_id, name_id, accession))
+        .select((id, dataset_id, name_id, record_id))
         .filter(dataset_id.eq(dataset))
         .load::<SubsampleMatch>(&mut conn)?;
 
     let mut map = SubsampleMap::new();
     for subsample_match in results {
-        map.insert(subsample_match.accession.clone(), subsample_match);
+        map.insert(subsample_match.record_id.clone(), subsample_match);
     }
 
     info!(total=map.len(), "Creating subsample map finished");
@@ -57,12 +57,12 @@ pub fn match_subsamples(records: &Vec<SubsampleRecord>, dataset: &Uuid, pool: &m
     // since our main limit here is the parameter limit in postgres
     let matched: Vec<Result<Vec<SubsampleMatch>, Error>> = records.par_chunks(50_000).map(|chunk| {
         let mut conn = pool.get()?;
-        let accessions: Vec<&String> = chunk.iter().map(|row| &row.accession).collect();
+        let record_ids: Vec<&String> = chunk.iter().map(|row| &row.record_id).collect();
 
         let results = subsamples
-            .select((id, dataset_id, name_id, accession))
+            .select((id, dataset_id, name_id, record_id))
             .filter(dataset_id.eq(&dataset))
-            .filter(accession.eq_any(&accessions))
+            .filter(record_id.eq_any(&record_ids))
             .load::<SubsampleMatch>(&mut conn)?;
 
         Ok::<Vec<SubsampleMatch>, Error>(results)
@@ -73,7 +73,7 @@ pub fn match_subsamples(records: &Vec<SubsampleRecord>, dataset: &Uuid, pool: &m
     for chunk in matched {
         if let Ok(records) = chunk {
             for record in records {
-                map.insert(record.accession.clone(), record);
+                map.insert(record.record_id.clone(), record);
             }
         }
     }
@@ -106,7 +106,7 @@ where T: Clone + Into<SubsampleRecord>
     for record in records {
         let subsample_record = record.clone().into();
 
-        if let Some(subsample) = subsamples.get(&subsample_record.accession) {
+        if let Some(subsample) = subsamples.get(&subsample_record.record_id) {
             matched.push((subsample.clone(), record));
         }
     }

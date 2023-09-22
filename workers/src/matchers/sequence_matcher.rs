@@ -17,7 +17,7 @@ pub type SequenceMap = HashMap<String, SequenceMatch>;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SequenceRecord {
-    pub accession: String,
+    pub record_id: String,
 }
 
 #[derive(Debug, Clone, Queryable, Deserialize)]
@@ -25,7 +25,7 @@ pub struct SequenceMatch {
     pub id: Uuid,
     pub dataset_id: Uuid,
     pub name_id: Uuid,
-    pub accession: String,
+    pub record_id: String,
 }
 
 
@@ -36,13 +36,13 @@ pub fn sequence_map(dataset: &Uuid, pool: &mut PgPool) -> Result<SequenceMap, Er
     let mut conn = pool.get()?;
 
     let results = sequences
-        .select((id, dataset_id, name_id, accession))
+        .select((id, dataset_id, name_id, record_id))
         .filter(dataset_id.eq(dataset))
         .load::<SequenceMatch>(&mut conn)?;
 
     let mut map = SequenceMap::new();
     for sequence_match in results {
-        map.insert(sequence_match.accession.clone(), sequence_match);
+        map.insert(sequence_match.record_id.clone(), sequence_match);
     }
 
     info!(total=map.len(), "Creating sequence map finished");
@@ -57,12 +57,12 @@ pub fn match_sequences(records: &Vec<SequenceRecord>, dataset: &Uuid, pool: &mut
     // since our main limit here is the parameter limit in postgres
     let matched: Vec<Result<Vec<SequenceMatch>, Error>> = records.par_chunks(50_000).map(|chunk| {
         let mut conn = pool.get()?;
-        let accessions: Vec<&String> = chunk.iter().map(|row| &row.accession).collect();
+        let record_ids: Vec<&String> = chunk.iter().map(|row| &row.record_id).collect();
 
         let results = sequences
-            .select((id, dataset_id, name_id, accession))
+            .select((id, dataset_id, name_id, record_id))
             .filter(dataset_id.eq(&dataset))
-            .filter(accession.eq_any(&accessions))
+            .filter(record_id.eq_any(&record_ids))
             .load::<SequenceMatch>(&mut conn)?;
 
         Ok::<Vec<SequenceMatch>, Error>(results)
@@ -73,7 +73,7 @@ pub fn match_sequences(records: &Vec<SequenceRecord>, dataset: &Uuid, pool: &mut
     for chunk in matched {
         if let Ok(records) = chunk {
             for record in records {
-                map.insert(record.accession.clone(), record);
+                map.insert(record.record_id.clone(), record);
             }
         }
     }
@@ -106,7 +106,7 @@ where T: Clone + Into<SequenceRecord>
     for record in records {
         let sequence_record = record.clone().into();
 
-        if let Some(sequence) = sequences.get(&sequence_record.accession) {
+        if let Some(sequence) = sequences.get(&sequence_record.record_id) {
             matched.push((sequence.clone(), record));
         }
     }

@@ -41,7 +41,7 @@ pub struct VernacularName {
 #[derive(Debug, Queryable)]
 pub struct SpecimenSummary {
     pub id: Uuid,
-    pub accession: String,
+    pub record_id: String,
     pub dataset_name: String,
     pub type_status: Option<String>,
     pub locality: Option<String>,
@@ -167,7 +167,7 @@ impl SpeciesProvider {
             .inner_join(specimen_stats::table)
             .select((
                 specimens::id,
-                specimens::accession,
+                specimens::record_id,
                 datasets::name,
                 specimens::type_status,
                 specimens::locality,

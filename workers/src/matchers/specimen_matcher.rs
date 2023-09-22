@@ -17,7 +17,7 @@ pub type SpecimenMap = HashMap<String, SpecimenMatch>;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SpecimenRecord {
-    pub accession: String,
+    pub record_id: String,
 }
 
 #[derive(Debug, Clone, Queryable, Deserialize)]
@@ -25,7 +25,7 @@ pub struct SpecimenMatch {
     pub id: Uuid,
     pub dataset_id: Uuid,
     pub name_id: Uuid,
-    pub accession: String,
+    pub record_id: String,
 }
 
 
@@ -36,13 +36,13 @@ pub fn specimen_map(dataset: &Uuid, pool: &mut PgPool) -> Result<SpecimenMap, Er
     let mut conn = pool.get()?;
 
     let results = specimens
-        .select((id, dataset_id, name_id, accession))
+        .select((id, dataset_id, name_id, record_id))
         .filter(dataset_id.eq(dataset))
         .load::<SpecimenMatch>(&mut conn)?;
 
     let mut map = SpecimenMap::new();
     for specimen_match in results {
-        map.insert(specimen_match.accession.clone(), specimen_match);
+        map.insert(specimen_match.record_id.clone(), specimen_match);
     }
 
     info!(total=map.len(), "Creating specimen map finished");
@@ -57,12 +57,12 @@ pub fn match_specimens(records: &Vec<SpecimenRecord>, dataset: &Uuid, pool: &mut
     // since our main limit here is the parameter limit in postgres
     let matched: Vec<Result<Vec<SpecimenMatch>, Error>> = records.par_chunks(50_000).map(|chunk| {
         let mut conn = pool.get()?;
-        let accessions: Vec<&String> = chunk.iter().map(|row| &row.accession).collect();
+        let accessions: Vec<&String> = chunk.iter().map(|row| &row.record_id).collect();
 
         let results = specimens
-            .select((id, dataset_id, name_id, accession))
+            .select((id, dataset_id, name_id, record_id))
             .filter(dataset_id.eq(&dataset))
-            .filter(accession.eq_any(&accessions))
+            .filter(record_id.eq_any(&accessions))
             .load::<SpecimenMatch>(&mut conn)?;
 
         Ok::<Vec<SpecimenMatch>, Error>(results)
@@ -73,7 +73,7 @@ pub fn match_specimens(records: &Vec<SpecimenRecord>, dataset: &Uuid, pool: &mut
     for chunk in matched {
         if let Ok(records) = chunk {
             for record in records {
-                map.insert(record.accession.clone(), record);
+                map.insert(record.record_id.clone(), record);
             }
         }
     }
@@ -106,7 +106,7 @@ where T: Clone + Into<SpecimenRecord>
     for record in records {
         let specimen_record = record.clone().into();
 
-        if let Some(specimen) = specimens.get(&specimen_record.accession) {
+        if let Some(specimen) = specimens.get(&specimen_record.record_id) {
             matched.push((specimen.clone(), record));
         }
     }

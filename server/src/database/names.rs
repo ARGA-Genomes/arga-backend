@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 
 use diesel::prelude::*;
-use diesel::sql_types::{Text, Nullable};
+use diesel::sql_types::Text;
 use diesel_async::RunQueryDsl;
 use tracing::instrument;
 use uuid::Uuid;

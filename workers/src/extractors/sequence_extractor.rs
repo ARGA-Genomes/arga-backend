@@ -9,7 +9,7 @@ use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{Event, SequencingEvent, Dataset, Sequence};
+use arga_core::models::{SequencingEvent, Dataset, Sequence};
 use crate::error::Error;
 use crate::matchers::dna_extract_matcher::{DnaExtractMatch, DnaExtractRecord, DnaExtractMap, dna_extract_map, match_records_mapped};
 
@@ -22,23 +22,13 @@ type MatchedRecords = Vec<(DnaExtractMatch, Record)>;
 
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
-    accession: String,
-    sequence_accession: Option<String>,
-    genbank_accession: Option<String>,
+    record_id: String,
     material_sample_id: Option<String>,
 
     #[serde(default)]
     #[serde(deserialize_with = "naive_date_from_str_opt")]
     event_date: Option<NaiveDate>,
     event_time: Option<NaiveTime>,
-    field_number: Option<String>,
-    field_notes: Option<String>,
-    event_remarks: Option<String>,
-    habitat: Option<String>,
-    sampling_protocol: Option<String>,
-    sampling_size_value: Option<String>,
-    sampling_size_unit: Option<String>,
-    sampling_effort: Option<String>,
 
     sequenced_by: Option<String>,
     target_gene: Option<String>,
@@ -69,17 +59,16 @@ impl From<Record> for DnaExtractRecord {
         // that have an ID of SAMNxxx, and later is referenced in Genbank and RefSeq
         // via the matierial sample id, and instead having its own accession
         // id of GCAxxx and GCFxxx respectively
-        let accession = match value.material_sample_id {
+        let record_id = match value.material_sample_id {
             Some(sample_id) => sample_id,
-            None => value.accession,
+            None => value.record_id,
         };
-        Self { accession }
+        Self { record_id }
     }
 }
 
 
 pub struct SequencingExtract {
-    pub events: Vec<Event>,
     pub sequences: Vec<Sequence>,
     pub sequencing_events: Vec<SequencingEvent>,
 }
@@ -144,39 +133,13 @@ fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, extracts: &DnaExtractMap
     // that could not be matched
     let records = match_records_mapped(chunk, extracts);
 
-    let events = extract_events(&records);
     let sequences = extract_sequences(&records, dataset);
-    let sequencing_events = extract_sequencing_events(records, &sequences, &events);
+    let sequencing_events = extract_sequencing_events(records, &sequences);
 
     Ok(SequencingExtract {
-        events,
         sequences,
         sequencing_events,
     })
-}
-
-
-fn extract_events(records: &MatchedRecords) -> Vec<Event> {
-    info!(total=records.len(), "Extracting events");
-
-    let events = records.par_iter().map(|(_name, row)| {
-        Event {
-            id: Uuid::new_v4(),
-            field_number: row.field_number.clone(),
-            event_date: row.event_date.clone(),
-            event_time: row.event_time.clone(),
-            habitat: row.habitat.clone(),
-            sampling_protocol: row.sampling_protocol.clone(),
-            sampling_size_value: row.sampling_size_value.clone(),
-            sampling_size_unit: row.sampling_size_unit.clone(),
-            sampling_effort: row.sampling_effort.clone(),
-            field_notes: row.field_notes.clone(),
-            event_remarks: row.event_remarks.clone(),
-        }
-    }).collect::<Vec<Event>>();
-
-    info!(events=events.len(), "Extracting events finished");
-    events
 }
 
 
@@ -184,19 +147,12 @@ fn extract_sequences(records: &MatchedRecords, dataset: &Dataset) -> Vec<Sequenc
     info!(total=records.len(), "Extracting sequences");
 
     let sequences = records.par_iter().map(|(dna_extract, row)| {
-        let accession = match &row.sequence_accession {
-            Some(accession) => accession.clone(),
-            None => row.accession.clone(),
-        };
-
         Sequence {
             id: Uuid::new_v4(),
             dataset_id: dataset.id.clone(),
             name_id: dna_extract.name_id.clone(),
             dna_extract_id: dna_extract.id.clone(),
-
-            accession,
-            genbank_accession: row.genbank_accession.clone(),
+            record_id: row.record_id.clone(),
         }
     }).collect::<Vec<Sequence>>();
 
@@ -205,17 +161,18 @@ fn extract_sequences(records: &MatchedRecords, dataset: &Dataset) -> Vec<Sequenc
 }
 
 
-fn extract_sequencing_events(records: MatchedRecords, sequences: &Vec<Sequence>, events: &Vec<Event>) -> Vec<SequencingEvent> {
+fn extract_sequencing_events(records: MatchedRecords, sequences: &Vec<Sequence>) -> Vec<SequencingEvent> {
     info!(total=records.len(), "Extracting sequencing events");
 
-    let sequences = (records, sequences, events).into_par_iter().map(|(record, sequence, event)| {
+    let sequences = (records, sequences).into_par_iter().map(|(record, sequence)| {
         let (_subsample, row) = record;
 
         SequencingEvent {
             id: Uuid::new_v4(),
             sequence_id: sequence.id.clone(),
-            event_id: event.id.clone(),
 
+            event_date: row.event_date,
+            event_time: row.event_time,
             sequenced_by: row.sequenced_by,
             material_sample_id: row.material_sample_id,
 

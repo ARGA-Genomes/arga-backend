@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use tracing::info;
 
 use arga_core::schema;
-use arga_core::models::{Event, Dataset, DnaExtractionEvent, DnaExtract};
+use arga_core::models::{Dataset, DnaExtractionEvent, DnaExtract};
 use crate::error::Error;
 use crate::extractors::dna_extraction_extractor;
 
@@ -21,34 +21,11 @@ pub fn import(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<(),
 
     for extract in extractor {
         let extract = extract?;
-        import_events(extract.events, pool)?;
         import_dna_extracts(extract.dna_extracts, pool)?;
         import_dna_extraction_events(extract.dna_extraction_events, pool)?;
     }
 
     info!("Import finished");
-    Ok(())
-}
-
-
-fn import_events(events: Vec<Event>, pool: &mut PgPool) -> Result<(), Error> {
-    use schema::events;
-
-    info!(total=events.len(), "Importing events");
-    let imported: Vec<Result<usize, Error>> = events.par_chunks(1000).map(|chunk| {
-        let mut conn = pool.get()?;
-        let inserted_rows = diesel::insert_into(events::table)
-            .values(chunk)
-            .execute(&mut conn)?;
-        Ok(inserted_rows)
-    }).collect();
-
-    let mut total_imported = 0;
-    for chunk_total in imported {
-        total_imported += chunk_total?;
-    }
-    info!(total=events.len(), imported=total_imported, "Importing events finished");
-
     Ok(())
 }
 

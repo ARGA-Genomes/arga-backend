@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveTime};
 use csv::DeserializeRecordsIntoIter;
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
@@ -9,7 +9,7 @@ use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{Event, Dataset, SubsampleEvent, Subsample};
+use arga_core::models::{Dataset, SubsampleEvent, Subsample};
 use crate::error::Error;
 use crate::matchers::specimen_matcher::{SpecimenMatch, SpecimenRecord, SpecimenMap, specimen_map, match_records_mapped};
 
@@ -23,25 +23,14 @@ type MatchedRecords = Vec<(SpecimenMatch, Record)>;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct Record {
-    accession: String,
-    scientific_name: Option<String>,
-    canonical_name: Option<String>,
+    record_id: String,
     preparation_type: Option<String>,
-
-    // event block
-    field_number: Option<String>,
 
     #[serde(default)]
     #[serde(deserialize_with = "naive_date_from_str_opt")]
     event_date: Option<NaiveDate>,
-    // event_time: Option<NaiveTime>,
-    habitat: Option<String>,
-    sampling_protocol: Option<String>,
-    sampling_size_value: Option<String>,
-    sampling_size_unit: Option<String>,
-    sampling_effort: Option<String>,
-    field_notes: Option<String>,
-    event_remarks: Option<String>,
+    event_time: Option<NaiveTime>,
+    subsampled_by: Option<String>,
 
     // dna block
     material_sample_id: Option<String>,
@@ -52,21 +41,18 @@ struct Record {
 
 impl From<Record> for SpecimenRecord {
     fn from(value: Record) -> Self {
-        Self { accession: value.accession }
+        Self { record_id: value.record_id }
     }
 }
 
 
 pub struct SubsampleExtract {
-    pub events: Vec<Event>,
     pub subsamples: Vec<Subsample>,
     pub subsample_events: Vec<SubsampleEvent>,
 }
 
 
 pub struct SubsampleExtractIterator {
-    pool: PgPool,
-    dataset: Dataset,
     specimens: SpecimenMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
@@ -95,7 +81,7 @@ impl Iterator for SubsampleExtractIterator {
         if records.is_empty() {
             None
         } else {
-            Some(extract_chunk(records, &self.dataset, &self.specimens, &mut self.pool))
+            Some(extract_chunk(records, &self.specimens))
         }
     }
 }
@@ -107,52 +93,24 @@ pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<Su
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(SubsampleExtractIterator {
-        pool: pool.clone(),
-        dataset: dataset.clone(),
         specimens,
         reader,
     })
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, specimens: &SpecimenMap, pool: &mut PgPool) -> Result<SubsampleExtract, Error> {
+fn extract_chunk(chunk: Vec<Record>, specimens: &SpecimenMap) -> Result<SubsampleExtract, Error> {
     // match the records to names in the database. this will filter out any names
     // that could not be matched
     let records = match_records_mapped(chunk, specimens);
 
-    let events = extract_events(&records);
     let subsamples = extract_subsamples(&records);
-    let subsample_events = extract_subsample_events(&records, &subsamples, &events);
+    let subsample_events = extract_subsample_events(records, &subsamples);
 
     Ok(SubsampleExtract {
-        events,
         subsamples,
         subsample_events,
     })
-}
-
-
-fn extract_events(records: &MatchedRecords) -> Vec<Event> {
-    info!(total=records.len(), "Extracting events");
-
-    let events = records.par_iter().map(|(_name, row)| {
-        Event {
-            id: Uuid::new_v4(),
-            field_number: row.field_number.clone(),
-            event_date: row.event_date.clone(),
-            event_time: None,
-            habitat: row.habitat.clone(),
-            sampling_protocol: row.sampling_protocol.clone(),
-            sampling_size_value: row.sampling_size_value.clone(),
-            sampling_size_unit: row.sampling_size_unit.clone(),
-            sampling_effort: row.sampling_effort.clone(),
-            field_notes: row.field_notes.clone(),
-            event_remarks: row.event_remarks.clone(),
-        }
-    }).collect::<Vec<Event>>();
-
-    info!(events=events.len(), "Extracting events finished");
-    events
 }
 
 
@@ -166,7 +124,7 @@ fn extract_subsamples(records: &MatchedRecords) -> Vec<Subsample> {
             name_id: specimen.name_id,
             specimen_id: specimen.id,
 
-            accession: row.accession.clone(),
+            record_id: row.record_id.clone(),
             material_sample_id: row.material_sample_id.clone(),
             institution_name: row.institution_name.clone(),
             institution_code: row.institution_code.clone(),
@@ -179,18 +137,20 @@ fn extract_subsamples(records: &MatchedRecords) -> Vec<Subsample> {
 }
 
 
-fn extract_subsample_events(records: &MatchedRecords, subsamples: &Vec<Subsample>, events: &Vec<Event>) -> Vec<SubsampleEvent>
+fn extract_subsample_events(records: MatchedRecords, subsamples: &Vec<Subsample>) -> Vec<SubsampleEvent>
 {
     info!(total=records.len(), "Extracting subsample events");
 
-    let subsample_events = (records, subsamples, events).into_par_iter().map(|(record, subsample, event)| {
+    let subsample_events = (records, subsamples).into_par_iter().map(|(record, subsample)| {
         let (_specimen, row) = record;
 
         SubsampleEvent {
             id: Uuid::new_v4(),
             subsample_id: subsample.id.clone(),
-            event_id: event.id.clone(),
-            preparation_type: row.preparation_type.clone(),
+            event_date: row.event_date,
+            event_time: row.event_time,
+            subsampled_by: row.subsampled_by,
+            preparation_type: row.preparation_type,
         }
     }).collect::<Vec<SubsampleEvent>>();
 

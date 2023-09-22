@@ -5,7 +5,6 @@ use uuid::Uuid;
 
 use crate::database::Database;
 use crate::database::models;
-use crate::database::{schema, schema_gnl};
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::names::GetNames;

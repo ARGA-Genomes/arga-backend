@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use tracing::info;
 
 use arga_core::schema;
-use arga_core::models::{Specimen, Event, CollectionEvent, Organism, Dataset};
+use arga_core::models::{Specimen, CollectionEvent, Dataset};
 use crate::error::Error;
 use crate::extractors::collection_extractor;
 
@@ -28,8 +28,6 @@ pub fn import(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<(),
         // specimens or events to other specimens so this approach works for us as that
         // means every collection import should always create new records
         import_specimens(extract.specimens, pool)?;
-        import_organisms(extract.organisms, pool)?;
-        import_events(extract.events, pool)?;
         import_collection_events(extract.collection_events, pool)?;
     }
 
@@ -55,48 +53,6 @@ fn import_specimens(specimens: Vec<Specimen>, pool: &mut PgPool) -> Result<(), E
         total_imported += chunk_total?;
     }
     info!(total=specimens.len(), total_imported, "Importing specimens finished");
-
-    Ok(())
-}
-
-fn import_organisms(organisms: Vec<Organism>, pool: &mut PgPool) -> Result<(), Error> {
-    use schema::organisms;
-
-    info!(total=organisms.len(), "Importing specimen organisms");
-    let imported: Vec<Result<usize, Error>> = organisms.par_chunks(1000).map(|chunk| {
-        let mut conn = pool.get()?;
-        let inserted_rows = diesel::insert_into(organisms::table)
-            .values(chunk)
-            .execute(&mut conn)?;
-        Ok(inserted_rows)
-    }).collect();
-
-    let mut total_imported = 0;
-    for chunk_total in imported {
-        total_imported += chunk_total?;
-    }
-    info!(total=organisms.len(), imported=total_imported, "Importing specimen organisms finished");
-
-    Ok(())
-}
-
-fn import_events(events: Vec<Event>, pool: &mut PgPool) -> Result<(), Error> {
-    use schema::events;
-
-    info!(total=events.len(), "Importing specimen events");
-    let imported: Vec<Result<usize, Error>> = events.par_chunks(1000).map(|chunk| {
-        let mut conn = pool.get()?;
-        let inserted_rows = diesel::insert_into(events::table)
-            .values(chunk)
-            .execute(&mut conn)?;
-        Ok(inserted_rows)
-    }).collect();
-
-    let mut total_imported = 0;
-    for chunk_total in imported {
-        total_imported += chunk_total?;
-    }
-    info!(total=events.len(), imported=total_imported, "Importing specimen events finished");
 
     Ok(())
 }

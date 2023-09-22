@@ -14,14 +14,14 @@ pub struct AssemblyProvider {
 
 impl AssemblyProvider {
     /// Get the assembly from the accession
-    pub async fn find_by_accession(&self, accession: &str) -> Result<AssemblyEvent, Error> {
+    pub async fn find_by_record_id(&self, record_id: &str) -> Result<AssemblyEvent, Error> {
         use schema::{sequences, assembly_events};
         let mut conn = self.pool.get().await?;
 
         let assembly = assembly_events::table
             .inner_join(sequences::table)
             .select(assembly_events::all_columns)
-            .filter(sequences::accession.eq(accession))
+            .filter(sequences::record_id.eq(record_id))
             .get_result::<AssemblyEvent>(&mut conn)
             .await?;
 

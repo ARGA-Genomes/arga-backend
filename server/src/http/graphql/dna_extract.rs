@@ -19,15 +19,21 @@ pub enum DnaExtractBy {
 pub struct DnaExtract(DnaExtractDetails, DnaExtractQuery);
 
 impl DnaExtract {
-    pub async fn new(db: &Database, by: &DnaExtractBy) -> Result<DnaExtract, Error> {
+    pub async fn new(db: &Database, by: &DnaExtractBy) -> Result<Option<DnaExtract>, Error> {
         let dna_extract = match by {
             DnaExtractBy::Id(id) => db.dna_extracts.find_by_id(&id).await?,
             DnaExtractBy::Accession(accession) => db.dna_extracts.find_by_accession(&accession).await?,
             DnaExtractBy::SpecimenAccession(accession) => db.dna_extracts.find_by_specimen_accession(&accession).await?,
         };
-        let details = dna_extract.clone().into();
-        let query = DnaExtractQuery { dna_extract };
-        Ok(DnaExtract(details, query))
+
+        match dna_extract {
+            None => Ok(None),
+            Some(dna_extract) => {
+                let details = dna_extract.clone().into();
+                let query = DnaExtractQuery { dna_extract };
+                Ok(Some(DnaExtract(details, query)))
+            }
+        }
     }
 }
 
@@ -54,7 +60,7 @@ impl DnaExtractQuery {
 pub struct DnaExtractDetails {
     pub id: Uuid,
     pub subsample_id: Uuid,
-    pub accession: String,
+    pub record_id: String,
 }
 
 impl From<models::DnaExtract> for DnaExtractDetails {
@@ -62,7 +68,7 @@ impl From<models::DnaExtract> for DnaExtractDetails {
         Self {
             id: value.id,
             subsample_id: value.subsample_id,
-            accession: value.accession,
+            record_id: value.record_id,
         }
     }
 }

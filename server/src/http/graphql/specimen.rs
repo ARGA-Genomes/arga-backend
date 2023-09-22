@@ -1,4 +1,6 @@
 use async_graphql::*;
+use chrono::NaiveDate;
+use chrono::NaiveTime;
 use tracing::instrument;
 use uuid::Uuid;
 
@@ -13,8 +15,8 @@ use crate::index::names::GetNames;
 #[derive(OneofObject)]
 pub enum SpecimenBy {
     Id(Uuid),
-    Accession(String),
-    SequenceAccession(String),
+    RecordId(String),
+    SequenceRecordId(String),
 }
 
 #[derive(MergedObject)]
@@ -24,8 +26,8 @@ impl Specimen {
     pub async fn new(db: &Database, by: &SpecimenBy) -> Result<Specimen, Error> {
         let specimen = match by {
             SpecimenBy::Id(id) => db.specimens.find_by_id(&id).await?,
-            SpecimenBy::Accession(accession) => db.specimens.find_by_accession(&accession).await?,
-            SpecimenBy::SequenceAccession(accession) => db.specimens.find_by_sequence_accession(&accession).await?,
+            SpecimenBy::RecordId(id) => db.specimens.find_by_record_id(&id).await?,
+            SpecimenBy::SequenceRecordId(id) => db.specimens.find_by_sequence_record_id(&id).await?,
         };
         let details = specimen.clone().into();
         let query = SpecimenQuery { specimen };
@@ -65,7 +67,7 @@ impl SpecimenQuery {
 pub struct SpecimenDetails {
     pub id: Uuid,
 
-    pub accession: String,
+    pub record_id: String,
     pub material_sample_id: Option<String>,
     pub organism_id: Option<String>,
 
@@ -98,7 +100,7 @@ impl From<models::Specimen> for SpecimenDetails {
     fn from(value: models::Specimen) -> Self {
         Self {
             id: value.id,
-            accession: value.accession,
+            record_id: value.record_id,
             material_sample_id: value.material_sample_id,
             organism_id: value.organism_id,
             institution_name: value.institution_name,
@@ -194,8 +196,9 @@ impl From<models::CollectionEvent> for CollectionEvent {
 #[derive(Clone, Debug, SimpleObject)]
 pub struct AccessionEvent {
     pub id: Uuid,
-    pub event_id: Uuid,
-
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
+    pub accessioned_by: Option<String>,
     pub material_sample_id: Option<String>,
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
@@ -206,7 +209,9 @@ impl From<models::AccessionEvent> for AccessionEvent {
     fn from(value: models::AccessionEvent) -> Self {
         Self {
             id: value.id,
-            event_id: value.event_id,
+            event_date: value.event_date,
+            event_time: value.event_time,
+            accessioned_by: value.accessioned_by,
             material_sample_id: value.material_sample_id,
             institution_name: value.institution_name,
             institution_code: value.institution_code,

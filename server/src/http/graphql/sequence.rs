@@ -1,6 +1,7 @@
 use async_graphql::*;
 use chrono::NaiveDate;
 use chrono::NaiveDateTime;
+use chrono::NaiveTime;
 use uuid::Uuid;
 
 use crate::database::Database;
@@ -13,23 +14,29 @@ use crate::database::models;
 #[derive(OneofObject)]
 pub enum SequenceBy {
     Id(Uuid),
-    Accession(String),
-    SpecimenAccession(String),
+    RecordId(String),
+    SpecimenRecordId(String),
 }
 
 #[derive(MergedObject)]
 pub struct Sequence(SequenceDetails, SequenceQuery);
 
 impl Sequence {
-    pub async fn new(db: &Database, by: &SequenceBy) -> Result<Sequence, Error> {
+    pub async fn new(db: &Database, by: &SequenceBy) -> Result<Option<Sequence>, Error> {
         let sequence = match by {
             SequenceBy::Id(id) => db.sequences.find_by_id(&id).await?,
-            SequenceBy::Accession(accession) => db.sequences.find_by_accession(&accession).await?,
-            SequenceBy::SpecimenAccession(accession) => db.sequences.find_by_specimen_accession(&accession).await?,
+            SequenceBy::RecordId(id) => db.sequences.find_by_record_id(&id).await?,
+            SequenceBy::SpecimenRecordId(id) => db.sequences.find_by_specimen_record_id(&id).await?,
         };
-        let details = sequence.clone().into();
-        let query = SequenceQuery { sequence };
-        Ok(Sequence(details, query))
+
+        match sequence {
+            None => Ok(None),
+            Some(sequence) => {
+                let details = sequence.clone().into();
+                let query = SequenceQuery { sequence };
+                Ok(Some(Sequence(details, query)))
+            }
+        }
     }
 }
 
@@ -70,8 +77,7 @@ impl SequenceQuery {
 pub struct SequenceDetails {
     pub id: Uuid,
     pub dna_extract_id: Uuid,
-    pub accession: String,
-    pub genbank_accession: Option<String>,
+    pub record_id: String,
 }
 
 impl From<models::Sequence> for SequenceDetails {
@@ -79,8 +85,7 @@ impl From<models::Sequence> for SequenceDetails {
         Self {
             id: value.id,
             dna_extract_id: value.dna_extract_id,
-            accession: value.accession,
-            genbank_accession: value.genbank_accession,
+            record_id: value.record_id,
         }
     }
 }
@@ -100,6 +105,8 @@ pub struct SequenceEvents {
 pub struct SequencingEvent {
     pub id: Uuid,
 
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
 
@@ -117,6 +124,8 @@ impl From<models::SequencingEvent> for SequencingEvent {
     fn from(value: models::SequencingEvent) -> Self {
         Self {
             id: value.id,
+            event_date: value.event_date,
+            event_time: value.event_time,
             sequenced_by: value.sequenced_by,
             material_sample_id: value.material_sample_id,
             concentration: value.concentration,
@@ -184,10 +193,12 @@ impl From<models::SequencingRunEvent> for SequencingRunEvent {
 pub struct AssemblyEvent {
     pub id: Uuid,
     pub name: Option<String>,
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
+    pub assembled_by: Option<String>,
     pub version_status: Option<String>,
     pub quality: Option<String>,
     pub assembly_type: Option<String>,
-    pub submitted_by: Option<String>,
     pub genome_size: Option<i64>,
 }
 
@@ -195,11 +206,13 @@ impl From<models::AssemblyEvent> for AssemblyEvent {
     fn from(value: models::AssemblyEvent) -> Self {
         Self {
             id: value.id,
+            event_date: value.event_date,
+            event_time: value.event_time,
+            assembled_by: value.assembled_by,
             name: value.name,
             version_status: value.version_status,
             quality: value.quality,
             assembly_type: value.assembly_type,
-            submitted_by: value.submitted_by,
             genome_size: value.genome_size,
         }
     }
@@ -208,25 +221,28 @@ impl From<models::AssemblyEvent> for AssemblyEvent {
 #[derive(Clone, Debug, SimpleObject)]
 pub struct AnnotationEvent {
     pub id: Uuid,
-
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
+    pub annotated_by: Option<String>,
     pub representation: Option<String>,
     pub release_type: Option<String>,
     pub coverage: Option<String>,
     pub replicons: Option<i64>,
     pub standard_operating_procedures: Option<String>,
-    pub annotated_by: Option<String>,
 }
 
 impl From<models::AnnotationEvent> for AnnotationEvent {
     fn from(value: models::AnnotationEvent) -> Self {
         Self {
             id: value.id,
+            event_date: value.event_date,
+            event_time: value.event_time,
+            annotated_by: value.annotated_by,
             representation: value.representation,
             release_type: value.release_type,
             coverage: value.coverage,
             replicons: value.replicons,
             standard_operating_procedures: value.standard_operating_procedures,
-            annotated_by: value.annotated_by,
         }
     }
 }
@@ -235,9 +251,11 @@ impl From<models::AnnotationEvent> for AnnotationEvent {
 pub struct DataDepositionEvent {
     pub id: Uuid,
 
-    pub material_sample_id: Option<String>,
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
     pub submitted_by: Option<String>,
 
+    pub material_sample_id: Option<String>,
     pub collection_name: Option<String>,
     pub collection_code: Option<String>,
     pub institution_name: Option<String>,
@@ -261,8 +279,10 @@ impl From<models::DepositionEvent> for DataDepositionEvent {
     fn from(value: models::DepositionEvent) -> Self {
         Self {
             id: value.id,
-            material_sample_id: value.material_sample_id,
+            event_date: value.event_date,
+            event_time: value.event_time,
             submitted_by: value.submitted_by,
+            material_sample_id: value.material_sample_id,
             collection_name: value.collection_name,
             collection_code: value.collection_code,
             institution_name: value.institution_name,

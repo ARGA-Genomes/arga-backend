@@ -17,7 +17,7 @@ pub type DnaExtractMap = HashMap<String, DnaExtractMatch>;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DnaExtractRecord {
-    pub accession: String,
+    pub record_id: String,
 }
 
 #[derive(Debug, Clone, Queryable, Deserialize)]
@@ -25,7 +25,7 @@ pub struct DnaExtractMatch {
     pub id: Uuid,
     pub dataset_id: Uuid,
     pub name_id: Uuid,
-    pub accession: String,
+    pub record_id: String,
 }
 
 
@@ -36,13 +36,13 @@ pub fn dna_extract_map(datasets: &Vec<Uuid>, pool: &mut PgPool) -> Result<DnaExt
     let mut conn = pool.get()?;
 
     let results = dna_extracts
-        .select((id, dataset_id, name_id, accession))
+        .select((id, dataset_id, name_id, record_id))
         .filter(dataset_id.eq_any(datasets))
         .load::<DnaExtractMatch>(&mut conn)?;
 
     let mut map = DnaExtractMap::new();
     for dna_extract_match in results {
-        map.insert(dna_extract_match.accession.clone(), dna_extract_match);
+        map.insert(dna_extract_match.record_id.clone(), dna_extract_match);
     }
 
     info!(total=map.len(), "Creating dna extract map finished");
@@ -57,12 +57,12 @@ pub fn match_dna_extracts(records: &Vec<DnaExtractRecord>, dataset: &Uuid, pool:
     // since our main limit here is the parameter limit in postgres
     let matched: Vec<Result<Vec<DnaExtractMatch>, Error>> = records.par_chunks(50_000).map(|chunk| {
         let mut conn = pool.get()?;
-        let accessions: Vec<&String> = chunk.iter().map(|row| &row.accession).collect();
+        let record_ids: Vec<&String> = chunk.iter().map(|row| &row.record_id).collect();
 
         let results = dna_extracts
-            .select((id, dataset_id, name_id, accession))
+            .select((id, dataset_id, name_id, record_id))
             .filter(dataset_id.eq(&dataset))
-            .filter(accession.eq_any(&accessions))
+            .filter(record_id.eq_any(&record_ids))
             .load::<DnaExtractMatch>(&mut conn)?;
 
         Ok::<Vec<DnaExtractMatch>, Error>(results)
@@ -73,7 +73,7 @@ pub fn match_dna_extracts(records: &Vec<DnaExtractRecord>, dataset: &Uuid, pool:
     for chunk in matched {
         if let Ok(records) = chunk {
             for record in records {
-                map.insert(record.accession.clone(), record);
+                map.insert(record.record_id.clone(), record);
             }
         }
     }
@@ -106,7 +106,7 @@ where T: Clone + Into<DnaExtractRecord>
     for record in records {
         let dna_extract_record = record.clone().into();
 
-        if let Some(extract) = subsamples.get(&dna_extract_record.accession) {
+        if let Some(extract) = subsamples.get(&dna_extract_record.record_id) {
             matched.push((extract.clone(), record));
         }
     }

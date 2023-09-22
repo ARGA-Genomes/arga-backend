@@ -1,4 +1,6 @@
 use async_graphql::*;
+use chrono::NaiveDate;
+use chrono::NaiveTime;
 use serde::Deserialize;
 use serde::Serialize;
 use uuid::Uuid;
@@ -14,8 +16,8 @@ use crate::index::names::GetNames;
 pub struct Assembly(AssemblyDetails, AssemblyQuery);
 
 impl Assembly {
-    pub async fn new(db: &Database, accession: &str) -> Result<Assembly, Error> {
-        let assembly = db.assembly.find_by_accession(accession).await?;
+    pub async fn new(db: &Database, record_id: &str) -> Result<Assembly, Error> {
+        let assembly = db.assembly.find_by_record_id(record_id).await?;
         let details = assembly.clone().into();
         let query = AssemblyQuery { assembly };
         Ok(Assembly(details, query))
@@ -52,10 +54,12 @@ impl AssemblyQuery {
 pub struct AssemblyDetails {
     pub id: Uuid,
     pub name: Option<String>,
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
     pub version_status: Option<String>,
     pub quality: Option<String>,
     pub assembly_type: Option<String>,
-    pub submitted_by: Option<String>,
+    pub assembled_by: Option<String>,
     pub genome_size: Option<i64>,
 }
 
@@ -64,10 +68,12 @@ impl From<models::AssemblyEvent> for AssemblyDetails {
         Self {
             id: value.id,
             name: value.name,
+            event_date: value.event_date,
+            event_time: value.event_time,
             version_status: value.version_status,
             quality: value.quality,
             assembly_type: value.assembly_type,
-            submitted_by: value.submitted_by,
+            assembled_by: value.assembled_by,
             genome_size: value.genome_size,
         }
     }

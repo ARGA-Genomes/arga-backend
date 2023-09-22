@@ -33,7 +33,6 @@ use async_graphql::{Object, EmptySubscription, EmptyMutation, Schema, Context};
 use async_graphql::extensions::Tracing;
 use async_graphql::http::GraphiQLSource;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-use uuid::Uuid;
 
 
 use crate::http::Context as State;
@@ -155,17 +154,17 @@ impl Query {
         Taxa::new(filters)
     }
 
-    async fn subsample(&self, ctx: &Context<'_>, by: subsample::SubsampleBy) -> Result<Subsample, Error> {
+    async fn subsample(&self, ctx: &Context<'_>, by: subsample::SubsampleBy) -> Result<Option<Subsample>, Error> {
         let state = ctx.data::<State>().unwrap();
         Subsample::new(&state.database, &by).await
     }
 
-    async fn dna_extract(&self, ctx: &Context<'_>, by: dna_extract::DnaExtractBy) -> Result<DnaExtract, Error> {
+    async fn dna_extract(&self, ctx: &Context<'_>, by: dna_extract::DnaExtractBy) -> Result<Option<DnaExtract>, Error> {
         let state = ctx.data::<State>().unwrap();
         DnaExtract::new(&state.database, &by).await
     }
 
-    async fn sequence(&self, ctx: &Context<'_>, by: sequence::SequenceBy) -> Result<Sequence, Error> {
+    async fn sequence(&self, ctx: &Context<'_>, by: sequence::SequenceBy) -> Result<Option<Sequence>, Error> {
         let state = ctx.data::<State>().unwrap();
         Sequence::new(&state.database, &by).await
     }
