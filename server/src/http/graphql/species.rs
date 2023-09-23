@@ -231,6 +231,7 @@ pub struct WholeGenome {
     pub representation: Option<String>,
     pub release_type: Option<String>,
 
+    pub release_date: Option<String>,
     pub deposited_by: Option<String>,
     pub data_type: Option<String>,
     pub excluded_from_refseq: Option<String>,
@@ -256,6 +257,7 @@ impl From<models::WholeGenome> for WholeGenome {
             annotated_by: value.annotated_by,
             representation: value.representation,
             release_type: value.release_type,
+            release_date: value.release_date,
             deposited_by: value.deposited_by,
             data_type: value.data_type,
             excluded_from_refseq: value.excluded_from_refseq,

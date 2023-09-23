@@ -19,6 +19,7 @@ SELECT
     annotation_events.annotated_by,
     annotation_events.representation,
     annotation_events.release_type,
+    deposition_events.event_date as release_date,
     deposition_events.submitted_by AS deposited_by,
     deposition_events.data_type,
     deposition_events.excluded_from_refseq

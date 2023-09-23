@@ -20,6 +20,7 @@ pub struct SpeciesMarker {
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
     pub target_gene: String,
+    pub release_date: Option<String>,
 }
 
 impl From<models::Marker> for SpeciesMarker {
@@ -33,6 +34,7 @@ impl From<models::Marker> for SpeciesMarker {
             sequenced_by: value.sequenced_by,
             material_sample_id: value.material_sample_id,
             target_gene: value.target_gene,
+            release_date: value.release_date,
         }
     }
 }

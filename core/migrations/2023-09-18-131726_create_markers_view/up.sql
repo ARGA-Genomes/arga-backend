@@ -9,7 +9,8 @@ SELECT
     deposition_events.accession,
     sequencing_events.sequenced_by,
     sequencing_events.material_sample_id,
-    sequencing_events.target_gene
+    sequencing_events.target_gene,
+    deposition_events.event_date AS release_date
 FROM sequences
 JOIN datasets on sequences.dataset_id = datasets.id
 JOIN sequencing_events ON sequences.id = sequencing_events.sequence_id

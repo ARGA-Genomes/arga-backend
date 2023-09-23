@@ -856,6 +856,7 @@ pub struct Marker {
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
     pub target_gene: String,
+    pub release_date: Option<String>,
 }
 
 
@@ -888,6 +889,7 @@ pub struct WholeGenome {
     pub representation: Option<String>,
     pub release_type: Option<String>,
 
+    pub release_date: Option<String>,
     pub deposited_by: Option<String>,
     pub data_type: Option<String>,
     pub excluded_from_refseq: Option<String>,

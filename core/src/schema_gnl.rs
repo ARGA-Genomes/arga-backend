@@ -198,6 +198,7 @@ diesel::table! {
         annotated_by -> Nullable<Varchar>,
         representation -> Nullable<Varchar>,
         release_type -> Nullable<Varchar>,
+        release_date -> Nullable<Varchar>,
         deposited_by -> Nullable<Varchar>,
         data_type -> Nullable<Varchar>,
         excluded_from_refseq -> Nullable<Varchar>,
@@ -216,6 +217,7 @@ diesel::table! {
         sequenced_by -> Nullable<Varchar>,
         material_sample_id -> Nullable<Varchar>,
         target_gene -> Varchar,
+        release_date -> Nullable<Varchar>,
     }
 }
 
