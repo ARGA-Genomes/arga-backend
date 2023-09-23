@@ -218,7 +218,7 @@ pub struct WholeGenome {
     pub accession: Option<String>,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
-    pub estimated_size: Option<i64>,
+    pub estimated_size: Option<String>,
 
     pub assembled_by: Option<String>,
     pub name: Option<String>,

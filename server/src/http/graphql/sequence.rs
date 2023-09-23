@@ -111,7 +111,7 @@ pub struct SequencingEvent {
 
     pub concentration: Option<f64>,
     pub amplicon_size: Option<i64>,
-    pub estimated_size: Option<i64>,
+    pub estimated_size: Option<String>,
     pub bait_set_name: Option<String>,
     pub bait_set_reference: Option<String>,
 

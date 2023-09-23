@@ -22,7 +22,8 @@ type MatchedRecords = Vec<(SequenceMatch, Record)>;
 
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
-    sequence_record_id: String,
+    record_id: String,
+    sequence_record_id: Option<String>,
     accession: Option<String>,
     material_sample_id: Option<String>,
     submitted_by: Option<String>,
@@ -53,7 +54,7 @@ struct Record {
 
 impl From<Record> for SequenceRecord {
     fn from(value: Record) -> Self {
-        Self { record_id: value.sequence_record_id }
+        Self { record_id: value.sequence_record_id.unwrap_or(value.record_id) }
     }
 }
 

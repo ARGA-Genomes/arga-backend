@@ -440,7 +440,7 @@ diesel::table! {
         material_sample_id -> Nullable<Varchar>,
         concentration -> Nullable<Float8>,
         amplicon_size -> Nullable<Int8>,
-        estimated_size -> Nullable<Int8>,
+        estimated_size -> Nullable<Varchar>,
         bait_set_name -> Nullable<Varchar>,
         bait_set_reference -> Nullable<Varchar>,
         target_gene -> Nullable<Varchar>,

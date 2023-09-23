@@ -20,6 +20,7 @@ type MatchedRecords = Vec<(DnaExtractMatch, Record)>;
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
     record_id: String,
+    sequence_record_id: Option<String>,
     material_sample_id: Option<String>,
 
     event_date: Option<String>,
@@ -41,7 +42,7 @@ struct Record {
 
     concentration: Option<f64>,
     amplicon_size: Option<i64>,
-    estimated_size: Option<i64>,
+    estimated_size: Option<String>,
     bait_set_name: Option<String>,
     bait_set_reference: Option<String>,
 }
@@ -142,12 +143,20 @@ fn extract_sequences(records: &MatchedRecords, dataset: &Dataset) -> Vec<Sequenc
     info!(total=records.len(), "Extracting sequences");
 
     let sequences = records.par_iter().map(|(dna_extract, row)| {
+        // sometimes a record can have a more descriptive identifier and we
+        // want to leverage that when possible, so we fallback to a mandatory
+        // identifier when a more granular one doesn't exist
+        let record_id = match &row.sequence_record_id {
+            Some(id) => id.clone(),
+            None => row.record_id.clone(),
+        };
+
         Sequence {
             id: Uuid::new_v4(),
             dataset_id: dataset.id.clone(),
             name_id: dna_extract.name_id.clone(),
             dna_extract_id: dna_extract.id.clone(),
-            record_id: row.record_id.clone(),
+            record_id,
         }
     }).collect::<Vec<Sequence>>();
 

@@ -9,7 +9,7 @@ CREATE TABLE sequencing_events (
 
     concentration float,
     amplicon_size bigint,
-    estimated_size bigint,
+    estimated_size varchar,
     bait_set_name varchar,
     bait_set_reference varchar,
 

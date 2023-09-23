@@ -188,7 +188,7 @@ diesel::table! {
         accession -> Nullable<Varchar>,
         sequenced_by -> Nullable<Varchar>,
         material_sample_id -> Nullable<Varchar>,
-        estimated_size -> Nullable<BigInt>,
+        estimated_size -> Nullable<Varchar>,
         assembled_by -> Nullable<Varchar>,
         name -> Nullable<Varchar>,
         version_status -> Nullable<Varchar>,

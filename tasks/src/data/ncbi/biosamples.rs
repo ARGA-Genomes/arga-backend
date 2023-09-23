@@ -8,18 +8,16 @@ use diesel::r2d2::{Pool, ConnectionManager};
 use memmap2::Mmap;
 use quick_xml::{Reader, events::{Event, BytesStart}};
 use serde::Serialize;
-use tracing::{info, error};
+use tracing::info;
 use rayon::prelude::*;
 use indicatif::{ProgressBar, ProgressStyle, ParallelProgressIterator, MultiProgress, ProgressIterator};
-use uuid::Uuid;
 
 use crate::data::Error;
 
-use super::name_matcher::{NameRecord, NameMatch};
+use super::name_matcher::NameRecord;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
-type MatchedRecords = Vec<(Uuid, BioSample)>;
 
 
 pub struct Progress {
@@ -144,7 +142,7 @@ impl Attribute {
 #[derive(Serialize, Debug, Default, Clone)]
 struct CollectionEvent {
     pub scientific_name: String,
-    pub accession: String,
+    pub record_id: String,
     pub sex: Option<String>,
     pub life_stage: Option<String>,
     pub organism_name: Option<String>,
@@ -164,6 +162,7 @@ struct CollectionEvent {
 #[derive(Serialize, Debug, Default, Clone)]
 struct AccessionEvent {
     pub scientific_name: String,
+    pub record_id: String,
     pub accession: String,
     pub taxon_id: Option<String>,
     pub material_sample_id: Option<String>,
@@ -178,21 +177,21 @@ struct AccessionEvent {
 #[derive(Serialize, Debug, Default, Clone)]
 struct SubsampleEvent {
     pub scientific_name: String,
-    pub accession: String,
+    pub record_id: String,
     pub preparation_type: Option<String>,
 }
 
 #[derive(Serialize, Debug, Default, Clone)]
 struct ExtractionEvent {
     pub scientific_name: String,
-    pub accession: String,
+    pub record_id: String,
     pub measurement_method: Option<String>,
 }
 
 #[derive(Serialize, Debug, Default, Clone)]
 struct SequencingEvent {
     pub scientific_name: String,
-    pub accession: String,
+    pub record_id: String,
     pub measurement_method: Option<String>,
     pub resource_id: Option<String>,
     pub realtionship_of_resource_id: Option<String>,
@@ -206,21 +205,22 @@ struct SequencingEvent {
 #[derive(Serialize, Debug, Default, Clone)]
 struct AssemblyEvent {
     pub scientific_name: String,
-    pub accession: String,
+    pub record_id: String,
     pub assembly_name: Option<String>,
 }
 
 #[derive(Serialize, Debug, Default, Clone)]
 struct AnnotationEvent {
     pub scientific_name: String,
-    pub accession: String,
+    pub record_id: String,
     pub num_replicons: Option<String>,
     pub sop: Option<String>,
 }
 
 #[derive(Serialize, Debug, Default, Clone)]
-struct DataAccessionEvent {
+struct DataDepositionEvent {
     pub scientific_name: String,
+    pub record_id: String,
     pub accession: String,
     pub material_sample_id: Option<String>,
     pub r#type: Option<String>,
@@ -266,25 +266,6 @@ enum BioSampleId {
 enum ItemState {
     Opened,
     Closed,
-}
-
-
-pub fn import(input: PathBuf) -> Result<(), Error> {
-    // info!(?input, "Creating database connection pool");
-    // let url = arga_core::get_database_url();
-    // let manager = ConnectionManager::<PgConnection>::new(url);
-    // let mut pool = Pool::builder().build(manager)?;
-
-    // let dataset = get_or_create_dataset("NCBI: BioSamples", &mut pool)?;
-
-    // info!(?input, "Memory mapping file");
-    // let file = std::fs::File::open(input)?;
-    // let mmap = unsafe { Mmap::map(&file)? };
-
-    // let analysed = analyse_biosamples(mmap)?;
-    // import_biosamples(analysed, &dataset, &mut pool)?;
-
-    Ok(())
 }
 
 
@@ -386,77 +367,18 @@ fn analyse_biosamples(mmap: Mmap) -> Result<AnalysedBiosamples, Error> {
 }
 
 
-// fn import_biosamples(analysed: AnalysedBiosamples, dataset: &NameList, pool: &mut PgPool) -> Result<(), Error> {
-//     // rather than using the name matcher we load all the names into a hash map
-//     // since it wont ever be too big to fit into memory and is much faster than querying
-//     // the database for matching names for such a large dataset
-//     let name_map = name_map(pool)?;
-
-//     let total = analysed.offsets.len() as u64;
-//     info!(items=total, "Processing biosample file");
-
-//     let style = ProgressStyle::with_template("[{elapsed_precise}] {bar:40.cyan/blue} {human_pos}/{human_len} @ {per_sec}").unwrap();
-//     let bars = MultiProgress::new();
-//     let parse_bar = bars.add(ProgressBar::new(total).with_style(style.clone()));
-
-//     analysed.offsets.chunks(1_000_000).for_each(|chunk| {
-//         // parse the body of each BioSample item in parallel
-//         let samples: Vec<BioSample> = chunk
-//             .into_par_iter()
-//             .progress_with(parse_bar.clone())
-//             .map(|(start, end)| {
-//                 process_item(&analysed.mmap, *start, *end).expect("Failed to process item")
-//             })
-//             .collect();
-
-//         // match the records to names in the database. this will filter out any names
-//         // that could not be matched
-//         let matched = match_records(samples, &name_map);
-
-//         let specimens = extract_specimens(&matched, dataset).unwrap();
-
-//         // associate and create database records for each biosample in prallel
-//         // let transform_bar = bars.add(ProgressBar::new(matched.len() as u64).with_style(style.clone()));
-//         // let records: Vec<Result<Vec<models::BioSample>, Error>> = matched
-//         //     .par_chunks(50_000)
-//         //     .progress_with(transform_bar.clone())
-//         //     .map(|chunk| transform_items(chunk.to_vec()))
-//         //     .collect();
-
-//         // flatten and unwrap errors
-//         // let records: Vec<models::BioSample> = records.into_iter().flat_map(|r| r.expect("Transormation failed")).collect();
-//         // transform_bar.finish();
-
-//         // persist the records
-//         let persist_bar = bars.add(ProgressBar::new(specimens.len() as u64).with_style(style.clone()));
-//         specimens.par_chunks(1000).progress_with(persist_bar.clone()).for_each(|chunk| {
-//             persist_specimens(chunk.to_vec(), &mut pool.clone()).unwrap();
-//         });
-//         persist_bar.finish();
-
-//         bars.remove(&persist_bar);
-//         // bars.remove(&transform_bar);
-//     });
-
-//     parse_bar.finish();
-//     info!("Finished converting");
-
-//     Ok(())
-// }
-
-
 fn convert_biosamples(analysed: AnalysedBiosamples, pool: &mut PgPool) -> Result<(), Error> {
     let total = analysed.offsets.len() as u64;
     info!(items=total, "Processing biosample file");
 
-    let mut collection_writer = csv::Writer::from_path("biosamples-collection-events.csv")?;
-    let mut accession_writer = csv::Writer::from_path("biosamples-accession-events.csv")?;
-    let mut subsample_writer = csv::Writer::from_path("biosamples-subsample-events.csv")?;
-    let mut extraction_writer = csv::Writer::from_path("biosamples-extraction-events.csv")?;
-    let mut sequencing_writer = csv::Writer::from_path("biosamples-sequencing-events.csv")?;
-    let mut assembly_writer = csv::Writer::from_path("biosamples-assembly-events.csv")?;
-    let mut annotation_writer = csv::Writer::from_path("biosamples-annotation-events.csv")?;
-    let mut data_accession_writer = csv::Writer::from_path("biosamples-data-accession-events.csv")?;
+    let mut collection_writer = csv::Writer::from_path("collections.csv")?;
+    let mut accession_writer = csv::Writer::from_path("accessions.csv")?;
+    let mut subsample_writer = csv::Writer::from_path("subsamples.csv")?;
+    let mut extraction_writer = csv::Writer::from_path("extractions.csv")?;
+    let mut sequencing_writer = csv::Writer::from_path("sequences.csv")?;
+    let mut assembly_writer = csv::Writer::from_path("assemblies.csv")?;
+    let mut annotation_writer = csv::Writer::from_path("annotations.csv")?;
+    let mut data_accession_writer = csv::Writer::from_path("depositions.csv")?;
 
     let bars = Progress::new();
     let parse_bar = bars.add("Parsing", analysed.offsets.len());
@@ -512,67 +434,11 @@ fn convert_biosamples(analysed: AnalysedBiosamples, pool: &mut PgPool) -> Result
 }
 
 
-// fn extract_specimens(samples: &MatchedRecords, dataset: &NameList) -> Result<Vec<Specimen>, Error> {
-//     let mut records = Vec::with_capacity(samples.len());
-
-//     for (name_uuid, sample) in samples {
-//         let type_status = sample.get_attribute("type-material");
-//         let locality = sample.get_attribute("geo-loc-name");
-//         let catalog_number = sample.get_attribute("specimen-voucher");
-
-//         // TODO: also sometimes separated into different attributes:
-//         // - geographic location (longitude)
-//         // - geographic location (latitude)
-//         let (latitude, longitude) = match sample.get_attribute("lat-lon") {
-//             Some(lat_lon) => match parse_lat_lng(&lat_lon) {
-//                 Ok((lat, lon)) => (Some(lat), Some(lon)),
-//                 Err(_) => (None, None),
-//             },
-//             None => (None, None),
-//         };
-
-//         records.push(Specimen {
-//             id: Uuid::new_v4(),
-//             list_id: dataset.id,
-//             name_id: name_uuid.clone(),
-//             type_status: type_status.unwrap_or_else(|| "unspecified".to_string()),
-//             institution_name: sample.owner.clone(),
-//             organism_id: None,
-//             locality,
-//             latitude,
-//             longitude,
-//             details: None,
-//             remarks: sample.comment.clone(),
-//             institution_code: sample.owner_code.clone(),
-//             collection_code: None,
-//             catalog_number,
-//             recorded_by: None,
-//         })
-//     }
-
-//     Ok(records)
-// }
-
-// fn persist_specimens(records: Vec<Specimen>, pool: &mut PgPool) -> Result<(), Error> {
-//     use schema::specimens::dsl::*;
-
-//     let mut conn = pool.get()?;
-
-//     match diesel::insert_into(specimens).values(records).execute(&mut conn) {
-//         Ok(_) => Ok(()),
-//         Err(err) => {
-//             error!(?err, "Failed to persist bulk items");
-//             Err(err.into())
-//         },
-//     }
-// }
-
-
 fn extract_collection_events(samples: &Vec<BioSample>, bars: &Progress) -> Result<Vec<CollectionEvent>, Error> {
     let records = samples.par_iter().multiprogress_with(bars, "Extracting collection events").map(|sample| {
         CollectionEvent {
             scientific_name: sample.taxonomy_name.clone().unwrap(),
-            accession: sample.accession.clone(),
+            record_id: sample.accession.clone(),
             sex: sample.get_attribute("sex"),
             life_stage: sample.get_attribute("developmental-stage"),
             organism_name: sample.organism_name.clone(),
@@ -596,6 +462,7 @@ fn extract_accession_events(samples: &Vec<BioSample>, bars: &Progress) -> Result
     let records = samples.par_iter().multiprogress_with(bars, "Extracting accession events").map(|sample| {
         AccessionEvent {
             scientific_name: sample.taxonomy_name.clone().unwrap(),
+            record_id: sample.accession.clone(),
             accession: sample.accession.clone(),
             taxon_id: sample.taxonomy_id.clone(),
             material_sample_id: sample.get_attribute("specimen-voucher"),
@@ -614,7 +481,7 @@ fn extract_subsample_events(samples: &Vec<BioSample>, bars: &Progress) -> Result
     let records = samples.par_iter().multiprogress_with(bars, "Extracting subsample events").map(|sample| {
         SubsampleEvent {
             scientific_name: sample.taxonomy_name.clone().unwrap(),
-            accession: sample.accession.clone(),
+            record_id: sample.accession.clone(),
             preparation_type: sample.get_attribute("tissue"),
         }
     }).collect();
@@ -625,7 +492,7 @@ fn extract_extraction_events(samples: &Vec<BioSample>, bars: &Progress) -> Resul
     let records = samples.par_iter().multiprogress_with(bars, "Extracting subsample events").map(|sample| {
         ExtractionEvent {
             scientific_name: sample.taxonomy_name.clone().unwrap(),
-            accession: sample.accession.clone(),
+            record_id: sample.accession.clone(),
             measurement_method: sample.get_attribute("nucleic-acid-extraction"),
         }
     }).collect();
@@ -636,7 +503,7 @@ fn extract_sequencing_events(samples: &Vec<BioSample>, bars: &Progress) -> Resul
     let records = samples.par_iter().multiprogress_with(bars, "Extracting sequencing events").map(|sample| {
         SequencingEvent {
             scientific_name: sample.taxonomy_name.clone().unwrap(),
-            accession: sample.accession.clone(),
+            record_id: sample.accession.clone(),
             measurement_method: sample.get_attribute("sequencing-method"),
             resource_id: sample.sra.clone(),
             realtionship_of_resource_id: Some("accessioned in SRA (Sequence Read Archive)".to_string()),
@@ -654,7 +521,7 @@ fn extract_assembly_events(samples: &Vec<BioSample>, bars: &Progress) -> Result<
     let records = samples.par_iter().multiprogress_with(bars, "Extracting assembly events").map(|sample| {
         AssemblyEvent {
             scientific_name: sample.taxonomy_name.clone().unwrap(),
-            accession: sample.accession.clone(),
+            record_id: sample.accession.clone(),
             assembly_name: sample.get_attribute("assembly"),
         }
     }).collect();
@@ -665,7 +532,7 @@ fn extract_annotation_events(samples: &Vec<BioSample>, bars: &Progress) -> Resul
     let records = samples.par_iter().multiprogress_with(bars, "Extracting annotation events").map(|sample| {
         AnnotationEvent {
             scientific_name: sample.taxonomy_name.clone().unwrap(),
-            accession: sample.accession.clone(),
+            record_id: sample.accession.clone(),
             num_replicons: sample.get_attribute("num_replicons"),
             sop: sample.get_attribute("sop"),
         }
@@ -673,10 +540,11 @@ fn extract_annotation_events(samples: &Vec<BioSample>, bars: &Progress) -> Resul
     Ok(records)
 }
 
-fn extract_data_accession_events(samples: &Vec<BioSample>, bars: &Progress) -> Result<Vec<DataAccessionEvent>, Error> {
+fn extract_data_accession_events(samples: &Vec<BioSample>, bars: &Progress) -> Result<Vec<DataDepositionEvent>, Error> {
     let records = samples.par_iter().multiprogress_with(bars, "Extracting data accession events").map(|sample| {
-        DataAccessionEvent {
+        DataDepositionEvent {
             scientific_name: sample.taxonomy_name.clone().unwrap(),
+            record_id: sample.accession.clone(),
             accession: sample.accession.clone(),
             material_sample_id: Some(sample.accession.clone()),
             r#type: Some("ncbi-biosample".to_string()),
@@ -898,45 +766,3 @@ fn parse_lat_lng(lat_long: &str) -> Result<(f64, f64), Error> {
 
     Ok((coord.y(), coord.x()))
 }
-
-
-// pub fn name_map(pool: &mut PgPool) -> Result<HashMap<String, NameMatch>, Error> {
-//     use schema::names;
-//     info!("Generating name map from database");
-
-//     let mut conn = pool.get()?;
-
-//     let records = names::table
-//         .select((names::id, names::scientific_name, names::canonical_name))
-//         .load::<NameMatch>(&mut conn)?;
-
-//     let mut map: HashMap<String, NameMatch> = HashMap::new();
-
-//     // for every bulk name match result from the database we insert it into a map
-//     // that can be referenced either by scientific name or canonical name as the
-//     // biosample xml can use either
-//     for record in records {
-//         if let Some(canonical_name) = &record.canonical_name {
-//             map.insert(canonical_name.clone(), record.clone());
-//         }
-//         map.insert(record.scientific_name.clone(), record);
-//     }
-
-//     info!(total=map.len(), "Generating name map finished");
-//     Ok(map)
-// }
-
-
-// pub fn match_records(records: Vec<BioSample>, names: &HashMap<String, NameMatch>) -> Vec<(Uuid, BioSample)>
-// {
-//     let mut matched: Vec<(Uuid, BioSample)> = Vec::with_capacity(records.len());
-//     for record in records {
-//         if let Some(canonical_name) = &record.taxonomy_name {
-//             if let Some(name) = names.get(canonical_name) {
-//                 matched.push((name.id.clone(), record));
-//             }
-//         }
-//     }
-
-//     matched
-// }
