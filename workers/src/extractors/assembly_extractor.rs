@@ -31,7 +31,7 @@ struct Record {
     version_status: Option<String>,
     assembly_quality: Option<String>,
     assembly_type: Option<String>,
-    genome_size: Option<i64>,
+    genome_size: Option<String>,
 }
 
 impl From<Record> for SequenceRecord {
@@ -121,10 +121,18 @@ fn extract_assembly_events(records: MatchedRecords) -> Vec<AssemblyEvent> {
             version_status: row.version_status,
             quality: row.assembly_quality,
             assembly_type: row.assembly_type,
-            genome_size: row.genome_size,
+            genome_size: parse_i64(row.genome_size),
         }
     }).collect::<Vec<AssemblyEvent>>();
 
     info!(assembly_events=assemblies.len(), "Extracting assembly events finished");
     assemblies
+}
+
+
+fn parse_i64(value: Option<String>) -> Option<i64> {
+    match value {
+        Some(v) => str::parse::<i64>(&v).ok(),
+        None => None,
+    }
 }

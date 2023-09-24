@@ -1,4 +1,11 @@
 pub mod collections;
+pub mod accessions;
+pub mod subsamples;
+pub mod extractions;
+pub mod sequences;
+pub mod assemblies;
+pub mod annotations;
+pub mod depositions;
 
 use std::path::PathBuf;
 
@@ -22,6 +29,13 @@ pub fn process_command(command: &Command) {
 
 fn normalise(path: PathBuf) -> Result<(), Error> {
     collections::normalise(&path)?;
+    accessions::normalise(&path)?;
+    subsamples::normalise(&path)?;
+    extractions::normalise(&path)?;
+    sequences::normalise(&path)?;
+    assemblies::normalise(&path)?;
+    annotations::normalise(&path)?;
+    depositions::normalise(&path)?;
 
     Ok(())
 }

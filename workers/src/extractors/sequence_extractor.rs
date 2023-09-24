@@ -40,7 +40,7 @@ struct Record {
     // analysis_description: Option<String>,
     // sequencing_analysis_software: Option<String>,
 
-    concentration: Option<f64>,
+    concentration: Option<String>,
     amplicon_size: Option<i64>,
     estimated_size: Option<String>,
     bait_set_name: Option<String>,
@@ -180,7 +180,7 @@ fn extract_sequencing_events(records: MatchedRecords, sequences: &Vec<Sequence>)
             sequenced_by: row.sequenced_by,
             material_sample_id: row.material_sample_id,
 
-            concentration: row.concentration,
+            concentration: parse_f64(row.concentration),
             amplicon_size: row.amplicon_size,
             estimated_size: row.estimated_size,
             bait_set_name: row.bait_set_name,
@@ -194,4 +194,12 @@ fn extract_sequencing_events(records: MatchedRecords, sequences: &Vec<Sequence>)
 
     info!(sequencing_events=sequences.len(), "Extracting sequencing events finished");
     sequences
+}
+
+
+fn parse_f64(value: Option<String>) -> Option<f64> {
+    match value {
+        Some(v) => str::parse::<f64>(&v).ok(),
+        None => None,
+    }
 }

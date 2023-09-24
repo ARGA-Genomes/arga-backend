@@ -161,7 +161,6 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
     for row in reader.deserialize() {
         let record: Record = row?;
 
-        // life_stage: lifestage
         let life_stage = record.life_stage.or(record.lifestage);
         let collection_date = record.collection_date.or(record.living_collections_event_date);
         let state = record.state_or_territory.or(record.state_or_region);

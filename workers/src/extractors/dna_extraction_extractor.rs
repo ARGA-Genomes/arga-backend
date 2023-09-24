@@ -32,9 +32,9 @@ struct Record {
     measurement_method: Option<String>,
     concentration_method: Option<String>,
     quality: Option<String>,
-    concentration: Option<f64>,
-    absorbance_260_230: Option<f64>,
-    absorbance_260_280: Option<f64>,
+    concentration: Option<String>,
+    absorbance_260_230: Option<String>,
+    absorbance_260_280: Option<String>,
 }
 
 impl From<Record> for SubsampleRecord {
@@ -151,12 +151,20 @@ fn extract_dna_extraction_events(records: MatchedRecords, extracts: &Vec<DnaExtr
             measurement_method: row.measurement_method,
             concentration_method: row.concentration_method,
             quality: row.quality,
-            concentration: row.concentration,
-            absorbance_260_230: row.absorbance_260_230,
-            absorbance_260_280: row.absorbance_260_280,
+            concentration: parse_f64(row.concentration),
+            absorbance_260_230: parse_f64(row.absorbance_260_230),
+            absorbance_260_280: parse_f64(row.absorbance_260_280),
         }
     }).collect::<Vec<DnaExtractionEvent>>();
 
     info!(dna_extraction_events=extractions.len(), "Extracting dna extraction events finished");
     extractions
+}
+
+
+fn parse_f64(value: Option<String>) -> Option<f64> {
+    match value {
+        Some(v) => str::parse::<f64>(&v).ok(),
+        None => None,
+    }
 }
