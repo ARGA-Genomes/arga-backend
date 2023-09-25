@@ -42,6 +42,12 @@ pub struct SpeciesSummary {
     pub other: Option<i32>,
 }
 
+#[derive(Debug, Queryable)]
+pub struct TaxonSummary {
+    pub children: i64,
+    pub species: i64,
+}
+
 
 #[derive(Clone)]
 pub struct TaxaProvider {
@@ -151,6 +157,34 @@ impl TaxaProvider {
 
         options.sort();
         Ok(options)
+    }
+
+
+    pub async fn taxon_summary(&self, rank: &TaxonRank) -> Result<TaxonSummary, Error> {
+        use diesel::dsl::{count, count_star};
+        use schema::taxa::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let species = taxa
+            .filter(status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .count()
+            .get_result::<i64>(&mut conn)
+            .await?;
+
+        let children = match rank {
+            TaxonRank::Kingdom(name) => taxa.select(count_star()).filter(kingdom.eq(name)).group_by(phylum).load::<i64>(&mut conn).await?,
+            TaxonRank::Phylum(name) => taxa.select(count_star()).filter(phylum.eq(name)).group_by(class).load::<i64>(&mut conn).await?,
+            TaxonRank::Class(name) => taxa.select(count_star()).filter(class.eq(name)).group_by(order).load::<i64>(&mut conn).await?,
+            TaxonRank::Order(name) => taxa.select(count(family)).filter(order.eq(name)).group_by(family).load::<i64>(&mut conn).await?,
+            TaxonRank::Family(name) => taxa.select(count_star()).filter(family.eq(name)).group_by(genus).load::<i64>(&mut conn).await?,
+            TaxonRank::Genus(name) => taxa.select(count_star()).filter(genus.eq(name)).group_by(genus).load::<i64>(&mut conn).await?,
+            TaxonRank::Species(name) => taxa.select(count_star()).filter(canonical_name.eq(name)).group_by(canonical_name).load::<i64>(&mut conn).await?,
+        };
+
+        Ok(TaxonSummary {
+            children: children.len() as i64,
+            species,
+        })
     }
 
 

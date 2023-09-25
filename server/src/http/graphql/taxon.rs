@@ -44,6 +44,13 @@ pub struct TaxonQuery {
 
 #[Object]
 impl TaxonQuery {
+    async fn summary(&self, ctx: &Context<'_>) -> Result<TaxonSummary, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let rank = self.rank.clone().into();
+        let summary = state.database.taxa.taxon_summary(&rank).await?;
+        Ok(summary.into())
+    }
+
     async fn data_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>().unwrap();
 
@@ -67,6 +74,22 @@ impl TaxonQuery {
         let summaries = state.database.taxa.species_summary(&rank).await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
+    }
+}
+
+
+#[derive(SimpleObject)]
+pub struct TaxonSummary {
+    pub children: i64,
+    pub species: i64,
+}
+
+impl From<taxa::TaxonSummary> for TaxonSummary {
+    fn from(value: taxa::TaxonSummary) -> Self {
+        Self {
+            children: value.children,
+            species: value.species,
+        }
     }
 }
 
