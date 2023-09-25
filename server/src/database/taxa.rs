@@ -23,6 +23,15 @@ pub enum TaxonRank {
     Species(String),
 }
 
+#[derive(Debug, Queryable)]
+pub struct DataSummary {
+    pub rank: Option<String>,
+    pub markers: Option<i64>,
+    pub genomes: Option<i64>,
+    pub specimens: Option<i64>,
+    pub other: Option<i64>,
+}
+
 
 #[derive(Clone)]
 pub struct TaxaProvider {
@@ -63,7 +72,6 @@ impl TaxaProvider {
 
         Ok(species.into())
     }
-
 
     pub async fn ecology_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
         use schema_gnl::taxa_filter;
@@ -133,5 +141,122 @@ impl TaxaProvider {
 
         options.sort();
         Ok(options)
+    }
+
+
+    pub async fn kingdom_summary(&self, kingdom: &str) -> Result<Vec<DataSummary>, Error> {
+        use diesel::dsl::sum;
+        use schema_gnl::{name_data_summaries, taxa_filter};
+        let mut conn = self.pool.get().await?;
+
+        let summaries = name_data_summaries::table
+            .inner_join(taxa_filter::table.on(taxa_filter::name_id.eq(name_data_summaries::name_id)))
+            .group_by(taxa_filter::kingdom)
+            .select((
+                taxa_filter::kingdom,
+                sum(name_data_summaries::markers),
+                sum(name_data_summaries::genomes),
+                sum(name_data_summaries::specimens),
+                sum(name_data_summaries::other),
+            ))
+            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(taxa_filter::kingdom.eq(kingdom))
+            // .filter(with_filters(&filters).unwrap())
+            .load::<DataSummary>(&mut conn)
+            .await?;
+
+        Ok(summaries)
+    }
+
+    pub async fn phylum_summary(&self, phylum: &str) -> Result<Vec<DataSummary>, Error> {
+        use diesel::dsl::sum;
+        use schema_gnl::{name_data_summaries, taxa_filter};
+        let mut conn = self.pool.get().await?;
+
+        let summaries = name_data_summaries::table
+            .inner_join(taxa_filter::table.on(taxa_filter::name_id.eq(name_data_summaries::name_id)))
+            .group_by(taxa_filter::class)
+            .select((
+                taxa_filter::class,
+                sum(name_data_summaries::markers),
+                sum(name_data_summaries::genomes),
+                sum(name_data_summaries::specimens),
+                sum(name_data_summaries::other),
+            ))
+            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(taxa_filter::phylum.eq(phylum))
+            .load::<DataSummary>(&mut conn)
+            .await?;
+
+        Ok(summaries)
+    }
+
+    pub async fn class_summary(&self, class: &str) -> Result<Vec<DataSummary>, Error> {
+        use diesel::dsl::sum;
+        use schema_gnl::{name_data_summaries, taxa_filter};
+        let mut conn = self.pool.get().await?;
+
+        let summaries = name_data_summaries::table
+            .inner_join(taxa_filter::table.on(taxa_filter::name_id.eq(name_data_summaries::name_id)))
+            .group_by(taxa_filter::order)
+            .select((
+                taxa_filter::order,
+                sum(name_data_summaries::markers),
+                sum(name_data_summaries::genomes),
+                sum(name_data_summaries::specimens),
+                sum(name_data_summaries::other),
+            ))
+            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(taxa_filter::class.eq(class))
+            .load::<DataSummary>(&mut conn)
+            .await?;
+
+        Ok(summaries)
+    }
+
+    pub async fn order_summary(&self, order: &str) -> Result<Vec<DataSummary>, Error> {
+        use diesel::dsl::sum;
+        use schema_gnl::{name_data_summaries, taxa_filter};
+        let mut conn = self.pool.get().await?;
+
+        let summaries = name_data_summaries::table
+            .inner_join(taxa_filter::table.on(taxa_filter::name_id.eq(name_data_summaries::name_id)))
+            .group_by(taxa_filter::family)
+            .select((
+                taxa_filter::family,
+                sum(name_data_summaries::markers),
+                sum(name_data_summaries::genomes),
+                sum(name_data_summaries::specimens),
+                sum(name_data_summaries::other),
+            ))
+            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(taxa_filter::order.eq(order))
+            .load::<DataSummary>(&mut conn)
+            .await?;
+
+        Ok(summaries)
+    }
+
+    pub async fn family_summary(&self, family: &str) -> Result<Vec<DataSummary>, Error> {
+        use diesel::dsl::sum;
+        use schema_gnl::{name_data_summaries, taxa_filter};
+        let mut conn = self.pool.get().await?;
+
+        let summaries = name_data_summaries::table
+            .inner_join(taxa_filter::table.on(taxa_filter::name_id.eq(name_data_summaries::name_id)))
+            .group_by(taxa_filter::genus)
+            .select((
+                taxa_filter::genus,
+                sum(name_data_summaries::markers),
+                sum(name_data_summaries::genomes),
+                sum(name_data_summaries::specimens),
+                sum(name_data_summaries::other),
+            ))
+            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(taxa_filter::family.eq(family))
+            .load::<DataSummary>(&mut conn)
+            .await?;
+
+        Ok(summaries)
     }
 }

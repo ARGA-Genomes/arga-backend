@@ -230,6 +230,18 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    name_data_summaries (name_id) {
+        name_id -> Uuid,
+        // TODO: these are actually BigInt. switch to using
+        // bigdecimal and numeric to stop worrying about this
+        markers -> Nullable<Integer>,
+        genomes -> Nullable<Integer>,
+        specimens -> Nullable<Integer>,
+        other -> Nullable<Integer>,
+    }
+}
+
 
 use super::schema::{datasets, names, assemblies, taxa, specimens, accession_events};
 
@@ -244,6 +256,9 @@ diesel::joinable!(markers -> datasets (dataset_id));
 diesel::joinable!(markers -> names (name_id));
 diesel::joinable!(markers -> taxa (name_id));
 diesel::joinable!(specimen_stats -> specimens (id));
+diesel::joinable!(name_data_summaries -> names (name_id));
+diesel::joinable!(taxa_filter -> names (name_id));
+diesel::joinable!(name_data_summaries -> taxa_filter (name_id));
 
 diesel::joinable!(ranked_taxa -> assemblies (name_id));
 diesel::joinable!(ranked_taxa -> names (name_id));
@@ -255,7 +270,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     species_vernacular_names,
     undescribed_species,
     whole_genomes,
-    markers
+    markers,
+    name_data_summaries,
+    taxa_filter,
 );
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -285,6 +302,11 @@ diesel::allow_tables_to_appear_in_same_query!(
 
 diesel::allow_tables_to_appear_in_same_query!(
     species_vernacular_names,
+    taxa,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    name_data_summaries,
     taxa,
 );
 
