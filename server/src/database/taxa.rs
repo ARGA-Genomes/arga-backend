@@ -168,6 +168,19 @@ impl TaxaProvider {
         let species = taxa
             .filter(status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .count()
+            .into_boxed();
+
+        let species = match rank {
+            TaxonRank::Kingdom(name) => species.filter(kingdom.eq(name)),
+            TaxonRank::Phylum(name) => species.filter(phylum.eq(name)),
+            TaxonRank::Class(name) => species.filter(class.eq(name)),
+            TaxonRank::Order(name) => species.filter(order.eq(name)),
+            TaxonRank::Family(name) => species.filter(family.eq(name)),
+            TaxonRank::Genus(name) => species.filter(genus.eq(name)),
+            TaxonRank::Species(name) => species.filter(canonical_name.eq(name)),
+        };
+
+        let species = species
             .get_result::<i64>(&mut conn)
             .await?;
 
