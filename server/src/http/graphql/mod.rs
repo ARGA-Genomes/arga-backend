@@ -23,6 +23,7 @@ pub mod taxa;
 pub mod subsample;
 pub mod dna_extract;
 pub mod sequence;
+pub mod taxon;
 pub mod extensions;
 
 use axum::{Extension, Router};
@@ -58,6 +59,7 @@ use self::markers::Markers;
 use self::taxa::Taxa;
 use self::subsample::Subsample;
 use self::dna_extract::DnaExtract;
+use self::taxon::Taxon;
 use self::sequence::Sequence;
 
 use super::error::Error;
@@ -167,6 +169,11 @@ impl Query {
     async fn sequence(&self, ctx: &Context<'_>, by: sequence::SequenceBy) -> Result<Option<Sequence>, Error> {
         let state = ctx.data::<State>().unwrap();
         Sequence::new(&state.database, &by).await
+    }
+
+    async fn taxon(&self, ctx: &Context<'_>, rank: taxon::TaxonRank, canonical_name: String) -> Result<Taxon, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Taxon::new(&state.database, rank, canonical_name).await
     }
 }
 

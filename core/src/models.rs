@@ -78,7 +78,7 @@ pub enum TaxonomicVernacularGroup {
     HigherPlants,
 }
 
-#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[derive(Queryable, Insertable, Debug, Default, Clone, Serialize, Deserialize)]
 #[diesel(table_name = schema::taxa)]
 pub struct Taxon {
     pub id: Uuid,
