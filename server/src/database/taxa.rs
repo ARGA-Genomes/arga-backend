@@ -13,6 +13,7 @@ use super::models::{Taxon, FilteredTaxon, TaxonomicStatus};
 sql_function!(fn unnest(x: Nullable<Array<Text>>) -> Text);
 
 
+#[derive(Clone, Debug)]
 pub enum TaxonRank {
     Kingdom(String),
     Phylum(String),
@@ -30,6 +31,15 @@ pub struct DataSummary {
     pub genomes: Option<i64>,
     pub specimens: Option<i64>,
     pub other: Option<i64>,
+}
+
+#[derive(Debug, Queryable)]
+pub struct SpeciesSummary {
+    pub name: String,
+    pub markers: Option<i32>,
+    pub genomes: Option<i32>,
+    pub specimens: Option<i32>,
+    pub other: Option<i32>,
 }
 
 
@@ -141,6 +151,40 @@ impl TaxaProvider {
 
         options.sort();
         Ok(options)
+    }
+
+
+    pub async fn species_summary(&self, rank: &TaxonRank) -> Result<Vec<SpeciesSummary>, Error> {
+        use schema_gnl::{name_data_summaries, taxa_filter};
+        let mut conn = self.pool.get().await?;
+
+        let summaries = name_data_summaries::table
+            .inner_join(taxa_filter::table.on(taxa_filter::name_id.eq(name_data_summaries::name_id)))
+            .select((
+                taxa_filter::canonical_name,
+                name_data_summaries::markers,
+                name_data_summaries::genomes,
+                name_data_summaries::specimens,
+                name_data_summaries::other,
+            ))
+            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .into_boxed();
+
+        let summaries = match rank {
+            TaxonRank::Kingdom(name) => summaries.filter(taxa_filter::kingdom.eq(name)),
+            TaxonRank::Phylum(name) => summaries.filter(taxa_filter::phylum.eq(name)),
+            TaxonRank::Class(name) => summaries.filter(taxa_filter::class.eq(name)),
+            TaxonRank::Order(name) => summaries.filter(taxa_filter::order.eq(name)),
+            TaxonRank::Family(name) => summaries.filter(taxa_filter::family.eq(name)),
+            TaxonRank::Genus(name) => summaries.filter(taxa_filter::genus.eq(name)),
+            TaxonRank::Species(name) => summaries.filter(taxa_filter::canonical_name.eq(name)),
+        };
+
+        let summaries = summaries
+            .load::<SpeciesSummary>(&mut conn)
+            .await?;
+
+        Ok(summaries)
     }
 
 

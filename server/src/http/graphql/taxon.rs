@@ -60,12 +60,20 @@ impl TaxonQuery {
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
+
+    async fn species_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let rank = self.rank.clone().into();
+        let summaries = state.database.taxa.species_summary(&rank).await?;
+        let summaries = summaries.into_iter().map(|r| r.into()).collect();
+        Ok(summaries)
+    }
 }
 
 
 #[derive(SimpleObject)]
 pub struct DataBreakdown {
-    pub rank: Option<String>,
+    pub name: Option<String>,
     pub markers: i64,
     pub genomes: i64,
     pub specimens: i64,
@@ -75,11 +83,23 @@ pub struct DataBreakdown {
 impl From<taxa::DataSummary> for DataBreakdown {
     fn from(value: taxa::DataSummary) -> Self {
         Self {
-            rank: value.rank,
+            name: value.rank,
             markers: value.markers.unwrap_or(0),
             genomes: value.genomes.unwrap_or(0),
             specimens: value.specimens.unwrap_or(0),
             other: value.other.unwrap_or(0),
+        }
+    }
+}
+
+impl From<taxa::SpeciesSummary> for DataBreakdown {
+    fn from(value: taxa::SpeciesSummary) -> Self {
+        Self {
+            name: Some(value.name),
+            markers: value.markers.unwrap_or(0) as i64,
+            genomes: value.genomes.unwrap_or(0) as i64,
+            specimens: value.specimens.unwrap_or(0) as i64,
+            other: value.other.unwrap_or(0) as i64,
         }
     }
 }
