@@ -242,9 +242,9 @@ impl TaxaProvider {
 
         let summaries = name_data_summaries::table
             .inner_join(taxa_filter::table.on(taxa_filter::name_id.eq(name_data_summaries::name_id)))
-            .group_by(taxa_filter::kingdom)
+            .group_by(taxa_filter::phylum)
             .select((
-                taxa_filter::kingdom,
+                taxa_filter::phylum,
                 sum(name_data_summaries::markers),
                 sum(name_data_summaries::genomes),
                 sum(name_data_summaries::specimens),

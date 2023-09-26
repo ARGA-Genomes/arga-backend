@@ -9,12 +9,15 @@ use crate::data::Error;
 struct Record {
     id: String,
     genome_coverage: Option<String>,
+    sequence_data_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct AnnotationEvent {
     record_id: String,
     coverage: Option<String>,
+    genome_representation: Option<String>,
+    data_type: Option<String>,
 }
 
 pub fn normalise(path: &PathBuf) -> Result<(), Error> {
@@ -24,9 +27,40 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
     for row in reader.deserialize() {
         let record: Record = row?;
 
+        let (data_type, representation) = match record.sequence_data_type.as_ref().map(|s| s.as_str()) {
+            Some("illumina-amplicons") => (Some("marker"), None),
+            Some("illumina-shortread") => (Some("whole_genome"), Some("Partial")),
+            Some("illumina-exoncapture") => (Some("whole_genome"), Some("Partial")),
+            Some("metabolomics") => (Some("metabolome"), None),
+            Some("proteomics") => (Some("proteome"), None),
+            Some("illumina-transcriptomics") => (Some("transcriptome"), None),
+            Some("pacbio-rsii") => (Some("whole_genome"), Some("Complete")),
+            Some("pacbio-hifi") => (Some("whole_genome"), Some("Complete")),
+            Some("Illumina-shortread") => (Some("whole_genome"), Some("Complete")),
+            Some("image") => (Some("image"), None),
+            Some("ont-promethion") => (Some("whole_genome"), Some("Complete")),
+            Some("transcriptomics-analysed") => (Some("transcriptome"), None),
+            Some("illumina-ddrad") => (Some("snps_ddrad"), None),
+            Some("Illumina-transcriptomics") => (Some("transcriptome"), None),
+            Some("metagenomics-analysed") => (Some("metagenome"), None),
+            Some("illumina-hic") => (Some("whole_genome"), Some("Complete")),
+            Some("pacbio-clr") => (None, None),
+            Some("illumina-10x") => (Some("whole_genome"), Some("Complete")),
+            Some("illumina_transcriptomics") => (Some("transcriptome"), None),
+            Some("analysed-data") => (None, None),
+            Some("illumina-dart") => (Some("snps_ddran"), None),
+            Some("metabolomics-analysed") => (Some("metabolome"), None),
+            Some("proteomics-analysed") => (Some("proteome"), None),
+            Some("ont-minion") => (Some("whole_genome"), None),
+            Some("genome-assembly") => (Some("whole_genome"), Some("Complete")),
+            _ => (None, None),
+        };
+
         let event = AnnotationEvent {
             record_id: record.id,
             coverage: record.genome_coverage,
+            genome_representation: representation.map(|s| s.to_string()),
+            data_type: data_type.map(|s| s.to_string()),
         };
 
         writer.serialize(event)?;
