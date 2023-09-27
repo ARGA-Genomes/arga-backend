@@ -2,6 +2,14 @@
 
 pub mod sql_types {
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "attribute_category"))]
+    pub struct AttributeCategory;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "attribute_value_type"))]
+    pub struct AttributeValueType;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "geometry"))]
     pub struct Geometry;
 
@@ -182,7 +190,7 @@ diesel::table! {
 diesel::table! {
     conservation_statuses (id) {
         id -> Uuid,
-        list_id -> Uuid,
+        dataset_id -> Uuid,
         name_id -> Uuid,
         status -> Varchar,
         state -> Nullable<Varchar>,
@@ -363,6 +371,26 @@ diesel::table! {
         payload -> Nullable<Jsonb>,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::AttributeCategory;
+    use super::sql_types::AttributeValueType;
+
+    name_attributes (id) {
+        id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
+        name -> Varchar,
+        category -> AttributeCategory,
+        value_type -> AttributeValueType,
+        value_bool -> Nullable<Bool>,
+        value_int -> Nullable<Int8>,
+        value_decimal -> Nullable<Numeric>,
+        value_str -> Nullable<Varchar>,
+        value_timestamp -> Nullable<Timestamp>,
     }
 }
 
@@ -669,7 +697,7 @@ diesel::joinable!(assembly_events -> sequences (sequence_id));
 diesel::joinable!(assembly_stats -> assemblies (assembly_id));
 diesel::joinable!(biosamples -> names (name_id));
 diesel::joinable!(collection_events -> specimens (specimen_id));
-diesel::joinable!(conservation_statuses -> name_lists (list_id));
+diesel::joinable!(conservation_statuses -> datasets (dataset_id));
 diesel::joinable!(conservation_statuses -> names (name_id));
 diesel::joinable!(datasets -> sources (source_id));
 diesel::joinable!(deposition_events -> sequences (sequence_id));
@@ -681,6 +709,8 @@ diesel::joinable!(ecology -> datasets (dataset_id));
 diesel::joinable!(ecology -> names (name_id));
 diesel::joinable!(indigenous_knowledge -> datasets (dataset_id));
 diesel::joinable!(indigenous_knowledge -> names (name_id));
+diesel::joinable!(name_attributes -> datasets (dataset_id));
+diesel::joinable!(name_attributes -> names (name_id));
 diesel::joinable!(name_vernacular_names -> names (name_id));
 diesel::joinable!(name_vernacular_names -> vernacular_names (vernacular_name_id));
 diesel::joinable!(organisms -> names (name_id));
@@ -723,6 +753,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     imcra_provincial,
     indigenous_knowledge,
     jobs,
+    name_attributes,
     name_lists,
     name_vernacular_names,
     names,

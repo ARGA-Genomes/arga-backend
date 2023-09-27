@@ -26,8 +26,9 @@ use super::importers::{
     vernacular_importer,
     region_importer,
     ecology_importer,
-    // conservation_status_importer,
+    conservation_status_importer,
     indigenous_knowledge_importer,
+    name_attribute_importer,
 };
 
 
@@ -97,9 +98,14 @@ impl ThreadedJob {
         let tmp_path = std::env::var("ADMIN_TMP_UPLOAD_STORAGE").expect("No upload storage specified");
         let path = Path::new(&tmp_path).join(&data.tmp_name);
 
-        let dataset = Self::get_dataset(&data.dataset, pool)?;
+        // dataset isn't used for all imports like the dataset importer itself
+        // so we have to make sure to keep it optional
+        let dataset = Self::get_dataset(&data.dataset, pool);
 
-        let mut context = vec![dataset.clone()];
+        let mut context = vec![];
+        if let Ok(dataset) = dataset.as_ref().map(|d| d.clone()) {
+            context.push(dataset);
+        }
         for name in &data.isolation_context {
             context.push(Self::get_dataset(&name, pool)?);
         }
@@ -107,25 +113,22 @@ impl ThreadedJob {
         match worker {
             "import_source" => source_importer::import(path, pool)?,
             "import_dataset" => dataset_importer::import(path, pool)?,
-            "import_taxon" => taxon_importer::import(path, &dataset, pool)?,
-            "import_synonym" => synonym_importer::import(path, &dataset, pool)?,
+            "import_taxon" => taxon_importer::import(path, &dataset?, pool)?,
+            "import_synonym" => synonym_importer::import(path, &dataset?, pool)?,
             "import_vernacular" => vernacular_importer::import(path, pool)?,
             "import_region" => region_importer::import(path, pool)?,
             "import_ecology" => ecology_importer::import(path, pool)?,
-            "import_conservation_status" => {
-                // info!(name=data.name, "Importing conservation status");
-                // let source = conservation_status_importer::get_or_create_dataset(&data.name, &data.description, pool)?;
-                // conservation_status_importer::import(path, &source, pool)?;
-            }
+            "import_conservation_status" => conservation_status_importer::import(path, &dataset?, pool)?,
             "import_indigenous_knowledge" => indigenous_knowledge_importer::import(path, pool)?,
-            "import_collection" => collection_importer::import(path, &dataset, pool)?,
-            "import_accession" => accession_importer::import(path, &dataset, pool)?,
-            "import_subsample" => subsample_importer::import(path, &dataset, pool)?,
-            "import_dna_extraction" => dna_extraction_importer::import(path, &dataset, pool)?,
-            "import_sequence" => sequence_importer::import(path, &dataset, &context, pool)?,
-            "import_assembly" => assembly_importer::import(path, &dataset, pool)?,
-            "import_annotation" => annotation_importer::import(path, &dataset, pool)?,
-            "import_deposition" => deposition_importer::import(path, &dataset, pool)?,
+            "import_collection" => collection_importer::import(path, &dataset?, pool)?,
+            "import_accession" => accession_importer::import(path, &dataset?, pool)?,
+            "import_subsample" => subsample_importer::import(path, &dataset?, pool)?,
+            "import_dna_extraction" => dna_extraction_importer::import(path, &dataset?, pool)?,
+            "import_sequence" => sequence_importer::import(path, &dataset?, &context, pool)?,
+            "import_assembly" => assembly_importer::import(path, &dataset?, pool)?,
+            "import_annotation" => annotation_importer::import(path, &dataset?, pool)?,
+            "import_deposition" => deposition_importer::import(path, &dataset?, pool)?,
+            "import_name_attribute" => name_attribute_importer::import(path, pool)?,
             _ => {}
         }
 
@@ -137,8 +140,9 @@ impl ThreadedJob {
         let mut conn = pool.get()?;
         let dataset = datasets
             .filter(global_id.eq(dataset_global_id))
-            .get_result::<Dataset>(&mut conn)?;
+            .get_result::<Dataset>(&mut conn)
+            .map_err(|e| e.into());
 
-        Ok(dataset)
+        dataset
     }
 }

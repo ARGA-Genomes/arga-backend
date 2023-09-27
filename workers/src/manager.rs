@@ -181,6 +181,7 @@ impl Allocator {
                 "import_assembly" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_annotation" => ret_some_to!([self.threaded_job], run() as (Job)),
                 "import_deposition" => ret_some_to!([self.threaded_job], run() as (Job)),
+                "import_name_attribute" => ret_some_to!([self.threaded_job], run() as (Job)),
                 _ => panic!("Unknown job worker: {}", job.worker)
             };
 

@@ -52,7 +52,7 @@ impl GetListNames for Database {
             .inner_join(names::table)
             .inner_join(taxa::table.on(taxa::name_id.eq(names::id)))
             .select(names::all_columns)
-            .filter(conservation_statuses::list_id.eq(list.id))
+            .filter(conservation_statuses::dataset_id.eq(list.id))
             .order_by(names::scientific_name)
             .offset(offset)
             .limit(pagination.page_size)
@@ -113,7 +113,7 @@ impl GetListStats for Database {
             .inner_join(names::table)
             .inner_join(taxa::table.on(taxa::name_id.eq(names::id)))
             .select(diesel::dsl::count_star())
-            .filter(conservation_statuses::list_id.eq(list.id))
+            .filter(conservation_statuses::dataset_id.eq(list.id))
             .into_boxed();
 
         for item in filters.items.iter() {

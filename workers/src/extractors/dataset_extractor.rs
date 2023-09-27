@@ -18,7 +18,6 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct Record {
     global_id: String,
     name: String,

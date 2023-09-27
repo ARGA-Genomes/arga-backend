@@ -64,6 +64,17 @@ pub fn parse_lat_lng(lat_long: &str) -> Result<Coordinates, Error> {
 }
 
 
+pub fn parse_naive_date_time(value: &str) -> Result<NaiveDateTime, ParseError> {
+    if let Ok(datetime) = NaiveDateTime::parse_from_str(value, "%d/%m/%Y %H:%M:%S") {
+        return Ok(datetime);
+    }
+    if let Ok(datetime) = NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S") {
+        return Ok(datetime);
+    }
+    Ok(NaiveDateTime::parse_from_str(value, "%Y-%m-%dT%H:%M:%SZ")?)
+}
+
+
 pub fn naive_date_time_from_str<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
 where D: serde::Deserializer<'de>
 {

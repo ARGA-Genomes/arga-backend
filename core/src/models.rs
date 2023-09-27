@@ -1,3 +1,4 @@
+use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate};
 use diesel::{Queryable, Insertable};
 use serde::{Serialize, Deserialize};
@@ -396,7 +397,7 @@ pub struct NameList {
 #[diesel(table_name = schema::conservation_statuses)]
 pub struct ConservationStatus {
     pub id: Uuid,
-    pub list_id: Uuid,
+    pub dataset_id: Uuid,
     pub name_id: Uuid,
     pub status: String,
     pub state: Option<String>,
@@ -893,4 +894,38 @@ pub struct WholeGenome {
     pub deposited_by: Option<String>,
     pub data_type: Option<String>,
     pub excluded_from_refseq: Option<String>,
+}
+
+
+
+#[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::AttributeCategory"]
+pub enum AttributeCategory {
+    BushfireRecovery,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::AttributeValueType"]
+pub enum AttributeValueType {
+    Boolean,
+    Integer,
+    Decimal,
+    String,
+    Timestamp,
+}
+
+#[derive(Debug, Queryable, Insertable, Clone)]
+#[diesel(table_name = schema::name_attributes)]
+pub struct NameAttribute {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub name: String,
+    pub category: AttributeCategory,
+    pub value_type: AttributeValueType,
+    pub value_bool: Option<bool>,
+    pub value_int: Option<i64>,
+    pub value_decimal: Option<BigDecimal>,
+    pub value_str: Option<String>,
+    pub value_timestamp: Option<NaiveDateTime>,
 }

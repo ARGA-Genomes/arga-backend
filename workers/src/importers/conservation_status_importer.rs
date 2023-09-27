@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use tracing::info;
 
 use arga_core::schema;
-use arga_core::models::{ConservationStatus, NameList, NameListType};
+use arga_core::models::{ConservationStatus, Dataset};
 use crate::error::Error;
 use crate::extractors::conservation_status_extractor;
 
@@ -14,28 +14,8 @@ use crate::extractors::conservation_status_extractor;
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
-pub fn get_or_create_dataset(list_name: &str, list_description: &Option<String>, pool: &mut PgPool) -> Result<NameList, Error> {
-    use schema::name_lists::dsl::*;
-    let mut conn = pool.get()?;
-
-    if let Some(list) = name_lists.filter(name.eq(list_name)).get_result(&mut conn).optional()? {
-        return Ok(list);
-    }
-
-    let list = diesel::insert_into(name_lists)
-        .values((
-            list_type.eq(NameListType::ConservationStatus),
-            name.eq(list_name),
-            description.eq(list_description),
-        ))
-        .get_result(&mut conn)?;
-
-    Ok(list)
-}
-
-
-pub fn import(path: PathBuf, list: &NameList, pool: &mut PgPool) -> Result<(), Error> {
-    let statuses = conservation_status_extractor::extract(path, list, pool)?;
+pub fn import(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<(), Error> {
+    let statuses = conservation_status_extractor::extract(path, &dataset, pool)?;
     import_conservation_status(&statuses, pool)?;
     Ok(())
 }
