@@ -1,6 +1,9 @@
 use arga_core::models;
 use arga_core::models::IndigenousKnowledge;
 use async_graphql::*;
+use chrono::NaiveDateTime;
+use serde::Deserialize;
+use serde::Serialize;
 use tracing::instrument;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
@@ -183,6 +186,13 @@ impl Species {
         let traits = records.into_iter().map(|r| r.into()).collect();
         Ok(traits)
     }
+
+    async fn attributes(&self, ctx: &Context<'_>) -> Result<Vec<NameAttribute>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let records = state.database.species.attributes(&self.name).await?;
+        let attributes = records.into_iter().map(|r| r.into()).collect();
+        Ok(attributes)
+    }
 }
 
 
@@ -295,6 +305,55 @@ impl From<species::SpecimenSummary> for SpecimenSummary {
             sequences: value.sequences,
             whole_genomes: value.whole_genomes,
             markers: value.markers,
+        }
+    }
+}
+
+
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "models::AttributeCategory")]
+pub enum AttributeCategory {
+    BushfireRecovery,
+}
+
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "models::AttributeValueType")]
+pub enum AttributeValueType {
+    Boolean,
+    Integer,
+    Decimal,
+    String,
+    Timestamp,
+}
+
+/// Attributes for a specific species
+#[derive(Clone, Debug, SimpleObject)]
+pub struct NameAttribute {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name: String,
+    pub category: AttributeCategory,
+    pub value_type: AttributeValueType,
+    pub value_bool: Option<bool>,
+    pub value_int: Option<i64>,
+    pub value_decimal: Option<String>,
+    pub value_str: Option<String>,
+    pub value_timestamp: Option<NaiveDateTime>,
+}
+
+impl From<models::NameAttribute> for NameAttribute {
+    fn from(value: models::NameAttribute) -> Self {
+        Self {
+            id: value.id,
+            dataset_id: value.dataset_id,
+            name: value.name,
+            category: value.category.into(),
+            value_type: value.value_type.into(),
+            value_bool: value.value_bool,
+            value_int: value.value_int,
+            value_decimal: value.value_decimal.map(|d| d.to_string()),
+            value_str: value.value_str,
+            value_timestamp: value.value_timestamp,
         }
     }
 }

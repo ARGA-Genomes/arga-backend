@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::http::graphql::common::Taxonomy;
 use crate::index::species::{self, GetSpecies, GetRegions, GetMedia, GetConservationStatus, GetTraceFiles};
 
-use super::models::{Taxon, Name, RegionType, TaxonPhoto, TraceFile, ConservationStatus, IndigenousKnowledge, WholeGenome, Marker};
+use super::models::{Taxon, Name, NameAttribute, RegionType, TaxonPhoto, TraceFile, ConservationStatus, IndigenousKnowledge, WholeGenome, Marker};
 use super::extensions::{sum_if, Paginate};
 use super::{schema, schema_gnl, Database, Error, PgPool, PageResult};
 
@@ -236,6 +236,18 @@ impl SpeciesProvider {
             .await.optional()?;
 
         Ok(record)
+    }
+
+    pub async fn attributes(&self, name: &Name) -> Result<Vec<NameAttribute>, Error> {
+        use schema::name_attributes;
+        let mut conn = self.pool.get().await?;
+
+        let records = name_attributes::table
+            .filter(name_attributes::name_id.eq(name.id))
+            .load::<NameAttribute>(&mut conn)
+            .await?;
+
+        Ok(records)
     }
 }
 
