@@ -1,6 +1,7 @@
 pub mod taxonomy;
 pub mod species;
 pub mod filters;
+pub mod attributes;
 
 pub use taxonomy::Taxonomy;
 pub use species::{SpeciesCard, SpeciesPhoto};

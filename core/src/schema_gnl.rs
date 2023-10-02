@@ -174,6 +174,7 @@ diesel::table! {
         imcra -> Nullable<Array<Text>>,
         state -> Nullable<Array<Text>>,
         drainage_basin -> Nullable<Array<Text>>,
+        traits -> Nullable<Array<Varchar>>,
     }
 }
 

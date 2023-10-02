@@ -3,6 +3,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::http::Error;
 use crate::database::extensions::filters::{Filter, FilterKind, Classification};
+use super::attributes::BushfireRecoveryTrait;
 use super::taxonomy::TaxonomicVernacularGroup;
 
 
@@ -22,6 +23,8 @@ pub enum FilterType {
     Imcra,
     State,
     DrainageBasin,
+
+    BushfireRecovery,
 }
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -62,6 +65,10 @@ impl TryFrom<FilterItem> for Filter {
             FilterType::Imcra => FilterKind::Imcra(source.value),
             FilterType::State => FilterKind::State(source.value),
             FilterType::DrainageBasin => FilterKind::DrainageBasin(source.value),
+
+            FilterType::BushfireRecovery => FilterKind::BushfireRecovery(
+                from_value::<BushfireRecoveryTrait>(Value::String(source.value))?.into()
+            ),
         };
 
         Ok(match source.action {

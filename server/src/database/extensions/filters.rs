@@ -3,7 +3,7 @@ use diesel::prelude::*;
 
 // use arga_core::schema::{taxa, ecology, names};
 use arga_core::{schema_gnl::taxa_filter as taxa, models::TaxonomicStatus};
-use arga_core::models::TaxonomicVernacularGroup;
+use arga_core::models::{TaxonomicVernacularGroup, BushfireRecoveryTrait};
 use diesel::sql_types::{Bool, Nullable};
 
 
@@ -16,6 +16,9 @@ pub enum FilterKind {
     Imcra(String),
     State(String),
     DrainageBasin(String),
+
+    // attribute filters
+    BushfireRecovery(BushfireRecoveryTrait),
 }
 
 
@@ -64,6 +67,7 @@ pub fn with_filter(filter: &Filter) -> BoxedTaxaExpression {
             FilterKind::Imcra(imcra) => with_imcra(imcra),
             FilterKind::State(state) => with_state(state),
             FilterKind::DrainageBasin(drainage_basin) => with_drainage_basin(drainage_basin),
+            FilterKind::BushfireRecovery(traits) => with_bushfire_recovery_trait(traits),
         }
         Filter::Exclude(kind) => match kind {
             FilterKind::Classification(classification) => without_classification(classification),
@@ -73,6 +77,7 @@ pub fn with_filter(filter: &Filter) -> BoxedTaxaExpression {
             FilterKind::Imcra(imcra) => without_imcra(imcra),
             FilterKind::State(state) => without_state(state),
             FilterKind::DrainageBasin(drainage_basin) => without_drainage_basin(drainage_basin),
+            FilterKind::BushfireRecovery(traits) => without_bushfire_recovery_trait(traits),
         }
     }
 }
@@ -217,5 +222,41 @@ pub fn without_classification(classification: &Classification) -> BoxedTaxaExpre
         Classification::Family(value) => Box::new(taxa::family.ne(value)),
         Classification::Tribe(value) => Box::new(taxa::tribe.ne(value)),
         Classification::Genus(value) => Box::new(taxa::genus.ne(value)),
+    }
+}
+
+/// Filter the taxa table with a particular trait attribute
+pub fn with_bushfire_recovery_trait(attr: &BushfireRecoveryTrait) -> BoxedTaxaExpression {
+    use BushfireRecoveryTrait as Trait;
+    match attr {
+        Trait::VulnerableToWildfire => Box::new(taxa::traits.contains(vec!["vulnerable_wildfire"])),
+        Trait::FireDroughtInteractions => Box::new(taxa::traits.contains(vec!["Interactive effects of fire and drought"])),
+        Trait::FireDiseaseInteractions => Box::new(taxa::traits.contains(vec!["Fire-disease interactions"])),
+        Trait::HighFireSeverity => Box::new(taxa::traits.contains(vec!["High fire severity"])),
+        Trait::WeedInvasion => Box::new(taxa::traits.contains(vec!["Weed invasion"])),
+        Trait::ChangedTemperatureRegimes => Box::new(taxa::traits.contains(vec!["Elevated winter temperatures or changed temperature regimes"])),
+        Trait::FireSensitivity => Box::new(taxa::traits.contains(vec!["Fire sensitivity"])),
+        Trait::PostFireErosion => Box::new(taxa::traits.contains(vec!["Post-fire erosion"])),
+        Trait::PostFireHerbivoreImpact => Box::new(taxa::traits.contains(vec!["Post-fire herbivore impacts"])),
+        Trait::CumulativeHighRiskExposure => Box::new(taxa::traits.contains(vec!["Cumulative exposure to high risks"])),
+        Trait::OtherThreats => Box::new(taxa::traits.contains(vec!["Other plausible threats or expert-driven nominations"])),
+    }
+}
+
+/// Filter the taxa table excluding a particular trait attribute
+pub fn without_bushfire_recovery_trait(attr: &BushfireRecoveryTrait) -> BoxedTaxaExpression {
+    use BushfireRecoveryTrait as Trait;
+    match attr {
+        Trait::VulnerableToWildfire => Box::new(taxa::traits.contains(vec!["vulnerable_wildfire"])),
+        Trait::FireDroughtInteractions => Box::new(taxa::traits.contains(vec!["Interactive effects of fire and drought"])),
+        Trait::FireDiseaseInteractions => Box::new(taxa::traits.contains(vec!["Fire-disease interactions"])),
+        Trait::HighFireSeverity => Box::new(taxa::traits.contains(vec!["High fire severity"])),
+        Trait::WeedInvasion => Box::new(taxa::traits.contains(vec!["Weed invasion"])),
+        Trait::ChangedTemperatureRegimes => Box::new(taxa::traits.contains(vec!["Elevated winter temperatures or changed temperature regimes"])),
+        Trait::FireSensitivity => Box::new(taxa::traits.contains(vec!["Fire sensitivity"])),
+        Trait::PostFireErosion => Box::new(taxa::traits.contains(vec!["Post-fire erosion"])),
+        Trait::PostFireHerbivoreImpact => Box::new(taxa::traits.contains(vec!["Post-fire herbivore impacts"])),
+        Trait::CumulativeHighRiskExposure => Box::new(taxa::traits.contains(vec!["Cumulative exposure to high risks"])),
+        Trait::OtherThreats => Box::new(taxa::traits.contains(vec!["Other plausible threats or expert-driven nominations"])),
     }
 }

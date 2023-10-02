@@ -5,7 +5,8 @@ SELECT
     regions.ibra,
     regions.imcra,
     regions.state,
-    regions.drainage_basin
+    regions.drainage_basin,
+    name_attributes.traits
 FROM taxa
 LEFT JOIN ecology ON taxa.name_id = ecology.name_id
 LEFT JOIN (
@@ -17,6 +18,14 @@ LEFT JOIN (
     array_agg(value) filter (WHERE region_type = 'drainage_basin') AS drainage_basin
   FROM regions, unnest(values) AS value
   GROUP BY name_id
-) regions ON taxa.name_id = regions.name_id;
+) regions ON taxa.name_id = regions.name_id
+LEFT JOIN (
+  SELECT
+    name_id,
+    array_agg(name::text) filter (WHERE value_type = 'boolean') AS traits
+  FROM name_attributes
+  GROUP BY name_id
+) name_attributes ON taxa.name_id = name_attributes.name_id;;
+
 
 CREATE INDEX taxa_filter_ecology ON taxa_filter USING GIN(ecology);

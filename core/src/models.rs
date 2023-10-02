@@ -146,6 +146,8 @@ pub struct FilteredTaxon {
     pub imcra: Option<Vec<String>>,
     pub state: Option<Vec<String>>,
     pub drainage_basin: Option<Vec<String>>,
+
+    pub traits: Option<Vec<String>>,
 }
 
 
@@ -928,4 +930,20 @@ pub struct NameAttribute {
     pub value_decimal: Option<BigDecimal>,
     pub value_str: Option<String>,
     pub value_timestamp: Option<NaiveDateTime>,
+}
+
+
+#[derive(Clone)]
+pub enum BushfireRecoveryTrait {
+    VulnerableToWildfire,
+    FireDroughtInteractions,
+    FireDiseaseInteractions,
+    HighFireSeverity,
+    WeedInvasion,
+    ChangedTemperatureRegimes,
+    FireSensitivity,
+    PostFireErosion,
+    PostFireHerbivoreImpact,
+    CumulativeHighRiskExposure,
+    OtherThreats,
 }
