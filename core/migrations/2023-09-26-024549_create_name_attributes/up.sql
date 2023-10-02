@@ -7,7 +7,7 @@ CREATE TYPE attribute_value_type AS ENUM (
     'integer',
     'decimal',
     'string',
-    'timestamp',
+    'timestamp'
 );
 
 CREATE TABLE name_attributes (
