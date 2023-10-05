@@ -79,7 +79,7 @@ pub fn naive_date_time_from_str<'de, D>(deserializer: D) -> Result<NaiveDateTime
 where D: serde::Deserializer<'de>
 {
     let s: String = Deserialize::deserialize(deserializer)?;
-    NaiveDateTime::parse_from_str(&s, "%Y-%m-%dT%H:%M:%SZ").map_err(serde::de::Error::custom)
+    parse_naive_date_time(&s).map_err(serde::de::Error::custom)
 }
 
 pub fn naive_date_from_str_opt<'de, D>(deserializer: D) -> Result<Option<NaiveDate>, D::Error>

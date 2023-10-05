@@ -904,6 +904,7 @@ pub struct WholeGenome {
 #[ExistingTypePath = "schema::sql_types::AttributeCategory"]
 pub enum AttributeCategory {
     BushfireRecovery,
+    VenomousSpecies,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]

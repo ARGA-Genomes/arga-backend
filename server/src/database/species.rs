@@ -47,6 +47,8 @@ pub struct SpecimenSummary {
     pub type_status: Option<String>,
     pub locality: Option<String>,
     pub country: Option<String>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
 
     pub sequences: i64,
     pub whole_genomes: i64,
@@ -175,6 +177,8 @@ impl SpeciesProvider {
                 specimens::type_status,
                 specimens::locality,
                 specimens::country,
+                specimens::latitude,
+                specimens::longitude,
                 specimen_stats::sequences,
                 specimen_stats::whole_genomes,
                 specimen_stats::markers,

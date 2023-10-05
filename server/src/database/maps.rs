@@ -1,5 +1,3 @@
-use async_trait::async_trait;
-
 use geozero::wkb::Ewkb;
 use geozero::ToGeo;
 
@@ -11,7 +9,7 @@ use diesel::pg::Pg;
 use super::schema::sql_types::Geometry;
 
 use crate::index::maps::{self, RegionGeometry};
-use super::{schema, Database, Error};
+use super::{schema, Error, PgPool};
 
 
 // geometry ST_Simplify(geometry geomA, float tolerance, boolean preserveCollapsed);
@@ -46,11 +44,13 @@ impl FromSql<Geometry, Pg> for Geom {
 }
 
 
-#[async_trait]
-impl maps::GetGeometry for Database {
-    type Error = Error;
+#[derive(Clone)]
+pub struct MapsProvider {
+    pub pool: PgPool,
+}
 
-    async fn map_ibra(&self, regions: &Vec<String>, tolerance: &Option<f32>) -> Result<Vec<maps::RegionGeometry>, Error> {
+impl MapsProvider {
+    pub async fn ibra(&self, regions: &Vec<String>, tolerance: &Option<f32>) -> Result<Vec<maps::RegionGeometry>, Error> {
         use schema::ibra::dsl::*;
         let mut conn = self.pool.get().await?;
 
@@ -77,7 +77,7 @@ impl maps::GetGeometry for Database {
         Ok(features)
     }
 
-    async fn map_imcra_provincial(&self, regions: &Vec<String>, tolerance: &Option<f32>) -> Result<Vec<maps::RegionGeometry>, Error> {
+    pub async fn imcra_provincial(&self, regions: &Vec<String>, tolerance: &Option<f32>) -> Result<Vec<maps::RegionGeometry>, Error> {
         use schema::imcra_provincial::dsl::*;
         let mut conn = self.pool.get().await?;
 
@@ -104,7 +104,7 @@ impl maps::GetGeometry for Database {
         Ok(features)
     }
 
-    async fn map_imcra_mesoscale(&self, regions: &Vec<String>, tolerance: &Option<f32>) -> Result<Vec<maps::RegionGeometry>, Error> {
+    pub async fn imcra_mesoscale(&self, regions: &Vec<String>, tolerance: &Option<f32>) -> Result<Vec<maps::RegionGeometry>, Error> {
         use schema::imcra_mesoscale::dsl::*;
         let mut conn = self.pool.get().await?;
 

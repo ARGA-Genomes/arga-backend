@@ -96,6 +96,7 @@ pub struct Database {
     pub subsamples: subsamples::SubsampleProvider,
     pub dna_extracts: dna_extracts::DnaExtractProvider,
     pub sequences: sequences::SequenceProvider,
+    pub maps: maps::MapsProvider,
 }
 
 impl Database {
@@ -122,6 +123,7 @@ impl Database {
             subsamples: subsamples::SubsampleProvider { pool: pool.clone() },
             dna_extracts: dna_extracts::DnaExtractProvider { pool: pool.clone() },
             sequences: sequences::SequenceProvider { pool: pool.clone() },
+            maps: maps::MapsProvider { pool: pool.clone() },
             pool
         })
     }

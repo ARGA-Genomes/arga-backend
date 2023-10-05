@@ -286,6 +286,8 @@ pub struct SpecimenSummary {
     pub type_status: Option<String>,
     pub locality: Option<String>,
     pub country: Option<String>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
 
     pub sequences: i64,
     pub whole_genomes: i64,
@@ -302,6 +304,8 @@ impl From<species::SpecimenSummary> for SpecimenSummary {
             type_status: value.type_status,
             locality: value.locality,
             country: value.country,
+            latitude: value.latitude,
+            longitude: value.longitude,
             sequences: value.sequences,
             whole_genomes: value.whole_genomes,
             markers: value.markers,
@@ -314,6 +318,7 @@ impl From<species::SpecimenSummary> for SpecimenSummary {
 #[graphql(remote = "models::AttributeCategory")]
 pub enum AttributeCategory {
     BushfireRecovery,
+    VenomousSpecies,
 }
 
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
