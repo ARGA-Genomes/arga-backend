@@ -855,6 +855,8 @@ pub struct Marker {
 
     pub dataset_name: String,
     pub record_id: String,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
     pub accession: Option<String>,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
@@ -876,6 +878,8 @@ pub struct WholeGenome {
 
     pub dataset_name: String,
     pub record_id: String,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
     pub accession: Option<String>,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,

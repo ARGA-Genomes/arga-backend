@@ -16,6 +16,8 @@ pub struct SpeciesMarker {
     pub dataset_name: String,
 
     pub record_id: String,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
     pub accession: Option<String>,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
@@ -30,6 +32,8 @@ impl From<models::Marker> for SpeciesMarker {
             dna_extract_id: value.dna_extract_id,
             dataset_name: value.dataset_name,
             record_id: value.record_id,
+            latitude: value.latitude,
+            longitude: value.longitude,
             accession: value.accession,
             sequenced_by: value.sequenced_by,
             material_sample_id: value.material_sample_id,
