@@ -3,8 +3,13 @@ use serde::{Serialize, Deserialize};
 
 use crate::http::Error;
 use crate::database::extensions::filters::{Filter, FilterKind, Classification};
+use crate::database::extensions::whole_genome_filters::{
+    Filter as WholeGenomeFilter,
+    FilterKind as WholeGenomeFilterKind,
+};
 use super::attributes::BushfireRecoveryTrait;
 use super::taxonomy::TaxonomicVernacularGroup;
+use super::whole_genomes::{AssemblyLevel, GenomeRepresentation, ReleaseType};
 
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -33,14 +38,13 @@ pub enum FilterAction {
     Exclude,
 }
 
-/// An all purpose filter to apply the query.
+/// An all purpose filter to apply to queries for species.
 #[derive(Clone, Debug, Serialize, Deserialize, InputObject)]
 pub struct FilterItem {
     filter: FilterType,
     action: FilterAction,
     value: String,
 }
-
 
 /// Converts a graphql filter into the common filter enum
 impl TryFrom<FilterItem> for Filter {
@@ -80,6 +84,58 @@ impl TryFrom<FilterItem> for Filter {
 
 
 pub fn convert_filters(items: Vec<FilterItem>) -> Result<Vec<Filter>, Error> {
+    let mut filters = Vec::new();
+    for item in items {
+        filters.push(item.try_into()?);
+    }
+    Ok(filters)
+}
+
+
+/// An all purpose filter to apply to queries for whole genomes.
+#[derive(Clone, Debug, Serialize, Deserialize, InputObject)]
+pub struct WholeGenomeFilterItem {
+    filter: WholeGenomeFilterType,
+    action: FilterAction,
+    value: String,
+}
+
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
+pub enum WholeGenomeFilterType {
+    AssemblyLevel,
+    GenomeRepresentation,
+    ReleaseType,
+}
+
+/// Converts a graphql whole genome filter into the whole genome filter enum
+impl TryFrom<WholeGenomeFilterItem> for WholeGenomeFilter {
+    type Error = Error;
+
+    fn try_from(source: WholeGenomeFilterItem) -> Result<Self, Self::Error> {
+        use WholeGenomeFilterType as Type;
+        use WholeGenomeFilterKind as Kind;
+
+        let kind = match source.filter {
+            Type::AssemblyLevel => Kind::AssemblyLevel(
+                from_value::<AssemblyLevel>(Value::String(source.value))?.into()
+            ),
+            Type::GenomeRepresentation => Kind::GenomeRepresentation(
+                from_value::<GenomeRepresentation>(Value::String(source.value))?.into()
+            ),
+            Type::ReleaseType => Kind::ReleaseType(
+                from_value::<ReleaseType>(Value::String(source.value))?.into()
+            ),
+        };
+
+        Ok(match source.action {
+            FilterAction::Include => WholeGenomeFilter::Include(kind),
+            FilterAction::Exclude => WholeGenomeFilter::Exclude(kind),
+        })
+    }
+}
+
+
+pub fn convert_whole_genome_filters(items: Vec<WholeGenomeFilterItem>) -> Result<Vec<WholeGenomeFilter>, Error> {
     let mut filters = Vec::new();
     for item in items {
         filters.push(item.try_into()?);

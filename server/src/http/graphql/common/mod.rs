@@ -2,10 +2,19 @@ pub mod taxonomy;
 pub mod species;
 pub mod filters;
 pub mod attributes;
+pub mod whole_genomes;
 
 pub use taxonomy::Taxonomy;
 pub use species::{SpeciesCard, SpeciesPhoto};
-pub use filters::{FilterItem, FilterType, FilterAction, convert_filters};
+pub use filters::{
+    FilterAction,
+    FilterItem,
+    FilterType,
+    WholeGenomeFilterItem,
+    WholeGenomeFilterType,
+    convert_filters,
+    convert_whole_genome_filters,
+};
 
 use async_graphql::{SimpleObject, OutputType};
 

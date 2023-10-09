@@ -7,6 +7,7 @@ use serde::{Serialize, Deserialize};
 use tracing::instrument;
 use uuid::Uuid;
 
+use crate::database::extensions::whole_genome_filters;
 use crate::http::graphql::common::Taxonomy;
 use crate::index::species::{self, GetSpecies, GetRegions, GetMedia, GetConservationStatus, GetTraceFiles};
 
@@ -196,12 +197,26 @@ impl SpeciesProvider {
         Ok(records.into())
     }
 
-    pub async fn whole_genomes(&self, name: &Name, page: i64, page_size: i64) -> PageResult<WholeGenome> {
+    pub async fn whole_genomes(
+        &self,
+        name: &Name,
+        filters: &Vec<whole_genome_filters::Filter>,
+        page: i64,
+        page_size: i64
+    ) -> PageResult<WholeGenome>
+    {
         use schema_gnl::whole_genomes;
         let mut conn = self.pool.get().await?;
 
-        let records = whole_genomes::table
+        let mut query = whole_genomes::table
             .filter(whole_genomes::name_id.eq(name.id))
+            .into_boxed();
+
+        if let Some(expr) = whole_genome_filters::with_filters(&filters) {
+            query = query.filter(expr);
+        }
+
+        let records = query
             .order(whole_genomes::accession)
             .paginate(page)
             .per_page(page_size)

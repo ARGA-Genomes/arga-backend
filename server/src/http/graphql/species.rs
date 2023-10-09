@@ -28,8 +28,12 @@ use crate::index::species::{
 use crate::database::{schema, Database};
 use crate::database::models::Name as ArgaName;
 use crate::database::species;
-use super::common::Page;
-use super::common::Taxonomy;
+use super::common::{
+    Page,
+    Taxonomy,
+    WholeGenomeFilterItem,
+    convert_whole_genome_filters,
+};
 use super::markers::SpeciesMarker;
 
 
@@ -145,9 +149,17 @@ impl Species {
     }
 
     #[instrument(skip(self, ctx))]
-    async fn whole_genomes(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<WholeGenome>, Error> {
+    async fn whole_genomes(
+        &self,
+        ctx: &Context<'_>,
+        page: i64,
+        page_size: i64,
+        filters: Option<Vec<WholeGenomeFilterItem>>,
+    ) -> Result<Page<WholeGenome>, Error>
+    {
         let state = ctx.data::<State>().unwrap();
-        let page = state.database.species.whole_genomes(&self.name, page, page_size).await?;
+        let filters = convert_whole_genome_filters(filters.unwrap_or_default())?;
+        let page = state.database.species.whole_genomes(&self.name, &filters, page, page_size).await?;
         let sequences = page.records.into_iter().map(|r| r.into()).collect();
         Ok(Page {
             records: sequences,
