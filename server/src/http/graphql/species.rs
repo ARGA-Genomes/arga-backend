@@ -296,9 +296,11 @@ impl From<models::WholeGenome> for WholeGenome {
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SpecimenSummary {
     pub id: Uuid,
+    pub dataset_name: String,
     pub record_id: String,
     pub accession: Option<String>,
-    pub dataset_name: String,
+    pub institution_code: Option<String>,
+    pub institution_name: Option<String>,
     pub type_status: Option<String>,
     pub locality: Option<String>,
     pub country: Option<String>,
@@ -314,9 +316,11 @@ impl From<species::SpecimenSummary> for SpecimenSummary {
     fn from(value: species::SpecimenSummary) -> Self {
         Self {
             id: value.id,
+            dataset_name: value.dataset_name,
             record_id: value.record_id,
             accession: value.accession,
-            dataset_name: value.dataset_name,
+            institution_code: value.institution_code,
+            institution_name: value.institution_name,
             type_status: value.type_status,
             locality: value.locality,
             country: value.country,
