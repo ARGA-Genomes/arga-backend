@@ -172,7 +172,7 @@ fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, names: &NameMap, existin
     // which makes it possible to zip the various extractions to get any associated ids
     // if necessary
     let specimens = extract_specimens(dataset, &records);
-    let collection_events = extract_collection_events(records, &specimens);
+    let collection_events = extract_collection_events(dataset, records, &specimens);
 
     // exclude any records that already exist within the isolation context. we want to
     // allow for duplicate record ids from different datasets so we cannot leverage unique
@@ -244,7 +244,7 @@ fn extract_specimens(dataset: &Dataset, records: &MatchedRecords) -> Vec<Specime
 }
 
 
-fn extract_collection_events(records: MatchedRecords, specimens: &Vec<Specimen>) -> Vec<CollectionEvent> {
+fn extract_collection_events(dataset: &Dataset, records: MatchedRecords, specimens: &Vec<Specimen>) -> Vec<CollectionEvent> {
     info!(total=records.len(), "Extracting collection events");
 
     let collections = (records, specimens).into_par_iter().map(|(record, specimen)| {
@@ -252,6 +252,7 @@ fn extract_collection_events(records: MatchedRecords, specimens: &Vec<Specimen>)
 
         CollectionEvent {
             id: Uuid::new_v4(),
+            dataset_id: dataset.id.clone(),
             specimen_id: specimen.id.clone(),
 
             event_date: row.event_date,

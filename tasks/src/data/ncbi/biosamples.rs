@@ -143,7 +143,7 @@ struct CollectionEvent {
     pub event_date: Option<String>,
     pub type_status: Option<String>,
     pub verbatim_locality: Option<String>,
-    pub verbatim_coordinates: Option<String>,
+    pub verbatim_lat_long: Option<String>,
     pub env_broad_scale: Option<String>,
     pub ref_biomaterial: Option<String>,
     pub source_mat_id: Option<String>,
@@ -433,7 +433,7 @@ fn extract_collection_events(samples: &Vec<BioSample>, bars: &Progress) -> Resul
             organism_name: sample.organism_name.clone(),
             event_date: sample.get_attribute("collection-date"),
             verbatim_locality: sample.get_attribute("geo-loc-name"),
-            verbatim_coordinates: sample.get_attribute("lat-lon"),
+            verbatim_lat_long: sample.get_attribute("lat-lon"),
             type_status: sample.get_attribute("type-material"),
             env_broad_scale: sample.get_attribute("biome"),
             ref_biomaterial: sample.get_attribute("ref-biomaterial"),
@@ -745,13 +745,4 @@ fn parse_attribute<R>(reader: &Reader<R>, event: &BytesStart, name: &str) -> Res
         Some(value) => Some(value.decode_and_unescape_value(reader)?.into_owned()),
         None => None,
     })
-}
-
-fn parse_lat_lng(lat_long: &str) -> Result<(f64, f64), Error> {
-    let coord = match latlon::parse(lat_long) {
-        Ok(point) => Ok(point),
-        Err(err) => Err(Error::GeoParser(err.to_string())),
-    }?;
-
-    Ok((coord.y(), coord.x()))
 }

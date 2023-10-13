@@ -131,8 +131,8 @@ fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, extracts: &DnaExtractMap
     // that could not be matched
     let records = match_records_mapped(chunk, extracts);
 
-    let sequences = extract_sequences(&records, dataset);
-    let sequencing_events = extract_sequencing_events(records, &sequences);
+    let sequences = extract_sequences(dataset, &records);
+    let sequencing_events = extract_sequencing_events(dataset, records, &sequences);
 
     Ok(SequencingExtract {
         sequences,
@@ -141,7 +141,7 @@ fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, extracts: &DnaExtractMap
 }
 
 
-fn extract_sequences(records: &MatchedRecords, dataset: &Dataset) -> Vec<Sequence> {
+fn extract_sequences(dataset: &Dataset, records: &MatchedRecords) -> Vec<Sequence> {
     info!(total=records.len(), "Extracting sequences");
 
     let sequences = records.par_iter().map(|(dna_extract, row)| {
@@ -167,7 +167,7 @@ fn extract_sequences(records: &MatchedRecords, dataset: &Dataset) -> Vec<Sequenc
 }
 
 
-fn extract_sequencing_events(records: MatchedRecords, sequences: &Vec<Sequence>) -> Vec<SequencingEvent> {
+fn extract_sequencing_events(dataset: &Dataset, records: MatchedRecords, sequences: &Vec<Sequence>) -> Vec<SequencingEvent> {
     info!(total=records.len(), "Extracting sequencing events");
 
     let sequences = (records, sequences).into_par_iter().map(|(record, sequence)| {
@@ -175,6 +175,7 @@ fn extract_sequencing_events(records: MatchedRecords, sequences: &Vec<Sequence>)
 
         SequencingEvent {
             id: Uuid::new_v4(),
+            dataset_id: dataset.id.clone(),
             sequence_id: sequence.id.clone(),
 
             event_date: row.event_date,

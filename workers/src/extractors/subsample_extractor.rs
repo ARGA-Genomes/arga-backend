@@ -11,6 +11,7 @@ use uuid::Uuid;
 use arga_core::models::{Dataset, SubsampleEvent, Subsample};
 use crate::error::Error;
 use crate::matchers::specimen_matcher::{SpecimenMatch, SpecimenRecord, SpecimenMap, specimen_map, match_records_mapped};
+use crate::matchers::subsample_matcher::{SubsampleMap, subsample_map};
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -50,6 +51,7 @@ pub struct SubsampleExtract {
 pub struct SubsampleExtractIterator {
     dataset: Dataset,
     specimens: SpecimenMap,
+    subsamples: SubsampleMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
 
@@ -77,7 +79,7 @@ impl Iterator for SubsampleExtractIterator {
         if records.is_empty() {
             None
         } else {
-            Some(extract_chunk(records, &self.dataset, &self.specimens))
+            Some(extract_chunk(records, &self.dataset, &self.specimens, &self.subsamples))
         }
     }
 }
@@ -88,23 +90,25 @@ pub fn extract(path: PathBuf, dataset: &Dataset, context: &Vec<Dataset>, pool: &
     let isolated_datasets = context.iter().map(|d| d.id.clone()).collect();
 
     let specimens = specimen_map(&isolated_datasets, pool)?;
+    let subsamples = subsample_map(&isolated_datasets, pool)?;
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(SubsampleExtractIterator {
         dataset: dataset.clone(),
         specimens,
+        subsamples,
         reader,
     })
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, specimens: &SpecimenMap) -> Result<SubsampleExtract, Error> {
+fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, specimens: &SpecimenMap, existing: &SubsampleMap) -> Result<SubsampleExtract, Error> {
     // match the records to names in the database. this will filter out any names
     // that could not be matched
     let records = match_records_mapped(chunk, specimens);
 
-    let subsamples = extract_subsamples(&dataset, &records);
-    let subsample_events = extract_subsample_events(records, &subsamples);
+    let subsamples = extract_subsamples(dataset, &records);
+    let subsample_events = extract_subsample_events(dataset, records, &subsamples);
 
     // exclude any records that already exist within the isolation context. we want to
     // allow for duplicate record ids from different datasets so we cannot leverage unique
@@ -115,7 +119,7 @@ fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, specimens: &SpecimenMap)
     };
 
     for (subsample, subsample_event) in subsamples.into_iter().zip(subsample_events.into_iter()) {
-        if !specimens.contains_key(&subsample.record_id) {
+        if !existing.contains_key(&subsample.record_id) {
             extract.subsamples.push(subsample);
             extract.subsample_events.push(subsample_event);
         }
@@ -148,7 +152,7 @@ fn extract_subsamples(dataset: &Dataset, records: &MatchedRecords) -> Vec<Subsam
 }
 
 
-fn extract_subsample_events(records: MatchedRecords, subsamples: &Vec<Subsample>) -> Vec<SubsampleEvent>
+fn extract_subsample_events(dataset: &Dataset, records: MatchedRecords, subsamples: &Vec<Subsample>) -> Vec<SubsampleEvent>
 {
     info!(total=records.len(), "Extracting subsample events");
 
@@ -157,6 +161,7 @@ fn extract_subsample_events(records: MatchedRecords, subsamples: &Vec<Subsample>
 
         SubsampleEvent {
             id: Uuid::new_v4(),
+            dataset_id: dataset.id.clone(),
             subsample_id: subsample.id.clone(),
             event_date: row.event_date,
             event_time: row.event_time,

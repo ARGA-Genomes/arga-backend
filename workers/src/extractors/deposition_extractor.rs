@@ -65,6 +65,7 @@ pub struct DepositionExtract {
 
 
 pub struct DepositionExtractIterator {
+    dataset: Dataset,
     sequences: SequenceMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
@@ -93,7 +94,7 @@ impl Iterator for DepositionExtractIterator {
         if records.is_empty() {
             None
         } else {
-            Some(extract_chunk(records, &self.sequences))
+            Some(extract_chunk(records, &self.dataset, &self.sequences))
         }
     }
 }
@@ -105,17 +106,18 @@ pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<De
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(DepositionExtractIterator {
+        dataset: dataset.clone(),
         sequences,
         reader,
     })
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, sequences: &SequenceMap) -> Result<DepositionExtract, Error> {
+fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, sequences: &SequenceMap) -> Result<DepositionExtract, Error> {
     // match the records to names in the database. this will filter out any names
     // that could not be matched
     let records = match_records_mapped(chunk, sequences);
-    let deposition_events = extract_deposition_events(records);
+    let deposition_events = extract_deposition_events(dataset, records);
 
     Ok(DepositionExtract {
         deposition_events,
@@ -123,7 +125,7 @@ fn extract_chunk(chunk: Vec<Record>, sequences: &SequenceMap) -> Result<Depositi
 }
 
 
-fn extract_deposition_events(records: MatchedRecords) -> Vec<DepositionEvent>
+fn extract_deposition_events(dataset: &Dataset, records: MatchedRecords) -> Vec<DepositionEvent>
 {
     info!(total=records.len(), "Extracting deposition events");
 
@@ -132,6 +134,7 @@ fn extract_deposition_events(records: MatchedRecords) -> Vec<DepositionEvent>
 
         DepositionEvent {
             id: Uuid::new_v4(),
+            dataset_id: dataset.id.clone(),
             sequence_id: sequence.id.clone(),
 
             event_date: row.event_date,

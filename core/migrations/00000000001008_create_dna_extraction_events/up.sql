@@ -1,5 +1,6 @@
 CREATE TABLE dna_extraction_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
     dna_extract_id uuid REFERENCES dna_extracts ON DELETE CASCADE NOT NULL,
 
     event_date varchar,

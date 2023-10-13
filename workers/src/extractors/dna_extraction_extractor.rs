@@ -52,6 +52,7 @@ pub struct DnaExtractionExtract {
 
 
 pub struct DnaExtractionExtractIterator {
+    dataset: Dataset,
     subsamples: SubsampleMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
@@ -80,31 +81,34 @@ impl Iterator for DnaExtractionExtractIterator {
         if records.is_empty() {
             None
         } else {
-            Some(extract_chunk(records, &self.subsamples))
+            Some(extract_chunk(records, &self.dataset, &self.subsamples))
         }
     }
 }
 
 
 /// Extract events and other related data from a CSV file
-pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<DnaExtractionExtractIterator, Error> {
-    let subsamples = subsample_map(&dataset.id, pool)?;
+pub fn extract(path: PathBuf, dataset: &Dataset, context: &Vec<Dataset>,  pool: &mut PgPool) -> Result<DnaExtractionExtractIterator, Error> {
+    let isolated_datasets = context.iter().map(|d| d.id.clone()).collect();
+
+    let subsamples = subsample_map(&isolated_datasets, pool)?;
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(DnaExtractionExtractIterator {
+        dataset: dataset.clone(),
         subsamples,
         reader,
     })
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, subsamples: &SubsampleMap) -> Result<DnaExtractionExtract, Error> {
+fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, subsamples: &SubsampleMap) -> Result<DnaExtractionExtract, Error> {
     // match the records to names in the database. this will filter out any subsamples
     // that could not be matched
     let records = match_records_mapped(chunk, subsamples);
 
-    let dna_extracts = extract_dna_extracts(&records);
-    let dna_extraction_events = extract_dna_extraction_events(records, &dna_extracts);
+    let dna_extracts = extract_dna_extracts(dataset, &records);
+    let dna_extraction_events = extract_dna_extraction_events(dataset, records, &dna_extracts);
 
     Ok(DnaExtractionExtract {
         dna_extracts,
@@ -113,13 +117,13 @@ fn extract_chunk(chunk: Vec<Record>, subsamples: &SubsampleMap) -> Result<DnaExt
 }
 
 
-fn extract_dna_extracts(records: &MatchedRecords) -> Vec<DnaExtract> {
+fn extract_dna_extracts(dataset: &Dataset, records: &MatchedRecords) -> Vec<DnaExtract> {
     info!(total=records.len(), "Extracting dna extracts");
 
     let dna_extracts = records.par_iter().map(|(subsample, row)| {
         DnaExtract {
             id: Uuid::new_v4(),
-            dataset_id: subsample.dataset_id.clone(),
+            dataset_id: dataset.id.clone(),
             name_id: subsample.name_id.clone(),
             subsample_id: subsample.id.clone(),
             record_id: row.record_id.clone(),
@@ -131,7 +135,7 @@ fn extract_dna_extracts(records: &MatchedRecords) -> Vec<DnaExtract> {
 }
 
 
-fn extract_dna_extraction_events(records: MatchedRecords, extracts: &Vec<DnaExtract>) -> Vec<DnaExtractionEvent>
+fn extract_dna_extraction_events(dataset: &Dataset, records: MatchedRecords, extracts: &Vec<DnaExtract>) -> Vec<DnaExtractionEvent>
 {
     info!(total=records.len(), "Extracting dna extraction events");
 
@@ -140,6 +144,7 @@ fn extract_dna_extraction_events(records: MatchedRecords, extracts: &Vec<DnaExtr
 
         DnaExtractionEvent {
             id: Uuid::new_v4(),
+            dataset_id: dataset.id.clone(),
             dna_extract_id: extract.id.clone(),
 
             event_date: row.event_date,

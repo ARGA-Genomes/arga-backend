@@ -1,5 +1,6 @@
 CREATE TABLE subsample_events (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
     subsample_id uuid REFERENCES subsamples ON DELETE CASCADE NOT NULL,
 
     event_date varchar,

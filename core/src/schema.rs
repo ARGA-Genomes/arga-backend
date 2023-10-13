@@ -33,6 +33,7 @@ pub mod sql_types {
 diesel::table! {
     accession_events (id) {
         id -> Uuid,
+        dataset_id -> Uuid,
         specimen_id -> Uuid,
         event_date -> Nullable<Varchar>,
         event_time -> Nullable<Varchar>,
@@ -48,6 +49,7 @@ diesel::table! {
 diesel::table! {
     annotation_events (id) {
         id -> Uuid,
+        dataset_id -> Uuid,
         sequence_id -> Uuid,
         event_date -> Nullable<Varchar>,
         event_time -> Nullable<Varchar>,
@@ -93,6 +95,7 @@ diesel::table! {
 diesel::table! {
     assembly_events (id) {
         id -> Uuid,
+        dataset_id -> Uuid,
         sequence_id -> Uuid,
         event_date -> Nullable<Varchar>,
         event_time -> Nullable<Varchar>,
@@ -151,6 +154,7 @@ diesel::table! {
 diesel::table! {
     collection_events (id) {
         id -> Uuid,
+        dataset_id -> Uuid,
         specimen_id -> Uuid,
         event_date -> Nullable<Varchar>,
         event_time -> Nullable<Varchar>,
@@ -218,6 +222,7 @@ diesel::table! {
 diesel::table! {
     deposition_events (id) {
         id -> Uuid,
+        dataset_id -> Uuid,
         sequence_id -> Uuid,
         event_date -> Nullable<Varchar>,
         event_time -> Nullable<Varchar>,
@@ -244,6 +249,7 @@ diesel::table! {
 diesel::table! {
     dna_extraction_events (id) {
         id -> Uuid,
+        dataset_id -> Uuid,
         dna_extract_id -> Uuid,
         event_date -> Nullable<Varchar>,
         event_time -> Nullable<Varchar>,
@@ -461,6 +467,7 @@ diesel::table! {
 diesel::table! {
     sequencing_events (id) {
         id -> Uuid,
+        dataset_id -> Uuid,
         sequence_id -> Uuid,
         event_date -> Nullable<Varchar>,
         event_time -> Nullable<Varchar>,
@@ -547,6 +554,7 @@ diesel::table! {
 diesel::table! {
     subsample_events (id) {
         id -> Uuid,
+        dataset_id -> Uuid,
         subsample_id -> Uuid,
         event_date -> Nullable<Varchar>,
         event_time -> Nullable<Varchar>,
@@ -690,17 +698,23 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(accession_events -> datasets (dataset_id));
 diesel::joinable!(accession_events -> specimens (specimen_id));
+diesel::joinable!(annotation_events -> datasets (dataset_id));
 diesel::joinable!(annotation_events -> sequences (sequence_id));
 diesel::joinable!(assemblies -> names (name_id));
+diesel::joinable!(assembly_events -> datasets (dataset_id));
 diesel::joinable!(assembly_events -> sequences (sequence_id));
 diesel::joinable!(assembly_stats -> assemblies (assembly_id));
 diesel::joinable!(biosamples -> names (name_id));
+diesel::joinable!(collection_events -> datasets (dataset_id));
 diesel::joinable!(collection_events -> specimens (specimen_id));
 diesel::joinable!(conservation_statuses -> datasets (dataset_id));
 diesel::joinable!(conservation_statuses -> names (name_id));
 diesel::joinable!(datasets -> sources (source_id));
+diesel::joinable!(deposition_events -> datasets (dataset_id));
 diesel::joinable!(deposition_events -> sequences (sequence_id));
+diesel::joinable!(dna_extraction_events -> datasets (dataset_id));
 diesel::joinable!(dna_extraction_events -> dna_extracts (dna_extract_id));
 diesel::joinable!(dna_extracts -> datasets (dataset_id));
 diesel::joinable!(dna_extracts -> names (name_id));
@@ -719,10 +733,12 @@ diesel::joinable!(regions -> names (name_id));
 diesel::joinable!(sequences -> datasets (dataset_id));
 diesel::joinable!(sequences -> dna_extracts (dna_extract_id));
 diesel::joinable!(sequences -> names (name_id));
+diesel::joinable!(sequencing_events -> datasets (dataset_id));
 diesel::joinable!(sequencing_events -> sequences (sequence_id));
 diesel::joinable!(sequencing_run_events -> sequencing_events (sequencing_event_id));
 diesel::joinable!(specimens -> datasets (dataset_id));
 diesel::joinable!(specimens -> names (name_id));
+diesel::joinable!(subsample_events -> datasets (dataset_id));
 diesel::joinable!(subsample_events -> subsamples (subsample_id));
 diesel::joinable!(subsamples -> datasets (dataset_id));
 diesel::joinable!(subsamples -> names (name_id));

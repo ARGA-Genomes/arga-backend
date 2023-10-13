@@ -529,6 +529,7 @@ pub struct Event {
 #[diesel(table_name = schema::collection_events)]
 pub struct CollectionEvent {
     pub id: Uuid,
+    pub dataset_id: Uuid,
     pub specimen_id: Uuid,
 
     pub event_date: Option<String>,
@@ -572,6 +573,7 @@ pub struct CollectionEvent {
 #[diesel(table_name = schema::accession_events)]
 pub struct AccessionEvent {
     pub id: Uuid,
+    pub dataset_id: Uuid,
     pub specimen_id: Uuid,
 
     pub event_date: Option<String>,
@@ -589,6 +591,7 @@ pub struct AccessionEvent {
 #[diesel(table_name = schema::subsample_events)]
 pub struct SubsampleEvent {
     pub id: Uuid,
+    pub dataset_id: Uuid,
     pub subsample_id: Uuid,
     pub event_date: Option<String>,
     pub event_time: Option<String>,
@@ -600,6 +603,7 @@ pub struct SubsampleEvent {
 #[diesel(table_name = schema::dna_extraction_events)]
 pub struct DnaExtractionEvent {
     pub id: Uuid,
+    pub dataset_id: Uuid,
     pub dna_extract_id: Uuid,
 
     pub event_date: Option<String>,
@@ -622,6 +626,7 @@ pub struct DnaExtractionEvent {
 #[diesel(table_name = schema::sequencing_events)]
 pub struct SequencingEvent {
     pub id: Uuid,
+    pub dataset_id: Uuid,
     pub sequence_id: Uuid,
 
     pub event_date: Option<String>,
@@ -668,6 +673,7 @@ pub struct SequencingRunEvent {
 #[diesel(table_name = schema::assembly_events)]
 pub struct AssemblyEvent {
     pub id: Uuid,
+    pub dataset_id: Uuid,
     pub sequence_id: Uuid,
 
     pub event_date: Option<String>,
@@ -685,6 +691,7 @@ pub struct AssemblyEvent {
 #[diesel(table_name = schema::annotation_events)]
 pub struct AnnotationEvent {
     pub id: Uuid,
+    pub dataset_id: Uuid,
     pub sequence_id: Uuid,
 
     pub event_date: Option<String>,
@@ -702,6 +709,7 @@ pub struct AnnotationEvent {
 #[diesel(table_name = schema::deposition_events)]
 pub struct DepositionEvent {
     pub id: Uuid,
+    pub dataset_id: Uuid,
     pub sequence_id: Uuid,
 
     pub event_date: Option<String>,

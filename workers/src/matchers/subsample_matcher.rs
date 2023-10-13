@@ -29,7 +29,7 @@ pub struct SubsampleMatch {
 }
 
 
-pub fn subsample_map(dataset: &Uuid, pool: &mut PgPool) -> Result<SubsampleMap, Error> {
+pub fn subsample_map(datasets: &Vec<Uuid>, pool: &mut PgPool) -> Result<SubsampleMap, Error> {
     use schema::subsamples::dsl::*;
     info!("Creating subsample map");
 
@@ -37,7 +37,7 @@ pub fn subsample_map(dataset: &Uuid, pool: &mut PgPool) -> Result<SubsampleMap, 
 
     let results = subsamples
         .select((id, dataset_id, name_id, record_id))
-        .filter(dataset_id.eq(dataset))
+        .filter(dataset_id.eq_any(datasets))
         .load::<SubsampleMatch>(&mut conn)?;
 
     let mut map = SubsampleMap::new();
