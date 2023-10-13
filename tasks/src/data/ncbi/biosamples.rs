@@ -2,9 +2,6 @@ use std::{path::PathBuf, collections::HashMap};
 
 // use arga_core::models::{Specimen, Dataset, NameList, NameListType};
 // use arga_core::{schema, models};
-use diesel::*;
-use diesel::r2d2::{Pool, ConnectionManager};
-
 use memmap2::Mmap;
 use quick_xml::{Reader, events::{Event, BytesStart}};
 use serde::Serialize;
@@ -15,9 +12,6 @@ use indicatif::{ProgressBar, ProgressStyle, ParallelProgressIterator, MultiProgr
 use crate::data::Error;
 
 use super::name_matcher::NameRecord;
-
-
-type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
 pub struct Progress {
@@ -270,17 +264,12 @@ enum ItemState {
 
 
 pub fn convert(input: PathBuf) -> Result<(), Error> {
-    info!(?input, "Creating database connection pool");
-    let url = arga_core::get_database_url();
-    let manager = ConnectionManager::<PgConnection>::new(url);
-    let mut pool = Pool::builder().build(manager)?;
-
     info!(?input, "Memory mapping file");
     let file = std::fs::File::open(input)?;
     let mmap = unsafe { Mmap::map(&file)? };
 
     let analysed = analyse_biosamples(mmap)?;
-    convert_biosamples(analysed, &mut pool)?;
+    convert_biosamples(analysed)?;
 
     Ok(())
 }
@@ -367,7 +356,7 @@ fn analyse_biosamples(mmap: Mmap) -> Result<AnalysedBiosamples, Error> {
 }
 
 
-fn convert_biosamples(analysed: AnalysedBiosamples, pool: &mut PgPool) -> Result<(), Error> {
+fn convert_biosamples(analysed: AnalysedBiosamples) -> Result<(), Error> {
     let total = analysed.offsets.len() as u64;
     info!(items=total, "Processing biosample file");
 
