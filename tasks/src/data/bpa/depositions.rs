@@ -9,6 +9,11 @@ use crate::data::Error;
 struct Record {
     id: String,
     bpa_sample_id: Option<String>,
+    bpa_dataset_id: Option<String>,
+
+    bpa_library_id: Option<String>,
+    library_id: Option<String>,
+
     owner_org: Option<String>,
     access_rights: Option<String>,
     publication_reference: Option<String>,
@@ -16,7 +21,6 @@ struct Record {
 
     dataset_id: Option<String>,
     bioplatforms_dataset_id: Option<String>,
-    bpa_dataset_id: Option<String>,
 
     bioplatforms_project_code: Option<String>,
     bioplatforms_project: Option<String>,
@@ -35,7 +39,8 @@ struct Record {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct DepositionEvent {
-    record_id: String,
+    id: String,
+    sequence_id: String,
     event_date: Option<String>,
     material_sample_id: Option<String>,
     rights_holder: Option<String>,
@@ -59,6 +64,11 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
     for row in reader.deserialize() {
         let record: Record = row?;
 
+        let sequence_id = record
+            .bpa_library_id
+            .or(record.library_id)
+            .unwrap_or(record.id.clone());
+
         let event_date = record.date_submission.or(record.date_data_published);
         let biosample_accession = record.ncbi_biosample_accession.or(record.ncbi_biosample_accession_number);
 
@@ -69,7 +79,8 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
         ].into_iter().filter_map(|r| r).collect();
 
         let event = DepositionEvent {
-            record_id: record.id,
+            id: record.id,
+            sequence_id,
             event_date,
             material_sample_id: record.bpa_sample_id,
             rights_holder: record.owner_org,

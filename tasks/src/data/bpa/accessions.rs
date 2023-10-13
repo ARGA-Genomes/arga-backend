@@ -15,6 +15,9 @@ struct Record {
     voucher_herbarium_catalog_number: Option<String>,
     voucher_or_tissue_number: Option<String>,
     voucher_id: Option<String>,
+    specimen_id: Option<String>,
+
+    sample_id: Option<String>,
 
     type_status: Option<String>,
     institution_name: Option<String>,
@@ -25,7 +28,8 @@ struct Record {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct AccessionEvent {
-    record_id: String,
+    id: String,
+    specimen_id: String,
     accession: String,
     material_sample_ids: String,
     type_status: Option<String>,
@@ -42,13 +46,22 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
     for row in reader.deserialize() {
         let record: Record = row?;
 
-        let accession = record.voucher_herbarium_catalog_number.as_ref()
-            .or(record.voucher_herbarium_record_number.as_ref())
-            .or(record.voucher_or_tissue_number.as_ref())
-            .or(record.voucher_id.as_ref())
-            .or(record.voucher_number.as_ref())
-            .unwrap_or(&record.id)
-            .clone();
+        let specimen_id = record
+            .voucher_number.clone()
+            .or(record.voucher_herbarium_catalog_number.clone())
+            .or(record.specimen_id)
+            .or(record.sample_id.clone())
+            .unwrap_or(record.id.clone());
+
+        let accession = specimen_id.clone();
+
+        // let accession = record.voucher_herbarium_catalog_number.as_ref()
+        //     .or(record.voucher_herbarium_record_number.as_ref())
+        //     .or(record.voucher_or_tissue_number.as_ref())
+        //     .or(record.voucher_id.as_ref())
+        //     .or(record.voucher_number.as_ref())
+        //     .unwrap_or(&specimen_id)
+        //     .clone();
 
         let vouchers: Vec<String> = vec![
             record.voucher_herbarium_catalog_number,
@@ -60,7 +73,8 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
 
 
         let event = AccessionEvent {
-            record_id: record.id,
+            id: record.id,
+            specimen_id,
             accession,
             material_sample_ids: vouchers.join(" | ").to_string(),
             type_status: record.type_status,

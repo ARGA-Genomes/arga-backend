@@ -8,6 +8,15 @@ use crate::data::Error;
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
     id: String,
+    bpa_sample_id: Option<String>,
+
+    // subsample_id construction
+    tissue_number: Option<String>,
+    voucher_or_tissue_number: Option<String>,
+    voucher_number: Option<String>,
+    voucher_herbarium_catalog_number: Option<String>,
+    sample_id: Option<String>,
+    specimen_id: Option<String>,
 
     dna_extraction_date: Option<String>,
     genomic_material_preparation_date: Option<String>,
@@ -37,7 +46,9 @@ struct Record {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct DnaExtractionEvent {
+    id: String,
     record_id: String,
+    subsample_id: String,
     event_date: Option<String>,
     concentration: Option<String>,
     concentration_method: Option<String>,
@@ -56,6 +67,24 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
 
     for row in reader.deserialize() {
         let record: Record = row?;
+
+        let record_id = record
+            .bpa_sample_id
+            .or(record.sample_id.clone())
+            .unwrap_or(record.id.clone());
+
+        let specimen_id = record
+            .voucher_number
+            .or(record.voucher_herbarium_catalog_number)
+            .or(record.specimen_id)
+            .or(record.sample_id.clone())
+            .unwrap_or(record.id.clone());
+
+        let subsample_material_id = record.tissue_number.or(record.voucher_or_tissue_number);
+        let subsample_id = match subsample_material_id {
+            Some(material_id) => format!("{} {material_id}", specimen_id),
+            None => specimen_id,
+        };
 
         let event_date = record
             .dna_extraction_date
@@ -77,7 +106,9 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
         let extracted_by = record.dna_extracted_by.or(record.material_extracted_by);
 
         let event = DnaExtractionEvent {
-            record_id: record.id,
+            id: record.id,
+            record_id,
+            subsample_id,
             event_date,
             concentration,
             concentration_method: record.dna_concentration_method,

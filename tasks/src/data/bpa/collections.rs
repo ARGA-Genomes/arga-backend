@@ -8,7 +8,13 @@ use crate::data::Error;
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
     id: String,
-    sample_id: Option<String>,
+    sample_id: Option<String>, // this is a bpa id in practice. eg: 102.100.100/352899
+    specimen_id: Option<String>, // bpa format of a vouchered specimen id. eg: WAM R102627
+    voucher_number: Option<String>,
+    voucher_herbarium_catalog_number: Option<String>,
+    tissue_number: Option<String>, // the tissue number of the vouchered specimen. eg: ABTC119950
+    voucher_or_tissue_number: Option<String>, // eg: R102627
+
     sample_type: Option<String>,
     title: Option<String>,
     sex: Option<String>,
@@ -17,7 +23,6 @@ struct Record {
     lifestage: Option<String>,
     life_stage: Option<String>,
     wild_captive: Option<String>,
-    specimen_id: Option<String>,
     ancillary_notes: Option<String>,
     collector_sample_id: Option<String>,
     collection_date: Option<String>,
@@ -88,6 +93,7 @@ struct Record {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct CollectionEvent {
+    id: String,
     record_id: String,
     material_sample_id: Option<String>,
     r#type: Option<String>,
@@ -161,6 +167,15 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
     for row in reader.deserialize() {
         let record: Record = row?;
 
+        let material_sample_id = record
+            .voucher_number
+            .or(record.voucher_herbarium_catalog_number)
+            .or(record.specimen_id);
+
+        let record_id = material_sample_id.clone()
+            .or(record.sample_id.clone())
+            .unwrap_or(record.id.clone());
+
         let life_stage = record.life_stage.or(record.lifestage);
         let collection_date = record.collection_date.or(record.living_collections_event_date);
         let state = record.state_or_territory.or(record.state_or_region);
@@ -174,9 +189,13 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
         let host_scientific_name = record.host_scientific_name.or(record.specific_host).or(record.original_source_host_species);
         let collected_by = record.collector.or(record.voucher_herbarium_collector_id);
 
+        // let material_sample_id = record.specimen_id.or(record.tissue_number).or(record.voucher_or_tissue_number);
+        // let record_id = material_sample_id.clone().or(record.sample_id).unwrap_or(record.id.clone());
+
         let event = CollectionEvent {
-            record_id: record.id,
-            material_sample_id: record.sample_id,
+            id: record.id.clone(),
+            record_id,
+            material_sample_id,
             r#type: record.sample_type,
             record_title_text: record.title,
             sex: record.sex,
@@ -184,7 +203,7 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
             phenotypic_sex: record.phenotypic_sex,
             life_stage,
             degree_of_establishment: record.wild_captive,
-            organism_id: record.specimen_id,
+            organism_id: None,
             organism_remarks: record.ancillary_notes,
             field_number: record.collector_sample_id,
             collection_date,

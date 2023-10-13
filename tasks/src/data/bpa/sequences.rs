@@ -10,8 +10,14 @@ struct Record {
     id: String,
 
     bioplatforms_library_id: Option<String>,
-    bpa_library_id: Option<String>,
     facility_sample_id: Option<String>,
+
+    bpa_library_id: Option<String>,
+    library_id: Option<String>,
+
+    // dna extraction id generation
+    bpa_sample_id: Option<String>,
+    sample_id: Option<String>,
 
     ddrad_dataset_ids: Option<String>,
     exon_capture_dataset_ids: Option<String>,
@@ -49,7 +55,9 @@ struct Record {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct SequencingEvent {
+    id: String,
     record_id: String,
+    dna_extract_id: String,
     material_sample_ids: String,
     dataset_ids: String,
     institution_code: Option<String>,
@@ -77,6 +85,16 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
     for row in reader.deserialize() {
         let record: Record = row?;
 
+        let record_id = record
+            .bpa_library_id.clone()
+            .or(record.library_id)
+            .unwrap_or(record.id.clone());
+
+        let dna_extract_id = record
+            .bpa_sample_id
+            .or(record.sample_id.clone())
+            .unwrap_or(record.id.clone());
+
         let sample_ids: Vec<String> = vec![
             record.bioplatforms_library_id,
             record.bpa_library_id,
@@ -99,7 +117,9 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
             .or(record.analysis_software);
 
         let event = SequencingEvent {
-            record_id: record.id,
+            id: record.id,
+            record_id,
+            dna_extract_id,
             material_sample_ids: sample_ids.join(" | ").to_string(),
             dataset_ids: dataset_ids.join(" | ").to_string(),
             institution_code: record.facility_project_code,

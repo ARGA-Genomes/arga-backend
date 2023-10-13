@@ -8,13 +8,16 @@ use crate::data::Error;
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
     id: String,
+    bpa_library_id: Option<String>,
+    library_id: Option<String>,
     genome_coverage: Option<String>,
     sequence_data_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct AnnotationEvent {
-    record_id: String,
+    id: String,
+    sequence_id: String,
     coverage: Option<String>,
     genome_representation: Option<String>,
     data_type: Option<String>,
@@ -26,6 +29,11 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
 
     for row in reader.deserialize() {
         let record: Record = row?;
+
+        let sequence_id = record
+            .bpa_library_id
+            .or(record.library_id.clone())
+            .unwrap_or(record.id.clone());
 
         let (data_type, representation) = match record.sequence_data_type.as_ref().map(|s| s.as_str()) {
             Some("illumina-amplicons") => (Some("marker"), None),
@@ -57,7 +65,8 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
         };
 
         let event = AnnotationEvent {
-            record_id: record.id,
+            id: record.id,
+            sequence_id,
             coverage: record.genome_coverage,
             genome_representation: representation.map(|s| s.to_string()),
             data_type: data_type.map(|s| s.to_string()),
