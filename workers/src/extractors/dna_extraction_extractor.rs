@@ -20,6 +20,7 @@ type MatchedRecords = Vec<(SubsampleMatch, Record)>;
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
     record_id: String,
+    subsample_id: String,
 
     event_date: Option<String>,
     event_time: Option<String>,
@@ -39,7 +40,7 @@ struct Record {
 
 impl From<Record> for SubsampleRecord {
     fn from(value: Record) -> Self {
-        Self { record_id: value.record_id }
+        Self { record_id: value.subsample_id }
     }
 }
 

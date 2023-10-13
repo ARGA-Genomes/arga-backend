@@ -29,7 +29,7 @@ pub struct SpecimenMatch {
 }
 
 
-pub fn specimen_map(dataset: &Uuid, pool: &mut PgPool) -> Result<SpecimenMap, Error> {
+pub fn specimen_map(datasets: &Vec<Uuid>, pool: &mut PgPool) -> Result<SpecimenMap, Error> {
     use schema::specimens::dsl::*;
     info!("Creating specimen map");
 
@@ -37,7 +37,7 @@ pub fn specimen_map(dataset: &Uuid, pool: &mut PgPool) -> Result<SpecimenMap, Er
 
     let results = specimens
         .select((id, dataset_id, name_id, record_id))
-        .filter(dataset_id.eq(dataset))
+        .filter(dataset_id.eq_any(datasets))
         .load::<SpecimenMatch>(&mut conn)?;
 
     let mut map = SpecimenMap::new();

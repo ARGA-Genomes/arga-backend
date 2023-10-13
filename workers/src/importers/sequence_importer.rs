@@ -17,7 +17,7 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 pub fn import(path: PathBuf, dataset: &Dataset, context: &Vec<Dataset>, pool: &mut PgPool) -> Result<(), Error> {
     info!("Extracting sequencing events");
 
-    let extractor = sequence_extractor::extract(path, &dataset, context, pool)?;
+    let extractor = sequence_extractor::extract(path, dataset, context, pool)?;
 
     for extract in extractor {
         let extract = extract?;

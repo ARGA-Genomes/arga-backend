@@ -78,8 +78,10 @@ impl Iterator for AccessionExtractIterator {
 
 
 /// Extract accession events and other related data from a CSV file
-pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<AccessionExtractIterator, Error> {
-    let specimens = specimen_map(&dataset.id, pool)?;
+pub fn extract(path: PathBuf, context: &Vec<Dataset>, pool: &mut PgPool) -> Result<AccessionExtractIterator, Error> {
+    let isolated_datasets = context.iter().map(|d| d.id.clone()).collect();
+
+    let specimens = specimen_map(&isolated_datasets, pool)?;
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(AccessionExtractIterator {

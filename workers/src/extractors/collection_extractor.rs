@@ -12,6 +12,7 @@ use arga_core::models::{Specimen, CollectionEvent, Dataset};
 use crate::error::Error;
 use crate::extractors::utils::parse_lat_lng;
 use crate::matchers::name_matcher::{NameMatch, NameRecord, match_records_mapped, NameMap, name_map};
+use crate::matchers::specimen_matcher::{SpecimenMap, specimen_map};
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -105,6 +106,7 @@ pub struct CollectionExtract {
 pub struct CollectionExtractIterator {
     dataset: Dataset,
     names: NameMap,
+    specimens: SpecimenMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
 
@@ -132,7 +134,7 @@ impl Iterator for CollectionExtractIterator {
         if records.is_empty() {
             None
         } else {
-            Some(extract_chunk(records, &self.dataset, &self.names))
+            Some(extract_chunk(records, &self.dataset, &self.names, &self.specimens))
         }
     }
 }
@@ -144,34 +146,50 @@ impl Iterator for CollectionExtractIterator {
 /// it and a parent event tracking common event metadata. A specimen can be further
 /// used by other events but a collection event will *always* create a new specimen
 /// since it is the _collection_ of a particular specimen that it describes.
-pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<CollectionExtractIterator, Error> {
+pub fn extract(path: PathBuf, dataset: &Dataset, context: &Vec<Dataset>, pool: &mut PgPool) -> Result<CollectionExtractIterator, Error> {
+    let isolated_datasets = context.iter().map(|d| d.id.clone()).collect();
+
     let names = name_map(pool)?;
+    let specimens = specimen_map(&isolated_datasets, pool)?;
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(CollectionExtractIterator {
         dataset: dataset.clone(),
         names,
+        specimens,
         reader,
     })
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, names: &NameMap) -> Result<CollectionExtract, Error> {
+fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, names: &NameMap, existing: &SpecimenMap) -> Result<CollectionExtract, Error> {
     // match the records to names in the database. this will filter out any names
     // that could not be matched
     let records = match_records_mapped(chunk, names)?;
 
     // extract all the records associated with a collection event.
-    // these extraction method return results in the same order as the input records
+    // these extraction methods return results in the same order as the input records
     // which makes it possible to zip the various extractions to get any associated ids
     // if necessary
     let specimens = extract_specimens(dataset, &records);
     let collection_events = extract_collection_events(records, &specimens);
 
-    Ok(CollectionExtract {
-        specimens,
-        collection_events,
-    })
+    // exclude any records that already exist within the isolation context. we want to
+    // allow for duplicate record ids from different datasets so we cannot leverage unique
+    // index constraints at the database level
+    let mut extract = CollectionExtract {
+        specimens: Vec::new(),
+        collection_events: Vec::new(),
+    };
+
+    for (specimen, collection_event) in specimens.into_iter().zip(collection_events.into_iter()) {
+        if !existing.contains_key(&specimen.record_id) {
+            extract.specimens.push(specimen);
+            extract.collection_events.push(collection_event);
+        }
+    }
+
+    Ok(extract)
 }
 
 

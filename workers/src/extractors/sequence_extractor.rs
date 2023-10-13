@@ -20,6 +20,7 @@ type MatchedRecords = Vec<(DnaExtractMatch, Record)>;
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
     record_id: String,
+    dna_extract_id: String,
     sequence_record_id: Option<String>,
     material_sample_id: Option<String>,
 
@@ -49,17 +50,18 @@ struct Record {
 
 impl From<Record> for DnaExtractRecord {
     fn from(value: Record) -> Self {
+        return Self { record_id: value.dna_extract_id };
         // a dataset can be made up of multiple different datasets
         // which might have different accessioned IDs for different stages.
         // for example, with NCBI the event chain starts with BioSamples
         // that have an ID of SAMNxxx, and later is referenced in Genbank and RefSeq
         // via the matierial sample id, and instead having its own accession
         // id of GCAxxx and GCFxxx respectively
-        let record_id = match value.material_sample_id {
-            Some(sample_id) => sample_id,
-            None => value.record_id,
-        };
-        Self { record_id }
+        // let record_id = match value.material_sample_id {
+        //     Some(sample_id) => sample_id,
+        //     None => value.record_id,
+        // };
+        // Self { record_id }
     }
 }
 

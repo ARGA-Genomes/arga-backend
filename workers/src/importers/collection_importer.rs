@@ -14,10 +14,10 @@ use crate::extractors::collection_extractor;
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
-pub fn import(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<(), Error> {
+pub fn import(path: PathBuf, dataset: &Dataset, context: &Vec<Dataset>, pool: &mut PgPool) -> Result<(), Error> {
     info!("Extracting collection events");
 
-    let extractor = collection_extractor::extract(path, &dataset, pool)?;
+    let extractor = collection_extractor::extract(path, dataset, context, pool)?;
 
     for extract in extractor {
         let extract = extract?;
