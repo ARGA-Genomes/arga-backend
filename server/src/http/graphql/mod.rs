@@ -166,7 +166,7 @@ impl Query {
         DnaExtract::new(&state.database, &by).await
     }
 
-    async fn sequence(&self, ctx: &Context<'_>, by: sequence::SequenceBy) -> Result<Option<Sequence>, Error> {
+    async fn sequence(&self, ctx: &Context<'_>, by: sequence::SequenceBy) -> Result<Vec<Sequence>, Error> {
         let state = ctx.data::<State>().unwrap();
         Sequence::new(&state.database, &by).await
     }

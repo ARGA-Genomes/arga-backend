@@ -26,34 +26,32 @@ impl SequenceProvider {
         Ok(sequence)
     }
 
-    pub async fn find_by_record_id(&self, record_id: &str) -> Result<Option<Sequence>, Error> {
+    pub async fn find_by_record_id(&self, record_id: &str) -> Result<Vec<Sequence>, Error> {
         use schema::sequences;
         let mut conn = self.pool.get().await?;
 
         let sequence = sequences::table
             .filter(sequences::record_id.eq(record_id))
-            .get_result::<Sequence>(&mut conn)
-            .await
-            .optional()?;
+            .load::<Sequence>(&mut conn)
+            .await?;
 
         Ok(sequence)
     }
 
-    pub async fn find_by_specimen_record_id(&self, record_id: &str) -> Result<Option<Sequence>, Error> {
+    pub async fn find_by_specimen_record_id(&self, record_id: &str) -> Result<Vec<Sequence>, Error> {
         use schema::{specimens, subsamples, dna_extracts, sequences};
         let mut conn = self.pool.get().await?;
 
-        let sequence = specimens::table
+        let sequences = specimens::table
             .inner_join(subsamples::table)
             .inner_join(dna_extracts::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
             .inner_join(sequences::table.on(dna_extracts::id.eq(sequences::dna_extract_id)))
             .select(sequences::all_columns)
             .filter(specimens::record_id.eq(record_id))
-            .get_result::<Sequence>(&mut conn)
-            .await
-            .optional()?;
+            .load::<Sequence>(&mut conn)
+            .await?;
 
-        Ok(sequence)
+        Ok(sequences)
     }
 
 

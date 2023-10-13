@@ -21,21 +21,21 @@ pub enum SequenceBy {
 pub struct Sequence(SequenceDetails, SequenceQuery);
 
 impl Sequence {
-    pub async fn new(db: &Database, by: &SequenceBy) -> Result<Option<Sequence>, Error> {
-        let sequence = match by {
-            SequenceBy::Id(id) => db.sequences.find_by_id(&id).await?,
+    pub async fn new(db: &Database, by: &SequenceBy) -> Result<Vec<Sequence>, Error> {
+        let sequences = match by {
+            SequenceBy::Id(id) => Vec::from_iter(db.sequences.find_by_id(&id).await?),
             SequenceBy::RecordId(id) => db.sequences.find_by_record_id(&id).await?,
             SequenceBy::SpecimenRecordId(id) => db.sequences.find_by_specimen_record_id(&id).await?,
         };
 
-        match sequence {
-            None => Ok(None),
-            Some(sequence) => {
-                let details = sequence.clone().into();
-                let query = SequenceQuery { sequence };
-                Ok(Some(Sequence(details, query)))
-            }
+        let mut resolvers = Vec::with_capacity(sequences.len());
+        for sequence in sequences {
+            let details = sequence.clone().into();
+            let query = SequenceQuery { sequence };
+            resolvers.push(Sequence(details, query))
         }
+
+        Ok(resolvers)
     }
 }
 
