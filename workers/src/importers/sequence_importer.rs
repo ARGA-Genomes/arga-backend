@@ -6,7 +6,7 @@ use rayon::prelude::*;
 use tracing::info;
 
 use arga_core::schema;
-use arga_core::models::{SequencingEvent, Dataset, Sequence};
+use arga_core::models::{SequencingEvent, Dataset, Sequence, SequencingRunEvent};
 use crate::error::Error;
 use crate::extractors::sequence_extractor;
 
@@ -23,6 +23,7 @@ pub fn import(path: PathBuf, dataset: &Dataset, context: &Vec<Dataset>, pool: &m
         let extract = extract?;
         import_sequences(extract.sequences, pool)?;
         import_sequencing_events(extract.sequencing_events, pool)?;
+        import_sequencing_run_events(extract.sequencing_run_events, pool)?;
     }
 
     info!("Import finished");
@@ -67,6 +68,27 @@ fn import_sequencing_events(sequences: Vec<SequencingEvent>, pool: &mut PgPool) 
         total_imported += chunk_total?;
     }
     info!(total=sequences.len(), total_imported, "Importing sequencing events finished");
+
+    Ok(())
+}
+
+fn import_sequencing_run_events(events: Vec<SequencingRunEvent>, pool: &mut PgPool) -> Result<(), Error> {
+    use schema::sequencing_run_events;
+
+    info!(total=events.len(), "Importing sequencing run events");
+    let imported: Vec<Result<usize, Error>> = events.par_chunks(1000).map(|chunk| {
+        let mut conn = pool.get()?;
+        let inserted_rows = diesel::insert_into(sequencing_run_events::table)
+            .values(chunk)
+            .execute(&mut conn)?;
+        Ok(inserted_rows)
+    }).collect();
+
+    let mut total_imported = 0;
+    for chunk_total in imported {
+        total_imported += chunk_total?;
+    }
+    info!(total=events.len(), total_imported, "Importing sequencing run events finished");
 
     Ok(())
 }
