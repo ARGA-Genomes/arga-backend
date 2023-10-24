@@ -349,7 +349,7 @@ pub struct Regions {
     pub dataset_id: Uuid,
     pub name_id: Uuid,
     pub region_type: RegionType,
-    pub values: Vec<String>,
+    pub values: Vec<Option<String>>,
 }
 
 

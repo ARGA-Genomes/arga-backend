@@ -11,7 +11,7 @@ use crate::database::extensions::whole_genome_filters;
 use crate::http::graphql::common::Taxonomy;
 use crate::index::species::{self, GetSpecies, GetRegions, GetMedia, GetConservationStatus, GetTraceFiles};
 
-use super::models::{Taxon, Name, NameAttribute, RegionType, TaxonPhoto, TraceFile, ConservationStatus, IndigenousKnowledge, WholeGenome, Marker};
+use super::models::{Taxon, Name, NameAttribute, RegionType, TaxonPhoto, TraceFile, ConservationStatus, IndigenousKnowledge, WholeGenome, Marker, Regions};
 use super::extensions::{sum_if, Paginate};
 use super::{schema, schema_gnl, Database, Error, PgPool, PageResult};
 
@@ -271,6 +271,32 @@ impl SpeciesProvider {
             .await?;
 
         Ok(records)
+    }
+
+    pub async fn regions_ibra(&self, name: &Name) -> Result<Vec<Regions>, Error> {
+        use schema::regions;
+        let mut conn = self.pool.get().await?;
+
+        let regions = regions::table
+            .filter(regions::name_id.eq(name.id))
+            .filter(regions::region_type.eq(RegionType::Ibra))
+            .load::<Regions>(&mut conn)
+            .await?;
+
+        Ok(regions)
+    }
+
+    pub async fn regions_imcra(&self, name: &Name) -> Result<Vec<Regions>, Error> {
+        use schema::regions;
+        let mut conn = self.pool.get().await?;
+
+        let regions = regions::table
+            .filter(regions::name_id.eq(name.id))
+            .filter(regions::region_type.eq(RegionType::Imcra))
+            .load::<Regions>(&mut conn)
+            .await?;
+
+        Ok(regions)
     }
 }
 

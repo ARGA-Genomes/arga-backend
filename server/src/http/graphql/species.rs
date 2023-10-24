@@ -18,11 +18,9 @@ use crate::index::species::{
     GetTraceFiles,
     TraceFile,
     GenomicData,
-    Region,
     Photo,
     GetSpecies,
     GetGenomicData,
-    GetRegions,
     GetMedia,
 };
 use crate::database::{schema, Database};
@@ -34,6 +32,7 @@ use super::common::{
     WholeGenomeFilterItem,
     convert_whole_genome_filters,
 };
+use super::dataset::DatasetDetails;
 use super::markers::SpeciesMarker;
 
 
@@ -214,18 +213,61 @@ pub struct Regions {
 
 #[Object]
 impl Regions {
-    #[instrument(skip(self, ctx))]
-    async fn ibra(&self, ctx: &Context<'_>) -> Result<Vec<Region>, Error> {
+    async fn ibra(&self, ctx: &Context<'_>) -> Result<Vec<RegionDistribution>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let regions = state.database.ibra(&self.name).await?;
+        let regions = state.database.species.regions_ibra(&self.name).await?;
+        let regions = regions.into_iter().map(RegionDistribution::new).collect();
         Ok(regions)
     }
 
-    #[instrument(skip(self, ctx))]
-    async fn imcra(&self, ctx: &Context<'_>) -> Result<Vec<Region>, Error> {
+    async fn imcra(&self, ctx: &Context<'_>) -> Result<Vec<RegionDistribution>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let regions = state.database.imcra(&self.name).await?;
+        let regions = state.database.species.regions_imcra(&self.name).await?;
+        let regions = regions.into_iter().map(RegionDistribution::new).collect();
         Ok(regions)
+    }
+}
+
+
+#[derive(MergedObject)]
+pub struct RegionDistribution(RegionDetails, RegionQuery);
+
+impl RegionDistribution {
+    pub fn new(regions: models::Regions) -> RegionDistribution {
+        let details = regions.clone().into();
+        let query = RegionQuery { regions };
+        RegionDistribution(details, query)
+    }
+}
+
+/// Regions that a species inhabit.
+///
+/// Regions are less granular than a distribution and serves to more
+/// clearly identify geographic locations inhabited by a particular species.
+#[derive(Clone, Debug, PartialEq, PartialOrd, Eq, Ord, Serialize, Deserialize, SimpleObject)]
+pub struct RegionDetails {
+    pub names: Vec<String>,
+}
+
+
+pub struct RegionQuery {
+    regions: models::Regions,
+}
+
+#[Object]
+impl RegionQuery {
+    pub async fn dataset(&self, ctx: &Context<'_>) -> Result<DatasetDetails, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let dataset = state.database.datasets.find_by_id(&self.regions.dataset_id).await?;
+        Ok(dataset.into())
+    }
+}
+
+impl From<models::Regions> for RegionDetails {
+    fn from(region: models::Regions) -> Self {
+        Self {
+            names: region.values.into_iter().filter_map(|r| r).collect(),
+        }
     }
 }
 

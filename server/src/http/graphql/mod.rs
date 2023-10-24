@@ -119,9 +119,9 @@ impl Query {
         Ok(sources)
     }
 
-    async fn dataset(&self, ctx: &Context<'_>, name: String) -> Result<Dataset, Error> {
+    async fn dataset(&self, ctx: &Context<'_>, by: dataset::DatasetBy) -> Result<Dataset, Error> {
         let state = ctx.data::<State>().unwrap();
-        Dataset::new(&state.database, &name).await
+        Dataset::new(&state.database, &by).await
     }
 
     async fn traces(&self, uuid: String) -> Traces {

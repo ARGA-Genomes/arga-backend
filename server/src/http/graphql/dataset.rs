@@ -16,12 +16,21 @@ use super::common::{Page, SpeciesCard};
 use super::helpers::SpeciesHelper;
 
 
+#[derive(OneofObject)]
+pub enum DatasetBy {
+    Id(Uuid),
+    Name(String),
+}
+
 #[derive(MergedObject)]
 pub struct Dataset(DatasetDetails, DatasetQuery);
 
 impl Dataset {
-    pub async fn new(db: &Database, name: &str) -> Result<Dataset, Error> {
-        let dataset = db.datasets.find_by_name(name).await?;
+    pub async fn new(db: &Database, by: &DatasetBy) -> Result<Dataset, Error> {
+        let dataset = match by {
+            DatasetBy::Id(id) => db.datasets.find_by_id(id).await?,
+            DatasetBy::Name(name) => db.datasets.find_by_name(name).await?,
+        };
         let details = dataset.clone().into();
         let query = DatasetQuery { dataset };
         Ok(Dataset(details, query))

@@ -95,6 +95,6 @@ fn extract_region_type(region_type: &str) -> Result<RegionType, ParseError> {
     }
 }
 
-fn extract_region_values(values: &str) -> Vec<String> {
-    values.split(",").map(|region| region.trim().to_string()).collect()
+fn extract_region_values(values: &str) -> Vec<Option<String>> {
+    values.split(",").map(|region| Some(region.trim().to_string())).collect()
 }
