@@ -62,7 +62,7 @@ impl SequenceQuery {
 
         Ok(SequenceEvents {
             sequencing: sequencing.into_iter().map(|r| r.into()).collect(),
-            sequencing_runs: sequencing_runs.into_iter().map(|r| r.into()).collect(),
+            sequencing_runs: sequencing_runs.into_iter().map(|r| SequencingRunEvent(r.clone().into(), SequencingRunEventQuery{ event: r })).collect(),
             assemblies: assemblies.into_iter().map(|r| r.into()).collect(),
             annotations: annotations.into_iter().map(|r| r.into()).collect(),
             data_depositions: depositions.into_iter().map(|r| r.into()).collect(),
@@ -71,7 +71,7 @@ impl SequenceQuery {
 }
 
 
-/// A specimen from a specific species.
+/// A sequence from a specific dna extract.
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SequenceDetails {
     pub id: Uuid,
@@ -138,14 +138,27 @@ impl From<models::SequencingEvent> for SequencingEvent {
     }
 }
 
+
+
+#[derive(MergedObject)]
+pub struct SequencingRunEvent(SequencingRunEventDetails, SequencingRunEventQuery);
+
+impl SequencingRunEvent {
+    pub fn new(event: models::SequencingRunEvent) -> SequencingRunEvent {
+        SequencingRunEvent(
+            SequencingRunEventDetails::from(event.clone()),
+            SequencingRunEventQuery { event }
+        )
+    }
+}
+
+
+/// A sequence run event from a specific sequencing event.
 #[derive(Clone, Debug, SimpleObject)]
-pub struct SequencingRunEvent {
+pub struct SequencingRunEventDetails {
     pub id: Uuid,
     pub sequencing_event_id: Uuid,
 
-    pub trace_id: Option<String>,
-    pub trace_name: Option<String>,
-    pub trace_link: Option<String>,
     pub sequencing_date: Option<NaiveDateTime>,
     pub sequencing_center: Option<String>,
     pub sequencing_center_code: Option<String>,
@@ -160,17 +173,13 @@ pub struct SequencingRunEvent {
     pub library_protocol: Option<String>,
     pub analysis_description: Option<String>,
     pub analysis_software: Option<String>,
-
 }
 
-impl From<models::SequencingRunEvent> for SequencingRunEvent {
+impl From<models::SequencingRunEvent> for SequencingRunEventDetails {
     fn from(value: models::SequencingRunEvent) -> Self {
         Self {
             id: value.id,
             sequencing_event_id: value.sequencing_event_id,
-            trace_id: value.trace_id,
-            trace_name: value.trace_name,
-            trace_link: value.trace_link,
             sequencing_date: value.sequencing_date,
             sequencing_center: value.sequencing_center,
             sequencing_center_code: value.sequencing_center_code,
@@ -187,6 +196,37 @@ impl From<models::SequencingRunEvent> for SequencingRunEvent {
         }
     }
 }
+
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct TraceData {
+    pub accession: Option<String>,
+    pub trace_id: Option<String>,
+    pub trace_name: Option<String>,
+    pub trace_link: Option<String>,
+}
+
+
+pub struct SequencingRunEventQuery {
+    event: models::SequencingRunEvent,
+}
+
+#[Object]
+impl SequencingRunEventQuery {
+    async fn trace(&self, ctx: &Context<'_>) -> Result<TraceData, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let trace = state.database.sequences.trace_data(&self.event.id).await?;
+
+        Ok(TraceData {
+            accession: trace.accession,
+            trace_id: trace.trace_id,
+            trace_name: trace.trace_name,
+            trace_link: trace.trace_link,
+        })
+    }
+}
+
+
 
 #[derive(Clone, Debug, SimpleObject)]
 pub struct AssemblyEvent {

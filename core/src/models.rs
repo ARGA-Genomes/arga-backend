@@ -960,3 +960,12 @@ pub enum BushfireRecoveryTrait {
     CumulativeHighRiskExposure,
     OtherThreats,
 }
+
+
+#[derive(Debug, Queryable, Default, Clone)]
+pub struct TraceData {
+    pub accession: Option<String>,
+    pub trace_id: Option<String>,
+    pub trace_name: Option<String>,
+    pub trace_link: Option<String>,
+}

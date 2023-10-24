@@ -1,4 +1,4 @@
-use arga_core::models::{SequencingRunEvent, AssemblyEvent, DepositionEvent, AnnotationEvent};
+use arga_core::models::{SequencingRunEvent, AssemblyEvent, DepositionEvent, AnnotationEvent, TraceData};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
@@ -115,5 +115,25 @@ impl SequenceProvider {
             .await?;
 
         Ok(events)
+    }
+
+    pub async fn trace_data(&self, sequence_run_event_id: &Uuid) -> Result<TraceData, Error> {
+        use schema::{sequencing_run_events, sequencing_events, deposition_events};
+        let mut conn = self.pool.get().await?;
+
+        let trace = sequencing_run_events::table
+            .inner_join(sequencing_events::table)
+            .inner_join(deposition_events::table.on(deposition_events::sequence_id.eq(sequencing_events::sequence_id)))
+            .select((
+                deposition_events::accession,
+                sequencing_run_events::trace_id,
+                sequencing_run_events::trace_name,
+                sequencing_run_events::trace_link,
+            ))
+            .filter(sequencing_run_events::id.eq(sequence_run_event_id))
+            .get_result::<TraceData>(&mut conn)
+            .await?;
+
+        Ok(trace)
     }
 }
