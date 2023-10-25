@@ -18,3 +18,4 @@ pub mod assembly_extractor;
 pub mod annotation_extractor;
 pub mod deposition_extractor;
 pub mod name_attribute_extractor;
+pub mod admin_media_extractor;

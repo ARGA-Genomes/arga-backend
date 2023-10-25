@@ -1,3 +1,4 @@
+mod common;
 mod taxa;
 mod csv_upload;
 mod media;

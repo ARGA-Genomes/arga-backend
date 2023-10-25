@@ -47,6 +47,25 @@ diesel::table! {
 }
 
 diesel::table! {
+    admin_media (id) {
+        id -> Uuid,
+        name_id -> Uuid,
+        image_source -> Varchar,
+        url -> Varchar,
+        width -> Nullable<Int4>,
+        height -> Nullable<Int4>,
+        reference_url -> Nullable<Varchar>,
+        title -> Nullable<Varchar>,
+        description -> Nullable<Varchar>,
+        source -> Nullable<Varchar>,
+        creator -> Nullable<Varchar>,
+        publisher -> Nullable<Varchar>,
+        license -> Nullable<Varchar>,
+        rights_holder -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     annotation_events (id) {
         id -> Uuid,
         dataset_id -> Uuid,
@@ -700,6 +719,7 @@ diesel::table! {
 
 diesel::joinable!(accession_events -> datasets (dataset_id));
 diesel::joinable!(accession_events -> specimens (specimen_id));
+diesel::joinable!(admin_media -> names (name_id));
 diesel::joinable!(annotation_events -> datasets (dataset_id));
 diesel::joinable!(annotation_events -> sequences (sequence_id));
 diesel::joinable!(assemblies -> names (name_id));
@@ -751,6 +771,7 @@ diesel::joinable!(trace_files -> names (name_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     accession_events,
+    admin_media,
     annotation_events,
     assemblies,
     assembly_events,

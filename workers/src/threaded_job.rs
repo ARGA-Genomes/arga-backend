@@ -29,6 +29,7 @@ use super::importers::{
     conservation_status_importer,
     indigenous_knowledge_importer,
     name_attribute_importer,
+    admin_media_importer,
 };
 
 
@@ -129,7 +130,8 @@ impl ThreadedJob {
             "import_annotation" => annotation_importer::import(path, &dataset?, pool)?,
             "import_deposition" => deposition_importer::import(path, &dataset?, pool)?,
             "import_name_attribute" => name_attribute_importer::import(path, pool)?,
-            _ => {}
+            "import_admin_media" => admin_media_importer::import(path, data.dataset.clone(), pool)?,
+            _ => panic!("Unknown job worker: {}", worker),
         }
 
         Ok(())

@@ -1,38 +1,20 @@
 use std::collections::HashMap;
 
-use axum::extract::{State, Query, Path};
+use axum::extract::{State, Query};
 use axum::{Json, Router};
-use axum::routing::{get, post, put};
+use axum::routing::get;
 
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
-use crate::database::extensions::{pagination, Paginate};
+use crate::database::extensions::Paginate;
 use crate::http::Context;
 use crate::http::error::InternalError;
 use crate::database::{schema, Database};
 use crate::database::models::{Name, Dataset};
 
-
-#[derive(Debug, Serialize)]
-pub struct Page<T> {
-    total: i64,
-    records: Vec<T>,
-}
-
-pub type PageResult<T> = Result<Json<Page<T>>, InternalError>;
-
-impl<T> From<Vec<(T, i64)>> for Page<T> {
-    fn from(value: Vec<(T, i64)>) -> Self {
-        let page: pagination::Page<T> = value.into();
-        Self {
-            total: page.total,
-            records: page.records,
-        }
-    }
-}
+use super::common::PageResult;
 
 
 async fn taxa(

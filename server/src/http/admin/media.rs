@@ -17,10 +17,39 @@ use futures::{Stream, TryStreamExt};
 use tokio::{fs::File, io::BufWriter};
 use tokio_util::io::StreamReader;
 
+use crate::database::extensions::Paginate;
 use crate::http::Context;
 use crate::http::error::{InternalError, Error};
 use crate::database::{schema, Database};
-use crate::database::models::{Name, TaxonPhoto};
+use crate::database::models::{Name, TaxonPhoto, AdminMedia};
+
+use super::common::{PageResult, parse_int_param};
+
+
+async fn media(
+    Query(params): Query<HashMap<String, String>>,
+    State(database): State<Database>,
+) -> PageResult<AdminMedia>
+{
+    use schema::{names, admin_media};
+    let mut conn = database.pool.get().await?;
+
+    let page = parse_int_param(&params, "page", 1);
+    let per_page = parse_int_param(&params, "page_size", 20);
+    let name = params.get("scientific_name").expect("must provide a scientific name parameter");
+
+    let page = admin_media::table
+        .inner_join(names::table)
+        .filter(names::scientific_name.eq(name))
+        .order_by(admin_media::reference_url)
+        .select(admin_media::all_columns)
+        .paginate(page)
+        .per_page(per_page)
+        .load::<(AdminMedia, i64)>(&mut conn)
+        .await?;
+
+    Ok(Json(page.into()))
+}
 
 
 async fn main_media(
@@ -221,6 +250,7 @@ fn valid_path(path: &str) -> bool {
 /// The REST gateway for the admin backend for basic CRUD operations
 pub(crate) fn router() -> Router<Context> {
     Router::new()
+        .route("/api/admin/media", get(media))
         .route("/api/admin/media/main", get(main_media))
         .route("/api/admin/media/main", post(upsert_main_media))
         .route("/api/admin/media/upload", post(accept_image))

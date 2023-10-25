@@ -969,3 +969,23 @@ pub struct TraceData {
     pub trace_name: Option<String>,
     pub trace_link: Option<String>,
 }
+
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::admin_media)]
+pub struct AdminMedia {
+    pub id: Uuid,
+    pub name_id: Uuid,
+    pub image_source: String,
+    pub url: String,
+    pub width: Option<i32>,
+    pub height: Option<i32>,
+    pub reference_url: Option<String>,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub source: Option<String>,
+    pub creator: Option<String>,
+    pub publisher: Option<String>,
+    pub license: Option<String>,
+    pub rights_holder: Option<String>,
+}

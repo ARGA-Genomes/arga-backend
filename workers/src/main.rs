@@ -6,10 +6,6 @@ mod importers;
 mod manager;
 mod threaded_job;
 
-mod tokio_bridge;
-// mod specimen_importer;
-// mod marker_importer;
-
 use std::time::{Instant, Duration};
 
 use stakker::*;
@@ -35,15 +31,6 @@ fn run() {
     let waker = move || { tx.send(0).expect("The waker receiver has been dropped") };
     stakker.set_poll_waker(waker);
 
-    // store the tokio handle instance in the anymap so that
-    // actors can execute async tasks without needing to thread
-    // through handle clones down the tree. since the tokio runtime
-    // is used as part of the main loop we consider it part of the
-    // environment and expect actors to gracefully handle errors
-    // that occur when trying to spawn with a failed tokio runtime
-    let mut runtime = tokio_bridge::TokioRuntime::new();
-    stakker.anymap_set(runtime.handle());
-
     // create the manager actor which spawns other actors
     // to process jobs
     let _manager = actor!(stakker, Manager::init(Duration::from_secs(10)), ret_shutdown!(stakker));
@@ -67,7 +54,4 @@ fn run() {
 
         stakker.run(Instant::now(), false);
     }
-
-    // gracefully shutdown the tokio runtime thread
-    runtime.shutdown().join().unwrap();
 }

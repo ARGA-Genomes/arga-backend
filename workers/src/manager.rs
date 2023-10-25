@@ -2,34 +2,37 @@ use std::time::Duration;
 
 use stakker::*;
 use tracing::{info, instrument};
+use diesel::*;
+use diesel::r2d2::{Pool, ConnectionManager};
 
 use arga_core::schema;
 use arga_core::models::{Job, JobStatus};
 
 use super::threaded_job::ThreadedJob;
-// use super::specimen_importer::SpecimenImporter;
-// use super::marker_importer::MarkerImporter;
-use super::tokio_bridge::TokioHandle;
+
+
+type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
 pub struct Manager {
     interval: Duration,
-    _store: ActorOwn<PostgresStore>,
     poller: ActorOwn<JobPoller>,
     allocator: ActorOwn<Allocator>,
 }
 
 impl Manager {
     pub fn init(cx: CX![], interval: Duration) -> Option<Self> {
-        let store = actor!(cx, PostgresStore::init(), ret_nop!());
-        let poller = actor!(cx, JobPoller::init(store.clone()), ret_nop!());
-        let allocator = actor!(cx, Allocator::init(store.clone()), ret_nop!());
+        let url = arga_core::get_database_url();
+        let manager = ConnectionManager::<PgConnection>::new(url);
+        let pool = Pool::builder().build(manager).expect("Could not build connection pool");
+
+        let poller = actor!(cx, JobPoller::init(pool.clone()), ret_nop!());
+        let allocator = actor!(cx, Allocator::init(pool.clone()), ret_nop!());
 
         call!([cx], poll());
 
         Some(Self {
             interval,
-            _store: store,
             poller,
             allocator,
         })
@@ -45,158 +48,63 @@ impl Manager {
 }
 
 
-use diesel::prelude::*;
-use diesel_async::RunQueryDsl;
-use diesel_async::AsyncPgConnection;
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
-use diesel_async::pooled_connection::bb8::Pool;
-
-
-type PgPool = Pool<AsyncPgConnection>;
-
-pub struct PostgresStore {
+pub struct JobPoller {
     pool: PgPool,
 }
 
-impl PostgresStore {
-    pub fn init(cx: CX![]) -> Option<Self> {
-        let url = arga_core::get_database_url();
-        let mut handle = cx.anymap_get::<TokioHandle>();
-
-        handle.spawn_ret(ret_to!([cx], Self::setup_connection() as (PgPool)), cx, || async move {
-            info!("Connecting to database");
-
-            let config = AsyncDieselConnectionManager::<AsyncPgConnection>::new(url);
-            let pool = Pool::builder().build(config).await.unwrap();
-
-            info!("Connected");
-            pool
-        });
-
-        None
-    }
-
-    fn setup_connection(_cx: CX![], pool: Option<PgPool>) -> Option<Self> {
-        Some(Self {
-            pool: pool.unwrap(),
-        })
-    }
-
-    fn pool(&self, _cx: CX![], ret: Ret<PgPool>) {
-        ret!([ret], self.pool.clone());
-    }
-}
-
-
-pub struct JobPoller {
-    handle: TokioHandle,
-    pool: Pool<AsyncPgConnection>,
-}
-
 impl JobPoller {
-    pub fn init(cx: CX![], postgres: Actor<PostgresStore>) -> Option<Self> {
-        let ret = ret_to!([cx], Self::setup_connection() as (PgPool));
-        call!([postgres], pool(ret));
-        None
-    }
-
-    fn setup_connection(cx: CX![], pool: Option<PgPool>) -> Option<Self> {
-        let handle = cx.anymap_get::<TokioHandle>();
+    pub fn init(_cx: CX![], pool: PgPool) -> Option<Self> {
         Some(Self {
-            handle,
-            pool: pool.unwrap(),
+            pool,
         })
     }
 
-    pub fn next_job(&mut self, cx: CX![], ret: Ret<Option<Job>>) {
-        let pool = self.pool.clone();
+    pub fn next_job(&mut self, _cx: CX![], ret: Ret<Option<Job>>) {
+        use schema::jobs::dsl::*;
 
-        self.handle.spawn_ret(ret, cx, || async move {
-            use schema::jobs::dsl::*;
-            let mut conn = pool.get().await.unwrap();
+        let mut conn = self.pool.get().expect("Failed to get a connection");
+        let job = jobs
+            .filter(status.eq(JobStatus::Pending))
+            .order(created_at.asc())
+            .first(&mut conn)
+            .optional()
+            .expect("Could not query for the next job");
 
-            jobs
-                .filter(status.eq(JobStatus::Pending))
-                .first(&mut conn)
-                .await
-                .optional()
-                .unwrap()
-        });
+        ret!([ret], job);
     }
 }
 
 
 pub struct Allocator {
-    handle: TokioHandle,
-    pool: Pool<AsyncPgConnection>,
-
-    // specimen_importer: ActorOwn<SpecimenImporter>,
-    // marker_importer: ActorOwn<MarkerImporter>,
+    pool: PgPool,
     threaded_job: ActorOwn<ThreadedJob>,
 }
 
 impl Allocator {
-    pub fn init(cx: CX![], postgres: Actor<PostgresStore>) -> Option<Self> {
-        let ret = ret_to!([cx], Self::setup_connection() as (PgPool));
-        call!([postgres], pool(ret));
-        None
-    }
-
-    fn setup_connection(cx: CX![], pool: Option<PgPool>) -> Option<Self> {
-        let handle = cx.anymap_get::<TokioHandle>();
+    pub fn init(cx: CX![], pool: PgPool) -> Option<Self> {
         Some(Self {
-            handle,
-            pool: pool.unwrap(),
-
-            // specimen_importer: actor!(cx, SpecimenImporter::init(), ret_nop!()),
-            // marker_importer: actor!(cx, MarkerImporter::init(), ret_nop!()),
+            pool,
             threaded_job: actor!(cx, ThreadedJob::init(), ret_nop!()),
         })
     }
 
-    #[instrument(skip(self, cx))]
-    pub fn recv_job(&mut self, cx: CX![], job: Option<Job>) {
+    #[instrument(skip(self, _cx))]
+    pub fn recv_job(&mut self, _cx: CX![], job: Option<Job>) {
+        use schema::jobs::dsl::*;
+
         if let Some(job) = job {
             info!("Taking job");
             let pool = self.pool.clone();
 
-            let ret = match job.worker.as_str() {
-                // "import_specimen" => ret_some_to!([self.specimen_importer], import() as (Job)),
-                // "import_marker" => ret_some_to!([self.marker_importer], import() as (Job)),
-
-                "import_source" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_dataset" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_taxon" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_synonym" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_vernacular" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_region" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_ecology" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_conservation_status" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_indigenous_knowledge" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_collection" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_accession" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_subsample" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_dna_extraction" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_sequence" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_assembly" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_annotation" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_deposition" => ret_some_to!([self.threaded_job], run() as (Job)),
-                "import_name_attribute" => ret_some_to!([self.threaded_job], run() as (Job)),
-                _ => panic!("Unknown job worker: {}", job.worker)
-            };
-
             // update the status so that it is only allocated to one worker
-            self.handle.spawn_ret(ret, cx, move || async move {
-                use schema::jobs::dsl::*;
-                let mut conn = pool.get().await.unwrap();
+            let mut conn = pool.get().expect("Failed to get a connection");
+            let job = diesel::update(jobs)
+                .filter(id.eq(job.id))
+                .set(status.eq(JobStatus::Initialized))
+                .get_result(&mut conn)
+                .expect("Could not get a lock on the job");
 
-                diesel::update(jobs)
-                    .filter(id.eq(job.id))
-                    .set(status.eq(JobStatus::Initialized))
-                    .get_result(&mut conn)
-                    .await
-                    .unwrap()
-            });
+            call!([self.threaded_job], run(job));
         }
     }
 }
