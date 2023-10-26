@@ -34,12 +34,12 @@ pub struct SpeciesDoc {
 }
 
 pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
-    use schema_gnl::{species, synonyms, species_vernacular_names};
+    use schema_gnl::{species, synonyms, common_names};
     let mut conn = pool.get()?;
 
     let docs = species::table
         .left_join(synonyms::table)
-        .left_join(species_vernacular_names::table)
+        .left_join(common_names::table)
         .select((
             species::name_id,
             species::status,
@@ -47,7 +47,7 @@ pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
             species::canonical_name,
             species::subspecies,
             synonyms::names.nullable(),
-            species_vernacular_names::vernacular_names.nullable(),
+            common_names::names.nullable(),
 
             species::kingdom,
             species::phylum,
@@ -64,13 +64,13 @@ pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
 
 pub fn get_undescribed_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
     use schema::taxa;
-    use schema_gnl::{species, synonyms, species_vernacular_names};
+    use schema_gnl::{species, synonyms, common_names};
     let mut conn = pool.get()?;
 
     let docs = taxa::table
         .left_join(species::table)
         .left_join(synonyms::table)
-        .left_join(species_vernacular_names::table)
+        .left_join(common_names::table)
         .select((
             taxa::name_id,
             taxa::status,
@@ -78,7 +78,7 @@ pub fn get_undescribed_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> 
             taxa::canonical_name,
             species::subspecies.nullable(),
             synonyms::names.nullable(),
-            species_vernacular_names::vernacular_names.nullable(),
+            common_names::names.nullable(),
 
             taxa::kingdom,
             taxa::phylum,

@@ -16,13 +16,15 @@ COMMENT ON TABLE name_vernacular_names IS 'A through table linking vernacular na
 
 
 CREATE VIEW common_names AS
-SELECT
-    names.id AS id,
-    vernacular_name,
-    language AS vernacular_language,
-    scientific_name,
-    authorship as scientific_name_authorship,
-    canonical_name
-FROM name_vernacular_names
-JOIN vernacular_names on name_vernacular_names.vernacular_name_id = vernacular_names.id
-JOIN names on name_vernacular_names.name_id = names.id;
+SELECT *
+FROM (
+  SELECT
+    taxa.*,
+    array_agg(vernacular_names.vernacular_name)
+      OVER (PARTITION BY scientific_name ORDER BY vernacular_names.id DESC) AS names,
+    rank() OVER (PARTITION BY scientific_name ORDER BY vernacular_names.id ASC) AS window_rank
+  FROM taxa
+  JOIN name_vernacular_names ON taxa.name_id = name_vernacular_names.name_id
+  JOIN vernacular_names ON name_vernacular_names.vernacular_name_id = vernacular_names.id
+) tbl
+WHERE window_rank = 1

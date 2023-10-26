@@ -321,17 +321,6 @@ pub struct Name {
     pub authorship: Option<String>,
 }
 
-#[derive(Clone, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
-#[diesel(table_name = schema_gnl::common_names)]
-pub struct CommonName {
-    pub id: Uuid,
-    pub vernacular_name: String,
-    pub vernacular_language: Option<String>,
-    pub scientific_name: String,
-    pub scientific_name_authorship: Option<String>,
-    pub canonical_name: Option<String>,
-}
-
 
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::RegionType"]
@@ -888,7 +877,7 @@ pub struct WholeGenome {
     pub record_id: String,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
-    pub accession: Option<String>,
+    pub accession: String,
     pub sequenced_by: Option<String>,
     pub material_sample_id: Option<String>,
     pub estimated_size: Option<String>,

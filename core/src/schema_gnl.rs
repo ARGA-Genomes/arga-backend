@@ -71,7 +71,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    species_vernacular_names (id) {
+    common_names (id) {
         id -> Uuid,
         source -> Uuid,
         name_id -> Uuid,
@@ -101,7 +101,7 @@ diesel::table! {
         family_authority -> Nullable<Varchar>,
         genus_authority -> Nullable<Varchar>,
         species_authority -> Nullable<Varchar>,
-        vernacular_names -> Nullable<Array<Text>>,
+        names -> Nullable<Array<Text>>,
         window_rank -> BigInt,
     }
 }
@@ -114,42 +114,6 @@ diesel::table! {
     }
 }
 
-diesel::table! {
-    ranked_taxa (id) {
-        id -> Uuid,
-        taxa_lists_id -> Uuid,
-        name_id -> Uuid,
-        scientific_name -> Nullable<Varchar>,
-        scientific_name_authorship -> Nullable<Varchar>,
-        canonical_name -> Nullable<Varchar>,
-        specific_epithet -> Nullable<Varchar>,
-        infraspecific_epithet -> Nullable<Varchar>,
-        taxon_rank -> Nullable<Text>,
-        name_according_to -> Nullable<Text>,
-        name_published_in -> Nullable<Text>,
-        taxonomic_status -> Nullable<Varchar>,
-        taxon_remarks -> Nullable<Text>,
-        kingdom -> Nullable<Varchar>,
-        phylum -> Nullable<Varchar>,
-        class -> Nullable<Varchar>,
-        order -> Nullable<Varchar>,
-        family -> Nullable<Varchar>,
-        genus -> Nullable<Varchar>,
-        list_name -> Varchar,
-        taxa_priority -> Integer,
-    }
-}
-
-diesel::table! {
-    common_names (id) {
-        id -> Uuid,
-        vernacular_name -> Varchar,
-        vernacular_language -> Nullable<Varchar>,
-        scientific_name -> Varchar,
-        scientific_name_authorship -> Nullable<Varchar>,
-        canonical_name -> Nullable<Varchar>,
-    }
-}
 
 diesel::table! {
     taxa_filter (id) {
@@ -188,7 +152,7 @@ diesel::table! {
         record_id -> Varchar,
         latitude -> Nullable<Float8>,
         longitude -> Nullable<Float8>,
-        accession -> Nullable<Varchar>,
+        accession -> Varchar,
         sequenced_by -> Nullable<Varchar>,
         material_sample_id -> Nullable<Varchar>,
         estimated_size -> Nullable<Varchar>,
@@ -248,13 +212,13 @@ diesel::table! {
 }
 
 
-use super::schema::{datasets, names, assemblies, taxa, specimens, accession_events};
+use super::schema::{datasets, names, taxa, specimens, accession_events};
 
 diesel::joinable!(species -> synonyms (id));
-diesel::joinable!(species -> species_vernacular_names (id));
+diesel::joinable!(species -> common_names (id));
 diesel::joinable!(taxa -> species (id));
 diesel::joinable!(taxa -> synonyms (id));
-diesel::joinable!(taxa -> species_vernacular_names (id));
+diesel::joinable!(taxa -> common_names (id));
 diesel::joinable!(whole_genomes -> datasets (dataset_id));
 diesel::joinable!(whole_genomes -> names (name_id));
 diesel::joinable!(markers -> datasets (dataset_id));
@@ -265,14 +229,11 @@ diesel::joinable!(name_data_summaries -> names (name_id));
 diesel::joinable!(taxa_filter -> names (name_id));
 diesel::joinable!(name_data_summaries -> taxa_filter (name_id));
 
-diesel::joinable!(ranked_taxa -> assemblies (name_id));
-diesel::joinable!(ranked_taxa -> names (name_id));
-
 diesel::allow_tables_to_appear_in_same_query!(
     names,
     species,
     synonyms,
-    species_vernacular_names,
+    common_names,
     undescribed_species,
     whole_genomes,
     markers,
@@ -306,12 +267,17 @@ diesel::allow_tables_to_appear_in_same_query!(
 );
 
 diesel::allow_tables_to_appear_in_same_query!(
-    species_vernacular_names,
+    common_names,
     taxa,
 );
 
 diesel::allow_tables_to_appear_in_same_query!(
     name_data_summaries,
+    taxa,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    whole_genomes,
     taxa,
 );
 
@@ -328,19 +294,4 @@ diesel::allow_tables_to_appear_in_same_query!(
 diesel::allow_tables_to_appear_in_same_query!(
     specimen_stats,
     accession_events,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    ranked_taxa,
-    common_names,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    ranked_taxa,
-    names,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    ranked_taxa,
-    assemblies,
 );

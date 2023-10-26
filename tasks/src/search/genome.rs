@@ -9,7 +9,7 @@ use uuid::Uuid;
 use anyhow::Error;
 
 use arga_core::models::TaxonomicStatus;
-use arga_core::schema;
+use arga_core::{schema, schema_gnl};
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -29,21 +29,22 @@ pub struct GenomeDoc {
 }
 
 pub fn get_genomes(pool: &PgPool) -> Result<Vec<GenomeDoc>, Error> {
-    use schema::{assemblies, names, taxa};
+    use schema_gnl::whole_genomes;
+    use schema::{names, taxa};
     let mut conn = pool.get()?;
 
-    let docs = names::table
-        .inner_join(taxa::table)
-        .inner_join(assemblies::table)
+    let docs = whole_genomes::table
+        .inner_join(names::table.on(whole_genomes::name_id.eq(names::id)))
+        .inner_join(taxa::table.on(names::id.eq(taxa::name_id)))
         .select((
             taxa::name_id,
             taxa::status,
             taxa::canonical_name,
-            assemblies::accession,
-            assemblies::genome_rep,
-            assemblies::contam_screen_input,
-            assemblies::refseq_category,
-            assemblies::event_date,
+            whole_genomes::accession,
+            whole_genomes::representation,
+            whole_genomes::quality,
+            whole_genomes::assembly_type,
+            whole_genomes::release_date,
         ))
         .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
         .load::<GenomeDoc>(&mut conn)?;
