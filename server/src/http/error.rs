@@ -27,7 +27,7 @@ pub enum Error {
     Database(crate::database::Error),
 
     #[error(transparent)]
-    SearchIndex(#[from] crate::index::providers::search::Error),
+    SearchIndex(#[from] arga_core::search::Error),
 
     #[error("request timeout")]
     Timeout,

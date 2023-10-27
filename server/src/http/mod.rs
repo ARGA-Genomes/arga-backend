@@ -8,8 +8,8 @@ use axum::Router;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
+use arga_core::search::SearchIndex;
 use crate::database::Database;
-use crate::index::providers::search::SearchIndex;
 use crate::index::providers::solr::Solr;
 
 pub mod error;

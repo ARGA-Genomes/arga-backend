@@ -4,10 +4,9 @@ use async_graphql::*;
 use serde::Deserialize;
 use uuid::Uuid;
 
+use arga_core::search::SearchItem;
 use crate::http::Error;
 use crate::http::Context as State;
-use crate::index::lists::Pagination;
-use crate::index::providers::search::SearchItem;
 
 
 #[derive(Debug, Enum, Eq, PartialEq, Copy, Clone)]
@@ -26,22 +25,19 @@ impl Search {
         &self,
         ctx: &Context<'_>,
         query: String,
-        pagination: Pagination,
+        page: usize,
+        per_page: usize,
         data_type: Option<String>,
     ) -> Result<FullTextSearchResult, Error>
     {
         let state = ctx.data::<State>().unwrap();
 
         let (search_results, total) = match data_type.unwrap_or_default().as_str() {
-            "taxonomy" => state.search.taxonomy(&query, &pagination),
-            "genomes" => state.search.genomes(&query, &pagination),
-            "loci" => state.search.loci(&query, &pagination),
-            "specimens" => state.search.specimens(&query, &pagination),
-            // default to an 'all' search
-            _ => {
-                let results = state.search.all(&query, &pagination)?;
-                Ok((results.results, results.total))
-            },
+            "taxonomy" => state.search.taxonomy(&query, page, per_page),
+            "genomes" => state.search.genomes(&query, page, per_page),
+            "loci" => state.search.loci(&query, page, per_page),
+            "specimens" => state.search.specimens(&query, page, per_page),
+            _ => state.search.all(&query, page, per_page),
         }?;
 
         let mut name_ids: Vec<Uuid> = Vec::new();

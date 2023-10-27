@@ -6,9 +6,7 @@ use crate::database::Database;
 use crate::http::Error;
 use crate::http::Context as State;
 
-use crate::database::models;
 use crate::database::taxa;
-
 use super::common::Taxonomy;
 
 

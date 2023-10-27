@@ -24,19 +24,6 @@ pub enum Error {
     ParseError(String),
 }
 
-#[derive(Debug)]
-pub struct FinalResult {
-    pub results: Vec<SearchItem>,
-    pub total: usize
-}
-
-
-#[derive(Debug)]
-pub struct Pagination {
-    pub page: i64,
-    pub page_size: i64,
-}
-
 
 #[derive(Debug)]
 pub enum SearchItem {
@@ -333,41 +320,29 @@ impl SearchIndex {
     }
 
 
-    pub fn taxonomy(&self, query: &str, pagination: &Pagination) -> SearchResult {
+    pub fn taxonomy(&self, query: &str, page: usize, per_page: usize) -> SearchResult {
         let query = format!("data_type:{} {query}", DataType::Taxon);
-        let results = self.all(&query, pagination)?;
-        Ok((results.results, results.total))
+        self.all(&query, page, per_page)
     }
 
-    pub fn genomes(&self, query: &str, pagination: &Pagination) -> SearchResult {
+    pub fn genomes(&self, query: &str, page: usize, per_page: usize) -> SearchResult {
         let query = format!("data_type:{} {query}", DataType::Genome);
-        let results = self.all(&query, pagination)?;
-        Ok((results.results, results.total))
+        self.all(&query, page, per_page)
     }
 
-    pub fn loci(&self, query: &str, pagination: &Pagination) -> SearchResult {
+    pub fn loci(&self, query: &str, page: usize, per_page: usize) -> SearchResult {
         let query = format!("data_type:{} {query}", DataType::Locus);
-        let results = self.all(&query, pagination)?;
-        Ok((results.results, results.total))
+        self.all(&query, page, per_page)
     }
 
-    pub fn specimens(&self, query: &str, pagination: &Pagination) -> SearchResult {
+    pub fn specimens(&self, query: &str, page: usize, per_page: usize) -> SearchResult {
         let query = format!("data_type:{} {query}", DataType::Specimen);
-        let results = self.all(&query, pagination)?;
-        Ok((results.results, results.total))
+        self.all(&query, page, per_page)
     }
 
-    pub fn all(&self, query: &str, pagination: &Pagination) -> Result<FinalResult, Error> {
+    pub fn all(&self, query: &str, page: usize, per_page: usize) -> SearchResult {
         let searcher = self.reader.searcher();
-
-        // by default the pagination struct is made for postgres which
-        // doesn't use unsigned integers, so we use i64. converting it to
-        // a usize for tantivy is safe because it doesn't make sense to provide
-        // a negative page_size. still, we should probably migrate this to its
-        // own pagination struct at this point to keep the types consistent
-        let page = pagination.page as usize;
-        let page_size = pagination.page_size as usize;
-        let offset = page_size * page.checked_sub(1).unwrap_or(0);
+        let offset = per_page * page.checked_sub(1).unwrap_or(0);
 
         // set the fields that the query should search on
         let mut query_parser = QueryParser::for_index(&self.index, vec![
@@ -393,7 +368,7 @@ impl SearchIndex {
 
         let mut records = Vec::new();
 
-        let top_docs = searcher.search(&parsed_query, &TopDocs::with_limit(page_size).and_offset(offset))?;
+        let top_docs = searcher.search(&parsed_query, &TopDocs::with_limit(per_page).and_offset(offset))?;
         let count = searcher.search(&parsed_query, &Count)?;
 
         for (score, doc_address) in top_docs {
@@ -470,7 +445,7 @@ impl SearchIndex {
             }
         }
 
-        Ok(FinalResult { results: records, total: count })
+        Ok((records, count))
     }
 }
 
