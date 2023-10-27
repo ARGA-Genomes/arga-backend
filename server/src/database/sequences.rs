@@ -26,6 +26,20 @@ impl SequenceProvider {
         Ok(sequence)
     }
 
+    pub async fn find_by_accession(&self, accession: &str) -> Result<Vec<Sequence>, Error> {
+        use schema::{sequences, deposition_events};
+        let mut conn = self.pool.get().await?;
+
+        let sequence = sequences::table
+            .inner_join(deposition_events::table)
+            .select(sequences::all_columns)
+            .filter(deposition_events::accession.eq(accession))
+            .load::<Sequence>(&mut conn)
+            .await?;
+
+        Ok(sequence)
+    }
+
     pub async fn find_by_record_id(&self, record_id: &str) -> Result<Vec<Sequence>, Error> {
         use schema::sequences;
         let mut conn = self.pool.get().await?;

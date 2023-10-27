@@ -13,6 +13,7 @@ use crate::database::models;
 #[derive(OneofObject)]
 pub enum SequenceBy {
     Id(Uuid),
+    Accession(String),
     RecordId(String),
     SpecimenRecordId(String),
 }
@@ -24,6 +25,7 @@ impl Sequence {
     pub async fn new(db: &Database, by: &SequenceBy) -> Result<Vec<Sequence>, Error> {
         let sequences = match by {
             SequenceBy::Id(id) => Vec::from_iter(db.sequences.find_by_id(&id).await?),
+            SequenceBy::Accession(id) => db.sequences.find_by_accession(&id).await?,
             SequenceBy::RecordId(id) => db.sequences.find_by_record_id(&id).await?,
             SequenceBy::SpecimenRecordId(id) => db.sequences.find_by_specimen_record_id(&id).await?,
         };

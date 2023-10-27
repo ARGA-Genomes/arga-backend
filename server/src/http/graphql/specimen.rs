@@ -15,6 +15,7 @@ pub enum SpecimenBy {
     Id(Uuid),
     RecordId(String),
     SequenceRecordId(String),
+    SequenceAccession(String),
 }
 
 #[derive(MergedObject)]
@@ -26,6 +27,7 @@ impl Specimen {
             SpecimenBy::Id(id) => db.specimens.find_by_id(&id).await?,
             SpecimenBy::RecordId(id) => db.specimens.find_by_record_id(&id).await?,
             SpecimenBy::SequenceRecordId(id) => db.specimens.find_by_sequence_record_id(&id).await?,
+            SpecimenBy::SequenceAccession(id) => db.specimens.find_by_sequence_accession(&id).await?,
         };
         let details = specimen.clone().into();
         let query = SpecimenQuery { specimen };
