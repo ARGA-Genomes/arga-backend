@@ -1,4 +1,3 @@
-use arga_core::schema_gnl;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -17,36 +16,43 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
 #[derive(Debug, Queryable, Serialize, Deserialize)]
-pub struct LocusDoc {
+pub struct SpecimenDoc {
     pub name_id: Uuid,
     pub status: TaxonomicStatus,
     pub canonical_name: String,
 
     pub accession: String,
     pub data_source: String,
-    pub locus_type: String,
+    pub institution_code: Option<String>,
+    pub collection_code: Option<String>,
+    pub recorded_by: Option<String>,
+    pub identified_by: Option<String>,
     pub event_date: Option<String>,
 }
 
-pub fn get_loci(pool: &PgPool) -> Result<Vec<LocusDoc>, Error> {
-    use schema::{names, taxa};
-    use schema_gnl::markers;
+pub fn get_specimens(pool: &PgPool) -> Result<Vec<SpecimenDoc>, Error> {
+    use schema::{names, taxa, specimens, datasets, collection_events};
     let mut conn = pool.get()?;
 
-    let docs = markers::table
+    let docs = specimens::table
+        .inner_join(datasets::table)
+        .inner_join(collection_events::table)
         .inner_join(names::table)
-        .inner_join(taxa::table.on(names::id.eq(taxa::name_id)))
+        .inner_join(taxa::table.on(taxa::name_id.eq(names::id)))
         .select((
             taxa::name_id,
             taxa::status,
             taxa::canonical_name,
-            markers::record_id,
-            markers::dataset_name,
-            markers::target_gene,
-            markers::release_date,
+            specimens::record_id,
+            datasets::name,
+            specimens::institution_code,
+            specimens::collection_code,
+            specimens::recorded_by,
+            specimens::identified_by,
+            collection_events::event_date,
         ))
         .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
-        .load::<LocusDoc>(&mut conn)?;
+        .load::<SpecimenDoc>(&mut conn)?;
 
     Ok(docs)
 }

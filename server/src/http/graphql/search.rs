@@ -14,7 +14,7 @@ use crate::index::providers::search::SearchItem;
 pub enum WithRecordType {
     Genomes,
     Organelles,
-    Barcodes
+    Barcodes,
 }
 
 
@@ -36,6 +36,7 @@ impl Search {
             "taxonomy" => state.search.taxonomy(&query, &pagination),
             "genomes" => state.search.genomes(&query, &pagination),
             "loci" => state.search.loci(&query, &pagination),
+            "specimens" => state.search.specimens(&query, &pagination),
             // default to an 'all' search
             _ => {
                 let results = state.search.all(&query, &pagination)?;
@@ -47,6 +48,7 @@ impl Search {
         let mut taxa: HashMap<Uuid, TaxonItem> = HashMap::new();
         let mut genomes: Vec<GenomeItem> = Vec::new();
         let mut loci: Vec<LocusItem> = Vec::new();
+        let mut specimens: Vec<SpecimenItem> = Vec::new();
 
         for item in search_results {
             match item {
@@ -102,6 +104,23 @@ impl Search {
                         event_location: item.event_location,
                     });
                 },
+                SearchItem::Specimen(item) => {
+                    specimens.push(SpecimenItem {
+                        r#type: FullTextType::Specimen,
+                        score: item.score,
+                        status: serde_json::to_string(&item.status).unwrap(),
+                        canonical_name: item.canonical_name,
+
+                        accession: item.accession,
+                        data_source: item.data_source,
+                        institution_code: item.institution_code,
+                        collection_code: item.collection_code,
+                        recorded_by: item.recorded_by,
+                        identified_by: item.identified_by,
+                        event_date: item.event_date.map(|d| d.format("%d/%m/%Y").to_string()),
+                        event_location: item.event_location,
+                    });
+                },
             }
         }
 
@@ -128,11 +147,13 @@ impl Search {
         let taxa: Vec<FullTextSearchItem> = taxa.into_values().map(|v| FullTextSearchItem::Taxon(v)).collect();
         let genomes: Vec<FullTextSearchItem> = genomes.into_iter().map(|v| FullTextSearchItem::Genome(v)).collect();
         let loci: Vec<FullTextSearchItem> = loci.into_iter().map(|v| FullTextSearchItem::Locus(v)).collect();
+        let specimens: Vec<FullTextSearchItem> = specimens.into_iter().map(|v| FullTextSearchItem::Specimen(v)).collect();
 
         let mut records = Vec::with_capacity(taxa.len() + genomes.len() + loci.len());
         records.extend(taxa);
         records.extend(genomes);
         records.extend(loci);
+        records.extend(specimens);
         records.sort_by(|a, b| b.partial_cmp(a).unwrap());
 
         Ok(FullTextSearchResult { records, total })
@@ -145,6 +166,7 @@ pub enum FullTextType {
     Taxon,
     Genome,
     Locus,
+    Specimen,
 }
 
 #[derive(Debug, Default, Deserialize, SimpleObject)]
@@ -211,6 +233,23 @@ pub struct LocusItem {
     pub status: String,
 }
 
+#[derive(Debug, Deserialize, SimpleObject)]
+#[serde(rename_all = "camelCase")]
+pub struct SpecimenItem {
+    pub accession: String,
+    pub canonical_name: Option<String>,
+    pub data_source: Option<String>,
+    pub institution_code: Option<String>,
+    pub collection_code: Option<String>,
+    pub recorded_by: Option<String>,
+    pub identified_by: Option<String>,
+    pub event_date: Option<String>,
+    pub event_location: Option<String>,
+    pub score: f32,
+    pub r#type: FullTextType,
+    pub status: String,
+}
+
 
 #[derive(Debug, Deserialize, SimpleObject)]
 #[serde(rename_all = "camelCase")]
@@ -224,6 +263,7 @@ pub enum FullTextSearchItem {
     Taxon(TaxonItem),
     Genome(GenomeItem),
     Locus(LocusItem),
+    Specimen(SpecimenItem),
 }
 
 impl FullTextSearchItem {
@@ -232,6 +272,7 @@ impl FullTextSearchItem {
             FullTextSearchItem::Taxon(item) => item.score,
             FullTextSearchItem::Genome(item) => item.score,
             FullTextSearchItem::Locus(item) => item.score,
+            FullTextSearchItem::Specimen(item) => item.score,
         }
     }
 }

@@ -1,6 +1,7 @@
 mod taxon;
 mod genome;
 mod locus;
+mod specimen;
 
 use diesel::*;
 use diesel::r2d2::{ConnectionManager, Pool};
@@ -41,6 +42,7 @@ pub fn create() -> Result<(), Error> {
     index_names(&schema, &index)?;
     index_genomes(&schema, &index)?;
     index_loci(&schema, &index)?;
+    index_specimens(&schema, &index)?;
     Ok(())
 }
 
@@ -58,6 +60,7 @@ pub fn reindex() -> Result<(), Error> {
     index_names(&schema, &index)?;
     index_genomes(&schema, &index)?;
     index_loci(&schema, &index)?;
+    index_specimens(&schema, &index)?;
     Ok(())
 }
 
@@ -90,6 +93,7 @@ fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
     info!("Loading undescribed species from database");
     let undescribed = taxon::get_undescribed_species(&pool)?;
     species.extend(undescribed);
+    info!(total=species.len(), "Loaded");
 
     for chunk in species.chunks(1_000_000) {
         for species in chunk {
@@ -143,6 +147,7 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
     let canonical_name = get_field(schema, "canonical_name")?;
 
     let accession = get_field(schema, "accession")?;
+    let data_source = get_field(schema, "data_source")?;
     let genome_rep = get_field(schema, "genome_rep")?;
     let level = get_field(schema, "level")?;
     let reference_genome = get_field(schema, "reference_genome")?;
@@ -150,6 +155,7 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
 
     info!("Loading assemblies from database");
     let records = genome::get_genomes(&pool)?;
+    info!(total=records.len(), "Loaded");
 
     for chunk in records.chunks(1_000_000) {
         for genome in chunk {
@@ -159,6 +165,7 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
                 name_id => genome.name_id.to_string(),
                 status => serde_json::to_string(&genome.status)?,
                 accession => genome.accession.clone(),
+                data_source => genome.data_source.clone(),
             );
 
             if let Some(value) = &genome.genome_rep { doc.add_text(genome_rep, value); }
@@ -194,21 +201,76 @@ fn index_loci(schema: &Schema, index: &Index) -> Result<(), Error> {
     let canonical_name = get_field(schema, "canonical_name")?;
 
     let accession = get_field(schema, "accession")?;
+    let data_source = get_field(schema, "data_source")?;
     let locus_type = get_field(schema, "locus_type")?;
+    let event_date = get_field(schema, "event_date")?;
 
     info!("Loading loci from database");
     let records = locus::get_loci(&pool)?;
+    info!(total=records.len(), "Loaded");
 
     for chunk in records.chunks(1_000_000) {
         for locus in chunk {
-            let doc = doc!(
+            let mut doc = doc!(
                 canonical_name => locus.canonical_name.clone(),
                 data_type => DataType::Locus.to_string(),
                 name_id => locus.name_id.to_string(),
                 status => serde_json::to_string(&locus.status)?,
                 accession => locus.accession.clone(),
+                data_source => locus.data_source.clone(),
                 locus_type => locus.locus_type.clone(),
             );
+
+            if let Some(value) = &locus.event_date { doc.add_text(event_date, value); }
+
+            index_writer.add_document(doc)?;
+        }
+        index_writer.commit()?;
+    }
+
+    Ok(())
+}
+
+
+fn index_specimens(schema: &Schema, index: &Index) -> Result<(), Error> {
+    let pool = get_pool()?;
+
+    // index some data with 500mb memory heap
+    let mut index_writer = index.writer(500_000_000)?;
+
+    let data_type = get_field(schema, "data_type")?;
+    let name_id = get_field(schema, "name_id")?;
+    let status = get_field(schema, "status")?;
+    let canonical_name = get_field(schema, "canonical_name")?;
+
+    let accession = get_field(schema, "accession")?;
+    let data_source = get_field(schema, "data_source")?;
+    let institution_code = get_field(schema, "institution_code")?;
+    let collection_code = get_field(schema, "collection_code")?;
+    let recorded_by = get_field(schema, "recorded_by")?;
+    let identified_by = get_field(schema, "identified_by")?;
+    let event_date = get_field(schema, "event_date")?;
+
+    info!("Loading specimens from database");
+    let records = specimen::get_specimens(&pool)?;
+    info!(total=records.len(), "Loaded");
+
+    for chunk in records.chunks(1_000_000) {
+        for specimen in chunk {
+            let mut doc = doc!(
+                canonical_name => specimen.canonical_name.clone(),
+                data_type => DataType::Specimen.to_string(),
+                name_id => specimen.name_id.to_string(),
+                status => serde_json::to_string(&specimen.status)?,
+                accession => specimen.accession.clone(),
+                data_source => specimen.data_source.clone(),
+            );
+
+            if let Some(value) = &specimen.institution_code { doc.add_text(institution_code, value); }
+            if let Some(value) = &specimen.collection_code { doc.add_text(collection_code, value); }
+            if let Some(value) = &specimen.recorded_by { doc.add_text(recorded_by, value); }
+            if let Some(value) = &specimen.identified_by { doc.add_text(identified_by, value); }
+            if let Some(value) = &specimen.event_date { doc.add_text(event_date, value); }
 
             index_writer.add_document(doc)?;
         }

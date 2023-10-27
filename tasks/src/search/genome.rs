@@ -22,6 +22,7 @@ pub struct GenomeDoc {
     pub canonical_name: String,
 
     pub accession: String,
+    pub data_source: String,
     pub genome_rep: Option<String>,
     pub level: Option<String>,
     pub reference_genome: Option<String>,
@@ -41,6 +42,7 @@ pub fn get_genomes(pool: &PgPool) -> Result<Vec<GenomeDoc>, Error> {
             taxa::status,
             taxa::canonical_name,
             whole_genomes::accession,
+            whole_genomes::dataset_name,
             whole_genomes::representation,
             whole_genomes::quality,
             whole_genomes::assembly_type,
