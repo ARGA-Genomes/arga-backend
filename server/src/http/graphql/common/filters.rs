@@ -8,6 +8,7 @@ use crate::database::extensions::whole_genome_filters::{
     FilterKind as WholeGenomeFilterKind,
 };
 use super::attributes::BushfireRecoveryTrait;
+use super::species::DataType;
 use super::taxonomy::TaxonomicVernacularGroup;
 use super::whole_genomes::{AssemblyLevel, GenomeRepresentation, ReleaseType};
 
@@ -23,6 +24,7 @@ pub enum FilterType {
     Genus,
 
     VernacularGroup,
+    HasData,
     Ecology,
     Ibra,
     Imcra,
@@ -62,6 +64,10 @@ impl TryFrom<FilterItem> for Filter {
 
             FilterType::VernacularGroup => FilterKind::VernacularGroup(
                 from_value::<TaxonomicVernacularGroup>(Value::String(source.value))?.into()
+            ),
+
+            FilterType::HasData => FilterKind::HasData(
+                from_value::<DataType>(Value::String(source.value))?.into()
             ),
 
             FilterType::Ecology => FilterKind::Ecology(source.value),

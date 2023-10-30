@@ -18,7 +18,7 @@ LEFT JOIN (
      SELECT name_id, count(*) AS total
      FROM annotation_events
      JOIN sequences ON annotation_events.sequence_id = sequences.id
-     WHERE representation IN ('Full', 'Partial')
+     WHERE representation IN ('Complete', 'Full', 'Partial')
      GROUP BY name_id
 ) genomes ON genomes.name_id = names.id
 
@@ -33,6 +33,6 @@ LEFT JOIN (
      FROM sequences
      LEFT JOIN sequencing_events se on sequences.id = se.sequence_id
      LEFT JOIN annotation_events ae on sequences.id = ae.sequence_id
-     WHERE (representation IS NULL OR representation NOT IN ('Full', 'Partial')) AND target_gene IS NULL
+     WHERE (representation IS NULL OR representation NOT IN ('Complete', 'Full', 'Partial')) AND target_gene IS NULL
      GROUP BY name_id
 ) other_data ON other_data.name_id = names.id;

@@ -1,6 +1,10 @@
 CREATE MATERIALIZED VIEW taxa_filter AS
 SELECT
     taxa.*,
+    name_data_summaries.genomes,
+    name_data_summaries.markers,
+    name_data_summaries.specimens,
+    name_data_summaries.other,
     ecology.values AS ecology,
     regions.ibra,
     regions.imcra,
@@ -8,6 +12,7 @@ SELECT
     regions.drainage_basin,
     name_attributes.traits
 FROM taxa
+JOIN name_data_summaries ON taxa.name_id = name_data_summaries.name_id
 LEFT JOIN ecology ON taxa.name_id = ecology.name_id
 LEFT JOIN (
   SELECT

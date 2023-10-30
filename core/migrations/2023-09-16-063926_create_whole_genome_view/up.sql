@@ -34,4 +34,4 @@ JOIN deposition_events ON sequences.id = deposition_events.sequence_id
 LEFT JOIN dna_extracts ON sequences.dna_extract_id = dna_extracts.id
 LEFT JOIN subsamples ON dna_extracts.subsample_id = subsamples.id
 LEFT JOIN specimens ON subsamples.specimen_id = specimens.id
-WHERE annotation_events.representation IN ('Full', 'Partial');
+WHERE annotation_events.representation IN ('Complete', 'Full', 'Partial');

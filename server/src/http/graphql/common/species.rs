@@ -1,4 +1,4 @@
-use async_graphql::SimpleObject;
+use async_graphql::{SimpleObject, Enum};
 use serde::{Serialize, Deserialize};
 
 use crate::database::models::TaxonPhoto;
@@ -15,10 +15,9 @@ pub struct SpeciesCard {
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, SimpleObject)]
 pub struct SpeciesDataSummary {
-    pub whole_genomes: i64,
-    pub partial_genomes: i64,
-    pub organelles: i64,
-    pub barcodes: i64,
+    pub genomes: i64,
+    pub loci: i64,
+    pub specimens: i64,
     pub other: i64,
 }
 
@@ -41,4 +40,14 @@ impl From<TaxonPhoto> for SpeciesPhoto {
             rights_holder: value.rights_holder,
         }
     }
+}
+
+
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "crate::database::extensions::filters::DataType")]
+pub enum DataType {
+    Genome,
+    Locus,
+    Specimen,
+    Other,
 }

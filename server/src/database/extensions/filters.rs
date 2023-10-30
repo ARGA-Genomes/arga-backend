@@ -11,6 +11,7 @@ use diesel::sql_types::{Bool, Nullable};
 pub enum FilterKind {
     Classification(Classification),
     VernacularGroup(TaxonomicVernacularGroup),
+    HasData(DataType),
     Ecology(String),
     Ibra(String),
     Imcra(String),
@@ -21,7 +22,6 @@ pub enum FilterKind {
     BushfireRecovery(BushfireRecoveryTrait),
 }
 
-
 #[derive(Clone)]
 pub enum Classification {
     Kingdom(String),
@@ -31,6 +31,14 @@ pub enum Classification {
     Family(String),
     Tribe(String),
     Genus(String),
+}
+
+#[derive(Clone)]
+pub enum DataType {
+    Genome,
+    Locus,
+    Specimen,
+    Other,
 }
 
 
@@ -62,6 +70,7 @@ pub fn with_filter(filter: &Filter) -> BoxedTaxaExpression {
         Filter::Include(kind) => match kind {
             FilterKind::Classification(classification) => with_classification(classification),
             FilterKind::VernacularGroup(group) => with_vernacular_group(group),
+            FilterKind::HasData(data_type) => with_data(data_type),
             FilterKind::Ecology(ecology) => with_ecology(ecology),
             FilterKind::Ibra(ibra) => with_ibra(ibra),
             FilterKind::Imcra(imcra) => with_imcra(imcra),
@@ -72,6 +81,7 @@ pub fn with_filter(filter: &Filter) -> BoxedTaxaExpression {
         Filter::Exclude(kind) => match kind {
             FilterKind::Classification(classification) => without_classification(classification),
             FilterKind::VernacularGroup(group) => without_vernacular_group(group),
+            FilterKind::HasData(data_type) => without_data(data_type),
             FilterKind::Ecology(ecology) => without_ecology(ecology),
             FilterKind::Ibra(ibra) => without_ibra(ibra),
             FilterKind::Imcra(imcra) => without_imcra(imcra),
@@ -258,5 +268,26 @@ pub fn without_bushfire_recovery_trait(attr: &BushfireRecoveryTrait) -> BoxedTax
         Trait::PostFireHerbivoreImpact => Box::new(taxa::traits.contains(vec!["Post-fire herbivore impacts"])),
         Trait::CumulativeHighRiskExposure => Box::new(taxa::traits.contains(vec!["Cumulative exposure to high risks"])),
         Trait::OtherThreats => Box::new(taxa::traits.contains(vec!["Other plausible threats or expert-driven nominations"])),
+    }
+}
+
+
+/// Filter the taxa table to records that have a specific type of associated data
+pub fn with_data(data_type: &DataType) -> BoxedTaxaExpression {
+    match data_type {
+        DataType::Genome => Box::new(taxa::genomes.gt(0)),
+        DataType::Locus => Box::new(taxa::markers.gt(0)),
+        DataType::Specimen => Box::new(taxa::specimens.gt(0)),
+        DataType::Other => Box::new(taxa::other.gt(0)),
+    }
+}
+
+/// Filter the taxa table to records that dont have a specific type of associated data
+pub fn without_data(data_type: &DataType) -> BoxedTaxaExpression {
+    match data_type {
+        DataType::Genome => Box::new(taxa::genomes.eq(0)),
+        DataType::Locus => Box::new(taxa::markers.eq(0)),
+        DataType::Specimen => Box::new(taxa::specimens.eq(0)),
+        DataType::Other => Box::new(taxa::other.eq(0)),
     }
 }

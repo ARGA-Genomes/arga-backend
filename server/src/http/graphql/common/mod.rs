@@ -5,7 +5,7 @@ pub mod attributes;
 pub mod whole_genomes;
 
 pub use taxonomy::Taxonomy;
-pub use species::{SpeciesCard, SpeciesPhoto};
+pub use species::{SpeciesCard, SpeciesPhoto, SpeciesDataSummary};
 pub use filters::{
     FilterAction,
     FilterItem,
