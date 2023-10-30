@@ -11,7 +11,6 @@ use crate::extractors::utils::decompose_scientific_name;
 
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct Record {
     scientific_name: String,
     canonical_name: Option<String>,

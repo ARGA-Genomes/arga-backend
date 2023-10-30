@@ -18,7 +18,6 @@ type MatchedRecords = Vec<(NameMatch, Record)>;
 
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct Record {
     scientific_name: String,
     canonical_name: Option<String>,
