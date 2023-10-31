@@ -57,6 +57,25 @@ pub struct DepositionEvent {
     title: Option<String>,
 }
 
+impl DepositionEvent {
+    fn has_data(&self) -> bool {
+        self.event_date.is_some() ||
+            self.material_sample_id.is_some() ||
+            self.rights_holder.is_some() ||
+            self.access_rights.is_some() ||
+            self.reference.is_some() ||
+            self.institution_name.is_some() ||
+            self.collection_code.is_some() ||
+            self.biosample_accession.is_some() ||
+            self.project_name.is_some() ||
+            self.url.is_some() ||
+            self.submitted_by.is_some() ||
+            self.funding_attribution.is_some() ||
+            self.title.is_some()
+    }
+}
+
+
 pub fn normalise(path: &PathBuf) -> Result<(), Error> {
     let mut reader = csv::Reader::from_path(&path)?;
     let mut writer = csv::Writer::from_path("depositions.csv")?;
@@ -97,7 +116,9 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
             title: record.title,
         };
 
-        writer.serialize(event)?;
+        if event.has_data() {
+            writer.serialize(event)?;
+        }
     }
 
     Ok(())

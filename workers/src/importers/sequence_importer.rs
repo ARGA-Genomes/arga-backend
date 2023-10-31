@@ -15,13 +15,19 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 
 pub fn import(path: PathBuf, dataset: &Dataset, context: &Vec<Dataset>, pool: &mut PgPool) -> Result<(), Error> {
-    info!("Extracting sequencing events");
+    info!("Extracting sequences");
+    let extracts = sequence_extractor::sequences(&path, dataset, context, pool)?;
 
-    let extractor = sequence_extractor::extract(path, dataset, context, pool)?;
-
-    for extract in extractor {
+    for extract in extracts {
         let extract = extract?;
-        import_sequences(extract.sequences, pool)?;
+        import_sequences(extract, pool)?;
+    }
+
+    info!("Extracting sequencing events");
+    let chunks = sequence_extractor::events(&path, dataset, context, pool)?;
+
+    for extract in chunks {
+        let extract = extract?;
         import_sequencing_events(extract.sequencing_events, pool)?;
         import_sequencing_run_events(extract.sequencing_run_events, pool)?;
     }
@@ -38,6 +44,7 @@ fn import_sequences(sequences: Vec<Sequence>, pool: &mut PgPool) -> Result<(), E
         let mut conn = pool.get()?;
         let inserted_rows = diesel::insert_into(sequences::table)
             .values(chunk)
+            .on_conflict_do_nothing()
             .execute(&mut conn)?;
         Ok(inserted_rows)
     }).collect();

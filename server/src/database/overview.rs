@@ -1,3 +1,4 @@
+use arga_core::models::TaxonomicStatus;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
@@ -19,20 +20,18 @@ pub struct OverviewProvider {
 
 impl OverviewProvider {
     pub async fn all_species(&self) -> Result<Overview, Error> {
-        use schema::names::dsl::*;
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
-        let total: i64 = names.count().get_result(&mut conn).await?;
+        let total: i64 = species.count().get_result(&mut conn).await?;
         Ok(Overview { total })
     }
 
     pub async fn animals(&self) -> Result<Overview, Error> {
-        use schema::{assemblies, names, taxa};
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total: i64 = assemblies::table
-            .inner_join(names::table)
-            .inner_join(taxa::table.on(names::id.eq(taxa::name_id)))
-            .filter(taxa::kingdom.eq("Animalia"))
+        let total: i64 = species
+            .filter(kingdom.eq("Animalia"))
             .count()
             .get_result(&mut conn)
             .await?;
@@ -43,13 +42,11 @@ impl OverviewProvider {
     }
 
     pub async fn plants(&self) -> Result<Overview, Error> {
-        use schema::{assemblies, names, taxa};
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total: i64 = assemblies::table
-            .inner_join(names::table)
-            .inner_join(taxa::table.on(names::id.eq(taxa::name_id)))
-            .filter(taxa::kingdom.eq("Plantae"))
+        let total: i64 = species
+            .filter(kingdom.eq("Plantae"))
             .count()
             .get_result(&mut conn)
             .await?;
@@ -60,13 +57,41 @@ impl OverviewProvider {
     }
 
     pub async fn fungi(&self) -> Result<Overview, Error> {
-        use schema::{assemblies, names, taxa};
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total: i64 = assemblies::table
-            .inner_join(names::table)
-            .inner_join(taxa::table.on(names::id.eq(taxa::name_id)))
-            .filter(taxa::kingdom.eq("Fungi"))
+        let total: i64 = species
+            .filter(kingdom.eq("Fungi"))
+            .count()
+            .get_result(&mut conn)
+            .await?;
+
+        Ok(Overview {
+            total,
+        })
+    }
+
+    pub async fn bacteria(&self) -> Result<Overview, Error> {
+        use schema_gnl::species::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let total: i64 = species
+            .filter(kingdom.eq("Bacteria"))
+            .count()
+            .get_result(&mut conn)
+            .await?;
+
+        Ok(Overview {
+            total,
+        })
+    }
+
+    pub async fn protista(&self) -> Result<Overview, Error> {
+        use schema_gnl::species::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let total: i64 = species
+            .filter(kingdom.eq("Protista"))
             .count()
             .get_result(&mut conn)
             .await?;
@@ -96,10 +121,20 @@ impl OverviewProvider {
         })
     }
 
-    pub async fn markers(&self) -> Result<Overview, Error> {
+    pub async fn loci(&self) -> Result<Overview, Error> {
         use schema_gnl::markers::dsl::*;
         let mut conn = self.pool.get().await?;
         let total: i64 = markers.count().get_result(&mut conn).await?;
+
+        Ok(Overview {
+            total,
+        })
+    }
+
+    pub async fn specimens(&self) -> Result<Overview, Error> {
+        use schema::specimens::dsl::*;
+        let mut conn = self.pool.get().await?;
+        let total: i64 = specimens.count().get_result(&mut conn).await?;
 
         Ok(Overview {
             total,

@@ -164,10 +164,10 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
                 data_type => DataType::Genome.to_string(),
                 name_id => genome.name_id.to_string(),
                 status => serde_json::to_string(&genome.status)?,
-                accession => genome.accession.clone(),
                 data_source => genome.data_source.clone(),
             );
 
+            if let Some(value) = &genome.accession { doc.add_text(accession, value); }
             if let Some(value) = &genome.genome_rep { doc.add_text(genome_rep, value); }
             if let Some(value) = &genome.level { doc.add_text(level, value); }
             if let Some(value) = &genome.reference_genome {

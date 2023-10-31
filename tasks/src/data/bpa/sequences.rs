@@ -56,7 +56,7 @@ struct Record {
 #[derive(Debug, Clone, Serialize)]
 pub struct SequencingEvent {
     id: String,
-    record_id: String,
+    sequence_id: String,
     dna_extract_id: String,
     material_sample_ids: String,
     dataset_ids: String,
@@ -85,7 +85,7 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
     for row in reader.deserialize() {
         let record: Record = row?;
 
-        let record_id = record
+        let sequence_id = record
             .bpa_library_id.clone()
             .or(record.library_id)
             .unwrap_or(record.id.clone());
@@ -118,7 +118,7 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
 
         let event = SequencingEvent {
             id: record.id,
-            record_id,
+            sequence_id,
             dna_extract_id,
             material_sample_ids: sample_ids.join(" | ").to_string(),
             dataset_ids: dataset_ids.join(" | ").to_string(),

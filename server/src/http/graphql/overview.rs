@@ -20,9 +20,14 @@ impl Overview {
         Ok(state.database.overview.sequences().await?.total)
     }
 
-    async fn markers(&self, ctx: &Context<'_>) -> Result<i64, Error> {
+    async fn loci(&self, ctx: &Context<'_>) -> Result<i64, Error> {
         let state = ctx.data::<State>().unwrap();
-        Ok(state.database.overview.markers().await?.total)
+        Ok(state.database.overview.loci().await?.total)
+    }
+
+    async fn specimens(&self, ctx: &Context<'_>) -> Result<i64, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.database.overview.specimens().await?.total)
     }
 
 

@@ -2,6 +2,7 @@ use chrono::{NaiveDateTime, NaiveDate};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
+use tracing::info;
 
 use crate::error::{Error, ParseError};
 
@@ -157,6 +158,25 @@ pub fn decompose_scientific_name(scientific_name: &str) -> Option<ScientificName
     else {
         None
     }
+}
+
+
+/// Read and deserialize the next million records
+pub fn read_chunk<T>(reader: &mut csv::DeserializeRecordsIntoIter<std::fs::File, T>) -> Result<Vec<T>, Error>
+where T: serde::de::DeserializeOwned
+{
+    info!("Deserialising CSV");
+    let mut records: Vec<T> = Vec::with_capacity(1_000_000);
+
+    for row in reader.by_ref().take(1_000_000) {
+        match row {
+            Ok(record) => records.push(record),
+            Err(err) => return Err(err.into())
+        }
+    }
+
+    info!(total=records.len(), "Deserialising CSV finished");
+    Ok(records)
 }
 
 

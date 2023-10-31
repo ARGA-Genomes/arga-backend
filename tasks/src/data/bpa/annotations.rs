@@ -23,6 +23,14 @@ pub struct AnnotationEvent {
     data_type: Option<String>,
 }
 
+impl AnnotationEvent {
+    fn has_data(&self) -> bool {
+        self.coverage.is_some() ||
+            self.genome_representation.is_some() ||
+            self.data_type.is_some()
+    }
+}
+
 pub fn normalise(path: &PathBuf) -> Result<(), Error> {
     let mut reader = csv::Reader::from_path(&path)?;
     let mut writer = csv::Writer::from_path("annotations.csv")?;
@@ -72,7 +80,9 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
             data_type: data_type.map(|s| s.to_string()),
         };
 
-        writer.serialize(event)?;
+        if event.has_data() {
+            writer.serialize(event)?;
+        }
     }
 
     Ok(())

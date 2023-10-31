@@ -156,7 +156,7 @@ diesel::table! {
         record_id -> Varchar,
         latitude -> Nullable<Float8>,
         longitude -> Nullable<Float8>,
-        accession -> Varchar,
+        accession -> Nullable<Varchar>,
         sequenced_by -> Nullable<Varchar>,
         material_sample_id -> Nullable<Varchar>,
         estimated_size -> Nullable<Varchar>,

@@ -11,19 +11,21 @@ use uuid::Uuid;
 
 use arga_core::models::{SequencingEvent, Dataset, Sequence, SequencingRunEvent};
 use crate::error::Error;
-use crate::extractors::utils::parse_naive_date_time;
-use crate::matchers::dna_extract_matcher::{DnaExtractMatch, DnaExtractRecord, DnaExtractMap, dna_extract_map, match_records_mapped};
+use crate::extractors::utils::{parse_naive_date_time, read_chunk};
+use crate::matchers::dna_extract_matcher::{self, DnaExtractMatch, DnaExtractRecord, DnaExtractMap, dna_extract_map};
+use crate::matchers::sequence_matcher::{self, SequenceRecord, SequenceMap, SequenceMatch, sequence_map};
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
-type MatchedRecords = Vec<(DnaExtractMatch, Record)>;
+type MatchedExtractions = Vec<(DnaExtractMatch, Record)>;
+type MatchedSequences = Vec<(SequenceMatch, Record)>;
 
 
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
-    record_id: String,
+    // id: String,
     dna_extract_id: String,
-    sequence_record_id: Option<String>,
+    sequence_id: String,
     material_sample_id: Option<String>,
 
     event_date: Option<String>,
@@ -53,75 +55,76 @@ struct Record {
 impl From<Record> for DnaExtractRecord {
     fn from(value: Record) -> Self {
         return Self { record_id: value.dna_extract_id };
-        // a dataset can be made up of multiple different datasets
-        // which might have different accessioned IDs for different stages.
-        // for example, with NCBI the event chain starts with BioSamples
-        // that have an ID of SAMNxxx, and later is referenced in Genbank and RefSeq
-        // via the matierial sample id, and instead having its own accession
-        // id of GCAxxx and GCFxxx respectively
-        // let record_id = match value.material_sample_id {
-        //     Some(sample_id) => sample_id,
-        //     None => value.record_id,
-        // };
-        // Self { record_id }
+    }
+}
+
+impl From<Record> for SequenceRecord {
+    fn from(value: Record) -> Self {
+        return Self { record_id: value.sequence_id };
     }
 }
 
 
-pub struct SequencingExtract {
-    pub sequences: Vec<Sequence>,
+pub struct EventExtract {
     pub sequencing_events: Vec<SequencingEvent>,
     pub sequencing_run_events: Vec<SequencingRunEvent>,
 }
 
 
-pub struct SequencingExtractIterator {
+pub struct SequenceIterator {
     dataset: Dataset,
     dna_extracts: DnaExtractMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
 
-impl Iterator for SequencingExtractIterator {
-    type Item = Result<SequencingExtract, Error>;
+impl Iterator for SequenceIterator {
+    type Item = Result<Vec<Sequence>, Error>;
 
-    /// Return a large chunk of events extracted from a CSV reader
     fn next(&mut self) -> Option<Self::Item> {
-        info!("Deserialising CSV");
-        let mut records: Vec<Record> = Vec::with_capacity(1_000_000);
+        let chunk = read_chunk(&mut self.reader).ok()?;
+        if chunk.is_empty() { return None }
 
-        // take the next million records and return early with an error result
-        // if parsing failed
-        for row in self.reader.by_ref().take(1_000_000) {
-            match row {
-                Ok(record) => records.push(record),
-                Err(err) => return Some(Err(err.into()))
-            }
-        }
-
-        info!(total=records.len(), "Deserialising CSV finished");
-
-        // if empth we've reached the end, otherwise do the expensive work
-        // of extracting the chunk of data within the iterator call
-        if records.is_empty() {
-            None
-        } else {
-            Some(extract_chunk(records, &self.dataset, &self.dna_extracts))
-        }
+        let records = dna_extract_matcher::match_records_mapped(chunk, &self.dna_extracts);
+        let sequences = extract_sequences(&self.dataset, &records);
+        Some(Ok(sequences))
     }
 }
 
 
-/// Extract events and other related data from a CSV file
-pub fn extract(path: PathBuf, dataset: &Dataset, context: &Vec<Dataset>, pool: &mut PgPool) -> Result<SequencingExtractIterator, Error> {
-    // we want to limit the data we match on but also have datasets that reference
-    // each other like the NCBI datasets, so we allow an isolated context of datasets
-    // that can be used to match on to enable more complex import scenarios
+pub struct EventIterator {
+    dataset: Dataset,
+    sequences: SequenceMap,
+    reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
+}
+
+impl Iterator for EventIterator {
+    type Item = Result<EventExtract, Error>;
+
+    /// Return a large chunk of events extracted from a CSV reader
+    fn next(&mut self) -> Option<Self::Item> {
+        let chunk = read_chunk(&mut self.reader).ok()?;
+        if chunk.is_empty() { return None }
+
+        let records = sequence_matcher::match_records_mapped(chunk, &self.sequences);
+        let sequencing_events = extract_sequencing_events(&self.dataset, &records);
+        let sequencing_run_events = extract_sequencing_run_events(records, &sequencing_events);
+
+        Some(Ok(EventExtract {
+            sequencing_events,
+            sequencing_run_events,
+        }))
+    }
+}
+
+
+/// Extract sequences from a CSV file
+pub fn sequences(path: &PathBuf, dataset: &Dataset, context: &Vec<Dataset>, pool: &mut PgPool) -> Result<SequenceIterator, Error> {
     let isolated_datasets = context.iter().map(|d| d.id.clone()).collect();
 
     let dna_extracts = dna_extract_map(&isolated_datasets, pool)?;
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
-    Ok(SequencingExtractIterator {
+    Ok(SequenceIterator {
         dataset: dataset.clone(),
         dna_extracts,
         reader,
@@ -129,41 +132,34 @@ pub fn extract(path: PathBuf, dataset: &Dataset, context: &Vec<Dataset>, pool: &
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, extracts: &DnaExtractMap) -> Result<SequencingExtract, Error> {
-    // match the records to dna extracts in the database. this will filter out any subsamples
-    // that could not be matched
-    let records = match_records_mapped(chunk, extracts);
+/// Extract events and other related data from a CSV file
+pub fn events(path: &PathBuf, dataset: &Dataset, context: &Vec<Dataset>, pool: &mut PgPool) -> Result<EventIterator, Error> {
+    let isolated_datasets = context.iter().map(|d| d.id.clone()).collect();
 
-    let sequences = extract_sequences(dataset, &records);
-    let sequencing_events = extract_sequencing_events(dataset, &records, &sequences);
-    let sequencing_run_events = extract_sequencing_run_events(records, &sequencing_events);
+    let sequences = sequence_map(&isolated_datasets, pool)?;
+    let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
-    Ok(SequencingExtract {
+    Ok(EventIterator {
+        dataset: dataset.clone(),
         sequences,
-        sequencing_events,
-        sequencing_run_events,
+        reader,
     })
 }
 
 
-fn extract_sequences(dataset: &Dataset, records: &MatchedRecords) -> Vec<Sequence> {
+fn extract_sequences(dataset: &Dataset, records: &MatchedExtractions) -> Vec<Sequence> {
     info!(total=records.len(), "Extracting sequences");
 
     let sequences = records.par_iter().map(|(dna_extract, row)| {
-        // sometimes a record can have a more descriptive identifier and we
-        // want to leverage that when possible, so we fallback to a mandatory
-        // identifier when a more granular one doesn't exist
-        let record_id = match &row.sequence_record_id {
-            Some(id) => id.clone(),
-            None => row.record_id.clone(),
-        };
-
         Sequence {
             id: Uuid::new_v4(),
             dataset_id: dataset.id.clone(),
             name_id: dna_extract.name_id.clone(),
             dna_extract_id: dna_extract.id.clone(),
-            record_id,
+            // we are extracting the sequence record id from a sequencing events file
+            // so we don't actually want to use the record_id from the row but rather
+            // the sequence_id that the event references
+            record_id: row.sequence_id.clone(),
         }
     }).collect::<Vec<Sequence>>();
 
@@ -172,12 +168,10 @@ fn extract_sequences(dataset: &Dataset, records: &MatchedRecords) -> Vec<Sequenc
 }
 
 
-fn extract_sequencing_events(dataset: &Dataset, records: &MatchedRecords, sequences: &Vec<Sequence>) -> Vec<SequencingEvent> {
+fn extract_sequencing_events(dataset: &Dataset, records: &MatchedSequences) -> Vec<SequencingEvent> {
     info!(total=records.len(), "Extracting sequencing events");
 
-    let sequences = (records, sequences).into_par_iter().map(|(record, sequence)| {
-        let (_subsample, row) = record;
-
+    let sequences = records.into_par_iter().map(|(sequence, row)| {
         SequencingEvent {
             id: Uuid::new_v4(),
             dataset_id: dataset.id.clone(),
@@ -205,14 +199,14 @@ fn extract_sequencing_events(dataset: &Dataset, records: &MatchedRecords, sequen
 
 
 fn extract_sequencing_run_events(
-    records: MatchedRecords,
+    records: MatchedSequences,
     events: &Vec<SequencingEvent>
 ) -> Vec<SequencingRunEvent>
 {
     info!(total=records.len(), "Extracting sequencing run events");
 
     let runs = (records, events).into_par_iter().map(|(record, event)| {
-        let (_subsample, row) = record;
+        let (_sequence, row) = record;
 
         let trace_ids = str_to_vec(&row.trace_ids);
         let trace_names = str_to_vec(&row.trace_names);

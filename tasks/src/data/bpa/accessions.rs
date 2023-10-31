@@ -39,6 +39,16 @@ pub struct AccessionEvent {
     quality: Option<String>,
 }
 
+impl AccessionEvent {
+    fn has_data(&self) -> bool {
+        self.type_status.is_some() ||
+            self.institution_code.is_some() ||
+            self.event_date.is_some() ||
+            self.accessioned_by.is_some() ||
+            self.quality.is_some()
+    }
+}
+
 pub fn normalise(path: &PathBuf) -> Result<(), Error> {
     let mut reader = csv::Reader::from_path(&path)?;
     let mut writer = csv::Writer::from_path("accessions.csv")?;
@@ -84,7 +94,9 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
             quality: record.sample_quality,
         };
 
-        writer.serialize(event)?;
+        if event.has_data() {
+            writer.serialize(event)?;
+        }
     }
 
     Ok(())

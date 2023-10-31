@@ -29,6 +29,16 @@ pub struct AssemblyEvent {
     genome_size: Option<String>,
 }
 
+impl AssemblyEvent {
+    fn has_data(&self) -> bool {
+        self.event_date.is_some() ||
+            self.assembly_type.is_some() ||
+            self.version_status.is_some() ||
+            self.name.is_some() ||
+            self.genome_size.is_some()
+    }
+}
+
 pub fn normalise(path: &PathBuf) -> Result<(), Error> {
     let mut reader = csv::Reader::from_path(&path)?;
     let mut writer = csv::Writer::from_path("assemblies.csv")?;
@@ -53,7 +63,9 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
             genome_size: record.genome_size,
         };
 
-        writer.serialize(event)?;
+        if event.has_data() {
+            writer.serialize(event)?;
+        }
     }
 
     Ok(())

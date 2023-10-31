@@ -29,7 +29,7 @@ pub struct SequenceMatch {
 }
 
 
-pub fn sequence_map(dataset: &Uuid, pool: &mut PgPool) -> Result<SequenceMap, Error> {
+pub fn sequence_map(datasets: &Vec<Uuid>, pool: &mut PgPool) -> Result<SequenceMap, Error> {
     use schema::sequences::dsl::*;
     info!("Creating sequence map");
 
@@ -37,7 +37,7 @@ pub fn sequence_map(dataset: &Uuid, pool: &mut PgPool) -> Result<SequenceMap, Er
 
     let results = sequences
         .select((id, dataset_id, name_id, record_id))
-        .filter(dataset_id.eq(dataset))
+        .filter(dataset_id.eq_any(datasets))
         .load::<SequenceMatch>(&mut conn)?;
 
     let mut map = SequenceMap::new();

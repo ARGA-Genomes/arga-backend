@@ -19,8 +19,7 @@ type MatchedRecords = Vec<(SequenceMatch, Record)>;
 
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
-    record_id: String,
-    sequence_record_id: Option<String>,
+    sequence_id: String,
     annotated_by: Option<String>,
 
     event_date: Option<String>,
@@ -36,7 +35,7 @@ struct Record {
 
 impl From<Record> for SequenceRecord {
     fn from(value: Record) -> Self {
-        Self { record_id: value.sequence_record_id.unwrap_or(value.record_id) }
+        Self { record_id: value.sequence_id }
     }
 }
 
@@ -84,7 +83,7 @@ impl Iterator for AnnotationExtractIterator {
 
 /// Extract events and other related data from a CSV file
 pub fn extract(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<AnnotationExtractIterator, Error> {
-    let sequences = sequence_map(&dataset.id, pool)?;
+    let sequences = sequence_map(&vec![dataset.id], pool)?;
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(AnnotationExtractIterator {
