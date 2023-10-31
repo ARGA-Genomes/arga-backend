@@ -30,7 +30,7 @@ LEFT JOIN (
     array_agg(name::text) filter (WHERE value_type = 'boolean') AS traits
   FROM name_attributes
   GROUP BY name_id
-) name_attributes ON taxa.name_id = name_attributes.name_id;;
+) name_attributes ON taxa.name_id = name_attributes.name_id;
 
 
 CREATE INDEX taxa_filter_ecology ON taxa_filter USING GIN(ecology);

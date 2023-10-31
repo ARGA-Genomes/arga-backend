@@ -363,6 +363,14 @@ impl SearchIndex {
             self.specimen.recorded_by,
         ]);
 
+        let query = format!(
+            "(data_type:{}^100.0 OR data_type:{}^50.0 OR data_type:{}^10.0 OR data_type:{}) {query}",
+            DataType::Taxon,
+            DataType::Genome,
+            DataType::Locus,
+            DataType::Specimen,
+        );
+
         query_parser.set_conjunction_by_default();
         let parsed_query = query_parser.parse_query(&query)?;
 
