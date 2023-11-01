@@ -15,6 +15,7 @@ sql_function!(fn unnest(x: Nullable<Array<Text>>) -> Text);
 
 #[derive(Clone, Debug)]
 pub enum TaxonRank {
+    Domain(String),
     Kingdom(String),
     Phylum(String),
     Class(String),
@@ -60,6 +61,7 @@ impl TaxaProvider {
         let mut conn = self.pool.get().await?;
 
         let taxon = match rank {
+            TaxonRank::Domain(name) => taxa.get_result::<Taxon>(&mut conn),
             TaxonRank::Kingdom(name) => taxa.filter(kingdom.eq(name)).get_result::<Taxon>(&mut conn),
             TaxonRank::Phylum(name) => taxa.filter(phylum.eq(name)).get_result::<Taxon>(&mut conn),
             TaxonRank::Class(name) => taxa.filter(class.eq(name)).get_result::<Taxon>(&mut conn),
@@ -171,6 +173,7 @@ impl TaxaProvider {
             .into_boxed();
 
         let species = match rank {
+            TaxonRank::Domain(_name) => species,
             TaxonRank::Kingdom(name) => species.filter(kingdom.eq(name)),
             TaxonRank::Phylum(name) => species.filter(phylum.eq(name)),
             TaxonRank::Class(name) => species.filter(class.eq(name)),
@@ -185,6 +188,7 @@ impl TaxaProvider {
             .await?;
 
         let children = match rank {
+            TaxonRank::Domain(_name) => taxa.select(count_star()).group_by(kingdom).load::<i64>(&mut conn).await?,
             TaxonRank::Kingdom(name) => taxa.select(count_star()).filter(kingdom.eq(name)).group_by(phylum).load::<i64>(&mut conn).await?,
             TaxonRank::Phylum(name) => taxa.select(count_star()).filter(phylum.eq(name)).group_by(class).load::<i64>(&mut conn).await?,
             TaxonRank::Class(name) => taxa.select(count_star()).filter(class.eq(name)).group_by(order).load::<i64>(&mut conn).await?,
@@ -218,6 +222,7 @@ impl TaxaProvider {
             .into_boxed();
 
         let summaries = match rank {
+            TaxonRank::Domain(_name) => summaries,
             TaxonRank::Kingdom(name) => summaries.filter(taxa_filter::kingdom.eq(name)),
             TaxonRank::Phylum(name) => summaries.filter(taxa_filter::phylum.eq(name)),
             TaxonRank::Class(name) => summaries.filter(taxa_filter::class.eq(name)),
@@ -234,6 +239,27 @@ impl TaxaProvider {
         Ok(summaries)
     }
 
+
+    pub async fn domain_summary(&self, _domain: &str) -> Result<Vec<DataSummary>, Error> {
+        use diesel::dsl::sum;
+        use schema_gnl::taxa_filter;
+        let mut conn = self.pool.get().await?;
+
+        let summaries = taxa_filter::table
+            .group_by(taxa_filter::kingdom)
+            .select((
+                taxa_filter::kingdom,
+                sum(taxa_filter::markers),
+                sum(taxa_filter::genomes),
+                sum(taxa_filter::specimens),
+                sum(taxa_filter::other),
+            ))
+            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .load::<DataSummary>(&mut conn)
+            .await?;
+
+        Ok(summaries)
+    }
 
     pub async fn kingdom_summary(&self, kingdom: &str) -> Result<Vec<DataSummary>, Error> {
         use diesel::dsl::sum;

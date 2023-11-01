@@ -12,6 +12,7 @@ use super::common::Taxonomy;
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
 pub enum TaxonRank {
+    Domain,
     Kingdom,
     Phylum,
     Class,
@@ -53,6 +54,7 @@ impl TaxonQuery {
         let state = ctx.data::<State>().unwrap();
 
         let summaries = match &self.rank {
+            taxa::TaxonRank::Domain(name) => state.database.taxa.domain_summary(&name).await?,
             taxa::TaxonRank::Kingdom(name) => state.database.taxa.kingdom_summary(&name).await?,
             taxa::TaxonRank::Phylum(name) => state.database.taxa.phylum_summary(&name).await?,
             taxa::TaxonRank::Class(name) => state.database.taxa.class_summary(&name).await?,
@@ -128,6 +130,7 @@ impl From<taxa::SpeciesSummary> for DataBreakdown {
 
 fn into_taxon_rank(rank: TaxonRank, value: String) -> taxa::TaxonRank {
     match rank {
+        TaxonRank::Domain => taxa::TaxonRank::Domain(value),
         TaxonRank::Kingdom => taxa::TaxonRank::Kingdom(value),
         TaxonRank::Phylum => taxa::TaxonRank::Phylum(value),
         TaxonRank::Class => taxa::TaxonRank::Class(value),
