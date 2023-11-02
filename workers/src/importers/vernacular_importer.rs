@@ -28,7 +28,7 @@ fn import_vernacular(names: &Vec<VernacularName>, pool: &mut PgPool) -> Result<(
     use schema::vernacular_names;
 
     info!(total=names.len(), "Importing vernacular names");
-    let imported: Vec<Result<usize, Error>> = names.par_chunks(20_000).map(|chunk| {
+    let imported: Vec<Result<usize, Error>> = names.chunks(10_000).map(|chunk| {
         let mut conn = pool.get()?;
         let inserted_rows = diesel::insert_into(vernacular_names::table)
             .values(chunk)
@@ -51,7 +51,7 @@ fn import_vernacular_links(names: &Vec<VernacularNameLink>, pool: &mut PgPool) -
     use schema::name_vernacular_names;
 
     info!(total=names.len(), "Importing vernacular name links");
-    let imported: Vec<Result<usize, Error>> = names.par_chunks(20_000).map(|chunk| {
+    let imported: Vec<Result<usize, Error>> = names.chunks(10_000).map(|chunk| {
         let mut conn = pool.get()?;
         let inserted_rows = diesel::insert_into(name_vernacular_names::table)
             .values(chunk)
