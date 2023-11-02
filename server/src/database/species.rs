@@ -245,6 +245,30 @@ impl SpeciesProvider {
         Ok(records.into())
     }
 
+    pub async fn genomic_components(
+        &self,
+        name: &Name,
+        page: i64,
+        page_size: i64
+    ) -> PageResult<GenomicComponent>
+    {
+        use schema_gnl::genomic_components;
+        let mut conn = self.pool.get().await?;
+
+        let mut query = genomic_components::table
+            .filter(genomic_components::name_id.eq(name.id))
+            .into_boxed();
+
+        let records = query
+            .order(genomic_components::accession)
+            .paginate(page)
+            .per_page(page_size)
+            .load::<(GenomicComponent, i64)>(&mut conn)
+            .await?;
+
+        Ok(records.into())
+    }
+
     pub async fn reference_genome(&self, name: &Name) -> Result<Option<WholeGenome>, Error> {
         use schema::datasets;
         use schema_gnl::whole_genomes;

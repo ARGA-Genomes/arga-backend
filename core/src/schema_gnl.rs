@@ -195,6 +195,26 @@ diesel::table! {
 }
 
 diesel::table! {
+    genomic_components (sequence_id) {
+        sequence_id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
+        dna_extract_id -> Uuid,
+        dataset_name -> Varchar,
+        record_id -> Varchar,
+        latitude -> Nullable<Float8>,
+        longitude -> Nullable<Float8>,
+        accession -> Nullable<Varchar>,
+        sequenced_by -> Nullable<Varchar>,
+        material_sample_id -> Nullable<Varchar>,
+        estimated_size -> Nullable<Varchar>,
+        release_date -> Nullable<Varchar>,
+        deposited_by -> Nullable<Varchar>,
+        data_type -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     specimen_stats (id) {
         id -> Uuid,
         sequences -> BigInt,

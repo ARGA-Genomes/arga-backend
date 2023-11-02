@@ -18,7 +18,7 @@ pub use filters::{
 
 use async_graphql::{SimpleObject, OutputType};
 
-use super::{species::SpecimenSummary, markers::SpeciesMarker, species::WholeGenome};
+use super::{species::SpecimenSummary, markers::SpeciesMarker, species::WholeGenome, species::GenomicComponent};
 
 
 #[derive(SimpleObject)]
@@ -26,6 +26,7 @@ use super::{species::SpecimenSummary, markers::SpeciesMarker, species::WholeGeno
 #[graphql(concrete(name = "SpecimenSummaryPage", params(SpecimenSummary)))]
 #[graphql(concrete(name = "WholeGenomePage", params(WholeGenome)))]
 #[graphql(concrete(name = "SpeciesMarkerPage", params(SpeciesMarker)))]
+#[graphql(concrete(name = "GenomicComponentPage", params(GenomicComponent)))]
 pub struct Page<T: OutputType> {
     pub records: Vec<T>,
     pub total: i64

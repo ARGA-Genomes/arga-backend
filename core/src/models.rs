@@ -905,6 +905,28 @@ pub struct WholeGenome {
 }
 
 
+#[derive(Debug, Queryable, Default, Clone)]
+#[diesel(table_name = schema_gnl::genomic_components)]
+pub struct GenomicComponent {
+    pub sequence_id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub dna_extract_id: Uuid,
+
+    pub dataset_name: String,
+    pub record_id: String,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub accession: Option<String>,
+    pub sequenced_by: Option<String>,
+    pub material_sample_id: Option<String>,
+    pub estimated_size: Option<String>,
+
+    pub release_date: Option<String>,
+    pub deposited_by: Option<String>,
+    pub data_type: Option<String>,
+}
+
 
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::AttributeCategory"]

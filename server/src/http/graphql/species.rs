@@ -183,6 +183,16 @@ impl Species {
         })
     }
 
+    async fn genomic_components(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<GenomicComponent>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let page = state.database.species.genomic_components(&self.name, page, page_size).await?;
+        let components = page.records.into_iter().map(|m| m.into()).collect();
+        Ok(Page {
+            records: components,
+            total: page.total,
+        })
+    }
+
     async fn reference_genome(&self, ctx: &Context<'_>) -> Result<Option<WholeGenome>, Error> {
         let state = ctx.data::<State>().unwrap();
         let genome = state.database.species.reference_genome(&self.name).await?;
@@ -329,6 +339,46 @@ impl From<models::WholeGenome> for WholeGenome {
             deposited_by: value.deposited_by,
             data_type: value.data_type,
             excluded_from_refseq: value.excluded_from_refseq,
+        }
+    }
+}
+
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct GenomicComponent {
+    pub sequence_id: Uuid,
+    pub dna_extract_id: Uuid,
+    pub dataset_name: String,
+
+    pub record_id: String,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub accession: Option<String>,
+    pub sequenced_by: Option<String>,
+    pub material_sample_id: Option<String>,
+    pub estimated_size: Option<String>,
+
+    pub release_date: Option<String>,
+    pub deposited_by: Option<String>,
+    pub data_type: Option<String>,
+}
+
+impl From<models::GenomicComponent> for GenomicComponent {
+    fn from(value: models::GenomicComponent) -> Self {
+        Self {
+            sequence_id: value.sequence_id,
+            dna_extract_id: value.dna_extract_id,
+            dataset_name: value.dataset_name,
+            record_id: value.record_id,
+            latitude: value.latitude,
+            longitude: value.longitude,
+            accession: value.accession,
+            sequenced_by: value.sequenced_by,
+            material_sample_id: value.material_sample_id,
+            estimated_size: value.estimated_size,
+            release_date: value.release_date,
+            deposited_by: value.deposited_by,
+            data_type: value.data_type,
         }
     }
 }
