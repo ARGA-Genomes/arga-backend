@@ -11,7 +11,7 @@ use crate::database::extensions::whole_genome_filters;
 use crate::http::graphql::common::Taxonomy;
 use crate::index::species::{self, GetSpecies, GetRegions, GetMedia, GetConservationStatus, GetTraceFiles};
 
-use super::models::{Taxon, Name, NameAttribute, RegionType, TaxonPhoto, TraceFile, ConservationStatus, IndigenousKnowledge, WholeGenome, Marker, Regions};
+use super::models::{Taxon, Name, NameAttribute, RegionType, TaxonPhoto, TraceFile, ConservationStatus, IndigenousKnowledge, WholeGenome, Marker, Regions, GenomicComponent};
 use super::extensions::{sum_if, Paginate};
 use super::{schema, schema_gnl, Database, Error, PgPool, PageResult};
 
