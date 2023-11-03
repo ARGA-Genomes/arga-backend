@@ -126,6 +126,7 @@ impl Search {
 
         for stat in assembly_summaries {
             taxa.entry(stat.name_id).and_modify(|item| {
+                item.data_summary.assemblies += stat.total;
                 item.data_summary.reference_genomes += stat.reference_genomes;
                 item.data_summary.whole_genomes += stat.whole_genomes;
                 item.data_summary.partial_genomes += stat.partial_genomes;
@@ -179,6 +180,7 @@ pub struct Classification {
 #[derive(Debug, Default, Deserialize, SimpleObject)]
 #[serde(rename_all = "camelCase")]
 pub struct DataSummary {
+    pub assemblies: i64,
     pub whole_genomes: i64,
     pub partial_genomes: i64,
     pub reference_genomes: i64,

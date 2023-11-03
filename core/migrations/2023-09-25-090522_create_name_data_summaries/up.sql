@@ -16,9 +16,8 @@ LEFT JOIN (
 
 LEFT JOIN (
      SELECT name_id, count(*) AS total
-     FROM annotation_events
-     JOIN sequences ON annotation_events.sequence_id = sequences.id
-     WHERE representation IN ('Complete', 'Full', 'Partial')
+     FROM assembly_events
+     JOIN sequences ON assembly_events.sequence_id = sequences.id
      GROUP BY name_id
 ) genomes ON genomes.name_id = names.id
 

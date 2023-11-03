@@ -22,6 +22,7 @@ const NCBI_REFSEQ_DATASET_ID: &str = "ARGA:TL:0002002";
 #[derive(Debug, Clone, Default, Queryable, Serialize, Deserialize)]
 pub struct AssemblySummary {
     pub name_id: Uuid,
+    pub total: i64,
     pub reference_genomes: i64,
     pub whole_genomes: i64,
     pub partial_genomes: i64,
@@ -110,17 +111,19 @@ impl SpeciesProvider {
     }
 
     pub async fn assembly_summary(&self, name_ids: &Vec<Uuid>) -> Result<Vec<AssemblySummary>, Error> {
-        use schema::assemblies::dsl::*;
+        use schema_gnl::whole_genomes::dsl::*;
+        use diesel::dsl::count_star;
         let mut conn = self.pool.get().await?;
 
         // get the total amounts of assembly records for each name
-        let summaries = assemblies
+        let summaries = whole_genomes
             .group_by(name_id)
             .select((
                 name_id,
-                sum_if(refseq_category.eq("reference genome")),
-                sum_if(genome_rep.eq("Full")),
-                sum_if(genome_rep.eq("Partial")),
+                count_star(),
+                sum_if(data_type.eq_any(vec!["reference genome", "representative genome"])),
+                sum_if(representation.eq_any(["Complete", "Full"])),
+                sum_if(representation.eq("Partial")),
             ))
             .filter(name_id.eq_any(name_ids))
             .load::<AssemblySummary>(&mut conn)
