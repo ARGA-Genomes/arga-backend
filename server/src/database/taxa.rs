@@ -254,7 +254,6 @@ impl TaxaProvider {
                 sum(taxa_filter::specimens),
                 sum(taxa_filter::other),
             ))
-            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .load::<DataSummary>(&mut conn)
             .await?;
 
