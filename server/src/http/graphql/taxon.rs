@@ -1,3 +1,4 @@
+use arga_core::models;
 use async_graphql::*;
 use serde::Deserialize;
 use serde::Serialize;
@@ -8,6 +9,7 @@ use crate::http::Context as State;
 
 use crate::database::taxa;
 use super::common::taxonomy::TaxonDetails;
+use super::common::taxonomy::TaxonomicRank;
 
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -43,6 +45,14 @@ pub struct TaxonQuery {
 
 #[Object]
 impl TaxonQuery {
+    async fn hierarchy(&self, ctx: &Context<'_>) -> Result<Vec<ClassificationNode>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let rank = self.rank.clone().into();
+        let hierarchy = state.database.taxa.hierarchy(&rank).await?;
+        let hierarchy = hierarchy.into_iter().map(ClassificationNode::from).collect();
+        Ok(hierarchy)
+    }
+
     async fn summary(&self, ctx: &Context<'_>) -> Result<TaxonSummary, Error> {
         let state = ctx.data::<State>().unwrap();
         let rank = self.rank.clone().into();
@@ -66,6 +76,25 @@ impl TaxonQuery {
     }
 }
 
+
+#[derive(SimpleObject)]
+pub struct ClassificationNode {
+    pub rank: TaxonomicRank,
+    pub scientific_name: String,
+    pub canonical_name: String,
+    pub depth: i32,
+}
+
+impl From<models::ClassificationTreeNode> for ClassificationNode {
+    fn from(value: models::ClassificationTreeNode) -> Self {
+        Self {
+            rank: value.rank.into(),
+            scientific_name: value.scientific_name,
+            canonical_name: value.canonical_name,
+            depth: value.depth,
+        }
+    }
+}
 
 #[derive(SimpleObject)]
 pub struct TaxonSummary {

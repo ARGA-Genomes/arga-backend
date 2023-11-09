@@ -1,6 +1,6 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate};
-use diesel::{Queryable, Insertable};
+use diesel::{Queryable, Insertable, Associations};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
@@ -124,7 +124,10 @@ pub struct Taxon {
 #[diesel(table_name = schema_gnl::taxa_filter)]
 pub struct FilteredTaxon {
     pub id: Uuid,
+    pub dataset_id: Uuid,
     pub name_id: Uuid,
+    pub parent_taxon_id: Option<Uuid>,
+
     pub status: TaxonomicStatus,
     pub scientific_name: String,
     pub canonical_name: String,
@@ -1062,4 +1065,18 @@ pub struct Classification {
     pub alternative_names: Option<Vec<Option<String>>>,
     pub description: Option<String>,
     pub remarks: Option<String>,
+}
+
+#[derive(Clone, Queryable, Insertable, Associations, Debug, Serialize, Deserialize)]
+#[diesel(belongs_to(FilteredTaxon, foreign_key = parent_id))]
+#[diesel(table_name = schema_gnl::classification_dag)]
+pub struct ClassificationTreeNode {
+    pub taxon_id: Uuid,
+    pub id: Uuid,
+    pub parent_id: Uuid,
+
+    pub rank: TaxonomicRank,
+    pub scientific_name: String,
+    pub canonical_name: String,
+    pub depth: i32,
 }

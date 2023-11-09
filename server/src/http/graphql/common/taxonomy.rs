@@ -155,3 +155,34 @@ pub enum TaxonomicVernacularGroup {
     Seaweeds,
     HigherPlants,
 }
+
+
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "models::TaxonomicRank")]
+pub enum TaxonomicRank {
+    Domain,
+    Superkingdom,
+    Kingdom,
+    Subkingdom,
+    Phylum,
+    Subphylum,
+    Superclass,
+    Class,
+    Subclass,
+    Superorder,
+    Order,
+    Suborder,
+    Superfamily,
+    Family,
+    Subfamily,
+    Supertribe,
+    Tribe,
+    Subtribe,
+    Genus,
+    Subgenus,
+    Species,
+    Subspecies,
+
+    Unranked,
+    HigherTaxon,
+}

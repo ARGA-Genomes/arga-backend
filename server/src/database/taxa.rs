@@ -1,4 +1,4 @@
-use arga_core::models::{TaxonomicRank, Classification};
+use arga_core::models::{TaxonomicRank, Classification, ClassificationTreeNode};
 use diesel::prelude::*;
 use diesel::sql_types::{Text, Array, Nullable};
 use diesel_async::RunQueryDsl;
@@ -167,6 +167,49 @@ impl TaxaProvider {
 
         options.sort();
         Ok(options)
+    }
+
+
+    pub async fn hierarchy(&self, rank: &TaxonRank) -> Result<Vec<ClassificationTreeNode>, Error> {
+        use schema::classifications;
+        use schema_gnl::classification_dag as dag;
+
+        let mut conn = self.pool.get().await?;
+
+        let nodes = dag::table
+            .inner_join(classifications::table.on(classifications::id.eq(dag::taxon_id)))
+            .select(dag::all_columns)
+            .into_boxed();
+
+        let nodes = match rank {
+            TaxonRank::Domain(name) => nodes
+                .filter(classifications::rank.eq(TaxonomicRank::Domain))
+                .filter(classifications::canonical_name.eq(name)),
+            TaxonRank::Kingdom(name) => nodes
+                .filter(classifications::rank.eq(TaxonomicRank::Kingdom))
+                .filter(classifications::canonical_name.eq(name)),
+            TaxonRank::Phylum(name) => nodes
+                .filter(classifications::rank.eq(TaxonomicRank::Phylum))
+                .filter(classifications::canonical_name.eq(name)),
+            TaxonRank::Class(name) => nodes
+                .filter(classifications::rank.eq(TaxonomicRank::Class))
+                .filter(classifications::canonical_name.eq(name)),
+            TaxonRank::Order(name) => nodes
+                .filter(classifications::rank.eq(TaxonomicRank::Order))
+                .filter(classifications::canonical_name.eq(name)),
+            TaxonRank::Family(name) => nodes
+                .filter(classifications::rank.eq(TaxonomicRank::Family))
+                .filter(classifications::canonical_name.eq(name)),
+            TaxonRank::Genus(name) => nodes
+                .filter(classifications::rank.eq(TaxonomicRank::Genus))
+                .filter(classifications::canonical_name.eq(name)),
+            TaxonRank::Species(name) => nodes
+                .filter(classifications::rank.eq(TaxonomicRank::Species))
+                .filter(classifications::canonical_name.eq(name)),
+        };
+
+        let nodes = nodes.load::<ClassificationTreeNode>(&mut conn).await?;
+        Ok(nodes)
     }
 
 

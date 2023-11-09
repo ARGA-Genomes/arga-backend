@@ -118,7 +118,9 @@ diesel::table! {
 diesel::table! {
     taxa_filter (id) {
         id -> Uuid,
+        dataset_id -> Uuid,
         name_id -> Uuid,
+        parent_taxon_id -> Nullable<Uuid>,
         status -> crate::schema::sql_types::TaxonomicStatus,
         scientific_name -> Varchar,
         canonical_name -> Varchar,
@@ -244,7 +246,7 @@ diesel::table! {
         rank -> crate::schema::sql_types::TaxonomicRank,
         scientific_name -> Varchar,
         canonical_name -> Varchar,
-        depth -> BigInt,
+        depth -> Integer,
     }
 }
 

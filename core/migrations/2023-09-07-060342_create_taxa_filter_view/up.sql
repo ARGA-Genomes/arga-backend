@@ -1,6 +1,7 @@
 CREATE MATERIALIZED VIEW taxa_filter AS
 SELECT
     taxa.*,
+    classification_tree.hierarchy,
     name_data_summaries.genomes,
     name_data_summaries.markers,
     name_data_summaries.specimens,
@@ -13,6 +14,13 @@ SELECT
     name_attributes.traits
 FROM taxa
 JOIN name_data_summaries ON taxa.name_id = name_data_summaries.name_id
+LEFT JOIN (
+  SELECT
+      taxon_id,
+      array_agg(canonical_name::text) as hierarchy
+  FROM classification_dag
+  GROUP BY taxon_id
+) classification_tree ON taxa.parent_taxon_id = classification_tree.taxon_id
 LEFT JOIN ecology ON taxa.name_id = ecology.name_id
 LEFT JOIN (
   SELECT
