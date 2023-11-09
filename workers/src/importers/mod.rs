@@ -17,3 +17,5 @@ pub mod annotation_importer;
 pub mod deposition_importer;
 pub mod name_attribute_importer;
 pub mod admin_media_importer;
+
+pub mod classification_importer;

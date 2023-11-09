@@ -212,13 +212,21 @@ pub fn without_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedTaxaEx
 /// Filter the taxa table that belong to the provided classification
 pub fn with_classification(classification: &Classification) -> BoxedTaxaExpression {
     match classification {
-        Classification::Kingdom(value) => Box::new(taxa::kingdom.eq(value)),
-        Classification::Phylum(value) => Box::new(taxa::phylum.eq(value)),
-        Classification::Class(value) => Box::new(taxa::class.eq(value)),
-        Classification::Order(value) => Box::new(taxa::order.eq(value)),
-        Classification::Family(value) => Box::new(taxa::family.eq(value)),
-        Classification::Tribe(value) => Box::new(taxa::tribe.eq(value)),
-        Classification::Genus(value) => Box::new(taxa::genus.eq(value)),
+        Classification::Kingdom(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Phylum(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Class(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Order(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Family(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Tribe(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Genus(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+
+        // Classification::Kingdom(value) => Box::new(taxa::kingdom.eq(value)),
+        // Classification::Phylum(value) => Box::new(taxa::phylum.eq(value)),
+        // Classification::Class(value) => Box::new(taxa::class.eq(value)),
+        // Classification::Order(value) => Box::new(taxa::order.eq(value)),
+        // Classification::Family(value) => Box::new(taxa::family.eq(value)),
+        // Classification::Tribe(value) => Box::new(taxa::tribe.eq(value)),
+        // Classification::Genus(value) => Box::new(taxa::genus.eq(value)),
     }
 }
 

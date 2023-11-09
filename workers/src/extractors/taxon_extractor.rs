@@ -10,6 +10,7 @@ use uuid::Uuid;
 use arga_core::models::{Taxon, TaxonomicStatus, Dataset};
 use crate::error::Error;
 use crate::extractors::utils::{extract_authority, decompose_scientific_name};
+use crate::matchers::classification_matcher::{classification_map, ClassificationMap};
 use crate::matchers::name_matcher::{match_records, NameRecord, NameMatch};
 
 
@@ -88,15 +89,17 @@ pub fn extract(path: &PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<V
         records.push(row?);
     }
 
+    let classifications = classification_map(pool)?;
+
     // match the records to names in the database. this will filter out any names
     // that could not be matched
     let records = match_records(records, pool);
-    let taxa = extract_taxa(&dataset, &records);
+    let taxa = extract_taxa(&dataset, &records, &classifications);
     Ok(taxa)
 }
 
 
-fn extract_taxa(dataset: &Dataset, records: &MatchedRecords) -> Vec<Taxon> {
+fn extract_taxa(dataset: &Dataset, records: &MatchedRecords, classifications: &ClassificationMap) -> Vec<Taxon> {
     info!(total=records.len(), "Extracting taxa");
 
     let taxa = records.par_iter().map(|(name, row)| {
@@ -141,10 +144,16 @@ fn extract_taxa(dataset: &Dataset, records: &MatchedRecords) -> Vec<Taxon> {
             None => decomposed.map(|v| v.canonical_name())
         };
 
+        let parent_taxon = match &genus {
+            Some(genus) => classifications.get(genus),
+            None => None,
+        };
+
         Taxon {
             id: Uuid::new_v4(),
             dataset_id: dataset.id.clone(),
             name_id: name.id.clone(),
+            parent_taxon_id: parent_taxon.map(|c| c.id.clone()),
 
             status: str_to_taxonomic_status(&row.taxonomic_status),
             scientific_name: row.scientific_name.clone(),

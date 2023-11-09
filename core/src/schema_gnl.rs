@@ -133,6 +133,7 @@ diesel::table! {
         subphylum -> Nullable<Varchar>,
         subclass -> Nullable<Varchar>,
         species_authority -> Nullable<Varchar>,
+        hierarchy -> Nullable<Array<Text>>,
         genomes -> Nullable<Integer>,
         markers -> Nullable<Integer>,
         specimens -> Nullable<Integer>,
@@ -235,8 +236,20 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    classification_dag (id) {
+        taxon_id -> Uuid,
+        id -> Uuid,
+        parent_id -> Uuid,
+        rank -> crate::schema::sql_types::TaxonomicRank,
+        scientific_name -> Varchar,
+        canonical_name -> Varchar,
+        depth -> BigInt,
+    }
+}
 
-use super::schema::{datasets, names, taxa, specimens, accession_events};
+
+use super::schema::{datasets, names, taxa, specimens, accession_events, classifications};
 
 diesel::joinable!(species -> synonyms (id));
 diesel::joinable!(species -> common_names (id));
@@ -263,6 +276,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     markers,
     name_data_summaries,
     taxa_filter,
+    classification_dag,
 );
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -306,6 +320,11 @@ diesel::allow_tables_to_appear_in_same_query!(
 );
 
 diesel::allow_tables_to_appear_in_same_query!(
+    classification_dag,
+    taxa,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
     specimen_stats,
     specimens,
 );
@@ -318,4 +337,14 @@ diesel::allow_tables_to_appear_in_same_query!(
 diesel::allow_tables_to_appear_in_same_query!(
     specimen_stats,
     accession_events,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    classification_dag,
+    classifications,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    name_data_summaries,
+    classifications,
 );

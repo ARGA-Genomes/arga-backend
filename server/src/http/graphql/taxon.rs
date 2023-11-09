@@ -7,7 +7,7 @@ use crate::http::Error;
 use crate::http::Context as State;
 
 use crate::database::taxa;
-use super::common::Taxonomy;
+use super::common::taxonomy::TaxonDetails;
 
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -24,7 +24,7 @@ pub enum TaxonRank {
 
 
 #[derive(MergedObject)]
-pub struct Taxon(Taxonomy, TaxonQuery);
+pub struct Taxon(TaxonDetails, TaxonQuery);
 
 impl Taxon {
     pub async fn new(db: &Database, rank: TaxonRank, canonical_name: String) -> Result<Taxon, Error> {
@@ -52,18 +52,7 @@ impl TaxonQuery {
 
     async fn data_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>().unwrap();
-
-        let summaries = match &self.rank {
-            taxa::TaxonRank::Domain(name) => state.database.taxa.domain_summary(&name).await?,
-            taxa::TaxonRank::Kingdom(name) => state.database.taxa.kingdom_summary(&name).await?,
-            taxa::TaxonRank::Phylum(name) => state.database.taxa.phylum_summary(&name).await?,
-            taxa::TaxonRank::Class(name) => state.database.taxa.class_summary(&name).await?,
-            taxa::TaxonRank::Order(name) => state.database.taxa.order_summary(&name).await?,
-            taxa::TaxonRank::Family(name) => state.database.taxa.family_summary(&name).await?,
-            taxa::TaxonRank::Genus(name) => state.database.taxa.family_summary(&name).await?,
-            taxa::TaxonRank::Species(name) => state.database.taxa.family_summary(&name).await?,
-        };
-
+        let summaries = state.database.taxa.data_summary(&self.rank).await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }

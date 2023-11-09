@@ -30,6 +30,8 @@ use super::importers::{
     indigenous_knowledge_importer,
     name_attribute_importer,
     admin_media_importer,
+
+    classification_importer,
 };
 
 
@@ -131,6 +133,8 @@ impl ThreadedJob {
             "import_deposition" => deposition_importer::import(path, &dataset?, pool)?,
             "import_name_attribute" => name_attribute_importer::import(path, pool)?,
             "import_admin_media" => admin_media_importer::import(path, data.dataset.clone(), pool)?,
+
+            "import_classification" => classification_importer::import(path, pool)?,
             _ => panic!("Unknown job worker: {}", worker),
         }
 

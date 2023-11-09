@@ -26,6 +26,10 @@ pub mod sql_types {
     pub struct RegionType;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "taxonomic_rank"))]
+    pub struct TaxonomicRank;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "taxonomic_status"))]
     pub struct TaxonomicStatus;
 }
@@ -167,6 +171,32 @@ diesel::table! {
         title -> Nullable<Varchar>,
         owner -> Nullable<Varchar>,
         attributes -> Nullable<Jsonb>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::TaxonomicRank;
+    use super::sql_types::TaxonomicStatus;
+
+    classifications (id) {
+        id -> Uuid,
+        dataset_id -> Uuid,
+        parent_id -> Uuid,
+        taxon_id -> Varchar,
+        rank -> TaxonomicRank,
+        accepted_name_usage -> Varchar,
+        original_name_usage -> Varchar,
+        scientific_name -> Varchar,
+        scientific_name_authorship -> Varchar,
+        canonical_name -> Varchar,
+        nomenclatural_code -> Varchar,
+        status -> TaxonomicStatus,
+        citation -> Nullable<Varchar>,
+        vernacular_names -> Nullable<Array<Nullable<Text>>>,
+        alternative_names -> Nullable<Array<Nullable<Text>>>,
+        description -> Nullable<Text>,
+        remarks -> Nullable<Text>,
     }
 }
 
@@ -604,6 +634,7 @@ diesel::table! {
         id -> Uuid,
         dataset_id -> Uuid,
         name_id -> Uuid,
+        parent_taxon_id -> Nullable<Uuid>,
         status -> TaxonomicStatus,
         scientific_name -> Varchar,
         canonical_name -> Varchar,
@@ -727,6 +758,7 @@ diesel::joinable!(assembly_events -> datasets (dataset_id));
 diesel::joinable!(assembly_events -> sequences (sequence_id));
 diesel::joinable!(assembly_stats -> assemblies (assembly_id));
 diesel::joinable!(biosamples -> names (name_id));
+diesel::joinable!(classifications -> datasets (dataset_id));
 diesel::joinable!(collection_events -> datasets (dataset_id));
 diesel::joinable!(collection_events -> specimens (specimen_id));
 diesel::joinable!(conservation_statuses -> datasets (dataset_id));
@@ -763,6 +795,7 @@ diesel::joinable!(subsample_events -> subsamples (subsample_id));
 diesel::joinable!(subsamples -> datasets (dataset_id));
 diesel::joinable!(subsamples -> names (name_id));
 diesel::joinable!(subsamples -> specimens (specimen_id));
+diesel::joinable!(taxa -> classifications (parent_taxon_id));
 diesel::joinable!(taxa -> datasets (dataset_id));
 diesel::joinable!(taxa -> names (name_id));
 diesel::joinable!(taxon_photos -> names (name_id));
@@ -777,6 +810,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     assembly_events,
     assembly_stats,
     biosamples,
+    classifications,
     collection_events,
     conservation_statuses,
     datasets,

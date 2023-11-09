@@ -1,3 +1,4 @@
+use arga_core::models::{TaxonomicRank, GenomicComponent};
 use async_trait::async_trait;
 
 use diesel::prelude::*;
@@ -69,12 +70,41 @@ impl SpeciesProvider {
     /// Get taxonomic information for a specific species.
     pub async fn taxonomy(&self, name_id: &Uuid) -> Result<Taxon, Error> {
         use schema::taxa;
+        use schema_gnl::classification_dag as dag;
+
         let mut conn = self.pool.get().await?;
 
-        let taxon = taxa::table
+        let mut taxon = taxa::table
             .filter(taxa::name_id.eq(name_id))
             .first::<Taxon>(&mut conn)
             .await?;
+
+        // get the the classification from the parent taxon id or genus
+        // if not available.
+        let mut query = dag::table.into_boxed();
+        query = match taxon.parent_taxon_id {
+            Some(taxon_id) => query.filter(dag::taxon_id.eq(taxon_id)),
+            None => query.filter(dag::canonical_name.eq(taxon.genus.clone().unwrap_or_default())),
+        };
+
+        let hierarchy = query
+            .select((dag::rank, dag::canonical_name))
+            .load::<(TaxonomicRank, String)>(&mut conn)
+            .await?;
+
+        for (rank, name) in hierarchy {
+            match rank {
+                TaxonomicRank::Kingdom => taxon.kingdom = Some(name),
+                TaxonomicRank::Phylum => taxon.phylum = Some(name),
+                TaxonomicRank::Class => taxon.class = Some(name),
+                TaxonomicRank::Order => taxon.order = Some(name),
+                TaxonomicRank::Family => taxon.family = Some(name),
+                TaxonomicRank::Tribe => taxon.tribe = Some(name),
+                TaxonomicRank::Genus => taxon.genus = Some(name),
+                TaxonomicRank::Subgenus => taxon.subgenus = Some(name),
+                _ => {}
+            }
+        }
 
         Ok(taxon)
     }

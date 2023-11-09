@@ -7,3 +7,5 @@ pub mod specimen_matcher;
 pub mod subsample_matcher;
 pub mod dna_extract_matcher;
 pub mod sequence_matcher;
+
+pub mod classification_matcher;

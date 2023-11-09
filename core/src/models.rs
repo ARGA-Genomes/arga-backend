@@ -45,6 +45,7 @@ pub enum TaxonomicStatus {
     Hybrid,
     Synonym,
     Unaccepted,
+    Informal,
 }
 
 impl Default for TaxonomicStatus {
@@ -85,6 +86,7 @@ pub struct Taxon {
     pub id: Uuid,
     pub dataset_id: Uuid,
     pub name_id: Uuid,
+    pub parent_taxon_id: Option<Uuid>,
 
     pub status: TaxonomicStatus,
     pub scientific_name: String,
@@ -140,6 +142,7 @@ pub struct FilteredTaxon {
     pub subclass: Option<String>,
 
     pub species_authority: Option<String>,
+    pub hierarchy: Option<Vec<String>>,
 
     pub genomes: Option<i32>,
     pub markers: Option<i32>,
@@ -1004,4 +1007,59 @@ pub struct AdminMedia {
     pub publisher: Option<String>,
     pub license: Option<String>,
     pub rights_holder: Option<String>,
+}
+
+
+#[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::TaxonomicRank"]
+pub enum TaxonomicRank {
+    Domain,
+    Superkingdom,
+    Kingdom,
+    Subkingdom,
+    Phylum,
+    Subphylum,
+    Superclass,
+    Class,
+    Subclass,
+    Superorder,
+    Order,
+    Suborder,
+    Superfamily,
+    Family,
+    Subfamily,
+    Supertribe,
+    Tribe,
+    Subtribe,
+    Genus,
+    Subgenus,
+    Species,
+    Subspecies,
+
+    Unranked,
+    HigherTaxon,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::classifications)]
+pub struct Classification {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub parent_id: Uuid,
+    pub taxon_id: String,
+
+    pub rank: TaxonomicRank,
+    pub accepted_name_usage: String,
+    pub original_name_usage: String,
+    pub scientific_name: String,
+    pub scientific_name_authorship: String,
+    pub canonical_name: String,
+    pub nomenclatural_code: String,
+    pub status: TaxonomicStatus,
+
+    pub citation: Option<String>,
+    pub vernacular_names: Option<Vec<Option<String>>>,
+    pub alternative_names: Option<Vec<Option<String>>>,
+    pub description: Option<String>,
+    pub remarks: Option<String>,
 }

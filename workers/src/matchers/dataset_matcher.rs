@@ -15,7 +15,6 @@ pub type DatasetMap = HashMap<String, DatasetMatch>;
 
 
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct DatasetRecord {
     pub global_id: String,
 }
@@ -59,4 +58,41 @@ where T: Sync + Clone + Into<DatasetRecord>
 
     info!(total=records.len(), matched=map.len(), "Matching datasets finished");
     map
+}
+
+
+pub fn dataset_map(pool: &mut PgPool) -> Result<DatasetMap, Error> {
+    use schema::datasets::dsl::*;
+    info!("Creating dataset map");
+
+    let mut conn = pool.get()?;
+
+    let results = datasets
+        .select((id, global_id))
+        .load::<DatasetMatch>(&mut conn)?;
+
+    let mut map = DatasetMap::new();
+    for dataset_match in results {
+        map.insert(dataset_match.global_id.clone(), dataset_match);
+    }
+
+    info!(total=map.len(), "Creating dataset map finished");
+    Ok(map)
+}
+
+
+pub fn match_records<T>(records: Vec<T>, datasets: &DatasetMap) -> Vec<(DatasetMatch, T)>
+where T: Clone + Into<DatasetRecord>
+{
+    // associate the records with the matched name
+    let mut matched: Vec<(DatasetMatch, T)> = Vec::with_capacity(records.len());
+    for record in records {
+        let sequence_record = record.clone().into();
+
+        if let Some(sequence) = datasets.get(&sequence_record.global_id) {
+            matched.push((sequence.clone(), record));
+        }
+    }
+
+    matched
 }

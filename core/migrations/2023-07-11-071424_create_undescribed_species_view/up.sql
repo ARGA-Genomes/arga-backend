@@ -12,3 +12,4 @@ FROM (
   WHERE status IN ('undescribed', 'hybrid')
 ) tbl
 WHERE window_rank = 1;
+

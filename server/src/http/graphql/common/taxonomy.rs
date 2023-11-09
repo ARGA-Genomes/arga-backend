@@ -21,6 +21,30 @@ impl From<species::VernacularName> for VernacularName {
 }
 
 
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject, Default)]
+pub struct TaxonDetails {
+    pub scientific_name: String,
+    pub scientific_name_authorship: String,
+    pub canonical_name: String,
+    pub status: TaxonomicStatus,
+    pub nomenclatural_code: String,
+    pub citation: Option<String>,
+}
+
+impl From<models::Classification> for TaxonDetails {
+    fn from(value: models::Classification) -> Self {
+        Self {
+            scientific_name: value.scientific_name,
+            scientific_name_authorship: value.scientific_name_authorship,
+            canonical_name: value.canonical_name,
+            status: value.status.into(),
+            nomenclatural_code: value.nomenclatural_code,
+            citation: value.citation,
+        }
+    }
+}
+
+
 /// Taxonomic information of a species.
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject, Default)]
 pub struct Taxonomy {
@@ -97,6 +121,7 @@ pub enum TaxonomicStatus {
     Hybrid,
     Synonym,
     Unaccepted,
+    Informal,
 }
 
 impl Default for TaxonomicStatus {

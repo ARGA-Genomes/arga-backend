@@ -24,4 +24,7 @@ pub enum ParseError {
 
     #[error(transparent)]
     DateTime(#[from] chrono::ParseError),
+
+    #[error("value not found: {0}")]
+    NotFound(String),
 }
