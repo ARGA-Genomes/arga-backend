@@ -78,8 +78,6 @@ impl TaxaProvider {
             .load::<(FilteredTaxon, i64)>(&mut conn)
             .await?;
 
-        tracing::info!(?species);
-
         Ok(species.into())
     }
 
