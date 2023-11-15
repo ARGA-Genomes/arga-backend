@@ -136,10 +136,10 @@ diesel::table! {
         subclass -> Nullable<Varchar>,
         species_authority -> Nullable<Varchar>,
         hierarchy -> Nullable<Array<Text>>,
-        genomes -> Nullable<Integer>,
-        markers -> Nullable<Integer>,
-        specimens -> Nullable<Integer>,
-        other -> Nullable<Integer>,
+        genomes -> BigInt,
+        markers -> BigInt,
+        specimens -> BigInt,
+        other -> BigInt,
         ecology -> Nullable<Array<Text>>,
         ibra -> Nullable<Array<Text>>,
         imcra -> Nullable<Array<Text>>,
@@ -229,12 +229,11 @@ diesel::table! {
 diesel::table! {
     name_data_summaries (name_id) {
         name_id -> Uuid,
-        // TODO: these are actually BigInt. switch to using
-        // bigdecimal and numeric to stop worrying about this
-        markers -> Nullable<Integer>,
-        genomes -> Nullable<Integer>,
-        specimens -> Nullable<Integer>,
-        other -> Nullable<Integer>,
+        markers -> BigInt,
+        genomes -> BigInt,
+        specimens -> BigInt,
+        other -> BigInt,
+        total_genomic -> BigInt,
     }
 }
 
@@ -247,6 +246,28 @@ diesel::table! {
         scientific_name -> Varchar,
         canonical_name -> Varchar,
         depth -> Integer,
+    }
+}
+
+diesel::table! {
+    classification_species (name_id, classification_id) {
+        name_id -> Uuid,
+        classification_id -> Uuid,
+        scientific_name -> Varchar,
+        canonical_name -> Varchar,
+        authorship -> Varchar,
+        classification_rank -> crate::schema::sql_types::TaxonomicRank,
+        classification_scientific_name -> Varchar,
+        classification_authorship -> Nullable<Varchar>,
+        classification_canonical_name -> Varchar,
+        parent_rank -> crate::schema::sql_types::TaxonomicRank,
+        parent_scientific_name -> Varchar,
+        parent_canonical_name -> Varchar,
+        markers -> BigInt,
+        genomes -> BigInt,
+        specimens -> BigInt,
+        other -> BigInt,
+        total_genomic -> BigInt,
     }
 }
 

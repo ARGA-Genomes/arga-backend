@@ -1,47 +1,42 @@
-use arga_core::models::{TaxonomicRank, Classification, ClassificationTreeNode};
+use arga_core::models::{ClassificationTreeNode, Classification};
+use bigdecimal::BigDecimal;
 use diesel::prelude::*;
 use diesel::sql_types::{Text, Array, Nullable};
 use diesel_async::RunQueryDsl;
 
-use crate::database::extensions::filters::{with_filters, Filter};
+use crate::database::extensions::filters::{with_filters, Filter, filter_taxa};
+use crate::database::extensions::classification_filters::{
+    with_classification,
+    Classification as ClassificationFilter,
+};
+use crate::database::extensions::species_filters::with_parent_classification;
 
 use super::extensions::Paginate;
-use super::extensions::filters::filter_taxa;
 use super::{schema, schema_gnl, PgPool, PageResult, Error};
-use super::models::{Taxon, FilteredTaxon, TaxonomicStatus};
+use super::models::{FilteredTaxon, TaxonomicStatus};
 
 
 sql_function!(fn unnest(x: Nullable<Array<Text>>) -> Text);
 
 
-#[derive(Clone, Debug)]
-pub enum TaxonRank {
-    Domain(String),
-    Kingdom(String),
-    Phylum(String),
-    Class(String),
-    Order(String),
-    Family(String),
-    Genus(String),
-    Species(String),
-}
-
 #[derive(Debug, Queryable)]
 pub struct DataSummary {
-    pub rank: Option<String>,
-    pub markers: Option<i64>,
-    pub genomes: Option<i64>,
-    pub specimens: Option<i64>,
-    pub other: Option<i64>,
+    pub canonical_name: String,
+    pub markers: Option<BigDecimal>,
+    pub genomes: Option<BigDecimal>,
+    pub specimens: Option<BigDecimal>,
+    pub other: Option<BigDecimal>,
+    pub total_genomic: Option<BigDecimal>,
 }
 
 #[derive(Debug, Queryable)]
 pub struct SpeciesSummary {
     pub name: String,
-    pub markers: Option<i32>,
-    pub genomes: Option<i32>,
-    pub specimens: Option<i32>,
-    pub other: Option<i32>,
+    pub markers: i64,
+    pub genomes: i64,
+    pub specimens: i64,
+    pub other: i64,
+    pub total_genomic: i64,
 }
 
 #[derive(Debug, Queryable)]
@@ -57,25 +52,12 @@ pub struct TaxaProvider {
 }
 
 impl TaxaProvider {
-    pub async fn find_by_taxon_rank(&self, taxon_rank: &TaxonRank) -> Result<Classification, Error> {
+    pub async fn find_by_classification(&self, classification: &ClassificationFilter) -> Result<Classification, Error> {
         use schema::classifications::dsl::*;
-
         let mut conn = self.pool.get().await?;
 
-        let (taxon_rank, name) = match taxon_rank {
-            TaxonRank::Domain(name) => (TaxonomicRank::Domain, name),
-            TaxonRank::Kingdom(name) => (TaxonomicRank::Kingdom, name),
-            TaxonRank::Phylum(name) => (TaxonomicRank::Phylum, name),
-            TaxonRank::Class(name) => (TaxonomicRank::Class, name),
-            TaxonRank::Order(name) => (TaxonomicRank::Order, name),
-            TaxonRank::Family(name) => (TaxonomicRank::Family, name),
-            TaxonRank::Genus(name) => (TaxonomicRank::Genus, name),
-            TaxonRank::Species(name) => (TaxonomicRank::Species, name),
-        };
-
         let taxon = classifications
-            .filter(rank.eq(taxon_rank))
-            .filter(canonical_name.eq(name))
+            .filter(with_classification(classification))
             .first::<Classification>(&mut conn)
             .await?;
 
@@ -95,6 +77,8 @@ impl TaxaProvider {
             .per_page(per_page)
             .load::<(FilteredTaxon, i64)>(&mut conn)
             .await?;
+
+        tracing::info!(?species);
 
         Ok(species.into())
     }
@@ -170,128 +154,54 @@ impl TaxaProvider {
     }
 
 
-    pub async fn hierarchy(&self, rank: &TaxonRank) -> Result<Vec<ClassificationTreeNode>, Error> {
+    pub async fn hierarchy(&self, classification: &ClassificationFilter) -> Result<Vec<ClassificationTreeNode>, Error> {
         use schema::classifications;
         use schema_gnl::classification_dag as dag;
 
         let mut conn = self.pool.get().await?;
 
-        let nodes = dag::table
-            .inner_join(classifications::table.on(classifications::id.eq(dag::taxon_id)))
+        // the classification filter helper is typed for the classifications table and will raise
+        // compiler errors due to the join against another table/view. rather than making the filters
+        // generic we just box the filtered table query first and then join it.
+        // we use the same handy technique elsewhere in this file
+        let nodes = classifications::table
+            .filter(with_classification(classification))
+            .into_boxed()
+            .inner_join(dag::table.on(dag::taxon_id.eq(classifications::id)))
             .select(dag::all_columns)
-            .into_boxed();
+            .load::<ClassificationTreeNode>(&mut conn)
+            .await?;
 
-        let nodes = match rank {
-            TaxonRank::Domain(name) => nodes
-                .filter(classifications::rank.eq(TaxonomicRank::Domain))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Kingdom(name) => nodes
-                .filter(classifications::rank.eq(TaxonomicRank::Kingdom))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Phylum(name) => nodes
-                .filter(classifications::rank.eq(TaxonomicRank::Phylum))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Class(name) => nodes
-                .filter(classifications::rank.eq(TaxonomicRank::Class))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Order(name) => nodes
-                .filter(classifications::rank.eq(TaxonomicRank::Order))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Family(name) => nodes
-                .filter(classifications::rank.eq(TaxonomicRank::Family))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Genus(name) => nodes
-                .filter(classifications::rank.eq(TaxonomicRank::Genus))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Species(name) => nodes
-                .filter(classifications::rank.eq(TaxonomicRank::Species))
-                .filter(classifications::canonical_name.eq(name)),
-        };
-
-        let nodes = nodes.load::<ClassificationTreeNode>(&mut conn).await?;
         Ok(nodes)
     }
 
 
-    pub async fn taxon_summary(&self, rank: &TaxonRank) -> Result<TaxonSummary, Error> {
-        use schema::taxa::dsl::*;
-        use schema::classifications;
+    pub async fn taxon_summary(&self, classification: &ClassificationFilter) -> Result<TaxonSummary, Error> {
+        use schema::{taxa, classifications};
         use schema_gnl::classification_dag as dag;
 
         let mut conn = self.pool.get().await?;
 
-        let species = taxa
-            .inner_join(dag::table.on(parent_taxon_id.assume_not_null().eq(dag::taxon_id)))
-            .inner_join(classifications::table.on(dag::id.eq(classifications::id)))
-            .filter(status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+        let species = classifications::table
+            .filter(with_classification(classification))
+            .into_boxed()
+            .inner_join(dag::table.on(dag::id.eq(classifications::id)))
+            .inner_join(taxa::table.on(taxa::parent_taxon_id.assume_not_null().eq(dag::taxon_id)))
+            .filter(taxa::status.eq_any(&[
+                TaxonomicStatus::Accepted,
+                TaxonomicStatus::Undescribed,
+                TaxonomicStatus::Hybrid,
+            ]))
             .count()
-            .into_boxed();
-
-        let species = match rank {
-            TaxonRank::Domain(name) => species
-                .filter(classifications::rank.eq(TaxonomicRank::Domain))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Kingdom(name) => species
-                .filter(classifications::rank.eq(TaxonomicRank::Kingdom))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Phylum(name) => species
-                .filter(classifications::rank.eq(TaxonomicRank::Phylum))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Class(name) => species
-                .filter(classifications::rank.eq(TaxonomicRank::Class))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Order(name) => species
-                .filter(classifications::rank.eq(TaxonomicRank::Order))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Family(name) => species
-                .filter(classifications::rank.eq(TaxonomicRank::Family))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Genus(name) => species
-                .filter(classifications::rank.eq(TaxonomicRank::Genus))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Species(name) => species
-                .filter(classifications::rank.eq(TaxonomicRank::Species))
-                .filter(classifications::canonical_name.eq(name)),
-        };
-
-        let species = species
             .get_result::<i64>(&mut conn)
             .await?;
 
         let child = diesel::alias!(classifications as children);
         let children = classifications::table
+            .filter(with_classification(classification))
+            .into_boxed()
             .inner_join(child.on(child.field(classifications::parent_id).eq(classifications::id)))
             .count()
-            .into_boxed();
-
-        let children = match rank {
-            TaxonRank::Domain(name) => children
-                .filter(classifications::rank.eq(TaxonomicRank::Domain))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Kingdom(name) => children
-                .filter(classifications::rank.eq(TaxonomicRank::Kingdom))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Phylum(name) => children
-                .filter(classifications::rank.eq(TaxonomicRank::Phylum))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Class(name) => children
-                .filter(classifications::rank.eq(TaxonomicRank::Class))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Order(name) => children
-                .filter(classifications::rank.eq(TaxonomicRank::Order))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Family(name) => children
-                .filter(classifications::rank.eq(TaxonomicRank::Family))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Genus(name) => children
-                .filter(classifications::rank.eq(TaxonomicRank::Genus))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Species(name) => children
-                .filter(classifications::rank.eq(TaxonomicRank::Species))
-                .filter(classifications::canonical_name.eq(name)),
-        };
-
-        let children = children
             .get_result::<i64>(&mut conn)
             .await?;
 
@@ -302,248 +212,67 @@ impl TaxaProvider {
     }
 
 
-    pub async fn species_summary(&self, rank: &TaxonRank) -> Result<Vec<SpeciesSummary>, Error> {
-        use schema::taxa;
-        use schema_gnl::{name_data_summaries, classification_dag as dag};
+    pub async fn species_summary(&self, classification: &ClassificationFilter) -> Result<Vec<SpeciesSummary>, Error> {
+        use schema_gnl::classification_species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let summaries = taxa::table
-            .inner_join(dag::table.on(dag::taxon_id.eq(taxa::parent_taxon_id.assume_not_null())))
-            .inner_join(name_data_summaries::table.on(taxa::name_id.eq(name_data_summaries::name_id)))
-            .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+        let summaries = classification_species
             .select((
-                taxa::canonical_name,
-                name_data_summaries::markers,
-                name_data_summaries::genomes,
-                name_data_summaries::specimens,
-                name_data_summaries::other,
+                canonical_name,
+                markers,
+                genomes,
+                specimens,
+                other,
+                total_genomic,
             ))
-            .into_boxed();
-
-        let summaries = match rank {
-            TaxonRank::Domain(name) => summaries
-                .filter(dag::rank.eq(TaxonomicRank::Domain))
-                .filter(dag::canonical_name.eq(name)),
-            TaxonRank::Kingdom(name) => summaries
-                .filter(dag::rank.eq(TaxonomicRank::Kingdom))
-                .filter(dag::canonical_name.eq(name)),
-            TaxonRank::Phylum(name) => summaries
-                .filter(dag::rank.eq(TaxonomicRank::Phylum))
-                .filter(dag::canonical_name.eq(name)),
-            TaxonRank::Class(name) => summaries
-                .filter(dag::rank.eq(TaxonomicRank::Class))
-                .filter(dag::canonical_name.eq(name)),
-            TaxonRank::Order(name) => summaries
-                .filter(dag::rank.eq(TaxonomicRank::Order))
-                .filter(dag::canonical_name.eq(name)),
-            TaxonRank::Family(name) => summaries
-                .filter(dag::rank.eq(TaxonomicRank::Family))
-                .filter(dag::canonical_name.eq(name)),
-            TaxonRank::Genus(name) => summaries
-                .filter(dag::rank.eq(TaxonomicRank::Genus))
-                .filter(dag::canonical_name.eq(name)),
-            TaxonRank::Species(name) => summaries
-                .filter(dag::rank.eq(TaxonomicRank::Species))
-                .filter(dag::canonical_name.eq(name)),
-        };
-
-        let summaries = summaries
+            .filter(with_parent_classification(classification))
+            .order(total_genomic.desc())
+            .limit(10)
             .load::<SpeciesSummary>(&mut conn)
             .await?;
 
         Ok(summaries)
     }
 
-
-    pub async fn data_summary(&self, rank: &TaxonRank) -> Result<Vec<DataSummary>, Error> {
-        use diesel::dsl::sum;
-        use schema::{taxa, classifications};
-        use schema_gnl::{name_data_summaries, classification_dag as dag};
+    pub async fn species_genome_summary(&self, classification: &ClassificationFilter) -> Result<Vec<SpeciesSummary>, Error> {
+        use schema_gnl::classification_species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let summaries = taxa::table
-            .inner_join(dag::table.on(dag::taxon_id.eq(taxa::parent_taxon_id.assume_not_null())))
-            .inner_join(classifications::table.on(dag::parent_id.eq(classifications::id)))
-            .inner_join(name_data_summaries::table.on(taxa::name_id.eq(name_data_summaries::name_id)))
-            .group_by(dag::canonical_name)
-            .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+        let summaries = classification_species
             .select((
-                dag::canonical_name.nullable(),
-                sum(name_data_summaries::markers),
-                sum(name_data_summaries::genomes),
-                sum(name_data_summaries::specimens),
-                sum(name_data_summaries::other),
+                canonical_name,
+                markers,
+                genomes,
+                specimens,
+                other,
+                total_genomic,
             ))
-            .into_boxed();
-
-        let summaries = match rank {
-            TaxonRank::Domain(name) => summaries
-                .filter(classifications::rank.eq(TaxonomicRank::Domain))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Kingdom(name) => summaries
-                .filter(classifications::rank.eq(TaxonomicRank::Kingdom))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Phylum(name) => summaries
-                .filter(classifications::rank.eq(TaxonomicRank::Phylum))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Class(name) => summaries
-                .filter(classifications::rank.eq(TaxonomicRank::Class))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Order(name) => summaries
-                .filter(classifications::rank.eq(TaxonomicRank::Order))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Family(name) => summaries
-                .filter(classifications::rank.eq(TaxonomicRank::Family))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Genus(name) => summaries
-                .filter(classifications::rank.eq(TaxonomicRank::Genus))
-                .filter(classifications::canonical_name.eq(name)),
-            TaxonRank::Species(name) => summaries
-                .filter(classifications::rank.eq(TaxonomicRank::Species))
-                .filter(classifications::canonical_name.eq(name)),
-        };
-
-        let summaries = summaries
-            .load::<DataSummary>(&mut conn)
+            .filter(with_parent_classification(classification))
+            .order(genomes.desc())
+            .limit(10)
+            .load::<SpeciesSummary>(&mut conn)
             .await?;
 
         Ok(summaries)
     }
 
-    pub async fn domain_summary(&self, _domain: &str) -> Result<Vec<DataSummary>, Error> {
+    pub async fn data_summary(&self, classification: &ClassificationFilter) -> Result<Vec<DataSummary>, Error> {
         use diesel::dsl::sum;
-        use schema_gnl::taxa_filter;
+        use schema_gnl::classification_species::dsl::*;
+
         let mut conn = self.pool.get().await?;
 
-        let summaries = taxa_filter::table
-            .group_by(taxa_filter::kingdom)
+        let summaries = classification_species
+            .group_by(classification_canonical_name)
             .select((
-                taxa_filter::kingdom,
-                sum(taxa_filter::markers),
-                sum(taxa_filter::genomes),
-                sum(taxa_filter::specimens),
-                sum(taxa_filter::other),
+                classification_canonical_name,
+                sum(markers),
+                sum(genomes),
+                sum(specimens),
+                sum(other),
+                sum(total_genomic),
             ))
-            .load::<DataSummary>(&mut conn)
-            .await?;
-
-        Ok(summaries)
-    }
-
-    pub async fn kingdom_summary(&self, kingdom: &str) -> Result<Vec<DataSummary>, Error> {
-        use diesel::dsl::sum;
-        use schema_gnl::{name_data_summaries, taxa_filter};
-        let mut conn = self.pool.get().await?;
-
-        let summaries = name_data_summaries::table
-            .inner_join(taxa_filter::table.on(taxa_filter::name_id.eq(name_data_summaries::name_id)))
-            .group_by(taxa_filter::phylum)
-            .select((
-                taxa_filter::phylum,
-                sum(name_data_summaries::markers),
-                sum(name_data_summaries::genomes),
-                sum(name_data_summaries::specimens),
-                sum(name_data_summaries::other),
-            ))
-            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
-            .filter(taxa_filter::kingdom.eq(kingdom))
-            // .filter(with_filters(&filters).unwrap())
-            .load::<DataSummary>(&mut conn)
-            .await?;
-
-        Ok(summaries)
-    }
-
-    pub async fn phylum_summary(&self, phylum: &str) -> Result<Vec<DataSummary>, Error> {
-        use diesel::dsl::sum;
-        use schema::{taxa, classifications};
-        use schema_gnl::{name_data_summaries, classification_dag as dag};
-        let mut conn = self.pool.get().await?;
-
-        let summaries = taxa::table
-            .inner_join(dag::table.on(dag::taxon_id.eq(taxa::parent_taxon_id.assume_not_null())))
-            .inner_join(classifications::table.on(dag::parent_id.eq(classifications::id)))
-            .inner_join(name_data_summaries::table.on(taxa::name_id.eq(name_data_summaries::name_id)))
-            .group_by(dag::canonical_name)
-            .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
-            .filter(classifications::rank.eq(TaxonomicRank::Phylum))
-            .filter(classifications::canonical_name.eq(phylum))
-            .select((
-                dag::canonical_name.nullable(),
-                sum(name_data_summaries::markers),
-                sum(name_data_summaries::genomes),
-                sum(name_data_summaries::specimens),
-                sum(name_data_summaries::other),
-            ))
-            .load::<DataSummary>(&mut conn)
-            .await?;
-
-        Ok(summaries)
-    }
-
-    pub async fn class_summary(&self, class: &str) -> Result<Vec<DataSummary>, Error> {
-        use diesel::dsl::sum;
-        use schema_gnl::{name_data_summaries, taxa_filter};
-        let mut conn = self.pool.get().await?;
-
-        let summaries = name_data_summaries::table
-            .inner_join(taxa_filter::table.on(taxa_filter::name_id.eq(name_data_summaries::name_id)))
-            .group_by(taxa_filter::order)
-            .select((
-                taxa_filter::order,
-                sum(name_data_summaries::markers),
-                sum(name_data_summaries::genomes),
-                sum(name_data_summaries::specimens),
-                sum(name_data_summaries::other),
-            ))
-            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
-            .filter(taxa_filter::class.eq(class))
-            .load::<DataSummary>(&mut conn)
-            .await?;
-
-        Ok(summaries)
-    }
-
-    pub async fn order_summary(&self, order: &str) -> Result<Vec<DataSummary>, Error> {
-        use diesel::dsl::sum;
-        use schema_gnl::{name_data_summaries, taxa_filter};
-        let mut conn = self.pool.get().await?;
-
-        let summaries = name_data_summaries::table
-            .inner_join(taxa_filter::table.on(taxa_filter::name_id.eq(name_data_summaries::name_id)))
-            .group_by(taxa_filter::family)
-            .select((
-                taxa_filter::family,
-                sum(name_data_summaries::markers),
-                sum(name_data_summaries::genomes),
-                sum(name_data_summaries::specimens),
-                sum(name_data_summaries::other),
-            ))
-            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
-            .filter(taxa_filter::order.eq(order))
-            .load::<DataSummary>(&mut conn)
-            .await?;
-
-        Ok(summaries)
-    }
-
-    pub async fn family_summary(&self, family: &str) -> Result<Vec<DataSummary>, Error> {
-        use diesel::dsl::sum;
-        use schema_gnl::{name_data_summaries, taxa_filter};
-        let mut conn = self.pool.get().await?;
-
-        let summaries = name_data_summaries::table
-            .inner_join(taxa_filter::table.on(taxa_filter::name_id.eq(name_data_summaries::name_id)))
-            .group_by(taxa_filter::genus)
-            .select((
-                taxa_filter::genus,
-                sum(name_data_summaries::markers),
-                sum(name_data_summaries::genomes),
-                sum(name_data_summaries::specimens),
-                sum(name_data_summaries::other),
-            ))
-            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
-            .filter(taxa_filter::family.eq(family))
+            .filter(with_parent_classification(classification))
             .load::<DataSummary>(&mut conn)
             .await?;
 

@@ -147,10 +147,10 @@ pub struct FilteredTaxon {
     pub species_authority: Option<String>,
     pub hierarchy: Option<Vec<String>>,
 
-    pub genomes: Option<i32>,
-    pub markers: Option<i32>,
-    pub specimens: Option<i32>,
-    pub other: Option<i32>,
+    pub genomes: i64,
+    pub markers: i64,
+    pub specimens: i64,
+    pub other: i64,
 
     pub ecology: Option<Vec<String>>,
     pub ibra: Option<Vec<String>>,

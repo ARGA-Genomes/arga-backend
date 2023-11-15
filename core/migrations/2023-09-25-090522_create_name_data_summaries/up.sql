@@ -1,10 +1,11 @@
 CREATE MATERIALIZED VIEW name_data_summaries AS
 SELECT
     names.id AS name_id,
-    markers.total::int AS markers,
-    genomes.total::int AS genomes,
-    specimens.total::int AS specimens,
-    other_data.total::int AS other
+    COALESCE(markers.total, 0) AS markers,
+    COALESCE(genomes.total, 0) AS genomes,
+    COALESCE(specimens.total, 0) AS specimens,
+    COALESCE(other_data.total, 0) AS other,
+    COALESCE(markers.total, 0) + COALESCE(genomes.total, 0) + COALESCE(other_data.total, 0) AS total_genomic
 FROM names
 LEFT JOIN (
      SELECT name_id, count(*) AS total

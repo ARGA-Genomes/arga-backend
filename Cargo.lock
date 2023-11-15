@@ -153,7 +153,7 @@ dependencies = [
  "async-trait",
  "axum",
  "axum-login",
- "bigdecimal 0.4.1",
+ "bigdecimal",
  "chrono",
  "diesel",
  "diesel-async",
@@ -185,7 +185,7 @@ dependencies = [
 name = "arga-core"
 version = "0.1.0"
 dependencies = [
- "bigdecimal 0.3.1",
+ "bigdecimal",
  "chrono",
  "diesel",
  "diesel-derive-enum",
@@ -231,7 +231,7 @@ name = "arga-workers"
 version = "0.1.0"
 dependencies = [
  "arga-core",
- "bigdecimal 0.3.1",
+ "bigdecimal",
  "chrono",
  "csv",
  "diesel",
@@ -621,18 +621,6 @@ dependencies = [
  "futures-util",
  "parking_lot",
  "tokio",
-]
-
-[[package]]
-name = "bigdecimal"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6773ddc0eafc0e509fb60e48dff7f450f8e674a0686ae8605e8d9901bd5eefa"
-dependencies = [
- "num-bigint",
- "num-integer",
- "num-traits",
- "serde",
 ]
 
 [[package]]
@@ -1065,11 +1053,11 @@ dependencies = [
 
 [[package]]
 name = "diesel"
-version = "2.1.0"
+version = "2.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7a532c1f99a0f596f6960a60d1e119e91582b24b39e2d83a190e61262c3ef0c"
+checksum = "62c6fcf842f17f8c78ecf7c81d75c5ce84436b41ee07e03f490fbb5f5a8731d8"
 dependencies = [
- "bigdecimal 0.3.1",
+ "bigdecimal",
  "bitflags 2.3.3",
  "byteorder",
  "chrono",
@@ -1113,9 +1101,9 @@ dependencies = [
 
 [[package]]
 name = "diesel_derives"
-version = "2.1.0"
+version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74398b79d81e52e130d991afeed9c86034bb1b7735f46d2f5bf7deb261d80303"
+checksum = "ef8337737574f55a468005a83499da720f20c65586241ffea339db9ecdfd2b44"
 dependencies = [
  "diesel_table_macro_syntax",
  "proc-macro2",

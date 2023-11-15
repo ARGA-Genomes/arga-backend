@@ -86,10 +86,10 @@ impl SpeciesHelper {
         for taxon in taxa {
             cards.insert(taxon.name_id, SpeciesCard {
                 data_summary: SpeciesDataSummary {
-                    genomes: taxon.genomes.unwrap_or_default() as i64,
-                    loci: taxon.markers.unwrap_or_default() as i64,
-                    specimens: taxon.specimens.unwrap_or_default() as i64,
-                    other: taxon.other.unwrap_or_default() as i64,
+                    genomes: taxon.genomes,
+                    loci: taxon.markers,
+                    specimens: taxon.specimens,
+                    other: taxon.other,
                 },
                 taxonomy: taxon.into(),
                 ..Default::default()

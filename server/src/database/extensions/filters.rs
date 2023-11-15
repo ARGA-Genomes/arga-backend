@@ -24,13 +24,30 @@ pub enum FilterKind {
 
 #[derive(Clone)]
 pub enum Classification {
+    Domain(String),
+    Superkingdom(String),
     Kingdom(String),
+    Subkingdom(String),
     Phylum(String),
+    Subphylum(String),
+    Superclass(String),
     Class(String),
+    Subclass(String),
+    Superorder(String),
     Order(String),
+    Suborder(String),
+    Superfamily(String),
     Family(String),
+    Subfamily(String),
+    Supertribe(String),
     Tribe(String),
+    Subtribe(String),
     Genus(String),
+    Subgenus(String),
+    Species(String),
+    Subspecies(String),
+    Unranked(String),
+    HigherTaxon(String),
 }
 
 #[derive(Clone)]
@@ -212,34 +229,60 @@ pub fn without_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedTaxaEx
 /// Filter the taxa table that belong to the provided classification
 pub fn with_classification(classification: &Classification) -> BoxedTaxaExpression {
     match classification {
+        Classification::Domain(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Superkingdom(value) => Box::new(taxa::hierarchy.contains(vec![value])),
         Classification::Kingdom(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subkingdom(value) => Box::new(taxa::hierarchy.contains(vec![value])),
         Classification::Phylum(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subphylum(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Superclass(value) => Box::new(taxa::hierarchy.contains(vec![value])),
         Classification::Class(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subclass(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Superorder(value) => Box::new(taxa::hierarchy.contains(vec![value])),
         Classification::Order(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Suborder(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Superfamily(value) => Box::new(taxa::hierarchy.contains(vec![value])),
         Classification::Family(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subfamily(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Supertribe(value) => Box::new(taxa::hierarchy.contains(vec![value])),
         Classification::Tribe(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subtribe(value) => Box::new(taxa::hierarchy.contains(vec![value])),
         Classification::Genus(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-
-        // Classification::Kingdom(value) => Box::new(taxa::kingdom.eq(value)),
-        // Classification::Phylum(value) => Box::new(taxa::phylum.eq(value)),
-        // Classification::Class(value) => Box::new(taxa::class.eq(value)),
-        // Classification::Order(value) => Box::new(taxa::order.eq(value)),
-        // Classification::Family(value) => Box::new(taxa::family.eq(value)),
-        // Classification::Tribe(value) => Box::new(taxa::tribe.eq(value)),
-        // Classification::Genus(value) => Box::new(taxa::genus.eq(value)),
+        Classification::Subgenus(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Species(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subspecies(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Unranked(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::HigherTaxon(value) => Box::new(taxa::hierarchy.contains(vec![value])),
     }
 }
 
 /// Filter the taxa table that belong to the provided classification
 pub fn without_classification(classification: &Classification) -> BoxedTaxaExpression {
     match classification {
-        Classification::Kingdom(value) => Box::new(taxa::kingdom.ne(value)),
-        Classification::Phylum(value) => Box::new(taxa::phylum.ne(value)),
-        Classification::Class(value) => Box::new(taxa::class.ne(value)),
-        Classification::Order(value) => Box::new(taxa::order.ne(value)),
-        Classification::Family(value) => Box::new(taxa::family.ne(value)),
-        Classification::Tribe(value) => Box::new(taxa::tribe.ne(value)),
-        Classification::Genus(value) => Box::new(taxa::genus.ne(value)),
+        Classification::Domain(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Superkingdom(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Kingdom(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subkingdom(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Phylum(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subphylum(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Superclass(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Class(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subclass(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Superorder(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Order(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Suborder(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Superfamily(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Family(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subfamily(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Supertribe(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Tribe(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subtribe(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Genus(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subgenus(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Species(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subspecies(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Unranked(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::HigherTaxon(value) => Box::new(taxa::hierarchy.contains(vec![value])),
     }
 }
 
@@ -283,19 +326,19 @@ pub fn without_bushfire_recovery_trait(attr: &BushfireRecoveryTrait) -> BoxedTax
 /// Filter the taxa table to records that have a specific type of associated data
 pub fn with_data(data_type: &DataType) -> BoxedTaxaExpression {
     match data_type {
-        DataType::Genome => Box::new(taxa::genomes.gt(0)),
-        DataType::Locus => Box::new(taxa::markers.gt(0)),
-        DataType::Specimen => Box::new(taxa::specimens.gt(0)),
-        DataType::Other => Box::new(taxa::other.gt(0)),
+        DataType::Genome => Box::new(taxa::genomes.gt(0).nullable()),
+        DataType::Locus => Box::new(taxa::markers.gt(0).nullable()),
+        DataType::Specimen => Box::new(taxa::specimens.gt(0).nullable()),
+        DataType::Other => Box::new(taxa::other.gt(0).nullable()),
     }
 }
 
 /// Filter the taxa table to records that dont have a specific type of associated data
 pub fn without_data(data_type: &DataType) -> BoxedTaxaExpression {
     match data_type {
-        DataType::Genome => Box::new(taxa::genomes.eq(0)),
-        DataType::Locus => Box::new(taxa::markers.eq(0)),
-        DataType::Specimen => Box::new(taxa::specimens.eq(0)),
-        DataType::Other => Box::new(taxa::other.eq(0)),
+        DataType::Genome => Box::new(taxa::genomes.eq(0).nullable()),
+        DataType::Locus => Box::new(taxa::markers.eq(0).nullable()),
+        DataType::Specimen => Box::new(taxa::specimens.eq(0).nullable()),
+        DataType::Other => Box::new(taxa::other.eq(0).nullable()),
     }
 }

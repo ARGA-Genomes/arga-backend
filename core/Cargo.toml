@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 chrono = { version = "0.4.24", features = ["serde"] }
-diesel = { version = "2.1.0", features = ["uuid", "numeric", "serde_json", "chrono", "postgres", "64-column-tables", "r2d2"] }
+diesel = { version = "2.1.4", features = ["uuid", "numeric", "serde_json", "chrono", "postgres", "64-column-tables", "r2d2"] }
 diesel-derive-enum = { version = "2.1.0", features = ["postgres"] }
 geo-types = "0.7.9"
 geojson = "0.24.0"
@@ -17,4 +17,4 @@ uuid = { version = "1.2.2", features = ["serde", "v4"] }
 tantivy = "0.19.2"
 thiserror = "1.0.38"
 tracing = "0.1.37"
-bigdecimal = { version = "0.3.1", features = ["serde"] }
+bigdecimal = { version = "0.4.1", features = ["serde"] }
