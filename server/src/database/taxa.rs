@@ -1,5 +1,5 @@
 use arga_core::models::{ClassificationTreeNode, Classification};
-use bigdecimal::BigDecimal;
+use bigdecimal::{BigDecimal, ToPrimitive};
 use diesel::prelude::*;
 use diesel::sql_types::{Text, Array, Nullable};
 use diesel_async::RunQueryDsl;
@@ -41,8 +41,19 @@ pub struct SpeciesSummary {
 
 #[derive(Debug, Queryable)]
 pub struct TaxonSummary {
+    /// Total amount of child taxa
     pub children: i64,
+    /// Total amount of child taxa that have species with genomes
+    pub children_genomes: i64,
+    /// Total amount of child taxa that have species with any genomic data
+    pub children_data: i64,
+
+    /// Total amount of descendant species
     pub species: i64,
+    /// Total amount of descendant species with genomes
+    pub species_genomes: i64,
+    /// Total amount of descendant species with any genomic data
+    pub species_data: i64,
 }
 
 
@@ -175,8 +186,9 @@ impl TaxaProvider {
 
 
     pub async fn taxon_summary(&self, classification: &ClassificationFilter) -> Result<TaxonSummary, Error> {
+        use diesel::dsl::sum;
         use schema::{taxa, classifications};
-        use schema_gnl::classification_dag as dag;
+        use schema_gnl::{classification_dag as dag, classification_species as species};
 
         let mut conn = self.pool.get().await?;
 
@@ -194,6 +206,7 @@ impl TaxaProvider {
             .get_result::<i64>(&mut conn)
             .await?;
 
+        // get the total amount of child taxa. we don't need the dag for this
         let child = diesel::alias!(classifications as children);
         let children = classifications::table
             .filter(with_classification(classification))
@@ -203,9 +216,29 @@ impl TaxaProvider {
             .get_result::<i64>(&mut conn)
             .await?;
 
+        // get the total amount of species with genomes and genomic data
+        let (species_genomes, species_data) = species::table
+            .group_by(species::classification_canonical_name)
+            .select((sum(species::genomes), sum(species::total_genomic)))
+            .filter(with_parent_classification(classification))
+            .get_result::<(Option<BigDecimal>, Option<BigDecimal>)>(&mut conn)
+            .await?;
+
+        // get the total amount of species with genomes and genomic data
+        let (children_genomes, children_data) = species::table
+            .group_by(species::classification_canonical_name)
+            .select((sum(species::genomes), sum(species::total_genomic)))
+            .filter(with_parent_classification(classification))
+            .get_result::<(Option<BigDecimal>, Option<BigDecimal>)>(&mut conn)
+            .await?;
+
         Ok(TaxonSummary {
             children,
+            children_genomes: children_genomes.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
+            children_data: children_data.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
             species,
+            species_genomes: species_genomes.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
+            species_data: species_data.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
         })
     }
 

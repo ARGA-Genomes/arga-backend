@@ -7,6 +7,7 @@ use axum::Router;
 
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
+use tower_http::compression::CompressionLayer;
 
 use arga_core::search::SearchIndex;
 use crate::database::Database;
@@ -99,6 +100,7 @@ fn router(context: Context) -> Result<Router, Error> {
                 .allow_origin(origin)
                 .allow_methods([Method::GET]),
         )
+        .layer(CompressionLayer::new())
         .with_state(context);
 
     Ok(router)

@@ -1013,7 +1013,7 @@ pub struct AdminMedia {
 }
 
 
-#[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::TaxonomicRank"]
 pub enum TaxonomicRank {
     Domain,
