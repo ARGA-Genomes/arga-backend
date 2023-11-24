@@ -11,7 +11,7 @@ pub mod species;
 pub mod stats;
 pub mod maps;
 pub mod lists;
-pub mod sources;
+pub mod source;
 pub mod dataset;
 pub mod traces;
 pub mod assembly;
@@ -47,7 +47,7 @@ use self::genus::Genus;
 use self::species::Species;
 use self::stats::Statistics;
 use self::maps::Maps;
-use self::sources::Source;
+use self::source::{Source, SourceDetails};
 use self::dataset::Dataset;
 use self::extensions::ErrorLogging;
 use self::traces::Traces;
@@ -112,11 +112,14 @@ impl Query {
         Maps { tolerance }
     }
 
-    async fn sources(&self, ctx: &Context<'_>) -> Result<Vec<Source>, Error> {
+    async fn sources(&self, ctx: &Context<'_>) -> Result<Vec<SourceDetails>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let records = state.database.sources.all_records().await?;
-        let sources = records.into_iter().map(|record| Source::new(record)).collect();
-        Ok(sources)
+        Source::all(&state.database).await
+    }
+
+    async fn source(&self, ctx: &Context<'_>, by: source::SourceBy) -> Result<Source, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Source::new(&state.database, &by).await
     }
 
     async fn dataset(&self, ctx: &Context<'_>, by: dataset::DatasetBy) -> Result<Dataset, Error> {
