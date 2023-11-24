@@ -2,7 +2,7 @@ name: Compile and test
 
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: [ "native-gh-build" ]
 
 env:
   CARGO_TERM_COLOR: always
