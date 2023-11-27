@@ -2,10 +2,21 @@ use arga_core::models::TaxonomicStatus;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
+use crate::database::extensions::filters::{Classification, with_classification};
 use crate::database::{schema, schema_gnl};
 use crate::http::Error;
 
 use super::PgPool;
+
+
+const ACCEPTED_NAMES: [TaxonomicStatus; 6] = [
+    TaxonomicStatus::Accepted,
+    TaxonomicStatus::Undescribed,
+    TaxonomicStatus::SpeciesInquirenda,
+    TaxonomicStatus::ManuscriptName,
+    TaxonomicStatus::Hybrid,
+    TaxonomicStatus::Informal,
+];
 
 
 pub struct Overview {
@@ -27,11 +38,12 @@ impl OverviewProvider {
     }
 
     pub async fn animals(&self) -> Result<Overview, Error> {
-        use schema_gnl::species::dsl::*;
+        use schema_gnl::taxa_filter::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total: i64 = species
-            .filter(kingdom.eq("Animalia"))
+        let total: i64 = taxa_filter
+            .filter(status.eq_any(ACCEPTED_NAMES))
+            .filter(with_classification(&Classification::Kingdom("Animalia".to_string())))
             .count()
             .get_result(&mut conn)
             .await?;
