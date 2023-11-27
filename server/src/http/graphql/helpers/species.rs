@@ -106,7 +106,9 @@ impl SpeciesHelper {
             cards.entry(photo.name_id).and_modify(|card| card.photo = Some(photo.into()));
         }
 
-        let cards: Vec<SpeciesCard> = cards.into_values().collect();
+        // reorder the cards since the hashmap effectively randomises them
+        let mut cards: Vec<SpeciesCard> = cards.into_values().collect();
+        cards.sort_by(|a, b| a.taxonomy.scientific_name.cmp(&b.taxonomy.scientific_name));
         Ok(cards)
     }
 }
