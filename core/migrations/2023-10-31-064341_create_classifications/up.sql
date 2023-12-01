@@ -22,7 +22,35 @@ CREATE TYPE taxonomic_rank AS ENUM (
   'species',
   'subspecies',
   'unranked',
-  'higher_taxon'
+  'higher_taxon',
+
+  'aggregate_genera',
+  'aggregate_species',
+  'cohort',
+  'division',
+  'incertae_sedis',
+  'infraclass',
+  'infraorder',
+  'section',
+  'subdivision',
+
+  'regnum',
+  'familia',
+  'classis',
+  'ordo',
+  'varietas',
+  'forma',
+  'subclassis',
+  'superordo',
+  'sectio',
+  'nothovarietas',
+  'subvarietas',
+  'series',
+  'infraspecies',
+  'subfamilia',
+  'subordo',
+  'special_form',
+  'regio'
 );
 
 
@@ -31,12 +59,12 @@ CREATE TABLE classifications (
     dataset_id uuid REFERENCES datasets NOT NULL,
     parent_id uuid REFERENCES classifications NOT NULL,
 
-    taxon_id varchar NOT NULL,
+    taxon_id serial,
     rank taxonomic_rank NOT NULL,
-    accepted_name_usage varchar NOT NULL,
-    original_name_usage varchar NOT NULL,
+    accepted_name_usage varchar,
+    original_name_usage varchar,
     scientific_name varchar NOT NULL,
-    scientific_name_authorship varchar NOT NULL,
+    scientific_name_authorship varchar,
     canonical_name varchar NOT NULL,
     nomenclatural_code varchar NOT NULL,
     status taxonomic_status NOT NULL,
@@ -50,4 +78,7 @@ CREATE TABLE classifications (
 
 
 CREATE UNIQUE INDEX classifications_unique_taxon_id ON classifications (taxon_id);
-CREATE UNIQUE INDEX classifications_unique_name ON classifications (scientific_name);
+CREATE UNIQUE INDEX classifications_unique_name_rank ON classifications (scientific_name, rank);
+
+ALTER SEQUENCE classifications_taxon_id_seq RESTART WITH 5000000;
+ALTER TABLE classifications ALTER CONSTRAINT classifications_parent_id_fkey DEFERRABLE INITIALLY DEFERRED;

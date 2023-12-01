@@ -24,7 +24,7 @@ impl From<species::VernacularName> for VernacularName {
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject, Default)]
 pub struct TaxonDetails {
     pub scientific_name: String,
-    pub scientific_name_authorship: String,
+    pub scientific_name_authorship: Option<String>,
     pub canonical_name: String,
     pub status: TaxonomicStatus,
     pub nomenclatural_code: String,
@@ -185,4 +185,32 @@ pub enum TaxonomicRank {
 
     Unranked,
     HigherTaxon,
+
+    AggregateGenera,
+    AggregateSpecies,
+    Cohort,
+    Division,
+    IncertaeSedis,
+    Infraclass,
+    Infraorder,
+    Section,
+    Subdivision,
+
+    Regnum,
+    Familia,
+    Classis,
+    Ordo,
+    Varietas,
+    Forma,
+    Subclassis,
+    Superordo,
+    Sectio,
+    Nothovarietas,
+    Subvarietas,
+    Series,
+    Infraspecies,
+    Subfamilia,
+    Subordo,
+    Regio,
+    SpecialForm,
 }

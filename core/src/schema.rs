@@ -183,12 +183,12 @@ diesel::table! {
         id -> Uuid,
         dataset_id -> Uuid,
         parent_id -> Uuid,
-        taxon_id -> Varchar,
+        taxon_id -> Int4,
         rank -> TaxonomicRank,
-        accepted_name_usage -> Varchar,
-        original_name_usage -> Varchar,
+        accepted_name_usage -> Nullable<Varchar>,
+        original_name_usage -> Nullable<Varchar>,
         scientific_name -> Varchar,
-        scientific_name_authorship -> Varchar,
+        scientific_name_authorship -> Nullable<Varchar>,
         canonical_name -> Varchar,
         nomenclatural_code -> Varchar,
         status -> TaxonomicStatus,
@@ -795,7 +795,6 @@ diesel::joinable!(subsample_events -> subsamples (subsample_id));
 diesel::joinable!(subsamples -> datasets (dataset_id));
 diesel::joinable!(subsamples -> names (name_id));
 diesel::joinable!(subsamples -> specimens (specimen_id));
-diesel::joinable!(taxa -> classifications (parent_taxon_id));
 diesel::joinable!(taxa -> datasets (dataset_id));
 diesel::joinable!(taxa -> names (name_id));
 diesel::joinable!(taxon_photos -> names (name_id));

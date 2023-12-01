@@ -13,7 +13,7 @@ use crate::database::extensions::Paginate;
 use crate::http::Context;
 use crate::http::error::InternalError;
 use crate::database::{schema, Database};
-use crate::database::models::{Name, Dataset, Classification, TaxonomicRank, TaxonomicStatus};
+use crate::database::models::{self, Name, Dataset, Classification, TaxonomicRank, TaxonomicStatus};
 
 use super::common::PageResult;
 
@@ -35,9 +35,9 @@ struct NewClassification {
     // pub taxon_id: String,
 
     pub rank: TaxonomicRank,
-    pub accepted_name_usage: String,
-    pub original_name_usage: String,
-    pub scientific_name_authorship: String,
+    pub accepted_name_usage: Option<String>,
+    pub original_name_usage: Option<String>,
+    pub scientific_name_authorship: Option<String>,
     pub canonical_name: String,
     pub nomenclatural_code: String,
     pub status: TaxonomicStatus,
@@ -55,9 +55,9 @@ struct UpdateClassification {
     pub dataset_id: Uuid,
 
     pub rank: TaxonomicRank,
-    pub accepted_name_usage: String,
-    pub original_name_usage: String,
-    pub scientific_name_authorship: String,
+    pub accepted_name_usage: Option<String>,
+    pub original_name_usage: Option<String>,
+    pub scientific_name_authorship: Option<String>,
     pub canonical_name: String,
     pub nomenclatural_code: String,
     pub status: TaxonomicStatus,
@@ -133,23 +133,23 @@ async fn classifications(
 }
 
 
-async fn get_next_taxon_id(database: &Database) -> Result<i64, InternalError> {
-    use schema::classifications::dsl::*;
+// async fn get_next_taxon_id(database: &Database) -> Result<i64, InternalError> {
+//     use schema::classifications::dsl::*;
 
-    let mut conn = database.pool.get().await?;
+//     let mut conn = database.pool.get().await?;
 
-    let highest_id: String = classifications
-        .select(taxon_id)
-        .order_by(taxon_id.desc())
-        .limit(1)
-        .get_result(&mut conn)
-        .await?;
+//     let highest_id: String = classifications
+//         .select(taxon_id)
+//         .order_by(taxon_id.desc())
+//         .limit(1)
+//         .get_result(&mut conn)
+//         .await?;
 
-    let components = highest_id.split(":");
-    let num = str::parse::<i64>(components.last().unwrap()).unwrap();
+//     let components = highest_id.split(":");
+//     let num = str::parse::<i64>(components.last().unwrap()).unwrap();
 
-    return Ok(num + 1);
-}
+//     return Ok(num + 1);
+// }
 
 
 async fn create_classifications(
@@ -161,19 +161,25 @@ async fn create_classifications(
 
     let mut conn = database.pool.get().await?;
 
-    let taxon_id_number = get_next_taxon_id(&database).await?;
+    // let taxon_id_number = get_next_taxon_id(&database).await?;
 
     let mut records = Vec::new();
     for row in form {
-        records.push(Classification {
+        let derived_scientific_name = match &row.scientific_name_authorship {
+            Some(authorship) => format!("{} {}", row.canonical_name, authorship).to_string(),
+            None => row.canonical_name.clone(),
+        };
+
+        records.push(models::NewClassification {
             id: Uuid::new_v4(),
             dataset_id: row.dataset_id,
             parent_id: row.parent_id,
-            taxon_id: format!("ARGA:BT:{}", taxon_id_number).to_string(),
+            taxon_id: None,
+            // taxon_id: format!("ARGA:BT:{}", taxon_id_number).to_string(),
             rank: row.rank,
             accepted_name_usage: row.accepted_name_usage,
             original_name_usage: row.original_name_usage,
-            scientific_name: format!("{} {}", row.canonical_name, row.scientific_name_authorship),
+            scientific_name: derived_scientific_name,
             scientific_name_authorship: row.scientific_name_authorship,
             canonical_name: row.canonical_name,
             nomenclatural_code: row.nomenclatural_code,
@@ -205,9 +211,14 @@ async fn update_classifications(
     let mut conn = database.pool.get().await?;
 
     for row in form {
+        let derived_scientific_name = match &row.scientific_name_authorship {
+            Some(authorship) => format!("{} {}", row.canonical_name, authorship).to_string(),
+            None => row.canonical_name.clone(),
+        };
+
         diesel::update(classifications.filter(id.eq(row.id)))
             .set((
-                scientific_name.eq(format!("{} {}", row.canonical_name, row.scientific_name_authorship)),
+                scientific_name.eq(derived_scientific_name),
                 dataset_id.eq(row.dataset_id),
                 rank.eq(row.rank),
                 accepted_name_usage.eq(row.accepted_name_usage),

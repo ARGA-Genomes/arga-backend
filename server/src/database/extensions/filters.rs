@@ -48,6 +48,15 @@ pub enum Classification {
     Subspecies(String),
     Unranked(String),
     HigherTaxon(String),
+    AggregateGenera(String),
+    AggregateSpecies(String),
+    Cohort(String),
+    Division(String),
+    IncertaeSedis(String),
+    Infraclass(String),
+    Infraorder(String),
+    Section(String),
+    Subdivision(String),
 }
 
 #[derive(Clone)]
@@ -253,6 +262,15 @@ pub fn with_classification(classification: &Classification) -> BoxedTaxaExpressi
         Classification::Subspecies(value) => Box::new(taxa::hierarchy.contains(vec![value])),
         Classification::Unranked(value) => Box::new(taxa::hierarchy.contains(vec![value])),
         Classification::HigherTaxon(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::AggregateGenera(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::AggregateSpecies(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Cohort(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Division(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::IncertaeSedis(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Infraclass(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Infraorder(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Section(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subdivision(value) => Box::new(taxa::hierarchy.contains(vec![value])),
     }
 }
 
@@ -283,6 +301,15 @@ pub fn without_classification(classification: &Classification) -> BoxedTaxaExpre
         Classification::Subspecies(value) => Box::new(taxa::hierarchy.contains(vec![value])),
         Classification::Unranked(value) => Box::new(taxa::hierarchy.contains(vec![value])),
         Classification::HigherTaxon(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::AggregateGenera(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::AggregateSpecies(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Cohort(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Division(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::IncertaeSedis(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Infraclass(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Infraorder(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Section(value) => Box::new(taxa::hierarchy.contains(vec![value])),
+        Classification::Subdivision(value) => Box::new(taxa::hierarchy.contains(vec![value])),
     }
 }
 

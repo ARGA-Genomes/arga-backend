@@ -1041,6 +1041,34 @@ pub enum TaxonomicRank {
 
     Unranked,
     HigherTaxon,
+
+    AggregateGenera,
+    AggregateSpecies,
+    Cohort,
+    Division,
+    IncertaeSedis,
+    Infraclass,
+    Infraorder,
+    Section,
+    Subdivision,
+
+    Regnum,
+    Familia,
+    Classis,
+    Ordo,
+    Varietas,
+    Forma,
+    Subclassis,
+    Superordo,
+    Sectio,
+    Nothovarietas,
+    Subvarietas,
+    Series,
+    Infraspecies,
+    Subfamilia,
+    Subordo,
+    Regio,
+    SpecialForm,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -1049,13 +1077,38 @@ pub struct Classification {
     pub id: Uuid,
     pub dataset_id: Uuid,
     pub parent_id: Uuid,
-    pub taxon_id: String,
+    pub taxon_id: i32,
 
     pub rank: TaxonomicRank,
-    pub accepted_name_usage: String,
-    pub original_name_usage: String,
+    pub accepted_name_usage: Option<String>,
+    pub original_name_usage: Option<String>,
     pub scientific_name: String,
-    pub scientific_name_authorship: String,
+    pub scientific_name_authorship: Option<String>,
+    pub canonical_name: String,
+    pub nomenclatural_code: String,
+    pub status: TaxonomicStatus,
+
+    pub citation: Option<String>,
+    pub vernacular_names: Option<Vec<Option<String>>>,
+    pub alternative_names: Option<Vec<Option<String>>>,
+    pub description: Option<String>,
+    pub remarks: Option<String>,
+}
+
+#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::classifications)]
+#[diesel(treat_none_as_default_value = true)]
+pub struct NewClassification {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub parent_id: Uuid,
+    pub taxon_id: Option<i32>,
+
+    pub rank: TaxonomicRank,
+    pub accepted_name_usage: Option<String>,
+    pub original_name_usage: Option<String>,
+    pub scientific_name: String,
+    pub scientific_name_authorship: Option<String>,
     pub canonical_name: String,
     pub nomenclatural_code: String,
     pub status: TaxonomicStatus,
