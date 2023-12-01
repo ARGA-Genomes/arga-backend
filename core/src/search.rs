@@ -361,6 +361,12 @@ impl SearchIndex {
             self.specimen.institution_code,
             self.specimen.collection_code,
             self.specimen.recorded_by,
+            self.taxon.kingdom,
+            self.taxon.phylum,
+            self.taxon.class,
+            self.taxon.order,
+            self.taxon.family,
+            self.taxon.genus,
         ]);
 
         let query = format!(

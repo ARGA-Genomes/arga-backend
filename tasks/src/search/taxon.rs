@@ -1,3 +1,5 @@
+use diesel::sql_types::Nullable;
+use diesel::sql_types::Varchar;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -34,6 +36,7 @@ pub struct SpeciesDoc {
 }
 
 pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
+    use diesel::dsl::sql;
     use schema_gnl::{species, synonyms, common_names};
     let mut conn = pool.get()?;
 
@@ -49,12 +52,12 @@ pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
             synonyms::names.nullable(),
             common_names::names.nullable(),
 
-            species::kingdom,
-            species::phylum,
-            species::class,
-            species::order,
-            species::family,
-            species::genus,
+            sql::<Nullable<Varchar>>("classification->>'kingdom'"),
+            sql::<Nullable<Varchar>>("classification->>'phylum'"),
+            sql::<Nullable<Varchar>>("classification->>'class'"),
+            sql::<Nullable<Varchar>>("classification->>'order'"),
+            sql::<Nullable<Varchar>>("classification->>'family'"),
+            sql::<Nullable<Varchar>>("classification->>'genus'"),
         ))
         .filter(species::status.eq_any(&[TaxonomicStatus::Accepted]))
         .load::<SpeciesDoc>(&mut conn)?;
