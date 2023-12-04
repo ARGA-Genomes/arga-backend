@@ -18,14 +18,6 @@ use super::whole_genomes::{AssemblyLevel, GenomeRepresentation, ReleaseType};
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
 pub enum FilterType {
-    Kingdom,
-    Phylum,
-    Class,
-    Order,
-    Family,
-    Tribe,
-    Genus,
-
     VernacularGroup,
     HasData,
     Ecology,
@@ -35,6 +27,44 @@ pub enum FilterType {
     DrainageBasin,
 
     BushfireRecovery,
+
+    // classification ranks
+    Domain,
+    Superkingdom,
+    Kingdom,
+    Subkingdom,
+    Phylum,
+    Subphylum,
+    Superclass,
+    Class,
+    Subclass,
+    Superorder,
+    Order,
+    Suborder,
+    Superfamily,
+    Family,
+    Subfamily,
+    Supertribe,
+    Tribe,
+    Subtribe,
+    Genus,
+    Subgenus,
+    Cohort,
+    Division,
+    Section,
+    Subdivision,
+    Regnum,
+    Familia,
+    Classis,
+    Ordo,
+    Forma,
+    Subclassis,
+    Superordo,
+    Sectio,
+    Series,
+    Subfamilia,
+    Subordo,
+    Regio,
 }
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -57,14 +87,6 @@ impl TryFrom<FilterItem> for Filter {
 
     fn try_from(source: FilterItem) -> Result<Self, Self::Error> {
         let kind = match source.filter {
-            FilterType::Kingdom => FilterKind::Classification(Classification::Kingdom(source.value)),
-            FilterType::Phylum => FilterKind::Classification(Classification::Phylum(source.value)),
-            FilterType::Class => FilterKind::Classification(Classification::Class(source.value)),
-            FilterType::Order => FilterKind::Classification(Classification::Order(source.value)),
-            FilterType::Family => FilterKind::Classification(Classification::Family(source.value)),
-            FilterType::Tribe => FilterKind::Classification(Classification::Tribe(source.value)),
-            FilterType::Genus => FilterKind::Classification(Classification::Genus(source.value)),
-
             FilterType::VernacularGroup => FilterKind::VernacularGroup(
                 from_value::<TaxonomicVernacularGroup>(Value::String(source.value))?.into()
             ),
@@ -82,6 +104,43 @@ impl TryFrom<FilterItem> for Filter {
             FilterType::BushfireRecovery => FilterKind::BushfireRecovery(
                 from_value::<BushfireRecoveryTrait>(Value::String(source.value))?.into()
             ),
+
+            FilterType::Domain => FilterKind::Classification(Classification::Domain(source.value)),
+            FilterType::Superkingdom => FilterKind::Classification(Classification::Superkingdom(source.value)),
+            FilterType::Kingdom => FilterKind::Classification(Classification::Kingdom(source.value)),
+            FilterType::Subkingdom => FilterKind::Classification(Classification::Subkingdom(source.value)),
+            FilterType::Phylum => FilterKind::Classification(Classification::Phylum(source.value)),
+            FilterType::Subphylum => FilterKind::Classification(Classification::Subphylum(source.value)),
+            FilterType::Superclass => FilterKind::Classification(Classification::Superclass(source.value)),
+            FilterType::Class => FilterKind::Classification(Classification::Class(source.value)),
+            FilterType::Subclass => FilterKind::Classification(Classification::Subclass(source.value)),
+            FilterType::Superorder => FilterKind::Classification(Classification::Superorder(source.value)),
+            FilterType::Order => FilterKind::Classification(Classification::Order(source.value)),
+            FilterType::Suborder => FilterKind::Classification(Classification::Suborder(source.value)),
+            FilterType::Superfamily => FilterKind::Classification(Classification::Superfamily(source.value)),
+            FilterType::Family => FilterKind::Classification(Classification::Family(source.value)),
+            FilterType::Subfamily => FilterKind::Classification(Classification::Subfamily(source.value)),
+            FilterType::Supertribe => FilterKind::Classification(Classification::Supertribe(source.value)),
+            FilterType::Tribe => FilterKind::Classification(Classification::Tribe(source.value)),
+            FilterType::Subtribe => FilterKind::Classification(Classification::Subtribe(source.value)),
+            FilterType::Genus => FilterKind::Classification(Classification::Genus(source.value)),
+            FilterType::Subgenus => FilterKind::Classification(Classification::Subgenus(source.value)),
+            FilterType::Cohort => FilterKind::Classification(Classification::Cohort(source.value)),
+            FilterType::Division => FilterKind::Classification(Classification::Division(source.value)),
+            FilterType::Subdivision => FilterKind::Classification(Classification::Subdivision(source.value)),
+            FilterType::Section => FilterKind::Classification(Classification::Section(source.value)),
+            FilterType::Regnum => FilterKind::Classification(Classification::Regnum(source.value)),
+            FilterType::Familia => FilterKind::Classification(Classification::Familia(source.value)),
+            FilterType::Classis => FilterKind::Classification(Classification::Classis(source.value)),
+            FilterType::Ordo => FilterKind::Classification(Classification::Ordo(source.value)),
+            FilterType::Forma => FilterKind::Classification(Classification::Forma(source.value)),
+            FilterType::Subclassis => FilterKind::Classification(Classification::Subclassis(source.value)),
+            FilterType::Superordo => FilterKind::Classification(Classification::Superordo(source.value)),
+            FilterType::Sectio => FilterKind::Classification(Classification::Sectio(source.value)),
+            FilterType::Series => FilterKind::Classification(Classification::Series(source.value)),
+            FilterType::Subfamilia => FilterKind::Classification(Classification::Subfamilia(source.value)),
+            FilterType::Subordo => FilterKind::Classification(Classification::Subordo(source.value)),
+            FilterType::Regio => FilterKind::Classification(Classification::Regio(source.value)),
         };
 
         Ok(match source.action {
