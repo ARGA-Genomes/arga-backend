@@ -77,6 +77,7 @@ CREATE TABLE classifications (
 );
 
 
+CREATE INDEX classifications_parent_id ON classifications (parent_id);
 CREATE UNIQUE INDEX classifications_unique_taxon_id ON classifications (taxon_id);
 CREATE UNIQUE INDEX classifications_unique_name_rank ON classifications (scientific_name, rank);
 

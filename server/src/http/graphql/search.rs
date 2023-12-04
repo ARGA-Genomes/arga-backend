@@ -4,9 +4,11 @@ use async_graphql::*;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use arga_core::search::SearchItem;
+use arga_core::search::{SearchItem, SearchFilter};
 use crate::http::Error;
 use crate::http::Context as State;
+
+use super::common::{SearchFilterItem, convert_search_filters};
 
 
 #[derive(Debug, Enum, Eq, PartialEq, Copy, Clone)]
@@ -17,28 +19,30 @@ pub enum WithRecordType {
 }
 
 
-pub struct Search;
+pub struct Search {
+    filters: Vec<SearchFilter>,
+}
 
 #[Object]
 impl Search {
+    #[graphql(skip)]
+    pub fn new(filters: Vec<SearchFilterItem>) -> Result<Search, Error> {
+        Ok(Search {
+            filters: convert_search_filters(filters)?,
+        })
+    }
+
     async fn full_text(
         &self,
         ctx: &Context<'_>,
         query: String,
         page: usize,
         per_page: usize,
-        data_type: Option<String>,
     ) -> Result<FullTextSearchResult, Error>
     {
         let state = ctx.data::<State>().unwrap();
 
-        let (search_results, total) = match data_type.unwrap_or_default().as_str() {
-            "taxonomy" => state.search.taxonomy(&query, page, per_page),
-            "genomes" => state.search.genomes(&query, page, per_page),
-            "loci" => state.search.loci(&query, page, per_page),
-            "specimens" => state.search.specimens(&query, page, per_page),
-            _ => state.search.all(&query, page, per_page),
-        }?;
+        let (search_results, total) = state.search.filtered(&query, page, per_page, &self.filters)?;
 
         let mut name_ids: Vec<Uuid> = Vec::new();
         let mut taxa: HashMap<Uuid, TaxonItem> = HashMap::new();
@@ -273,11 +277,24 @@ impl FullTextSearchItem {
             FullTextSearchItem::Specimen(item) => item.score,
         }
     }
+
+    pub fn canonical_name(&self) -> String {
+        match self {
+            FullTextSearchItem::Taxon(item) => item.canonical_name.clone().unwrap_or_default(),
+            FullTextSearchItem::Genome(item) => item.canonical_name.clone().unwrap_or_default(),
+            FullTextSearchItem::Locus(item) => item.canonical_name.clone().unwrap_or_default(),
+            FullTextSearchItem::Specimen(item) => item.canonical_name.clone().unwrap_or_default(),
+        }
+    }
 }
 
 impl PartialOrd for FullTextSearchItem {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.score().partial_cmp(&other.score())
+        match self.score().partial_cmp(&other.score()) {
+            Some(std::cmp::Ordering::Equal) => self.canonical_name().partial_cmp(&other.canonical_name()),
+            Some(order) => Some(order),
+            None => None,
+        }
     }
 }
 

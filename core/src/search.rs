@@ -25,6 +25,20 @@ pub enum Error {
 }
 
 
+#[derive(Debug, Clone)]
+pub enum SearchFilter {
+    DataType(DataType)
+}
+
+#[derive(Debug, Clone)]
+pub enum DataType {
+    Taxon,
+    Genome,
+    Locus,
+    Specimen,
+}
+
+
 #[derive(Debug)]
 pub enum SearchItem {
     Species(SpeciesItem),
@@ -153,13 +167,6 @@ struct SpecimenFields {
     event_location: Field,
 }
 
-#[derive(Debug, Clone)]
-pub enum DataType {
-    Taxon,
-    Genome,
-    Locus,
-    Specimen,
-}
 
 impl TryFrom<&str> for DataType {
     type Error = Error;
@@ -338,6 +345,25 @@ impl SearchIndex {
     pub fn specimens(&self, query: &str, page: usize, per_page: usize) -> SearchResult {
         let query = format!("data_type:{} {query}", DataType::Specimen);
         self.all(&query, page, per_page)
+    }
+
+    pub fn filtered(&self, query: &str, page: usize, per_page: usize, filters: &Vec<SearchFilter>) -> SearchResult {
+        let mut data_types = Vec::new();
+
+        for filter in filters {
+            match filter {
+                SearchFilter::DataType(data_type) => data_types.push(format!("data_type:{}", data_type)),
+            }
+        }
+
+        let mut filtered_query = query.to_string();
+
+        if data_types.len() > 0 {
+            let types = data_types.join(" OR ");
+            filtered_query = format!("({}) {}", &types, &filtered_query);
+        }
+
+        self.all(&filtered_query, page, per_page)
     }
 
     pub fn all(&self, query: &str, page: usize, per_page: usize) -> SearchResult {

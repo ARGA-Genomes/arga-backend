@@ -3,6 +3,7 @@ pub mod species;
 pub mod filters;
 pub mod attributes;
 pub mod whole_genomes;
+pub mod search;
 
 pub use taxonomy::Taxonomy;
 pub use species::{SpeciesCard, SpeciesPhoto, SpeciesDataSummary};
@@ -12,8 +13,11 @@ pub use filters::{
     FilterType,
     WholeGenomeFilterItem,
     WholeGenomeFilterType,
+    SearchFilterItem,
+    SearchFilterType,
     convert_filters,
     convert_whole_genome_filters,
+    convert_search_filters,
 };
 
 use async_graphql::{SimpleObject, OutputType};

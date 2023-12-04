@@ -37,7 +37,7 @@ use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 
 
 use crate::http::Context as State;
-use self::common::FilterItem;
+use self::common::{FilterItem, SearchFilterItem};
 use self::overview::Overview;
 use self::search::Search;
 use self::class::Class;
@@ -79,8 +79,8 @@ impl Query {
         Overview {}
     }
 
-    async fn search(&self) -> Search {
-        Search {}
+    async fn search(&self, filters: Vec<SearchFilterItem>) -> Result<Search, Error> {
+        Search::new(filters)
     }
 
     async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<Species, Error> {
