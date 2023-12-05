@@ -225,7 +225,9 @@ impl TaxaProvider {
             .select((sum_if(species::genomes.gt(0)), sum_if(species::total_genomic.gt(0))))
             .filter(with_species_classification(classification))
             .get_result::<(i64, i64)>(&mut conn)
-            .await?;
+            .await
+            .optional()?
+            .unwrap_or_default();
 
         // get the total amount of child taxa with genomes and genomic data
         let (children_genomes, children_data) = species::table
@@ -233,7 +235,9 @@ impl TaxaProvider {
             .select((sum_if(species::genomes.gt(0)), sum_if(species::total_genomic.gt(0))))
             .filter(with_parent_classification(classification))
             .get_result::<(i64, i64)>(&mut conn)
-            .await?;
+            .await
+            .optional()?
+            .unwrap_or_default();
 
         Ok(TaxonSummary {
             children,
