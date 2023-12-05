@@ -222,7 +222,9 @@ impl TaxaProvider {
             .select((sum(species::genomes), sum(species::total_genomic)))
             .filter(with_parent_classification(classification))
             .get_result::<(Option<BigDecimal>, Option<BigDecimal>)>(&mut conn)
-            .await?;
+            .await
+            .optional()?
+            .unwrap_or((Some(BigDecimal::default()), Some(BigDecimal::default())));
 
         // get the total amount of species with genomes and genomic data
         let (children_genomes, children_data) = species::table
@@ -230,7 +232,9 @@ impl TaxaProvider {
             .select((sum(species::genomes), sum(species::total_genomic)))
             .filter(with_parent_classification(classification))
             .get_result::<(Option<BigDecimal>, Option<BigDecimal>)>(&mut conn)
-            .await?;
+            .await
+            .optional()?
+            .unwrap_or((Some(BigDecimal::default()), Some(BigDecimal::default())));
 
         Ok(TaxonSummary {
             children,
