@@ -150,15 +150,30 @@ impl From<models::ClassificationTreeNode> for ClassificationNode {
 
 #[derive(SimpleObject)]
 pub struct TaxonSummary {
+    /// Total amount of child taxa
     pub children: i64,
+    /// Total amount of child taxa that have species with genomes
+    pub children_genomes: i64,
+    /// Total amount of child taxa that have species with any genomic data
+    pub children_data: i64,
+
+    /// Total amount of descendant species
     pub species: i64,
+    /// Total amount of descendant species with genomes
+    pub species_genomes: i64,
+    /// Total amount of descendant species with any genomic data
+    pub species_data: i64,
 }
 
 impl From<taxa::TaxonSummary> for TaxonSummary {
     fn from(value: taxa::TaxonSummary) -> Self {
         Self {
             children: value.children,
+            children_genomes: value.children_genomes,
+            children_data: value.children_data,
             species: value.species,
+            species_genomes: value.species_genomes,
+            species_data: value.species_data,
         }
     }
 }

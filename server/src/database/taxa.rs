@@ -9,7 +9,11 @@ use crate::database::extensions::classification_filters::{
     with_classification,
     Classification as ClassificationFilter,
 };
-use crate::database::extensions::species_filters::with_parent_classification;
+use crate::database::extensions::species_filters::{
+    with_parent_classification,
+    with_classification as with_species_classification,
+};
+use crate::database::extensions::sum_if;
 
 use super::extensions::Paginate;
 use super::{schema, schema_gnl, PgPool, PageResult, Error};
@@ -186,7 +190,6 @@ impl TaxaProvider {
 
 
     pub async fn taxon_summary(&self, classification: &ClassificationFilter) -> Result<TaxonSummary, Error> {
-        use diesel::dsl::sum;
         use schema::{taxa, classifications};
         use schema_gnl::{classification_dag as dag, classification_species as species};
 
@@ -219,30 +222,26 @@ impl TaxaProvider {
         // get the total amount of species with genomes and genomic data
         let (species_genomes, species_data) = species::table
             .group_by(species::classification_canonical_name)
-            .select((sum(species::genomes), sum(species::total_genomic)))
-            .filter(with_parent_classification(classification))
-            .get_result::<(Option<BigDecimal>, Option<BigDecimal>)>(&mut conn)
-            .await
-            .optional()?
-            .unwrap_or((Some(BigDecimal::default()), Some(BigDecimal::default())));
+            .select((sum_if(species::genomes.gt(0)), sum_if(species::total_genomic.gt(0))))
+            .filter(with_species_classification(classification))
+            .get_result::<(i64, i64)>(&mut conn)
+            .await?;
 
-        // get the total amount of species with genomes and genomic data
+        // get the total amount of child taxa with genomes and genomic data
         let (children_genomes, children_data) = species::table
             .group_by(species::classification_canonical_name)
-            .select((sum(species::genomes), sum(species::total_genomic)))
+            .select((sum_if(species::genomes.gt(0)), sum_if(species::total_genomic.gt(0))))
             .filter(with_parent_classification(classification))
-            .get_result::<(Option<BigDecimal>, Option<BigDecimal>)>(&mut conn)
-            .await
-            .optional()?
-            .unwrap_or((Some(BigDecimal::default()), Some(BigDecimal::default())));
+            .get_result::<(i64, i64)>(&mut conn)
+            .await?;
 
         Ok(TaxonSummary {
             children,
-            children_genomes: children_genomes.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
-            children_data: children_data.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
+            children_genomes,
+            children_data,
             species,
-            species_genomes: species_genomes.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
-            species_data: species_data.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
+            species_genomes,
+            species_data,
         })
     }
 
@@ -260,7 +259,7 @@ impl TaxaProvider {
                 other,
                 total_genomic,
             ))
-            .filter(with_parent_classification(classification))
+            .filter(with_species_classification(classification))
             .order(total_genomic.desc())
             .limit(10)
             .load::<SpeciesSummary>(&mut conn)
@@ -282,7 +281,7 @@ impl TaxaProvider {
                 other,
                 total_genomic,
             ))
-            .filter(with_parent_classification(classification))
+            .filter(with_species_classification(classification))
             .order(genomes.desc())
             .limit(10)
             .load::<SpeciesSummary>(&mut conn)
