@@ -156,6 +156,8 @@ fn str_to_taxonomic_rank(value: &str) -> Result<TaxonomicRank, Error> {
         "superorder" => Ok(TaxonomicRank::Superorder),
         "order" => Ok(TaxonomicRank::Order),
         "suborder" => Ok(TaxonomicRank::Suborder),
+        "hyporder" => Ok(TaxonomicRank::Hyporder),
+        "minorder" => Ok(TaxonomicRank::Minorder),
         "superfamily" => Ok(TaxonomicRank::Superfamily),
         "family" => Ok(TaxonomicRank::Family),
         "subfamily" => Ok(TaxonomicRank::Subfamily),
@@ -171,6 +173,7 @@ fn str_to_taxonomic_rank(value: &str) -> Result<TaxonomicRank, Error> {
         "aggregate genera" => Ok(TaxonomicRank::AggregateGenera),
         "aggregate species" => Ok(TaxonomicRank::AggregateSpecies),
         "cohort" => Ok(TaxonomicRank::Cohort),
+        "subcohort" => Ok(TaxonomicRank::Subcohort),
         "division" => Ok(TaxonomicRank::Division),
         "incertae sedis" => Ok(TaxonomicRank::IncertaeSedis),
         "infraclass" => Ok(TaxonomicRank::Infraclass),
@@ -225,6 +228,8 @@ fn str_to_taxonomic_status(value: &str) -> Result<TaxonomicStatus, Error> {
 
         "informal" => Ok(TaxonomicStatus::Informal),
         "informal name" => Ok(TaxonomicStatus::Informal),
+
+        "placeholder" => Ok(TaxonomicStatus::Placeholder),
 
         val => Err(Error::Parsing(ParseError::InvalidValue(val.to_string()))),
     }

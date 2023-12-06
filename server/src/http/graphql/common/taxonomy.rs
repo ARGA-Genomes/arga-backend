@@ -122,6 +122,7 @@ pub enum TaxonomicStatus {
     Synonym,
     Unaccepted,
     Informal,
+    Placeholder,
 }
 
 impl Default for TaxonomicStatus {
@@ -172,6 +173,8 @@ pub enum TaxonomicRank {
     Superorder,
     Order,
     Suborder,
+    Hyporder,
+    Minorder,
     Superfamily,
     Family,
     Subfamily,
@@ -189,6 +192,7 @@ pub enum TaxonomicRank {
     AggregateGenera,
     AggregateSpecies,
     Cohort,
+    Subcohort,
     Division,
     IncertaeSedis,
     Infraclass,

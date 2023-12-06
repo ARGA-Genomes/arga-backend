@@ -6,6 +6,8 @@ use arga_core::{schema_gnl::taxa_filter as taxa, models::TaxonomicStatus};
 use arga_core::models::{TaxonomicVernacularGroup, BushfireRecoveryTrait};
 use diesel::sql_types::{Bool, Nullable};
 
+use super::classification_filters::{Classification, decompose_classification};
+
 
 #[derive(Clone)]
 pub enum FilterKind {
@@ -22,59 +24,6 @@ pub enum FilterKind {
     BushfireRecovery(BushfireRecoveryTrait),
 }
 
-#[derive(Clone)]
-pub enum Classification {
-    Domain(String),
-    Superkingdom(String),
-    Kingdom(String),
-    Subkingdom(String),
-    Phylum(String),
-    Subphylum(String),
-    Superclass(String),
-    Class(String),
-    Subclass(String),
-    Superorder(String),
-    Order(String),
-    Suborder(String),
-    Superfamily(String),
-    Family(String),
-    Subfamily(String),
-    Supertribe(String),
-    Tribe(String),
-    Subtribe(String),
-    Genus(String),
-    Subgenus(String),
-    Species(String),
-    Subspecies(String),
-    Unranked(String),
-    HigherTaxon(String),
-    AggregateGenera(String),
-    AggregateSpecies(String),
-    Cohort(String),
-    Division(String),
-    IncertaeSedis(String),
-    Infraclass(String),
-    Infraorder(String),
-    Section(String),
-    Subdivision(String),
-    Regnum(String),
-    Familia(String),
-    Classis(String),
-    Ordo(String),
-    Varietas(String),
-    Forma(String),
-    Subclassis(String),
-    Superordo(String),
-    Sectio(String),
-    Nothovarietas(String),
-    Subvarietas(String),
-    Series(String),
-    Infraspecies(String),
-    Subfamilia(String),
-    Subordo(String),
-    Regio(String),
-    SpecialForm(String),
-}
 
 #[derive(Clone)]
 pub enum DataType {
@@ -254,114 +203,14 @@ pub fn without_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedTaxaEx
 
 /// Filter the taxa table that belong to the provided classification
 pub fn with_classification(classification: &Classification) -> BoxedTaxaExpression {
-    match classification {
-        Classification::Domain(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Superkingdom(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Kingdom(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subkingdom(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Phylum(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subphylum(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Superclass(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Class(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subclass(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Superorder(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Order(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Suborder(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Superfamily(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Family(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subfamily(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Supertribe(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Tribe(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subtribe(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Genus(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subgenus(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Species(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subspecies(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Unranked(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::HigherTaxon(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::AggregateGenera(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::AggregateSpecies(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Cohort(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Division(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::IncertaeSedis(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Infraclass(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Infraorder(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Section(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subdivision(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Regnum(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Familia(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Classis(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Ordo(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Varietas(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Forma(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subclassis(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Superordo(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Sectio(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Nothovarietas(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subvarietas(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Series(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Infraspecies(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subfamilia(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subordo(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Regio(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::SpecialForm(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-    }
+    let (taxon_rank, value) = decompose_classification(classification);
+    Box::new(taxa::hierarchy.contains(vec![value]))
 }
 
 /// Filter the taxa table that belong to the provided classification
 pub fn without_classification(classification: &Classification) -> BoxedTaxaExpression {
-    match classification {
-        Classification::Domain(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Superkingdom(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Kingdom(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subkingdom(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Phylum(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subphylum(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Superclass(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Class(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subclass(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Superorder(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Order(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Suborder(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Superfamily(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Family(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subfamily(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Supertribe(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Tribe(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subtribe(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Genus(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subgenus(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Species(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subspecies(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Unranked(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::HigherTaxon(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::AggregateGenera(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::AggregateSpecies(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Cohort(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Division(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::IncertaeSedis(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Infraclass(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Infraorder(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Section(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subdivision(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Regnum(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Familia(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Classis(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Ordo(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Varietas(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Forma(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subclassis(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Superordo(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Sectio(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Nothovarietas(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subvarietas(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Series(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Infraspecies(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subfamilia(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Subordo(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::Regio(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-        Classification::SpecialForm(value) => Box::new(taxa::hierarchy.contains(vec![value])),
-    }
+    let (taxon_rank, value) = decompose_classification(classification);
+    Box::new(taxa::hierarchy.contains(vec![value]))
 }
 
 /// Filter the taxa table with a particular trait attribute

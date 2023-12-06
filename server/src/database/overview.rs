@@ -2,7 +2,8 @@ use arga_core::models::TaxonomicStatus;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
-use crate::database::extensions::filters::{Classification, with_classification};
+use crate::database::extensions::classification_filters::Classification;
+use crate::database::extensions::filters::with_classification;
 use crate::database::{schema, schema_gnl};
 use crate::http::Error;
 

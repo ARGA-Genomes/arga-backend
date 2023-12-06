@@ -6,7 +6,8 @@ CREATE TYPE taxonomic_status AS ENUM (
   'hybrid',
   'synonym',
   'unaccepted',
-  'informal'
+  'informal',
+  'placeholder'
 );
 
 

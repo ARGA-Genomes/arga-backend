@@ -4,7 +4,8 @@ use serde::{Serialize, Deserialize};
 use arga_core::search::SearchFilter;
 
 use crate::http::Error;
-use crate::database::extensions::filters::{Filter, FilterKind, Classification};
+use crate::database::extensions::filters::{Filter, FilterKind};
+use crate::database::extensions::classification_filters::Classification;
 use crate::database::extensions::whole_genome_filters::{
     Filter as WholeGenomeFilter,
     FilterKind as WholeGenomeFilterKind,
@@ -41,6 +42,7 @@ pub enum FilterType {
     Superorder,
     Order,
     Suborder,
+    Hyporder,
     Superfamily,
     Family,
     Subfamily,
@@ -50,6 +52,7 @@ pub enum FilterType {
     Genus,
     Subgenus,
     Cohort,
+    Subcohort,
     Division,
     Section,
     Subdivision,
@@ -117,6 +120,7 @@ impl TryFrom<FilterItem> for Filter {
             FilterType::Superorder => FilterKind::Classification(Classification::Superorder(source.value)),
             FilterType::Order => FilterKind::Classification(Classification::Order(source.value)),
             FilterType::Suborder => FilterKind::Classification(Classification::Suborder(source.value)),
+            FilterType::Hyporder => FilterKind::Classification(Classification::Hyporder(source.value)),
             FilterType::Superfamily => FilterKind::Classification(Classification::Superfamily(source.value)),
             FilterType::Family => FilterKind::Classification(Classification::Family(source.value)),
             FilterType::Subfamily => FilterKind::Classification(Classification::Subfamily(source.value)),
@@ -126,6 +130,7 @@ impl TryFrom<FilterItem> for Filter {
             FilterType::Genus => FilterKind::Classification(Classification::Genus(source.value)),
             FilterType::Subgenus => FilterKind::Classification(Classification::Subgenus(source.value)),
             FilterType::Cohort => FilterKind::Classification(Classification::Cohort(source.value)),
+            FilterType::Subcohort => FilterKind::Classification(Classification::Subcohort(source.value)),
             FilterType::Division => FilterKind::Classification(Classification::Division(source.value)),
             FilterType::Subdivision => FilterKind::Classification(Classification::Subdivision(source.value)),
             FilterType::Section => FilterKind::Classification(Classification::Section(source.value)),
