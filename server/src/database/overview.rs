@@ -55,11 +55,12 @@ impl OverviewProvider {
     }
 
     pub async fn plants(&self) -> Result<Overview, Error> {
-        use schema_gnl::species::dsl::*;
+        use schema_gnl::taxa_filter::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total: i64 = species
-            .filter(kingdom.eq("Plantae"))
+        let total: i64 = taxa_filter
+            .filter(status.eq_any(ACCEPTED_NAMES))
+            .filter(with_classification(&Classification::Kingdom("Plantae".to_string())))
             .count()
             .get_result(&mut conn)
             .await?;
@@ -70,11 +71,12 @@ impl OverviewProvider {
     }
 
     pub async fn fungi(&self) -> Result<Overview, Error> {
-        use schema_gnl::species::dsl::*;
+        use schema_gnl::taxa_filter::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total: i64 = species
-            .filter(kingdom.eq("Fungi"))
+        let total: i64 = taxa_filter
+            .filter(status.eq_any(ACCEPTED_NAMES))
+            .filter(with_classification(&Classification::Kingdom("Fungi".to_string())))
             .count()
             .get_result(&mut conn)
             .await?;
@@ -85,11 +87,12 @@ impl OverviewProvider {
     }
 
     pub async fn bacteria(&self) -> Result<Overview, Error> {
-        use schema_gnl::species::dsl::*;
+        use schema_gnl::taxa_filter::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total: i64 = species
-            .filter(kingdom.eq("Bacteria"))
+        let total: i64 = taxa_filter
+            .filter(status.eq_any(ACCEPTED_NAMES))
+            .filter(with_classification(&Classification::Kingdom("Bacteria".to_string())))
             .count()
             .get_result(&mut conn)
             .await?;
@@ -100,11 +103,11 @@ impl OverviewProvider {
     }
 
     pub async fn protista(&self) -> Result<Overview, Error> {
-        use schema_gnl::species::dsl::*;
+        use schema_gnl::taxa_filter::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total: i64 = species
-            .filter(kingdom.eq("Protista"))
+        let total: i64 = taxa_filter
+            .filter(with_classification(&Classification::Superkingdom("Protista".to_string())))
             .count()
             .get_result(&mut conn)
             .await?;

@@ -31,16 +31,22 @@ impl Overview {
     }
 
 
-    /// Returns the amount of genomic records for plants in the index
+    /// Returns the amount of species records for plants in the index
     async fn plants(&self, ctx: &Context<'_>) -> Result<i64, Error> {
         let state = ctx.data::<State>().unwrap();
         Ok(state.database.overview.plants().await?.total)
     }
 
-    /// Returns the amount of genomic records for fungi in the index
+    /// Returns the amount of species records for fungi in the index
     async fn fungi(&self, ctx: &Context<'_>) -> Result<i64, Error> {
         let state = ctx.data::<State>().unwrap();
         Ok(state.database.overview.fungi().await?.total)
+    }
+
+    /// Returns the amount of species records for protista in the index
+    async fn protista(&self, ctx: &Context<'_>) -> Result<i64, Error> {
+        let state = ctx.data::<State>().unwrap();
+        Ok(state.database.overview.protista().await?.total)
     }
 
 
