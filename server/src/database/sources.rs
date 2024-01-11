@@ -1,12 +1,13 @@
-use arga_core::models::Taxon;
+use arga_core::models::FilteredTaxon;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::database::Error;
+use crate::database::extensions::filters::{with_filters, Filter};
 
 use super::extensions::Paginate;
-use super::{schema, PgPool, PageResult};
+use super::{schema, schema_gnl, PgPool, PageResult};
 use super::models::{Source, Dataset};
 
 
@@ -73,8 +74,9 @@ impl SourceProvider {
         Ok(records)
     }
 
-    pub async fn species(&self, source: &Source, page: i64, page_size: i64) -> PageResult<Taxon> {
-        use schema::{datasets, taxa, names, name_attributes as attrs};
+    pub async fn species(&self, source: &Source, filters: &Vec<Filter>, page: i64, page_size: i64) -> PageResult<FilteredTaxon> {
+        use schema::{datasets, names, name_attributes as attrs};
+        use schema_gnl::taxa_filter;
         let mut conn = self.pool.get().await?;
 
         let with_source = names::table
@@ -85,12 +87,19 @@ impl SourceProvider {
             .group_by(names::id)
             .into_boxed();
 
-        let species = taxa::table
-            .filter(taxa::name_id.eq_any(with_source))
-            .order_by(taxa::scientific_name)
+        let mut species = taxa_filter::table
+            .filter(taxa_filter::name_id.eq_any(with_source))
+            .into_boxed();
+
+        if let Some(filters) = with_filters(&filters) {
+            species = species.filter(filters);
+        }
+
+        let species = species
+            .order_by(taxa_filter::scientific_name)
             .paginate(page)
             .per_page(page_size)
-            .load::<(Taxon, i64)>(&mut conn)
+            .load::<(FilteredTaxon, i64)>(&mut conn)
             .await?;
 
         Ok(species.into())

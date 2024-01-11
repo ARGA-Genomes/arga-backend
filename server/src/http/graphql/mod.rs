@@ -117,9 +117,9 @@ impl Query {
         Source::all(&state.database).await
     }
 
-    async fn source(&self, ctx: &Context<'_>, by: source::SourceBy) -> Result<Source, Error> {
+    async fn source(&self, ctx: &Context<'_>, by: source::SourceBy, filters: Option<Vec<FilterItem>>) -> Result<Source, Error> {
         let state = ctx.data::<State>().unwrap();
-        Source::new(&state.database, &by).await
+        Source::new(&state.database, &by, filters.unwrap_or_default()).await
     }
 
     async fn dataset(&self, ctx: &Context<'_>, by: dataset::DatasetBy) -> Result<Dataset, Error> {
