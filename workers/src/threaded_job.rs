@@ -21,6 +21,7 @@ use super::importers::{
     assembly_importer,
     annotation_importer,
     deposition_importer,
+    name_importer,
     taxon_importer,
     synonym_importer,
     vernacular_importer,
@@ -116,6 +117,7 @@ impl ThreadedJob {
         match worker {
             "import_source" => source_importer::import(path, pool)?,
             "import_dataset" => dataset_importer::import(path, pool)?,
+            "import_name" => name_importer::import(path, &dataset?, pool)?,
             "import_taxon" => taxon_importer::import(path, &dataset?, pool)?,
             "import_synonym" => synonym_importer::import(path, &dataset?, pool)?,
             "import_vernacular" => vernacular_importer::import(path, pool)?,

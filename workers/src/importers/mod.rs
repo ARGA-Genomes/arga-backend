@@ -1,5 +1,6 @@
 pub mod source_importer;
 pub mod dataset_importer;
+pub mod name_importer;
 pub mod taxon_importer;
 pub mod synonym_importer;
 pub mod vernacular_importer;
