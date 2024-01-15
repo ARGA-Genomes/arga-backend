@@ -74,22 +74,30 @@ fn reference_map(records: &Vec<Record>, classifications: &ClassificationMap) -> 
         map.insert(key.clone(), val.id.clone());
     }
 
+    // Records and reference others without being in the database. We want to leverage uuid's
+    // here and generate them so that referential integrity can be maintained come import time.
+    // we also want to make sure to link to existing classifications if they exist so that an
+    // incomplete set can still inherit the full tree
     for record in records {
+        // attempt to find a match via taxon_id first, falling back to scientific name
+        // and finally to canonical name
         let taxon_id = parse_taxon_id_str(&record.taxon_id);
         let id = match classifications.get(&taxon_id.clone().unwrap_or(record.scientific_name.clone())) {
             Some(classification) => classification.id,
-            None => match classifications.get(&record.canonical_name) {
-                Some(classification) => classification.id,
-                None => Uuid::new_v4(),
-            },
+            None => Uuid::new_v4(),
+            // None => match classifications.get(&record.canonical_name) {
+            //     Some(classification) => classification.id,
+            //     None => Uuid::new_v4(),
+            // },
         };
 
         map.insert(record.scientific_name.clone(), id.clone());
-        map.insert(record.canonical_name.clone(), id.clone());
+        // map.insert(record.canonical_name.clone(), id.clone());
         if let Some(taxon_id) = taxon_id {
             map.insert(taxon_id, id.clone());
         }
     }
+
 
     Ok(map)
 }

@@ -107,6 +107,7 @@ impl OverviewProvider {
         let mut conn = self.pool.get().await?;
 
         let total: i64 = taxa_filter
+            .filter(status.eq_any(ACCEPTED_NAMES))
             .filter(with_classification(&Classification::Superkingdom("Protista".to_string())))
             .count()
             .get_result(&mut conn)

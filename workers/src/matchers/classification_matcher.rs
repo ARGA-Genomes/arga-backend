@@ -46,7 +46,7 @@ pub fn classification_map(pool: &mut PgPool) -> Result<ClassificationMap, Error>
     for classification_match in results {
         map.insert(classification_match.taxon_id.to_string(), classification_match.clone());
         map.insert(classification_match.scientific_name.clone(), classification_match.clone());
-        map.insert(classification_match.canonical_name.clone(), classification_match.clone());
+        // map.insert(classification_match.canonical_name.clone(), classification_match.clone());
     }
 
     info!(total=map.len(), "Creating classification map finished");

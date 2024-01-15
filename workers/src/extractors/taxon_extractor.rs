@@ -24,6 +24,7 @@ struct Record {
     canonical_name: Option<String>,
     // rank: Option<String>,
     species_authority: Option<String>,
+    parent_taxon: Option<String>,
 
     kingdom: Option<String>,
     phylum: Option<String>,
@@ -144,8 +145,8 @@ fn extract_taxa(dataset: &Dataset, records: &MatchedRecords, classifications: &C
             None => decomposed.map(|v| v.canonical_name())
         };
 
-        let parent_taxon = match &genus {
-            Some(genus) => classifications.get(genus),
+        let parent_taxon = match &row.parent_taxon {
+            Some(taxon) => classifications.get(taxon),
             None => None,
         };
 
