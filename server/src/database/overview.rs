@@ -1,6 +1,7 @@
 use arga_core::models::TaxonomicStatus;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use serde::Deserialize;
 
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::extensions::filters::with_classification;
@@ -21,6 +22,13 @@ const ACCEPTED_NAMES: [TaxonomicStatus; 6] = [
 
 
 pub struct Overview {
+    pub total: i64,
+}
+
+#[derive(Debug, Queryable, Clone, Deserialize)]
+pub struct SourceOverview {
+    pub id: uuid::Uuid,
+    pub name: String,
     pub total: i64,
 }
 
@@ -156,5 +164,23 @@ impl OverviewProvider {
         Ok(Overview {
             total,
         })
+    }
+
+    pub async fn sources(&self) -> Result<Vec<SourceOverview>, Error> {
+        use schema::{sources, datasets, name_attributes};
+        use diesel::dsl::count_star;
+
+        let mut conn = self.pool.get().await?;
+
+        let records = name_attributes::table
+            .inner_join(datasets::table)
+            .inner_join(sources::table.on(datasets::source_id.eq(sources::id)))
+            .group_by((sources::id, sources::name))
+            .select((sources::id, sources::name, count_star()))
+            .filter(name_attributes::name.eq("last_updated"))
+            .load::<SourceOverview>(&mut conn)
+            .await?;
+
+        Ok(records)
     }
 }

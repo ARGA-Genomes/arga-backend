@@ -1,5 +1,6 @@
 use async_graphql::*;
 
+use crate::database;
 use crate::http::Error;
 use crate::http::Context as State;
 use crate::index::overview::{Overview as OverviewTrait, OverviewCategory};
@@ -66,5 +67,32 @@ impl Overview {
     async fn all_species(&self, ctx: &Context<'_>) -> Result<i64, Error> {
         let state = ctx.data::<State>().unwrap();
         Ok(state.database.overview.all_species().await?.total)
+    }
+
+
+    /// Returns the amount of species in every dataset
+    async fn sources(&self, ctx: &Context<'_>) -> Result<Vec<SourceOverview>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let stats = state.database.overview.sources().await?;
+        let sources = stats.into_iter().map(|s| s.into()).collect();
+        Ok(sources)
+    }
+}
+
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct SourceOverview {
+    id: uuid::Uuid,
+    name: String,
+    total: i64,
+}
+
+impl From<database::overview::SourceOverview> for SourceOverview {
+    fn from(value: database::overview::SourceOverview) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            total: value.total,
+        }
     }
 }
