@@ -33,7 +33,7 @@ fn run() {
 
     // create the manager actor which spawns other actors
     // to process jobs
-    let _manager = actor!(stakker, Manager::init(Duration::from_secs(10)), ret_shutdown!(stakker));
+    let _manager = actor!(stakker, Manager::init(Duration::from_secs(1)), ret_shutdown!(stakker));
 
     // worker main loop
     info!("Starting actor main loop");

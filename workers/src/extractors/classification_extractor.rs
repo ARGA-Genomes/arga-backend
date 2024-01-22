@@ -53,7 +53,9 @@ impl From<Record> for DatasetRecord {
 /// Extract names and taxonomy from a CSV file
 pub fn extract(path: &PathBuf, pool: &mut PgPool) -> Result<Vec<NewClassification>, Error> {
     let mut records: Vec<Record> = Vec::new();
-    for row in csv::Reader::from_path(&path)?.deserialize() {
+
+    let mut reader = csv::ReaderBuilder::new().trim(csv::Trim::All).from_path(&path)?;
+    for row in reader.deserialize() {
         records.push(row?);
     }
 
