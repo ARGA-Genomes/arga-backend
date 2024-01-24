@@ -86,7 +86,7 @@ pub fn link_classifications(records: &Vec<Taxon>, pool: &mut PgPool) -> Result<(
 
 
 pub fn link_names(records: &Vec<Taxon>, pool: &mut PgPool) -> Result<(), Error> {
-    use schema::taxa_names::dsl::*;
+    use schema::taxon_names::dsl::*;
 
     info!(total=records.len(), "Linking classifications");
     let names = name_map(pool)?;
@@ -109,7 +109,7 @@ pub fn link_names(records: &Vec<Taxon>, pool: &mut PgPool) -> Result<(), Error> 
             }
         }
 
-        let inserted_rows = diesel::insert_into(taxa_names)
+        let inserted_rows = diesel::insert_into(taxon_names)
             .values(links)
             .on_conflict_do_nothing()
             .execute(&mut conn)?;

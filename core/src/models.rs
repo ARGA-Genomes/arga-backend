@@ -188,7 +188,7 @@ pub struct Taxon {
 #[derive(Identifiable, Insertable, Selectable, Queryable, Associations, Debug, Clone)]
 #[diesel(belongs_to(Taxon))]
 #[diesel(belongs_to(Name))]
-#[diesel(table_name = schema::taxa_names)]
+#[diesel(table_name = schema::taxon_names)]
 #[diesel(primary_key(taxon_id, name_id))]
 pub struct TaxonName {
     pub taxon_id: Uuid,

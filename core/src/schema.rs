@@ -625,7 +625,7 @@ diesel::table! {
 }
 
 diesel::table! {
-    taxa_names (taxon_id, name_id) {
+    taxon_names (taxon_id, name_id) {
         taxon_id -> Uuid,
         name_id -> Uuid,
     }
@@ -762,8 +762,8 @@ diesel::joinable!(subsamples -> datasets (dataset_id));
 diesel::joinable!(subsamples -> names (name_id));
 diesel::joinable!(subsamples -> specimens (specimen_id));
 diesel::joinable!(taxa -> datasets (dataset_id));
-diesel::joinable!(taxa_names -> names (name_id));
-diesel::joinable!(taxa_names -> taxa (taxon_id));
+diesel::joinable!(taxon_names -> names (name_id));
+diesel::joinable!(taxon_names -> taxa (taxon_id));
 diesel::joinable!(taxon_photos -> names (name_id));
 diesel::joinable!(trace_files -> names (name_id));
 
@@ -802,7 +802,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     subsample_events,
     subsamples,
     taxa,
-    taxa_names,
+    taxon_names,
     taxon_history,
     taxon_photos,
     taxon_remarks,
