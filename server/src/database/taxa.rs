@@ -169,7 +169,7 @@ impl TaxaProvider {
 
     pub async fn hierarchy(&self, classification: &ClassificationFilter) -> Result<Vec<TaxonTreeNode>, Error> {
         use schema::taxa;
-        use schema_gnl::classification_dag as dag;
+        use schema_gnl::taxa_dag as dag;
 
         let mut conn = self.pool.get().await?;
 
@@ -191,7 +191,7 @@ impl TaxaProvider {
 
     pub async fn taxon_summary(&self, classification: &ClassificationFilter) -> Result<TaxonSummary, Error> {
         use schema::taxa;
-        use schema_gnl::{classification_dag as dag, classification_species as species};
+        use schema_gnl::{taxa_dag as dag, classification_species as species};
 
         let mut conn = self.pool.get().await?;
 

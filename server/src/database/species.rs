@@ -4,17 +4,14 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
 use serde::{Serialize, Deserialize};
-use tracing::instrument;
 use uuid::Uuid;
 
 use crate::database::extensions::whole_genome_filters;
-use crate::http::graphql::common::Taxonomy;
-use crate::index::species::{self, GetSpecies, GetRegions, GetMedia, GetConservationStatus, GetTraceFiles};
+use crate::index::species::{self, GetRegions, GetMedia, GetConservationStatus, GetTraceFiles};
 
 use super::models::{
     Taxon,
-    // TaxonName,
-    // Classification,
+    TaxonName,
     Name,
     NameAttribute,
     RegionType,
@@ -83,56 +80,18 @@ pub struct SpeciesProvider {
 impl SpeciesProvider {
     /// Get taxonomic information for a specific species.
     pub async fn taxonomy(&self, name_id: &Uuid) -> Result<Vec<Taxon>, Error> {
-        use schema::{taxa, names, taxa_names};
-        use schema_gnl::classification_dag as dag;
+        use schema::{taxa, names};
 
         let mut conn = self.pool.get().await?;
 
         let name = names::table.filter(names::id.eq(name_id)).get_result::<Name>(&mut conn).await?;
-
-        // FIXME: get taxonomy via taxon_names
-        let taxa = vec![];
-        // let taxa = TaxonName::belonging_to(&name)
-        //     .inner_join(classifications::table)
-        //     .select(Classification::as_select())
-        //     .load(&mut conn)
-        //     .await?;
+        let taxa = TaxonName::belonging_to(&name)
+            .inner_join(taxa::table)
+            .select(Taxon::as_select())
+            .load(&mut conn)
+            .await?;
 
         Ok(taxa)
-
-        // let mut taxon = taxa::table
-        //     .filter(taxa::name_id.eq(name_id))
-        //     .first::<Taxon>(&mut conn)
-        //     .await?;
-
-        // // get the the classification from the parent taxon id or genus
-        // // if not available.
-        // let mut query = dag::table.into_boxed();
-        // query = match taxon.parent_taxon_id {
-        //     Some(taxon_id) => query.filter(dag::taxon_id.eq(taxon_id)),
-        //     None => query.filter(dag::canonical_name.eq(taxon.genus.clone().unwrap_or_default())),
-        // };
-
-        // let hierarchy = query
-        //     .select((dag::rank, dag::canonical_name))
-        //     .load::<(TaxonomicRank, String)>(&mut conn)
-        //     .await?;
-
-        // for (rank, name) in hierarchy {
-        //     match rank {
-        //         TaxonomicRank::Kingdom => taxon.kingdom = Some(name),
-        //         TaxonomicRank::Phylum => taxon.phylum = Some(name),
-        //         TaxonomicRank::Class => taxon.class = Some(name),
-        //         TaxonomicRank::Order => taxon.order = Some(name),
-        //         TaxonomicRank::Family => taxon.family = Some(name),
-        //         TaxonomicRank::Tribe => taxon.tribe = Some(name),
-        //         TaxonomicRank::Genus => taxon.genus = Some(name),
-        //         TaxonomicRank::Subgenus => taxon.subgenus = Some(name),
-        //         _ => {}
-        //     }
-        // }
-
-        // Ok(taxon)
     }
 
     pub async fn vernacular_names(&self, name_id: &Uuid) -> Result<Vec<VernacularName>, Error> {
@@ -408,46 +367,6 @@ impl From<Distribution> for species::Distribution {
         }
     }
 }
-
-
-// #[async_trait]
-// impl GetSpecies for Database {
-//     type Error = Error;
-
-    // #[instrument(skip(self))]
-    // async fn taxonomy(&self, name: &Name) -> Result<Taxonomy, Error> {
-    //     use schema::taxa;
-    //     let mut conn = self.pool.get().await?;
-
-    //     let taxon = taxa::table
-    //         .filter(taxa::name_id.eq(name.id))
-    //         .first::<Taxon>(&mut conn)
-    //         .await?;
-
-    //     Ok(Taxonomy::from(taxon))
-    // }
-
-    // #[instrument(skip(self))]
-    // async fn taxa(&self, names: &Vec<Name>) -> Result<Vec<Taxonomy>, Error> {
-    //     use schema::taxa;
-    //     let mut conn = self.pool.get().await?;
-
-    //     let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
-
-    //     let records = taxa::table
-    //         .filter(taxa::name_id.eq_any(name_ids))
-    //         .load::<Taxon>(&mut conn)
-    //         .await?;
-
-    //     let mut taxa = Vec::with_capacity(records.len());
-    //     for taxon in records {
-    //         taxa.push(Taxonomy::from(taxon))
-    //     }
-
-    //     Ok(taxa)
-    // }
-// }
-
 
 
 #[async_trait]

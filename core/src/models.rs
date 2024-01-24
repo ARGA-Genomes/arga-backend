@@ -147,9 +147,11 @@ pub enum TaxonomicRank {
 
 #[derive(Clone, Queryable, Insertable, Associations, Debug, Serialize, Deserialize)]
 #[diesel(belongs_to(FilteredTaxon, foreign_key = parent_id))]
-#[diesel(table_name = schema_gnl::classification_dag)]
+#[diesel(table_name = schema_gnl::taxa_dag)]
 pub struct TaxonTreeNode {
     pub taxon_id: Uuid,
+    pub taxon_scientific_name: String,
+    pub taxon_canonical_name: String,
     pub id: Uuid,
     pub parent_id: Uuid,
 
@@ -159,7 +161,7 @@ pub struct TaxonTreeNode {
     pub depth: i32,
 }
 
-#[derive(Queryable, Insertable, Debug, Clone, Serialize, Deserialize)]
+#[derive(Identifiable, Queryable, Selectable, Insertable, Debug, Clone, Serialize, Deserialize)]
 #[diesel(table_name = schema::taxa)]
 pub struct Taxon {
     pub id: Uuid,
@@ -183,7 +185,7 @@ pub struct Taxon {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Identifiable, Selectable, Queryable, Associations, Debug, Clone)]
+#[derive(Identifiable, Insertable, Selectable, Queryable, Associations, Debug, Clone)]
 #[diesel(belongs_to(Taxon))]
 #[diesel(belongs_to(Name))]
 #[diesel(table_name = schema::taxa_names)]

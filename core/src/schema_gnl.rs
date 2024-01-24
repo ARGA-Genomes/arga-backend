@@ -238,8 +238,10 @@ diesel::table! {
 }
 
 diesel::table! {
-    classification_dag (id) {
+    taxa_dag (id) {
         taxon_id -> Uuid,
+        taxon_scientific_name -> Varchar,
+        taxon_canonical_name -> Varchar,
         id -> Uuid,
         parent_id -> Uuid,
         rank -> crate::schema::sql_types::TaxonomicRank,
@@ -299,7 +301,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     markers,
     name_data_summaries,
     taxa_filter,
-    classification_dag,
+    taxa_dag,
 );
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -343,7 +345,7 @@ diesel::allow_tables_to_appear_in_same_query!(
 );
 
 diesel::allow_tables_to_appear_in_same_query!(
-    classification_dag,
+    taxa_dag,
     taxa,
 );
 
