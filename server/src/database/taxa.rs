@@ -1,5 +1,5 @@
-use arga_core::models::{ClassificationTreeNode, Classification};
-use bigdecimal::{BigDecimal, ToPrimitive};
+use arga_core::models::{TaxonTreeNode, Taxon};
+use bigdecimal::BigDecimal;
 use diesel::prelude::*;
 use diesel::sql_types::{Text, Array, Nullable};
 use diesel_async::RunQueryDsl;
@@ -67,13 +67,13 @@ pub struct TaxaProvider {
 }
 
 impl TaxaProvider {
-    pub async fn find_by_classification(&self, classification: &ClassificationFilter) -> Result<Classification, Error> {
-        use schema::classifications::dsl::*;
+    pub async fn find_by_classification(&self, classification: &ClassificationFilter) -> Result<Taxon, Error> {
+        use schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let taxon = classifications
+        let taxon = taxa
             .filter(with_classification(classification))
-            .first::<Classification>(&mut conn)
+            .first::<Taxon>(&mut conn)
             .await?;
 
         Ok(taxon)
@@ -167,8 +167,8 @@ impl TaxaProvider {
     }
 
 
-    pub async fn hierarchy(&self, classification: &ClassificationFilter) -> Result<Vec<ClassificationTreeNode>, Error> {
-        use schema::classifications;
+    pub async fn hierarchy(&self, classification: &ClassificationFilter) -> Result<Vec<TaxonTreeNode>, Error> {
+        use schema::taxa;
         use schema_gnl::classification_dag as dag;
 
         let mut conn = self.pool.get().await?;
@@ -177,12 +177,12 @@ impl TaxaProvider {
         // compiler errors due to the join against another table/view. rather than making the filters
         // generic we just box the filtered table query first and then join it.
         // we use the same handy technique elsewhere in this file
-        let nodes = classifications::table
+        let nodes = taxa::table
             .filter(with_classification(classification))
             .into_boxed()
-            .inner_join(dag::table.on(dag::taxon_id.eq(classifications::id)))
+            .inner_join(dag::table.on(dag::taxon_id.eq(taxa::id)))
             .select(dag::all_columns)
-            .load::<ClassificationTreeNode>(&mut conn)
+            .load::<TaxonTreeNode>(&mut conn)
             .await?;
 
         Ok(nodes)
@@ -190,16 +190,15 @@ impl TaxaProvider {
 
 
     pub async fn taxon_summary(&self, classification: &ClassificationFilter) -> Result<TaxonSummary, Error> {
-        use schema::{taxa, classifications};
+        use schema::taxa;
         use schema_gnl::{classification_dag as dag, classification_species as species};
 
         let mut conn = self.pool.get().await?;
 
-        let species = classifications::table
+        let species = taxa::table
             .filter(with_classification(classification))
             .into_boxed()
-            .inner_join(dag::table.on(dag::id.eq(classifications::id)))
-            .inner_join(taxa::table.on(taxa::parent_taxon_id.assume_not_null().eq(dag::taxon_id)))
+            .inner_join(dag::table.on(dag::id.eq(taxa::id)))
             .filter(taxa::status.eq_any(&[
                 TaxonomicStatus::Accepted,
                 TaxonomicStatus::Undescribed,
@@ -210,11 +209,11 @@ impl TaxaProvider {
             .await?;
 
         // get the total amount of child taxa. we don't need the dag for this
-        let child = diesel::alias!(classifications as children);
-        let children = classifications::table
+        let child = diesel::alias!(taxa as children);
+        let children = taxa::table
             .filter(with_classification(classification))
             .into_boxed()
-            .inner_join(child.on(child.field(classifications::parent_id).eq(classifications::id)))
+            .inner_join(child.on(child.field(taxa::parent_id).eq(taxa::id.nullable())))
             .count()
             .get_result::<i64>(&mut conn)
             .await?;

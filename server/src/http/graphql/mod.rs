@@ -3,19 +3,15 @@ pub mod helpers;
 
 pub mod overview;
 pub mod search;
-pub mod class;
-pub mod order;
-pub mod family;
-pub mod genus;
 pub mod species;
 pub mod stats;
 pub mod maps;
-pub mod lists;
+// pub mod lists;
 pub mod source;
 pub mod dataset;
 pub mod traces;
-pub mod assembly;
-pub mod assemblies;
+// pub mod assembly;
+// pub mod assemblies;
 pub mod specimen;
 pub mod marker;
 pub mod markers;
@@ -40,10 +36,6 @@ use crate::http::Context as State;
 use self::common::{FilterItem, SearchFilterItem};
 use self::overview::Overview;
 use self::search::Search;
-use self::class::Class;
-use self::order::Order;
-use self::family::Family;
-use self::genus::Genus;
 use self::species::Species;
 use self::stats::Statistics;
 use self::maps::Maps;
@@ -51,8 +43,8 @@ use self::source::{Source, SourceDetails};
 use self::dataset::Dataset;
 use self::extensions::ErrorLogging;
 use self::traces::Traces;
-use self::assembly::Assembly;
-use self::assemblies::Assemblies;
+// use self::assembly::Assembly;
+// use self::assemblies::Assemblies;
 use self::specimen::Specimen;
 use self::marker::Marker;
 use self::markers::Markers;
@@ -88,22 +80,6 @@ impl Query {
         Species::new(&state.database, canonical_name).await
     }
 
-    async fn class(&self, class: String) -> Class {
-        Class { class }
-    }
-
-    async fn order(&self, order: String) -> Order {
-        Order { order }
-    }
-
-    async fn family(&self, family: String) -> Family {
-        Family { family }
-    }
-
-    async fn genus(&self, genus: String) -> Genus {
-        Genus { genus }
-    }
-
     async fn stats(&self) -> Statistics {
         Statistics {}
     }
@@ -132,14 +108,14 @@ impl Query {
         Traces { uuid }
     }
 
-    async fn assembly(&self, ctx: &Context<'_>, accession: String) -> Result<Assembly, Error> {
-        let state = ctx.data::<State>().unwrap();
-        Assembly::new(&state.database, &accession).await
-    }
+    // async fn assembly(&self, ctx: &Context<'_>, accession: String) -> Result<Assembly, Error> {
+    //     let state = ctx.data::<State>().unwrap();
+    //     Assembly::new(&state.database, &accession).await
+    // }
 
-    async fn assemblies(&self) -> Assemblies {
-        Assemblies {}
-    }
+    // async fn assemblies(&self) -> Assemblies {
+    //     Assemblies {}
+    // }
 
     async fn specimen(&self, ctx: &Context<'_>, by: specimen::SpecimenBy) -> Result<Specimen, Error> {
         let state = ctx.data::<State>().unwrap();

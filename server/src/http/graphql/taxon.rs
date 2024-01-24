@@ -96,10 +96,10 @@ pub struct TaxonQuery {
 
 #[Object]
 impl TaxonQuery {
-    async fn hierarchy(&self, ctx: &Context<'_>) -> Result<Vec<ClassificationNode>, Error> {
+    async fn hierarchy(&self, ctx: &Context<'_>) -> Result<Vec<TaxonNode>, Error> {
         let state = ctx.data::<State>().unwrap();
         let hierarchy = state.database.taxa.hierarchy(&self.classification).await?;
-        let hierarchy = hierarchy.into_iter().map(ClassificationNode::from).collect();
+        let hierarchy = hierarchy.into_iter().map(TaxonNode::from).collect();
         Ok(hierarchy)
     }
 
@@ -133,15 +133,15 @@ impl TaxonQuery {
 
 
 #[derive(SimpleObject)]
-pub struct ClassificationNode {
+pub struct TaxonNode {
     pub rank: TaxonomicRank,
     pub scientific_name: String,
     pub canonical_name: String,
     pub depth: i32,
 }
 
-impl From<models::ClassificationTreeNode> for ClassificationNode {
-    fn from(value: models::ClassificationTreeNode) -> Self {
+impl From<models::TaxonTreeNode> for TaxonNode {
+    fn from(value: models::TaxonTreeNode) -> Self {
         Self {
             rank: value.rank.into(),
             scientific_name: value.scientific_name,

@@ -65,6 +65,19 @@ pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
     Ok(docs)
 }
 
+
+
+#[derive(Debug, Queryable, Serialize, Deserialize)]
+pub struct UndescribedSpeciesDoc {
+    pub name_id: Uuid,
+    pub status: TaxonomicStatus,
+
+    pub canonical_name: String,
+    pub subspecies: Option<Vec<String>>,
+    pub synonyms: Option<Vec<String>>,
+    pub vernacular_names: Option<Vec<String>>,
+}
+
 pub fn get_undescribed_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
     use schema::taxa;
     use schema_gnl::{species, synonyms, common_names};
@@ -82,16 +95,24 @@ pub fn get_undescribed_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> 
             species::subspecies.nullable(),
             synonyms::names.nullable(),
             common_names::names.nullable(),
-
-            taxa::kingdom,
-            taxa::phylum,
-            taxa::class,
-            taxa::order,
-            taxa::family,
-            taxa::genus,
         ))
         .filter(taxa::status.eq_any(&[TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
-        .load::<SpeciesDoc>(&mut conn)?;
+        .load::<UndescribedSpeciesDoc>(&mut conn)?;
+
+    let docs = docs.into_iter().map(|doc| SpeciesDoc {
+        name_id: doc.name_id,
+        status: doc.status,
+        canonical_name: doc.canonical_name,
+        subspecies: doc.subspecies,
+        synonyms: doc.synonyms,
+        vernacular_names: doc.vernacular_names,
+        kingdom: None,
+        phylum: None,
+        class: None,
+        order: None,
+        family: None,
+        genus: None,
+    }).collect();
 
     Ok(docs)
 }

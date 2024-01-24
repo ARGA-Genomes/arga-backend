@@ -175,32 +175,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::TaxonomicRank;
-    use super::sql_types::TaxonomicStatus;
-
-    classifications (id) {
-        id -> Uuid,
-        dataset_id -> Uuid,
-        parent_id -> Uuid,
-        taxon_id -> Int4,
-        rank -> TaxonomicRank,
-        accepted_name_usage -> Nullable<Varchar>,
-        original_name_usage -> Nullable<Varchar>,
-        scientific_name -> Varchar,
-        scientific_name_authorship -> Nullable<Varchar>,
-        canonical_name -> Varchar,
-        nomenclatural_code -> Varchar,
-        status -> TaxonomicStatus,
-        citation -> Nullable<Varchar>,
-        vernacular_names -> Nullable<Array<Nullable<Text>>>,
-        alternative_names -> Nullable<Array<Nullable<Text>>>,
-        description -> Nullable<Text>,
-        remarks -> Nullable<Text>,
-    }
-}
-
-diesel::table! {
     collection_events (id) {
         id -> Uuid,
         dataset_id -> Uuid,
@@ -629,38 +603,31 @@ diesel::table! {
 diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::TaxonomicStatus;
+    use super::sql_types::TaxonomicRank;
 
     taxa (id) {
         id -> Uuid,
         dataset_id -> Uuid,
-        name_id -> Uuid,
-        parent_taxon_id -> Nullable<Uuid>,
+        parent_id -> Nullable<Uuid>,
         status -> TaxonomicStatus,
+        rank -> TaxonomicRank,
         scientific_name -> Varchar,
         canonical_name -> Varchar,
-        kingdom -> Nullable<Varchar>,
-        phylum -> Nullable<Varchar>,
-        class -> Nullable<Varchar>,
-        order -> Nullable<Varchar>,
-        family -> Nullable<Varchar>,
-        tribe -> Nullable<Varchar>,
-        genus -> Nullable<Varchar>,
-        specific_epithet -> Nullable<Varchar>,
-        subphylum -> Nullable<Varchar>,
-        subclass -> Nullable<Varchar>,
-        suborder -> Nullable<Varchar>,
-        subfamily -> Nullable<Varchar>,
-        subtribe -> Nullable<Varchar>,
-        subgenus -> Nullable<Varchar>,
-        subspecific_epithet -> Nullable<Varchar>,
-        superclass -> Nullable<Varchar>,
-        superorder -> Nullable<Varchar>,
-        superfamily -> Nullable<Varchar>,
-        supertribe -> Nullable<Varchar>,
-        order_authority -> Nullable<Varchar>,
-        family_authority -> Nullable<Varchar>,
-        genus_authority -> Nullable<Varchar>,
-        species_authority -> Nullable<Varchar>,
+        authorship -> Nullable<Varchar>,
+        nomenclatural_code -> Varchar,
+        citation -> Nullable<Varchar>,
+        vernacular_names -> Nullable<Array<Nullable<Text>>>,
+        description -> Nullable<Text>,
+        remarks -> Nullable<Text>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
+    taxa_names (taxon_id, name_id) {
+        taxon_id -> Uuid,
+        name_id -> Uuid,
     }
 }
 
@@ -758,7 +725,6 @@ diesel::joinable!(assembly_events -> datasets (dataset_id));
 diesel::joinable!(assembly_events -> sequences (sequence_id));
 diesel::joinable!(assembly_stats -> assemblies (assembly_id));
 diesel::joinable!(biosamples -> names (name_id));
-diesel::joinable!(classifications -> datasets (dataset_id));
 diesel::joinable!(collection_events -> datasets (dataset_id));
 diesel::joinable!(collection_events -> specimens (specimen_id));
 diesel::joinable!(conservation_statuses -> datasets (dataset_id));
@@ -796,9 +762,9 @@ diesel::joinable!(subsamples -> datasets (dataset_id));
 diesel::joinable!(subsamples -> names (name_id));
 diesel::joinable!(subsamples -> specimens (specimen_id));
 diesel::joinable!(taxa -> datasets (dataset_id));
-diesel::joinable!(taxa -> names (name_id));
+diesel::joinable!(taxa_names -> names (name_id));
+diesel::joinable!(taxa_names -> taxa (taxon_id));
 diesel::joinable!(taxon_photos -> names (name_id));
-diesel::joinable!(taxon_remarks -> taxa (taxon_id));
 diesel::joinable!(trace_files -> names (name_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -809,7 +775,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     assembly_events,
     assembly_stats,
     biosamples,
-    classifications,
     collection_events,
     conservation_statuses,
     datasets,
@@ -837,6 +802,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     subsample_events,
     subsamples,
     taxa,
+    taxa_names,
     taxon_history,
     taxon_photos,
     taxon_remarks,

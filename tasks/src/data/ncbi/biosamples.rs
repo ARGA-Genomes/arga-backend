@@ -263,13 +263,13 @@ enum ItemState {
 }
 
 
-pub fn convert(input: PathBuf) -> Result<(), Error> {
+pub fn convert(input: PathBuf, out: PathBuf) -> Result<(), Error> {
     info!(?input, "Memory mapping file");
     let file = std::fs::File::open(input)?;
     let mmap = unsafe { Mmap::map(&file)? };
 
     let analysed = analyse_biosamples(mmap)?;
-    convert_biosamples(analysed)?;
+    convert_biosamples(analysed, out)?;
 
     Ok(())
 }
@@ -356,18 +356,18 @@ fn analyse_biosamples(mmap: Mmap) -> Result<AnalysedBiosamples, Error> {
 }
 
 
-fn convert_biosamples(analysed: AnalysedBiosamples) -> Result<(), Error> {
+fn convert_biosamples(analysed: AnalysedBiosamples, out: PathBuf) -> Result<(), Error> {
     let total = analysed.offsets.len() as u64;
     info!(items=total, "Processing biosample file");
 
-    let mut collection_writer = csv::Writer::from_path("collections.csv")?;
-    let mut accession_writer = csv::Writer::from_path("accessions.csv")?;
-    let mut subsample_writer = csv::Writer::from_path("subsamples.csv")?;
-    let mut extraction_writer = csv::Writer::from_path("extractions.csv")?;
-    let mut sequencing_writer = csv::Writer::from_path("sequences.csv")?;
-    let mut assembly_writer = csv::Writer::from_path("assemblies.csv")?;
-    let mut annotation_writer = csv::Writer::from_path("annotations.csv")?;
-    let mut data_accession_writer = csv::Writer::from_path("depositions.csv")?;
+    let mut collection_writer = csv::Writer::from_path(out.join("collections.csv"))?;
+    let mut accession_writer = csv::Writer::from_path(out.join("accessions.csv"))?;
+    let mut subsample_writer = csv::Writer::from_path(out.join("subsamples.csv"))?;
+    let mut extraction_writer = csv::Writer::from_path(out.join("extractions.csv"))?;
+    let mut sequencing_writer = csv::Writer::from_path(out.join("sequences.csv"))?;
+    let mut assembly_writer = csv::Writer::from_path(out.join("assemblies.csv"))?;
+    let mut annotation_writer = csv::Writer::from_path(out.join("annotations.csv"))?;
+    let mut data_accession_writer = csv::Writer::from_path(out.join("depositions.csv"))?;
 
     let bars = Progress::new();
     let parse_bar = bars.add("Parsing", analysed.offsets.len());

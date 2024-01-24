@@ -1,6 +1,6 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate};
-use diesel::{Queryable, Insertable, Associations};
+use diesel::{Queryable, Insertable, Associations, Identifiable, Selectable};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
@@ -81,44 +81,116 @@ pub enum TaxonomicVernacularGroup {
     HigherPlants,
 }
 
-#[derive(Queryable, Insertable, Debug, Default, Clone, Serialize, Deserialize)]
+
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::TaxonomicRank"]
+pub enum TaxonomicRank {
+    Domain,
+    Superkingdom,
+    Kingdom,
+    Subkingdom,
+    Phylum,
+    Subphylum,
+    Superclass,
+    Class,
+    Subclass,
+    Superorder,
+    Order,
+    Suborder,
+    Hyporder,
+    Minorder,
+    Superfamily,
+    Family,
+    Subfamily,
+    Supertribe,
+    Tribe,
+    Subtribe,
+    Genus,
+    Subgenus,
+    Species,
+    Subspecies,
+
+    Unranked,
+    HigherTaxon,
+
+    AggregateGenera,
+    AggregateSpecies,
+    Cohort,
+    Subcohort,
+    Division,
+    IncertaeSedis,
+    Infraclass,
+    Infraorder,
+    Section,
+    Subdivision,
+
+    Regnum,
+    Familia,
+    Classis,
+    Ordo,
+    Varietas,
+    Forma,
+    Subclassis,
+    Superordo,
+    Sectio,
+    Nothovarietas,
+    Subvarietas,
+    Series,
+    Infraspecies,
+    Subfamilia,
+    Subordo,
+    Regio,
+    SpecialForm,
+}
+
+
+#[derive(Clone, Queryable, Insertable, Associations, Debug, Serialize, Deserialize)]
+#[diesel(belongs_to(FilteredTaxon, foreign_key = parent_id))]
+#[diesel(table_name = schema_gnl::classification_dag)]
+pub struct TaxonTreeNode {
+    pub taxon_id: Uuid,
+    pub id: Uuid,
+    pub parent_id: Uuid,
+
+    pub rank: TaxonomicRank,
+    pub scientific_name: String,
+    pub canonical_name: String,
+    pub depth: i32,
+}
+
+#[derive(Queryable, Insertable, Debug, Clone, Serialize, Deserialize)]
 #[diesel(table_name = schema::taxa)]
 pub struct Taxon {
     pub id: Uuid,
     pub dataset_id: Uuid,
-    pub name_id: Uuid,
-    pub parent_taxon_id: Option<Uuid>,
+    pub parent_id: Option<Uuid>,
 
     pub status: TaxonomicStatus,
+    pub rank: TaxonomicRank,
+
     pub scientific_name: String,
     pub canonical_name: String,
+    pub authorship: Option<String>,
 
-    pub kingdom: Option<String>,
-    pub phylum: Option<String>,
-    pub class: Option<String>,
-    pub order: Option<String>,
-    pub family: Option<String>,
-    pub tribe: Option<String>,
-    pub genus: Option<String>,
-    pub specific_epithet: Option<String>,
+    pub nomenclatural_code: String,
+    pub citation: Option<String>,
+    pub vernacular_names: Option<Vec<Option<String>>>,
+    pub description: Option<String>,
+    pub remarks: Option<String>,
 
-    pub subphylum: Option<String>,
-    pub subclass: Option<String>,
-    pub suborder: Option<String>,
-    pub subfamily: Option<String>,
-    pub subtribe: Option<String>,
-    pub subgenus: Option<String>,
-    pub subspecific_epithet: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
 
-    pub superclass: Option<String>,
-    pub superorder: Option<String>,
-    pub superfamily: Option<String>,
-    pub supertribe: Option<String>,
-
-    pub order_authority: Option<String>,
-    pub family_authority: Option<String>,
-    pub genus_authority: Option<String>,
-    pub species_authority: Option<String>,
+#[derive(Identifiable, Selectable, Queryable, Associations, Debug, Clone)]
+#[diesel(belongs_to(Taxon))]
+#[diesel(belongs_to(Name))]
+#[diesel(table_name = schema::taxa_names)]
+#[diesel(primary_key(taxon_id, name_id))]
+pub struct TaxonName {
+    pub taxon_id: Uuid,
+    pub name_id: Uuid,
 }
 
 #[derive(Queryable, Debug, Default, Serialize, Deserialize)]
@@ -163,62 +235,62 @@ pub struct FilteredTaxon {
 }
 
 
-impl Taxon {
-    pub fn kingdom_str(&self) -> Option<&str> { self.kingdom.as_ref().map(String::as_str) }
-    pub fn phylum_str(&self) -> Option<&str> { self.phylum.as_ref().map(String::as_str) }
-    pub fn class_str(&self) -> Option<&str> { self.class.as_ref().map(String::as_str) }
-    pub fn order_str(&self) -> Option<&str> { self.order.as_ref().map(String::as_str) }
-    pub fn family_str(&self) -> Option<&str> { self.family.as_ref().map(String::as_str) }
-    pub fn tribe_str(&self) -> Option<&str> { self.tribe.as_ref().map(String::as_str) }
-    pub fn genus_str(&self) -> Option<&str> { self.genus.as_ref().map(String::as_str) }
+// impl Taxon {
+//     pub fn kingdom_str(&self) -> Option<&str> { self.kingdom.as_ref().map(String::as_str) }
+//     pub fn phylum_str(&self) -> Option<&str> { self.phylum.as_ref().map(String::as_str) }
+//     pub fn class_str(&self) -> Option<&str> { self.class.as_ref().map(String::as_str) }
+//     pub fn order_str(&self) -> Option<&str> { self.order.as_ref().map(String::as_str) }
+//     pub fn family_str(&self) -> Option<&str> { self.family.as_ref().map(String::as_str) }
+//     pub fn tribe_str(&self) -> Option<&str> { self.tribe.as_ref().map(String::as_str) }
+//     pub fn genus_str(&self) -> Option<&str> { self.genus.as_ref().map(String::as_str) }
 
-    pub fn subphylum_str(&self) -> Option<&str> { self.subphylum.as_ref().map(String::as_str) }
-    pub fn subclass_str(&self) -> Option<&str> { self.subclass.as_ref().map(String::as_str) }
+//     pub fn subphylum_str(&self) -> Option<&str> { self.subphylum.as_ref().map(String::as_str) }
+//     pub fn subclass_str(&self) -> Option<&str> { self.subclass.as_ref().map(String::as_str) }
 
-    pub fn vernacular_group(&self) -> Option<TaxonomicVernacularGroup> {
-        use TaxonomicVernacularGroup as Group;
+//     pub fn vernacular_group(&self) -> Option<TaxonomicVernacularGroup> {
+//         use TaxonomicVernacularGroup as Group;
 
-        Some(match self.kingdom_str() {
-            Some("Archaea") => Group::Bacteria,
-            Some("Bacteria") => match self.phylum_str() {
-                Some("Cyanobacteria") => Group::Cyanobacteria,
-                _ => Group::Bacteria,
-            },
-            Some("Protozoa") => Group::ProtistsAndOtherUnicellularOrganisms,
-            Some("Fungi") => Group::Fungi,
-            Some("Animalia") => match self.phylum_str() {
-                Some("Echinodermata") => Group::Echinoderms,
-                Some("Cnidaria") => Group::CoralsAndJellyfishes,
-                Some("Mollusca") => Group::Molluscs,
-                Some("Arthropoda") => match (self.subphylum_str(), self.class_str()) {
-                    (Some("Crustacea"), None) => Group::Crustaceans,
-                    (None, Some("Insecta")) => Group::Insects,
-                    _ => Group::Animals,
-                }
-                Some("Chordata") => match self.class_str() {
-                    Some("Amphibia") => Group::FrogsAndOtherAmphibians,
-                    Some("Aves") => Group::Birds,
-                    Some("Mammalia") => Group::Mammals,
-                    Some("Actinopterygii") => Group::FinFishes,
-                    Some("Chondrichthyes") => match self.subclass_str() {
-                        Some("Elasmobranchii") => Group::SharksAndRays,
-                        _ => Group::Animals,
-                    },
-                    _ => Group::Animals,
-                }
-                _ => Group::Animals,
-            }
-            Some("Chromista") => Group::Seaweeds,
-            Some("Plantae") => match self.phylum_str() {
-                Some("Phaeophyceae") => Group::BrownAlgae,
-                Some("Rhodophyta") => Group::RedAlgae,
-                Some("Chlorophyta") => Group::GreenAlgae,
-                _ => Group::HigherPlants,
-            }
-            _ => return None,
-        })
-    }
-}
+//         Some(match self.kingdom_str() {
+//             Some("Archaea") => Group::Bacteria,
+//             Some("Bacteria") => match self.phylum_str() {
+//                 Some("Cyanobacteria") => Group::Cyanobacteria,
+//                 _ => Group::Bacteria,
+//             },
+//             Some("Protozoa") => Group::ProtistsAndOtherUnicellularOrganisms,
+//             Some("Fungi") => Group::Fungi,
+//             Some("Animalia") => match self.phylum_str() {
+//                 Some("Echinodermata") => Group::Echinoderms,
+//                 Some("Cnidaria") => Group::CoralsAndJellyfishes,
+//                 Some("Mollusca") => Group::Molluscs,
+//                 Some("Arthropoda") => match (self.subphylum_str(), self.class_str()) {
+//                     (Some("Crustacea"), None) => Group::Crustaceans,
+//                     (None, Some("Insecta")) => Group::Insects,
+//                     _ => Group::Animals,
+//                 }
+//                 Some("Chordata") => match self.class_str() {
+//                     Some("Amphibia") => Group::FrogsAndOtherAmphibians,
+//                     Some("Aves") => Group::Birds,
+//                     Some("Mammalia") => Group::Mammals,
+//                     Some("Actinopterygii") => Group::FinFishes,
+//                     Some("Chondrichthyes") => match self.subclass_str() {
+//                         Some("Elasmobranchii") => Group::SharksAndRays,
+//                         _ => Group::Animals,
+//                     },
+//                     _ => Group::Animals,
+//                 }
+//                 _ => Group::Animals,
+//             }
+//             Some("Chromista") => Group::Seaweeds,
+//             Some("Plantae") => match self.phylum_str() {
+//                 Some("Phaeophyceae") => Group::BrownAlgae,
+//                 Some("Rhodophyta") => Group::RedAlgae,
+//                 Some("Chlorophyta") => Group::GreenAlgae,
+//                 _ => Group::HigherPlants,
+//             }
+//             _ => return None,
+//         })
+//     }
+// }
 
 #[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::taxon_history)]
@@ -231,14 +303,6 @@ pub struct TaxonHistory {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
-#[diesel(table_name = schema::taxon_remarks)]
-pub struct TaxonRemarks {
-    pub id: Uuid,
-    pub taxon_id: Uuid,
-    pub remark: String,
-    pub created_at: DateTime<Utc>,
-}
 
 #[derive(Queryable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema_gnl::species)]
@@ -324,7 +388,7 @@ pub struct Job {
 
 
 
-#[derive(Clone, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Identifiable, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::names)]
 pub struct Name {
     pub id: Uuid,
@@ -952,7 +1016,7 @@ pub enum AttributeValueType {
     Timestamp,
 }
 
-#[derive(Debug, Queryable, Insertable, Clone)]
+#[derive(Debug, Queryable, Insertable, Clone, Serialize, Deserialize)]
 #[diesel(table_name = schema::name_attributes)]
 pub struct NameAttribute {
     pub id: Uuid,
@@ -1011,129 +1075,4 @@ pub struct AdminMedia {
     pub publisher: Option<String>,
     pub license: Option<String>,
     pub rights_holder: Option<String>,
-}
-
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash, diesel_derive_enum::DbEnum)]
-#[ExistingTypePath = "schema::sql_types::TaxonomicRank"]
-pub enum TaxonomicRank {
-    Domain,
-    Superkingdom,
-    Kingdom,
-    Subkingdom,
-    Phylum,
-    Subphylum,
-    Superclass,
-    Class,
-    Subclass,
-    Superorder,
-    Order,
-    Suborder,
-    Hyporder,
-    Minorder,
-    Superfamily,
-    Family,
-    Subfamily,
-    Supertribe,
-    Tribe,
-    Subtribe,
-    Genus,
-    Subgenus,
-    Species,
-    Subspecies,
-
-    Unranked,
-    HigherTaxon,
-
-    AggregateGenera,
-    AggregateSpecies,
-    Cohort,
-    Subcohort,
-    Division,
-    IncertaeSedis,
-    Infraclass,
-    Infraorder,
-    Section,
-    Subdivision,
-
-    Regnum,
-    Familia,
-    Classis,
-    Ordo,
-    Varietas,
-    Forma,
-    Subclassis,
-    Superordo,
-    Sectio,
-    Nothovarietas,
-    Subvarietas,
-    Series,
-    Infraspecies,
-    Subfamilia,
-    Subordo,
-    Regio,
-    SpecialForm,
-}
-
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::classifications)]
-pub struct Classification {
-    pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub parent_id: Uuid,
-    pub taxon_id: i32,
-
-    pub rank: TaxonomicRank,
-    pub accepted_name_usage: Option<String>,
-    pub original_name_usage: Option<String>,
-    pub scientific_name: String,
-    pub scientific_name_authorship: Option<String>,
-    pub canonical_name: String,
-    pub nomenclatural_code: String,
-    pub status: TaxonomicStatus,
-
-    pub citation: Option<String>,
-    pub vernacular_names: Option<Vec<Option<String>>>,
-    pub alternative_names: Option<Vec<Option<String>>>,
-    pub description: Option<String>,
-    pub remarks: Option<String>,
-}
-
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::classifications)]
-#[diesel(treat_none_as_default_value = true)]
-pub struct NewClassification {
-    pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub parent_id: Uuid,
-    pub taxon_id: Option<i32>,
-
-    pub rank: TaxonomicRank,
-    pub accepted_name_usage: Option<String>,
-    pub original_name_usage: Option<String>,
-    pub scientific_name: String,
-    pub scientific_name_authorship: Option<String>,
-    pub canonical_name: String,
-    pub nomenclatural_code: String,
-    pub status: TaxonomicStatus,
-
-    pub citation: Option<String>,
-    pub vernacular_names: Option<Vec<Option<String>>>,
-    pub alternative_names: Option<Vec<Option<String>>>,
-    pub description: Option<String>,
-    pub remarks: Option<String>,
-}
-
-#[derive(Clone, Queryable, Insertable, Associations, Debug, Serialize, Deserialize)]
-#[diesel(belongs_to(FilteredTaxon, foreign_key = parent_id))]
-#[diesel(table_name = schema_gnl::classification_dag)]
-pub struct ClassificationTreeNode {
-    pub taxon_id: Uuid,
-    pub id: Uuid,
-    pub parent_id: Uuid,
-
-    pub rank: TaxonomicRank,
-    pub scientific_name: String,
-    pub canonical_name: String,
-    pub depth: i32,
 }

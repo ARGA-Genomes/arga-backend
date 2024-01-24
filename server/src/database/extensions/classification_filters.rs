@@ -1,12 +1,12 @@
 use diesel::pg::Pg;
 use diesel::prelude::*;
 
-use arga_core::schema::classifications;
+use arga_core::schema::taxa;
 use arga_core::models::TaxonomicRank;
 use diesel::sql_types::Bool;
 
 
-type BoxedExpression<'a> = Box<dyn BoxableExpression<classifications::table, Pg, SqlType = Bool> + 'a>;
+type BoxedExpression<'a> = Box<dyn BoxableExpression<taxa::table, Pg, SqlType = Bool> + 'a>;
 
 
 #[derive(Clone)]
@@ -78,9 +78,9 @@ pub enum Filter {
 }
 
 
-pub fn filter_classifications(filters: &Vec<Filter>) -> classifications::BoxedQuery<Pg> {
-    classifications::table
-        .select(classifications::all_columns)
+pub fn filter_classifications(filters: &Vec<Filter>) -> taxa::BoxedQuery<Pg> {
+    taxa::table
+        .select(taxa::all_columns)
         .filter(with_filters(&filters).unwrap())
         .into_boxed()
 }
@@ -176,14 +176,14 @@ pub fn decompose_classification(classification: &Classification) -> (TaxonomicRa
 
 /// Filter the classifications table that belong to the provided classification
 pub fn with_classification(classification: &Classification) -> BoxedExpression {
-    use arga_core::schema::classifications::dsl::*;
+    use arga_core::schema::taxa::dsl::*;
     let (taxon_rank, value) = decompose_classification(classification);
     Box::new(rank.eq(taxon_rank).and(canonical_name.eq(value)))
 }
 
 /// Filter the classifications table that do not belong to the provided classification
 pub fn without_classification(classification: &Classification) -> BoxedExpression {
-    use arga_core::schema::classifications::dsl::*;
+    use arga_core::schema::taxa::dsl::*;
     let (taxon_rank, value) = decompose_classification(classification);
     Box::new(rank.eq(taxon_rank).and(canonical_name.ne(value)))
 }

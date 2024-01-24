@@ -26,10 +26,12 @@ impl SpeciesHelper {
         use schema::taxa::dsl::*;
         let mut conn = self.database.pool.get().await?;
 
-        let records = taxa
-            .filter(name_id.eq_any(name_ids))
-            .load::<Taxon>(&mut conn)
-            .await?;
+        // FIXME: lookup name ids from taxon_names
+        let records = vec![];
+        // let records = taxa
+        //     .filter(name_id.eq_any(name_ids))
+        //     .load::<Taxon>(&mut conn)
+        //     .await?;
 
         Ok(records)
     }
@@ -42,13 +44,16 @@ impl SpeciesHelper {
         use schema::taxon_photos;
         let mut conn = self.database.pool.get().await?;
 
-        let name_ids: Vec<Uuid> = taxa.iter().map(|taxon| taxon.name_id).collect();
+        // FIXME: lookup name ids from taxon_names
+        let name_ids: Vec<Uuid> = vec![];
+        // let name_ids: Vec<Uuid> = taxa.iter().map(|taxon| taxon.name_id).collect();
 
         let mut cards: HashMap<Uuid, SpeciesCard> = HashMap::new();
 
         // create the card with the taxa and some defaults
         for taxon in taxa {
-            cards.insert(taxon.name_id, SpeciesCard {
+            // FIXME: link photos and cards up via name id, or find an alternative
+            cards.insert(taxon.id, SpeciesCard {
                 taxonomy: taxon.into(),
                 ..Default::default()
             });

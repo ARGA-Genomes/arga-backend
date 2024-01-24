@@ -26,6 +26,7 @@ use crate::index::species::{
 use crate::database::{schema, Database};
 use crate::database::models::Name as ArgaName;
 use crate::database::species;
+use super::common::taxonomy::TaxonDetails;
 use super::common::{
     Page,
     Taxonomy,
@@ -90,16 +91,26 @@ impl Species {
     }
 
     #[instrument(skip(self, ctx))]
-    async fn taxonomy(&self, ctx: &Context<'_>) -> Result<Taxonomy, Error> {
+    async fn taxonomy(&self, ctx: &Context<'_>) -> Result<Vec<Taxonomy>, Error> {
         let state = ctx.data::<State>().unwrap();
         let synonyms = state.database.species.synonyms(&self.name.id).await?;
         let vernacular_names = state.database.species.vernacular_names(&self.name.id).await?;
 
-        let mut taxonomy: Taxonomy = state.database.species.taxonomy(&self.name.id).await?.into();
-        taxonomy.synonyms = synonyms.into_iter().map(|s| s.into()).collect();
-        taxonomy.vernacular_names = vernacular_names.into_iter().map(|s| s.into()).collect();
+        let taxa = state.database.species.taxonomy(&self.name.id).await?;
+        let details = taxa.into_iter().map(|t| t.into()).collect();
 
-        Ok(taxonomy)
+        Ok(details)
+
+        // match state.database.species.taxonomy(&self.name.id).await {
+        //     Ok(result) => {
+        //         let mut taxonomy: Taxonomy = result.into();
+        //         taxonomy.synonyms = synonyms.into_iter().map(|s| s.into()).collect();
+        //         taxonomy.vernacular_names = vernacular_names.into_iter().map(|s| s.into()).collect();
+        //         Ok(Some(taxonomy))
+        //     },
+        //     Err(crate::database::Error::NotFound(_)) => Ok(None),
+        //     Err(err) => Err(err.into()),
+        // }
     }
 
     #[instrument(skip(self, _ctx))]
@@ -107,14 +118,14 @@ impl Species {
         Regions { name: self.name.clone() }
     }
 
-    #[instrument(skip(self, ctx))]
-    async fn data(&self, ctx: &Context<'_>) -> Result<Vec<GenomicData>, Error> {
-        let state = ctx.data::<State>().unwrap();
-        let taxonomy = state.database.taxonomy(&self.name).await?;
-        let data = state.solr.genomic_data(&taxonomy.canonical_name).await?;
+    // #[instrument(skip(self, ctx))]
+    // async fn data(&self, ctx: &Context<'_>) -> Result<Vec<GenomicData>, Error> {
+    //     let state = ctx.data::<State>().unwrap();
+    //     let taxonomy = state.database.taxonomy(&self.name).await?;
+    //     let data = state.solr.genomic_data(&taxonomy.canonical_name).await?;
 
-        Ok(data)
-    }
+    //     Ok(data)
+    // }
 
     #[instrument(skip(self, ctx))]
     async fn photos(&self, ctx: &Context<'_>) -> Result<Vec<Photo>, Error> {

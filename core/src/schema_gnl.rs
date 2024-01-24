@@ -272,7 +272,7 @@ diesel::table! {
 }
 
 
-use super::schema::{datasets, names, taxa, specimens, accession_events, classifications};
+use super::schema::{datasets, names, taxa, specimens, accession_events};
 
 diesel::joinable!(species -> synonyms (id));
 diesel::joinable!(species -> common_names (id));
@@ -360,14 +360,4 @@ diesel::allow_tables_to_appear_in_same_query!(
 diesel::allow_tables_to_appear_in_same_query!(
     specimen_stats,
     accession_events,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    classification_dag,
-    classifications,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    name_data_summaries,
-    classifications,
 );

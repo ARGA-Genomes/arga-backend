@@ -2,7 +2,7 @@ pub mod utils;
 pub mod source_extractor;
 pub mod dataset_extractor;
 pub mod name_extractor;
-pub mod taxon_extractor;
+// pub mod taxon_extractor;
 pub mod taxon_history_extractor;
 pub mod vernacular_extractor;
 pub mod region_extractor;

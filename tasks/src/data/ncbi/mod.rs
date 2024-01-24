@@ -10,6 +10,9 @@ pub enum Command {
     ConvertBiosamples {
         /// The biosamples XML file
         input: String,
+
+        /// The output directory for biosample CSV event files
+        out: String,
     },
 
     /// Summarise a biosamples XML file
@@ -21,7 +24,7 @@ pub enum Command {
 
 pub fn process_command(command: &Command) {
     match command {
-        Command::ConvertBiosamples { input } => biosamples::convert(PathBuf::from(input)).unwrap(),
+        Command::ConvertBiosamples { input, out } => biosamples::convert(PathBuf::from(input), PathBuf::from(out)).unwrap(),
         Command::SummariseBiosamples { input } => biosamples::summarise(PathBuf::from(input)).unwrap(),
     }
 }

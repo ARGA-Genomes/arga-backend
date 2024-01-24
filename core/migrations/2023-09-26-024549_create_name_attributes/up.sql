@@ -25,3 +25,5 @@ CREATE TABLE name_attributes (
     value_str varchar,
     value_timestamp timestamp without time zone
 );
+
+CREATE UNIQUE INDEX name_attributes_unique_name ON name_attributes (dataset_id, name_id, name);

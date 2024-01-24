@@ -7,9 +7,9 @@ use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{TaxonomicStatus, Classification, TaxonomicRank, NewClassification};
+use arga_core::models::{TaxonomicStatus, TaxonomicRank, Taxon};
 use crate::error::{Error, ParseError};
-use crate::matchers::classification_matcher::{classification_map, ClassificationMap, taxa_map};
+use crate::matchers::classification_matcher::{classification_map, ClassificationMap};
 use crate::matchers::dataset_matcher::{DatasetRecord, match_records, dataset_map, DatasetMatch};
 
 
@@ -51,7 +51,7 @@ impl From<Record> for DatasetRecord {
 
 
 /// Extract names and taxonomy from a CSV file
-pub fn extract(path: &PathBuf, pool: &mut PgPool) -> Result<Vec<NewClassification>, Error> {
+pub fn extract(path: &PathBuf, pool: &mut PgPool) -> Result<Vec<Taxon>, Error> {
     let mut records: Vec<Record> = Vec::new();
 
     let mut reader = csv::ReaderBuilder::new().trim(csv::Trim::All).from_path(&path)?;
@@ -105,7 +105,7 @@ fn reference_map(records: &Vec<Record>, classifications: &ClassificationMap) -> 
 }
 
 
-fn extract_classifications(records: MatchedRecords, taxa: &HashMap<String, Uuid>) -> Result<Vec<NewClassification>, Error> {
+fn extract_classifications(records: MatchedRecords, taxa: &HashMap<String, Uuid>) -> Result<Vec<Taxon>, Error> {
     info!(total=records.len(), "Extracting classifications");
 
     let mut rows = Vec::new();
@@ -115,35 +115,35 @@ fn extract_classifications(records: MatchedRecords, taxa: &HashMap<String, Uuid>
         // the classification map can be used with the scientific_name, canonical_name, or the
         // taxon_id (parent_taxon in our case). this allows us to link to the parent taxon
         // within the database and validate its correctness in the process.
-        let parent_id = match parse_taxon_id_str(&record.parent_taxon)
-            .or(record.parent_taxon)
-            .or(record.parent_scientific_name)
-        {
+        let parent_id = match record.parent_taxon.or(record.parent_scientific_name) {
             Some(parent) => {
                 let parent_id = taxa.get(&parent).ok_or_else(|| ParseError::NotFound(parent))?;
-                parent_id.clone()
+                Some(parent_id.clone())
             },
-            None => id.clone(),
+            None => None,
         };
 
-        rows.push(NewClassification {
+        rows.push(Taxon {
             id: id.clone(),
             parent_id,
             dataset_id: dataset.id.clone(),
-            taxon_id: record.taxon_id.map(parse_taxon_id).unwrap_or(None),
+            // taxon_id: record.taxon_id.map(parse_taxon_id).unwrap_or(None),
             rank: str_to_taxonomic_rank(&record.taxon_rank)?,
-            accepted_name_usage: record.accepted_name_usage,
-            original_name_usage: record.original_name_usage,
+            // accepted_name_usage: record.accepted_name_usage,
+            // original_name_usage: record.original_name_usage,
             scientific_name: record.scientific_name,
-            scientific_name_authorship: record.scientific_name_authorship,
+            authorship: record.scientific_name_authorship,
             canonical_name: record.canonical_name,
             nomenclatural_code: record.nomenclatural_code,
             status: str_to_taxonomic_status(&record.taxonomic_status)?,
             citation: record.citation,
             vernacular_names: record.vernacular_name.map(str_to_array),
-            alternative_names: record.alternative_names.map(str_to_array),
+            // alternative_names: record.alternative_names.map(str_to_array),
             description: record.description,
             remarks: record.remarks,
+
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
         })
     }
 

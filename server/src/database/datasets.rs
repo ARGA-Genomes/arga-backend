@@ -53,15 +53,17 @@ impl DatasetProvider {
 
         // join the taxa table with all dataset tables to filter get taxonomy
         // of species that appear in a dataset.
-        let species = taxa::table
-            .left_join(iek::table.on(taxa::name_id.eq(iek::name_id)))
-            .filter(iek::dataset_id.eq(dataset.id))
-            .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
-            .select(taxa::all_columns)
-            .order_by(taxa::scientific_name)
-            .paginate(page)
-            .load::<(Taxon, i64)>(&mut conn)
-            .await?;
+        // FIXME: find new pathway linking name_attributes to taxa via taxon_names
+        let species = vec![];
+        // let species = taxa::table
+        //     .left_join(iek::table.on(taxa::name_id.eq(iek::name_id)))
+        //     .filter(iek::dataset_id.eq(dataset.id))
+        //     .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+        //     .select(taxa::all_columns)
+        //     .order_by(taxa::scientific_name)
+        //     .paginate(page)
+        //     .load::<(Taxon, i64)>(&mut conn)
+        //     .await?;
 
         Ok(species.into())
     }

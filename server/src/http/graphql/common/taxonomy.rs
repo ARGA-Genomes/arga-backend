@@ -24,19 +24,19 @@ impl From<species::VernacularName> for VernacularName {
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject, Default)]
 pub struct TaxonDetails {
     pub scientific_name: String,
-    pub scientific_name_authorship: Option<String>,
     pub canonical_name: String,
+    pub authorship: Option<String>,
     pub status: TaxonomicStatus,
     pub nomenclatural_code: String,
     pub citation: Option<String>,
 }
 
-impl From<models::Classification> for TaxonDetails {
-    fn from(value: models::Classification) -> Self {
+impl From<models::Taxon> for TaxonDetails {
+    fn from(value: models::Taxon) -> Self {
         Self {
             scientific_name: value.scientific_name,
-            scientific_name_authorship: value.scientific_name_authorship,
             canonical_name: value.canonical_name,
+            authorship: value.authorship,
             status: value.status.into(),
             nomenclatural_code: value.nomenclatural_code,
             citation: value.citation,
@@ -52,17 +52,14 @@ pub struct Taxonomy {
     pub scientific_name: String,
     /// The species name without authors
     pub canonical_name: String,
-    /// The species name authority
-    pub authority: Option<String>,
+    /// The authors of the scientific name
+    pub authorship: Option<String>,
     /// The taxonomic status of the species
     pub status: TaxonomicStatus,
 
-    pub kingdom: Option<String>,
-    pub phylum: Option<String>,
-    pub class: Option<String>,
-    pub order: Option<String>,
-    pub family: Option<String>,
-    pub genus: Option<String>,
+    pub rank: TaxonomicRank,
+    pub nomenclatural_code: String,
+    pub citation: Option<String>,
 
     pub vernacular_group: Option<TaxonomicVernacularGroup>,
 
@@ -74,19 +71,17 @@ pub struct Taxonomy {
 impl From<models::Taxon> for Taxonomy {
     fn from(value: models::Taxon) -> Self {
         Self {
-            vernacular_group: value.vernacular_group().map(|v| v.into()),
+            // vernacular_group: value.vernacular_group().map(|v| v.into()),
+            vernacular_group: None,
             scientific_name: value.scientific_name,
             canonical_name: value.canonical_name,
-            authority: value.species_authority,
+            authorship: value.authorship,
             status: value.status.into(),
-            kingdom: value.kingdom,
-            phylum: value.phylum,
-            class: value.class,
-            order: value.order,
-            family: value.family,
-            genus: value.genus,
             synonyms: vec![],
             vernacular_names: vec![],
+            rank: value.rank.into(),
+            nomenclatural_code: value.nomenclatural_code,
+            citation: value.citation,
         }
     }
 }
@@ -96,17 +91,14 @@ impl From<models::FilteredTaxon> for Taxonomy {
         Self {
             vernacular_group: None,
             scientific_name: value.scientific_name,
+            authorship: value.species_authority,
             canonical_name: value.canonical_name,
-            authority: value.species_authority,
             status: value.status.into(),
-            kingdom: value.kingdom,
-            phylum: value.phylum,
-            class: value.class,
-            order: value.order,
-            family: value.family,
-            genus: value.genus,
             synonyms: vec![],
             vernacular_names: vec![],
+            rank: TaxonomicRank::Species,
+            nomenclatural_code: "".to_string(),
+            citation: None,
         }
     }
 }
@@ -217,4 +209,8 @@ pub enum TaxonomicRank {
     Subordo,
     Regio,
     SpecialForm,
+}
+
+impl Default for TaxonomicRank {
+    fn default() -> Self { TaxonomicRank::Unranked }
 }

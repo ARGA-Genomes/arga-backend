@@ -1,5 +1,8 @@
 mod common;
-mod taxa;
+// mod taxa;
+mod sources;
+mod datasets;
+mod attributes;
 mod csv_upload;
 mod media;
 mod lists;
@@ -36,7 +39,10 @@ pub(crate) fn router(context: Context) -> Router<Context> {
 
     Router::new()
         .route("/api/admin/logout", get(logout_handler))
-        .merge(taxa::router())
+        // .merge(taxa::router())
+        .merge(sources::router())
+        .merge(datasets::router())
+        .merge(attributes::router())
         .merge(csv_upload::router())
         .merge(media::router())
         .merge(lists::router())

@@ -1,5 +1,6 @@
 pub mod ncbi;
 pub mod bpa;
+// pub mod bold;
 
 
 #[derive(clap::Subcommand)]
@@ -10,6 +11,9 @@ pub enum Command {
     /// Extra processing for BPA datasets
     #[command(subcommand)]
     Bpa(bpa::Command),
+    // Extra processing for BOLD datasets
+    // #[command(subcommand)]
+    // Bold(bold::Command),
 }
 
 pub fn process_command(command: &Command) {
@@ -18,6 +22,7 @@ pub fn process_command(command: &Command) {
     match command {
         Command::Ncbi(cmd) => ncbi::process_command(cmd),
         Command::Bpa(cmd) => bpa::process_command(cmd),
+        // Command::Bold(cmd) => bold::process_command(cmd),
     }
 }
 
@@ -30,6 +35,8 @@ pub enum Error {
     Csv(csv::Error),
     Database(diesel::result::Error),
     Pool(diesel::r2d2::PoolError),
+    // Http(ureq::Error),
+    // Abif(abif::Error),
 }
 
 impl From<std::io::Error> for Error {
@@ -61,3 +68,15 @@ impl From<diesel::r2d2::PoolError> for Error {
         Self::Pool(value)
     }
 }
+
+// impl From<ureq::Error> for Error {
+//     fn from(value: ureq::Error) -> Self {
+//         Self::Http(value)
+//     }
+// }
+
+// impl From<abif::Error> for Error {
+//     fn from(value: abif::Error) -> Self {
+//         Self::Abif(value)
+//     }
+// }
