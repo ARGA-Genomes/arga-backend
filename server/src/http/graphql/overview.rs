@@ -3,7 +3,6 @@ use async_graphql::*;
 use crate::database;
 use crate::http::Error;
 use crate::http::Context as State;
-use crate::index::overview::{Overview as OverviewTrait, OverviewCategory};
 
 
 pub struct Overview;
@@ -55,12 +54,6 @@ impl Overview {
     async fn whole_genomes(&self, ctx: &Context<'_>) -> Result<i64, Error> {
         let state = ctx.data::<State>().unwrap();
         Ok(state.database.overview.whole_genomes().await?.total)
-    }
-
-    /// Returns the amount of records
-    async fn all_records(&self, ctx: &Context<'_>) -> Result<usize, Error> {
-        let state = ctx.data::<State>().unwrap();
-        Ok(state.solr.total(OverviewCategory::AllRecords).await?)
     }
 
     /// Returns the amount of species

@@ -6,7 +6,6 @@ use dotenvy::dotenv;
 use arga_backend::http;
 use arga_backend::telemetry;
 
-use arga_backend::index::providers::{Solr, SolrClient};
 use arga_backend::database::Database;
 
 
@@ -65,10 +64,6 @@ async fn serve() {
 
     // because the entire backend is in a crate we instantiate providers and any other services
     // here so that it is explicitly defined
-    let solr_host = std::env::var("SOLR_URL").expect("No solr URL specified");
-    let client = SolrClient::new(&solr_host);
-    let solr = Solr::new(client);
-
     let db_host = arga_backend::database::get_database_url();
     let database = Database::connect(&db_host).await.expect("Failed to connect to the database");
 
@@ -77,7 +72,7 @@ async fn serve() {
         frontend_host,
     };
 
-    http::serve(config, database, solr).await.expect("Failed to start server");
+    http::serve(config, database).await.expect("Failed to start server");
 
     telemetry::shutdown();
 }

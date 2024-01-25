@@ -1,26 +1,25 @@
-use async_trait::async_trait;
-
 use diesel::prelude::*;
 use diesel::sql_types::Text;
 use diesel_async::RunQueryDsl;
-use tracing::instrument;
 use uuid::Uuid;
 
-use crate::index::names::GetNames;
+use arga_core::models::Name;
+use crate::database::schema;
+use crate::http::Error;
 
-use super::{schema, Database, Error};
-use super::models::Name;
+use super::PgPool;
 
 
 sql_function!(fn lower(x: Text) -> Text);
 
 
-#[async_trait]
-impl GetNames for Database {
-    type Error = Error;
+#[derive(Clone)]
+pub struct NameProvider {
+    pub pool: PgPool,
+}
 
-    #[instrument(skip(self))]
-    async fn find_by_name_id(&self, uuid: &Uuid) -> Result<Name, Self::Error> {
+impl NameProvider {
+    pub async fn find_by_name_id(&self, uuid: &Uuid) -> Result<Name, Error> {
         use schema::names::dsl::*;
         let mut conn = self.pool.get().await?;
 
@@ -33,8 +32,7 @@ impl GetNames for Database {
         Ok(record)
     }
 
-    #[instrument(skip(self))]
-    async fn find_by_canonical_name(&self, name: &str) -> Result<Vec<Name>, Self::Error> {
+    pub async fn find_by_canonical_name(&self, name: &str) -> Result<Vec<Name>, Error> {
         use schema::names::dsl::*;
         let mut conn = self.pool.get().await?;
 
@@ -47,29 +45,13 @@ impl GetNames for Database {
         Ok(records)
     }
 
-    #[instrument(skip(self))]
-    async fn find_by_scientific_name(&self, name: &str) -> Result<Name, Self::Error> {
+    pub async fn find_by_scientific_name(&self, name: &str) -> Result<Name, Error> {
         use schema::names::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let name = names
             .filter(scientific_name.eq(name))
             .order_by(scientific_name)
-            .first::<Name>(&mut conn)
-            .await?;
-
-        Ok(name)
-    }
-
-    #[instrument(skip(self))]
-    async fn find_by_assembly_id(&self, uuid: &Uuid) -> Result<Name, Self::Error> {
-        use schema::{names, assemblies};
-        let mut conn = self.pool.get().await?;
-
-        let name = assemblies::table
-            .inner_join(names::table)
-            .filter(assemblies::id.eq(uuid))
-            .select(names::all_columns)
             .first::<Name>(&mut conn)
             .await?;
 

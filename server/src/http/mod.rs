@@ -11,7 +11,6 @@ use tower_http::compression::CompressionLayer;
 
 use arga_core::search::SearchIndex;
 use crate::database::Database;
-use crate::index::providers::solr::Solr;
 
 pub mod error;
 pub mod graphql;
@@ -41,7 +40,6 @@ pub struct Config {
 pub(crate) struct Context {
     pub config: Config,
     pub database: Database,
-    pub solr: Solr,
     pub search: SearchIndex,
 }
 
@@ -58,7 +56,6 @@ impl FromRef<Context> for Database {
 pub async fn serve(
     config: Config,
     database: Database,
-    solr: Solr,
 ) -> anyhow::Result<()>
 {
     let addr = config.bind_address.clone();
@@ -66,7 +63,6 @@ pub async fn serve(
     let context = Context {
         config,
         database,
-        solr,
         search: SearchIndex::open()?,
     };
 

@@ -7,7 +7,6 @@ use crate::database::Database;
 use crate::database::models;
 use crate::http::Error;
 use crate::http::Context as State;
-use crate::index::names::GetNames;
 
 
 #[derive(MergedObject)]
@@ -31,7 +30,7 @@ struct MarkerQuery {
 impl MarkerQuery {
     async fn canonical_name(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let state = ctx.data::<State>().unwrap();
-        let name = state.database.find_by_name_id(&self.marker.name_id).await?;
+        let name = state.database.names.find_by_name_id(&self.marker.name_id).await?;
         Ok(name.canonical_name)
     }
 }

@@ -75,6 +75,7 @@ pub type PageResult<T> = Result<Page<T>, Error>;
 pub struct Database {
     pub pool: Pool<AsyncPgConnection>,
 
+    pub names: names::NameProvider,
     pub markers: markers::MarkerProvider,
     pub overview: overview::OverviewProvider,
     pub stats: stats::StatsProvider,
@@ -98,6 +99,7 @@ impl Database {
         let pool = Pool::builder().build(config).await?;
 
         Ok(Database {
+            names: names::NameProvider { pool: pool.clone() },
             markers: markers::MarkerProvider { pool: pool.clone() },
             overview: overview::OverviewProvider { pool: pool.clone() },
             stats: stats::StatsProvider { pool: pool.clone() },

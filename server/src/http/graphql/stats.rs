@@ -8,8 +8,6 @@ use crate::database::stats::BreakdownItem;
 use crate::http::Error;
 use crate::http::Context as State;
 
-use crate::index::names::GetNames;
-
 
 pub struct Statistics;
 
@@ -18,7 +16,7 @@ impl Statistics {
     #[instrument(skip(self, ctx))]
     async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<SpeciesStatistics, Error> {
         let state = ctx.data::<State>().unwrap();
-        let names = state.database.find_by_canonical_name(&canonical_name).await?;
+        let names = state.database.names.find_by_canonical_name(&canonical_name).await?;
 
         if names.is_empty() {
             return Err(Error::NotFound(canonical_name));

@@ -21,9 +21,6 @@ pub enum Error {
     Internal(#[from] anyhow::Error),
 
     #[error(transparent)]
-    Solr(#[from] crate::index::providers::solr::Error),
-
-    #[error(transparent)]
     Database(crate::database::Error),
 
     #[error(transparent)]
@@ -61,7 +58,6 @@ impl Error {
             Error::Configuration(_, _) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Authentication => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Error::Solr(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::SearchIndex(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Timeout => StatusCode::REQUEST_TIMEOUT,
@@ -82,9 +78,6 @@ impl IntoResponse for Error {
             },
             Error::Internal(err) => {
                 error!(?err, "Internal error");
-            },
-            Error::Solr(err) => {
-                error!(?err, "Solr error");
             },
             Error::Database(err) => {
                 error!(?err, "Database error");
