@@ -4,11 +4,9 @@ pub mod search;
 pub mod species;
 pub mod stats;
 pub mod maps;
-// pub mod lists;
 pub mod sources;
 pub mod datasets;
 pub mod names;
-// pub mod assembly;
 pub mod specimen;
 pub mod markers;
 pub mod overview;
@@ -80,8 +78,6 @@ pub struct Database {
     pub overview: overview::OverviewProvider,
     pub stats: stats::StatsProvider,
     pub species: species::SpeciesProvider,
-    // pub assembly: assembly::AssemblyProvider,
-    // pub lists: lists::ListProvider,
     pub sources: sources::SourceProvider,
     pub datasets: datasets::DatasetProvider,
     pub taxa: taxa::TaxaProvider,
@@ -104,8 +100,6 @@ impl Database {
             overview: overview::OverviewProvider { pool: pool.clone() },
             stats: stats::StatsProvider { pool: pool.clone() },
             species: species::SpeciesProvider { pool: pool.clone() },
-            // assembly: assembly::AssemblyProvider { pool: pool.clone() },
-            // lists: lists::ListProvider { pool: pool.clone() },
             sources: sources::SourceProvider { pool: pool.clone() },
             datasets: datasets::DatasetProvider { pool: pool.clone() },
             taxa: taxa::TaxaProvider { pool: pool.clone() },
