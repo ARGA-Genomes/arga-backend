@@ -4,7 +4,7 @@ use diesel_async::RunQueryDsl;
 use serde::Deserialize;
 
 use crate::database::extensions::classification_filters::Classification;
-use crate::database::extensions::filters::with_classification;
+use crate::database::extensions::species_filters::with_classification;
 use crate::database::{schema, schema_gnl};
 use crate::http::Error;
 
@@ -47,11 +47,11 @@ impl OverviewProvider {
     }
 
     pub async fn animals(&self) -> Result<Overview, Error> {
-        use schema_gnl::taxa_filter::dsl::*;
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total: i64 = taxa_filter
-            .filter(status.eq_any(ACCEPTED_NAMES))
+        let total: i64 = species
+            .filter(taxon_status.eq_any(ACCEPTED_NAMES))
             .filter(with_classification(&Classification::Kingdom("Animalia".to_string())))
             .count()
             .get_result(&mut conn)
@@ -63,11 +63,11 @@ impl OverviewProvider {
     }
 
     pub async fn plants(&self) -> Result<Overview, Error> {
-        use schema_gnl::taxa_filter::dsl::*;
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total: i64 = taxa_filter
-            .filter(status.eq_any(ACCEPTED_NAMES))
+        let total: i64 = species
+            .filter(taxon_status.eq_any(ACCEPTED_NAMES))
             .filter(with_classification(&Classification::Kingdom("Plantae".to_string())))
             .count()
             .get_result(&mut conn)
@@ -79,11 +79,11 @@ impl OverviewProvider {
     }
 
     pub async fn fungi(&self) -> Result<Overview, Error> {
-        use schema_gnl::taxa_filter::dsl::*;
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total: i64 = taxa_filter
-            .filter(status.eq_any(ACCEPTED_NAMES))
+        let total: i64 = species
+            .filter(taxon_status.eq_any(ACCEPTED_NAMES))
             .filter(with_classification(&Classification::Kingdom("Fungi".to_string())))
             .count()
             .get_result(&mut conn)
@@ -95,11 +95,11 @@ impl OverviewProvider {
     }
 
     pub async fn bacteria(&self) -> Result<Overview, Error> {
-        use schema_gnl::taxa_filter::dsl::*;
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total: i64 = taxa_filter
-            .filter(status.eq_any(ACCEPTED_NAMES))
+        let total: i64 = species
+            .filter(taxon_status.eq_any(ACCEPTED_NAMES))
             .filter(with_classification(&Classification::Kingdom("Bacteria".to_string())))
             .count()
             .get_result(&mut conn)
@@ -111,11 +111,11 @@ impl OverviewProvider {
     }
 
     pub async fn protista(&self) -> Result<Overview, Error> {
-        use schema_gnl::taxa_filter::dsl::*;
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let total: i64 = taxa_filter
-            .filter(status.eq_any(ACCEPTED_NAMES))
+        let total: i64 = species
+            .filter(taxon_status.eq_any(ACCEPTED_NAMES))
             .filter(with_classification(&Classification::Superkingdom("Protista".to_string())))
             .count()
             .get_result(&mut conn)

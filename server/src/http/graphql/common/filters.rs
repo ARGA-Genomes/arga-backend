@@ -19,15 +19,15 @@ use super::whole_genomes::{AssemblyLevel, GenomeRepresentation, ReleaseType};
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
 pub enum FilterType {
-    VernacularGroup,
-    HasData,
-    Ecology,
-    Ibra,
-    Imcra,
-    State,
-    DrainageBasin,
+    // VernacularGroup,
+    // HasData,
+    // Ecology,
+    // Ibra,
+    // Imcra,
+    // State,
+    // DrainageBasin,
 
-    BushfireRecovery,
+    // BushfireRecovery,
 
     // classification ranks
     Domain,
@@ -90,23 +90,23 @@ impl TryFrom<FilterItem> for Filter {
 
     fn try_from(source: FilterItem) -> Result<Self, Self::Error> {
         let kind = match source.filter {
-            FilterType::VernacularGroup => FilterKind::VernacularGroup(
-                from_value::<TaxonomicVernacularGroup>(Value::String(source.value))?.into()
-            ),
+            // FilterType::VernacularGroup => FilterKind::VernacularGroup(
+            //     from_value::<TaxonomicVernacularGroup>(Value::String(source.value))?.into()
+            // ),
 
-            FilterType::HasData => FilterKind::HasData(
-                from_value::<DataType>(Value::String(source.value))?.into()
-            ),
+            // FilterType::HasData => FilterKind::HasData(
+            //     from_value::<DataType>(Value::String(source.value))?.into()
+            // ),
 
-            FilterType::Ecology => FilterKind::Ecology(source.value),
-            FilterType::Ibra => FilterKind::Ibra(source.value),
-            FilterType::Imcra => FilterKind::Imcra(source.value),
-            FilterType::State => FilterKind::State(source.value),
-            FilterType::DrainageBasin => FilterKind::DrainageBasin(source.value),
+            // FilterType::Ecology => FilterKind::Ecology(source.value),
+            // FilterType::Ibra => FilterKind::Ibra(source.value),
+            // FilterType::Imcra => FilterKind::Imcra(source.value),
+            // FilterType::State => FilterKind::State(source.value),
+            // FilterType::DrainageBasin => FilterKind::DrainageBasin(source.value),
 
-            FilterType::BushfireRecovery => FilterKind::BushfireRecovery(
-                from_value::<BushfireRecoveryTrait>(Value::String(source.value))?.into()
-            ),
+            // FilterType::BushfireRecovery => FilterKind::BushfireRecovery(
+            //     from_value::<BushfireRecoveryTrait>(Value::String(source.value))?.into()
+            // ),
 
             FilterType::Domain => FilterKind::Classification(Classification::Domain(source.value)),
             FilterType::Superkingdom => FilterKind::Classification(Classification::Superkingdom(source.value)),

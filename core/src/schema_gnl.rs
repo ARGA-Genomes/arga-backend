@@ -1,40 +1,4 @@
 diesel::table! {
-    species (id) {
-        id -> Uuid,
-        source -> Uuid,
-        name_id -> Uuid,
-        status -> crate::schema::sql_types::TaxonomicStatus,
-        scientific_name -> Varchar,
-        canonical_name -> Varchar,
-        kingdom -> Nullable<Varchar>,
-        phylum -> Nullable<Varchar>,
-        class -> Nullable<Varchar>,
-        order -> Nullable<Varchar>,
-        family -> Nullable<Varchar>,
-        tribe -> Nullable<Varchar>,
-        genus -> Nullable<Varchar>,
-        specific_epithet -> Nullable<Varchar>,
-        subphylum -> Nullable<Varchar>,
-        subclass -> Nullable<Varchar>,
-        suborder -> Nullable<Varchar>,
-        subfamily -> Nullable<Varchar>,
-        subtribe -> Nullable<Varchar>,
-        subgenus -> Nullable<Varchar>,
-        subspecific_epithet -> Nullable<Varchar>,
-        superclass -> Nullable<Varchar>,
-        superorder -> Nullable<Varchar>,
-        superfamily -> Nullable<Varchar>,
-        supertribe -> Nullable<Varchar>,
-        order_authority -> Nullable<Varchar>,
-        family_authority -> Nullable<Varchar>,
-        genus_authority -> Nullable<Varchar>,
-        species_authority -> Nullable<Varchar>,
-        subspecies -> Nullable<Array<Text>>,
-        window_rank -> BigInt,
-    }
-}
-
-diesel::table! {
     synonyms (id) {
         id -> Uuid,
         source -> Uuid,
@@ -252,33 +216,31 @@ diesel::table! {
 }
 
 diesel::table! {
-    classification_species (name_id, classification_id) {
-        name_id -> Uuid,
-        classification_id -> Uuid,
+    species (id, taxon_id) {
+        id -> Uuid,
         scientific_name -> Varchar,
         canonical_name -> Varchar,
-        authorship -> Varchar,
-        classification_rank -> crate::schema::sql_types::TaxonomicRank,
-        classification_scientific_name -> Varchar,
-        classification_authorship -> Nullable<Varchar>,
-        classification_canonical_name -> Varchar,
-        parent_rank -> crate::schema::sql_types::TaxonomicRank,
-        parent_scientific_name -> Varchar,
-        parent_canonical_name -> Varchar,
-        markers -> BigInt,
+        authorship -> Nullable<Varchar>,
         genomes -> BigInt,
+        loci -> BigInt,
         specimens -> BigInt,
         other -> BigInt,
         total_genomic -> BigInt,
+        taxon_dataset_id -> Uuid,
+        taxon_status -> crate::schema::sql_types::TaxonomicStatus,
+        taxon_rank -> crate::schema::sql_types::TaxonomicRank,
+        taxon_id -> Uuid,
+        classification -> Jsonb,
+        traits -> Nullable<Array<Varchar>>,
     }
 }
 
 
-use super::schema::{datasets, names, taxa, specimens, accession_events};
+use super::schema::{datasets, names, taxa, specimens, accession_events, name_attributes};
 
 diesel::joinable!(species -> synonyms (id));
 diesel::joinable!(species -> common_names (id));
-diesel::joinable!(taxa -> species (id));
+diesel::joinable!(species -> taxa (taxon_id));
 diesel::joinable!(taxa -> synonyms (id));
 diesel::joinable!(taxa -> common_names (id));
 diesel::joinable!(whole_genomes -> datasets (dataset_id));
@@ -362,4 +324,14 @@ diesel::allow_tables_to_appear_in_same_query!(
 diesel::allow_tables_to_appear_in_same_query!(
     specimen_stats,
     accession_events,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    name_attributes,
+    species,
+);
+
+diesel::allow_tables_to_appear_in_same_query!(
+    datasets,
+    species,
 );

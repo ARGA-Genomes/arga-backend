@@ -10,14 +10,16 @@ use crate::database::extensions::classification_filters::{
     Classification as ClassificationFilter,
 };
 use crate::database::extensions::species_filters::{
-    with_parent_classification,
+    // with_parent_classification,
     with_classification as with_species_classification,
+    with_filters as with_species_filters,
+    Filter as SpeciesFilter,
 };
 use crate::database::extensions::sum_if;
 
 use super::extensions::Paginate;
 use super::{schema, schema_gnl, PgPool, PageResult, Error};
-use super::models::{FilteredTaxon, TaxonomicStatus};
+use super::models::{Species, TaxonomicStatus};
 
 
 sql_function!(fn unnest(x: Nullable<Array<Text>>) -> Text);
@@ -26,8 +28,8 @@ sql_function!(fn unnest(x: Nullable<Array<Text>>) -> Text);
 #[derive(Debug, Queryable)]
 pub struct DataSummary {
     pub canonical_name: String,
-    pub markers: Option<BigDecimal>,
     pub genomes: Option<BigDecimal>,
+    pub markers: Option<BigDecimal>,
     pub specimens: Option<BigDecimal>,
     pub other: Option<BigDecimal>,
     pub total_genomic: Option<BigDecimal>,
@@ -36,8 +38,8 @@ pub struct DataSummary {
 #[derive(Debug, Queryable)]
 pub struct SpeciesSummary {
     pub name: String,
-    pub markers: i64,
     pub genomes: i64,
+    pub markers: i64,
     pub specimens: i64,
     pub other: i64,
     pub total_genomic: i64,
@@ -79,91 +81,100 @@ impl TaxaProvider {
         Ok(taxon)
     }
 
-    pub async fn species(&self, filters: &Vec<Filter>, page: i64, per_page: i64) -> PageResult<FilteredTaxon> {
-        use schema_gnl::taxa_filter;
+    pub async fn species(&self, filters: &Vec<Filter>, page: i64, per_page: i64) -> PageResult<Species> {
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let species = taxa_filter::table
-            .select(taxa_filter::all_columns)
-            .filter(taxa_filter::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+        let records = species
+            .filter(taxon_status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .filter(with_filters(&filters).unwrap())
-            .order_by(taxa_filter::scientific_name)
+            .order_by(scientific_name)
             .paginate(page)
             .per_page(per_page)
-            .load::<(FilteredTaxon, i64)>(&mut conn)
+            .load::<(Species, i64)>(&mut conn)
             .await?;
 
-        Ok(species.into())
+        Ok(records.into())
     }
 
     pub async fn ecology_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
-        use schema_gnl::taxa_filter;
-        let mut conn = self.pool.get().await?;
+        // FIXME: reimplement
+        Ok(vec![])
+        // use schema_gnl::taxa_filter;
+        // let mut conn = self.pool.get().await?;
 
-        let mut options = filter_taxa(filters)
-            .select(unnest(taxa_filter::ecology))
-            .distinct()
-            .load::<String>(&mut conn)
-            .await?;
+        // let mut options = filter_taxa(filters)
+        //     .select(unnest(taxa_filter::ecology))
+        //     .distinct()
+        //     .load::<String>(&mut conn)
+        //     .await?;
 
-        options.sort();
-        Ok(options)
+        // options.sort();
+        // Ok(options)
     }
 
     pub async fn ibra_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
-        use schema_gnl::taxa_filter;
-        let mut conn = self.pool.get().await?;
+        // FIXME: reimplement
+        Ok(vec![])
+        // use schema_gnl::taxa_filter;
+        // let mut conn = self.pool.get().await?;
 
-        let mut options = filter_taxa(filters)
-            .select(unnest(taxa_filter::ibra))
-            .distinct()
-            .load::<String>(&mut conn)
-            .await?;
+        // let mut options = filter_taxa(filters)
+        //     .select(unnest(taxa_filter::ibra))
+        //     .distinct()
+        //     .load::<String>(&mut conn)
+        //     .await?;
 
-        options.sort();
-        Ok(options)
+        // options.sort();
+        // Ok(options)
     }
 
     pub async fn imcra_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
-        use schema_gnl::taxa_filter;
-        let mut conn = self.pool.get().await?;
+        // FIXME: reimplement
+        Ok(vec![])
+        // use schema_gnl::taxa_filter;
+        // let mut conn = self.pool.get().await?;
 
-        let mut options = filter_taxa(filters)
-            .select(unnest(taxa_filter::ibra))
-            .distinct()
-            .load::<String>(&mut conn)
-            .await?;
+        // let mut options = filter_taxa(filters)
+        //     .select(unnest(taxa_filter::ibra))
+        //     .distinct()
+        //     .load::<String>(&mut conn)
+        //     .await?;
 
-        options.sort();
-        Ok(options)
+        // options.sort();
+        // Ok(options)
     }
 
     pub async fn state_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
-        use schema_gnl::taxa_filter;
-        let mut conn = self.pool.get().await?;
+        // FIXME: reimplement
+        Ok(vec![])
+        // use schema_gnl::taxa_filter;
+        // let mut conn = self.pool.get().await?;
 
-        let mut options = filter_taxa(filters)
-            .select(unnest(taxa_filter::state))
-            .distinct()
-            .load::<String>(&mut conn)
-            .await?;
+        // let mut options = filter_taxa(filters)
+        //     .select(unnest(taxa_filter::state))
+        //     .distinct()
+        //     .load::<String>(&mut conn)
+        //     .await?;
 
-        options.sort();
-        Ok(options)
+        // options.sort();
+        // Ok(options)
     }
 
     pub async fn drainage_basin_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
-        use schema_gnl::taxa_filter;
-        let mut conn = self.pool.get().await?;
+        // FIXME: reimplement
+        Ok(vec![])
+        // use schema_gnl::taxa_filter;
+        // let mut conn = self.pool.get().await?;
 
-        let mut options = filter_taxa(filters)
-            .select(unnest(taxa_filter::drainage_basin))
-            .distinct()
-            .load::<String>(&mut conn)
-            .await?;
+        // let mut options = filter_taxa(filters)
+        //     .select(unnest(taxa_filter::drainage_basin))
+        //     .distinct()
+        //     .load::<String>(&mut conn)
+        //     .await?;
 
-        options.sort();
-        Ok(options)
+        // options.sort();
+        // Ok(options)
     }
 
 
@@ -191,7 +202,7 @@ impl TaxaProvider {
 
     pub async fn taxon_summary(&self, classification: &ClassificationFilter) -> Result<TaxonSummary, Error> {
         use schema::taxa;
-        use schema_gnl::{taxa_dag as dag, classification_species as species};
+        use schema_gnl::{taxa_dag as dag, species};
 
         let mut conn = self.pool.get().await?;
 
@@ -220,7 +231,7 @@ impl TaxaProvider {
 
         // get the total amount of species with genomes and genomic data
         let (species_genomes, species_data) = species::table
-            .group_by(species::classification_canonical_name)
+            .group_by(species::canonical_name)
             .select((sum_if(species::genomes.gt(0)), sum_if(species::total_genomic.gt(0))))
             .filter(with_species_classification(classification))
             .get_result::<(i64, i64)>(&mut conn)
@@ -229,14 +240,17 @@ impl TaxaProvider {
             .unwrap_or_default();
 
         // get the total amount of child taxa with genomes and genomic data
-        let (children_genomes, children_data) = species::table
-            .group_by(species::classification_canonical_name)
-            .select((sum_if(species::genomes.gt(0)), sum_if(species::total_genomic.gt(0))))
-            .filter(with_parent_classification(classification))
-            .get_result::<(i64, i64)>(&mut conn)
-            .await
-            .optional()?
-            .unwrap_or_default();
+        // FIXME: get stats of species that belong to an ancestor
+        let children_genomes = 0;
+        let children_data = 0;
+        // let (children_genomes, children_data) = species::table
+        //     .group_by(species::canonical_name)
+        //     .select((sum_if(species::genomes.gt(0)), sum_if(species::total_genomic.gt(0))))
+        //     .filter(with_parent_classification(classification))
+        //     .get_result::<(i64, i64)>(&mut conn)
+        //     .await
+        //     .optional()?
+        //     .unwrap_or_default();
 
         Ok(TaxonSummary {
             children,
@@ -249,20 +263,20 @@ impl TaxaProvider {
     }
 
 
-    pub async fn species_summary(&self, classification: &ClassificationFilter) -> Result<Vec<SpeciesSummary>, Error> {
-        use schema_gnl::classification_species::dsl::*;
+    pub async fn species_summary(&self, filter: &ClassificationFilter) -> Result<Vec<SpeciesSummary>, Error> {
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let summaries = classification_species
+        let summaries = species
             .select((
                 canonical_name,
-                markers,
                 genomes,
+                loci,
                 specimens,
                 other,
                 total_genomic,
             ))
-            .filter(with_species_classification(classification))
+            .filter(with_species_classification(filter))
             .order(total_genomic.desc())
             .limit(10)
             .load::<SpeciesSummary>(&mut conn)
@@ -271,20 +285,20 @@ impl TaxaProvider {
         Ok(summaries)
     }
 
-    pub async fn species_genome_summary(&self, classification: &ClassificationFilter) -> Result<Vec<SpeciesSummary>, Error> {
-        use schema_gnl::classification_species::dsl::*;
+    pub async fn species_genome_summary(&self, filter: &ClassificationFilter) -> Result<Vec<SpeciesSummary>, Error> {
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let summaries = classification_species
+        let summaries = species
             .select((
                 canonical_name,
-                markers,
                 genomes,
+                loci,
                 specimens,
                 other,
                 total_genomic,
             ))
-            .filter(with_species_classification(classification))
+            .filter(with_species_classification(filter))
             .order(genomes.desc())
             .limit(10)
             .load::<SpeciesSummary>(&mut conn)
@@ -293,26 +307,29 @@ impl TaxaProvider {
         Ok(summaries)
     }
 
-    pub async fn data_summary(&self, classification: &ClassificationFilter) -> Result<Vec<DataSummary>, Error> {
+    pub async fn data_summary(&self, filter: &ClassificationFilter) -> Result<Vec<DataSummary>, Error> {
         use diesel::dsl::sum;
-        use schema_gnl::classification_species::dsl::*;
+        use schema::taxa;
+        use schema_gnl::species::dsl::*;
 
         let mut conn = self.pool.get().await?;
 
-        let summaries = classification_species
-            .group_by(classification_canonical_name)
-            .select((
-                classification_canonical_name,
-                sum(markers),
-                sum(genomes),
-                sum(specimens),
-                sum(other),
-                sum(total_genomic),
-            ))
-            .filter(with_parent_classification(classification))
-            .load::<DataSummary>(&mut conn)
-            .await?;
+        // FIXME: get child taxa totals
+        Ok(vec![])
+        // let summaries = species
+        //     .group_by(canonical_name)
+        //     .select((
+        //         classification_canonical_name,
+        //         sum(markers),
+        //         sum(genomes),
+        //         sum(specimens),
+        //         sum(other),
+        //         sum(total_genomic),
+        //     ))
+        //     .filter(with_parent_classification(classification))
+        //     .load::<DataSummary>(&mut conn)
+        //     .await?;
 
-        Ok(summaries)
+        // Ok(summaries)
     }
 }

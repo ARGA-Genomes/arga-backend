@@ -79,13 +79,11 @@ pub struct SpeciesProvider {
 
 impl SpeciesProvider {
     /// Get taxonomic information for a specific species.
-    pub async fn taxonomy(&self, name_id: &Uuid) -> Result<Vec<Taxon>, Error> {
-        use schema::{taxa, names};
-
+    pub async fn taxonomy(&self, names: &Vec<Name>) -> Result<Vec<Taxon>, Error> {
+        use schema::taxa;
         let mut conn = self.pool.get().await?;
 
-        let name = names::table.filter(names::id.eq(name_id)).get_result::<Name>(&mut conn).await?;
-        let taxa = TaxonName::belonging_to(&name)
+        let taxa = TaxonName::belonging_to(names)
             .inner_join(taxa::table)
             .select(Taxon::as_select())
             .load(&mut conn)

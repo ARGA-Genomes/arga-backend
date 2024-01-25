@@ -71,7 +71,7 @@ impl SpeciesSearchByCanonicalName for Database {
 
         let rows = species
             .select(scientific_name)
-            .filter(status.eq(TaxonomicStatus::Accepted))
+            .filter(taxon_status.eq(TaxonomicStatus::Accepted))
             .filter(canonical_name.eq_any(names))
             .order_by(canonical_name)
             .load::<String>(&mut conn).await?;
@@ -104,7 +104,7 @@ impl SpeciesSearchExcludingCanonicalName for Database {
 
         let rows = species
             .select(scientific_name)
-            .filter(status.eq(TaxonomicStatus::Accepted))
+            .filter(taxon_status.eq(TaxonomicStatus::Accepted))
             .filter(canonical_name.ne_all(names))
             .order_by(canonical_name)
             .load::<String>(&mut conn).await?;

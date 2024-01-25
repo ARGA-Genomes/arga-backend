@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use arga_core::models::FilteredTaxon;
+use arga_core::models::Species;
 use async_graphql::*;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
@@ -79,20 +79,20 @@ impl SpeciesHelper {
     ///
     /// This will enrich the provided names with additional data such as
     /// taxonomy, species photos, and data summaries.
-    pub async fn filtered_cards(&self, taxa: Vec<FilteredTaxon>) -> Result<Vec<SpeciesCard>, Error> {
+    pub async fn filtered_cards(&self, taxa: Vec<Species>) -> Result<Vec<SpeciesCard>, Error> {
         use schema::taxon_photos;
         let mut conn = self.database.pool.get().await?;
 
-        let name_ids: Vec<Uuid> = taxa.iter().map(|taxon| taxon.name_id).collect();
+        let name_ids: Vec<Uuid> = taxa.iter().map(|taxon| taxon.id).collect();
 
         let mut cards: HashMap<Uuid, SpeciesCard> = HashMap::new();
 
         // create the card with the taxa and some defaults
         for taxon in taxa {
-            cards.insert(taxon.name_id, SpeciesCard {
+            cards.insert(taxon.id, SpeciesCard {
                 data_summary: SpeciesDataSummary {
                     genomes: taxon.genomes,
-                    loci: taxon.markers,
+                    loci: taxon.loci,
                     specimens: taxon.specimens,
                     other: taxon.other,
                 },

@@ -25,6 +25,7 @@ use crate::index::species::{
 };
 use crate::database::{schema, Database};
 use crate::database::models::Name as ArgaName;
+use crate::database::models::Name;
 use crate::database::species;
 use super::common::taxonomy::TaxonDetails;
 use super::common::{
@@ -40,7 +41,7 @@ use super::markers::SpeciesMarker;
 pub struct Species {
     pub canonical_name: String,
     pub name: ArgaName,
-    pub all_names: Vec<ArgaName>,
+    pub names: Vec<Name>,
 }
 
 #[derive(Clone, Debug, SimpleObject)]
@@ -87,7 +88,7 @@ impl Species {
         }
         let names = names?;
 
-        Ok(Species { canonical_name, name: names[0].clone(), all_names: names })
+        Ok(Species { canonical_name, name: names[0].clone(), names })
     }
 
     #[instrument(skip(self, ctx))]
@@ -96,7 +97,7 @@ impl Species {
         let synonyms = state.database.species.synonyms(&self.name.id).await?;
         let vernacular_names = state.database.species.vernacular_names(&self.name.id).await?;
 
-        let taxa = state.database.species.taxonomy(&self.name.id).await?;
+        let taxa = state.database.species.taxonomy(&self.names).await?;
         let details = taxa.into_iter().map(|t| t.into()).collect();
 
         Ok(details)
@@ -150,7 +151,7 @@ impl Species {
         let state = ctx.data::<State>().unwrap();
 
         let mut statuses = Vec::new();
-        for name in &self.all_names {
+        for name in &self.names {
             let records = state.database.conservation_status(name).await?;
             statuses.extend(records);
         }
@@ -180,7 +181,7 @@ impl Species {
     #[instrument(skip(self, ctx))]
     async fn trace_files(&self, ctx: &Context<'_>) -> Result<Vec<TraceFile>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let records = state.database.trace_files(&self.all_names).await?;
+        let records = state.database.trace_files(&self.names).await?;
         Ok(records)
     }
 
@@ -213,7 +214,7 @@ impl Species {
 
     async fn indigenous_ecological_knowledge(&self, ctx: &Context<'_>) -> Result<Vec<IndigenousEcologicalTrait>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let name_ids: Vec<Uuid> = self.all_names.iter().map(|name| name.id.clone()).collect();
+        let name_ids: Vec<Uuid> = self.names.iter().map(|name| name.id.clone()).collect();
         let records = state.database.species.indigenous_knowledge(&name_ids).await?;
         let traits = records.into_iter().map(|r| r.into()).collect();
         Ok(traits)

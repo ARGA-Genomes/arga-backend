@@ -29,6 +29,8 @@ pub struct TaxonDetails {
     pub status: TaxonomicStatus,
     pub nomenclatural_code: String,
     pub citation: Option<String>,
+    pub source: Option<String>,
+    pub source_url: Option<String>,
 }
 
 impl From<models::Taxon> for TaxonDetails {
@@ -40,6 +42,8 @@ impl From<models::Taxon> for TaxonDetails {
             status: value.status.into(),
             nomenclatural_code: value.nomenclatural_code,
             citation: value.citation,
+            source: None,
+            source_url: None,
         }
     }
 }
@@ -60,6 +64,8 @@ pub struct Taxonomy {
     pub rank: TaxonomicRank,
     pub nomenclatural_code: String,
     pub citation: Option<String>,
+    pub source: Option<String>,
+    pub source_url: Option<String>,
 
     pub vernacular_group: Option<TaxonomicVernacularGroup>,
 
@@ -82,23 +88,27 @@ impl From<models::Taxon> for Taxonomy {
             rank: value.rank.into(),
             nomenclatural_code: value.nomenclatural_code,
             citation: value.citation,
+            source: None,
+            source_url: None,
         }
     }
 }
 
-impl From<models::FilteredTaxon> for Taxonomy {
-    fn from(value: models::FilteredTaxon) -> Self {
+impl From<models::Species> for Taxonomy {
+    fn from(value: models::Species) -> Self {
         Self {
             vernacular_group: None,
             scientific_name: value.scientific_name,
-            authorship: value.species_authority,
             canonical_name: value.canonical_name,
-            status: value.status.into(),
+            authorship: value.authorship,
+            status: value.taxon_status.into(),
             synonyms: vec![],
             vernacular_names: vec![],
-            rank: TaxonomicRank::Species,
+            rank: value.taxon_rank.into(),
             nomenclatural_code: "".to_string(),
             citation: None,
+            source: None,
+            source_url: None,
         }
     }
 }

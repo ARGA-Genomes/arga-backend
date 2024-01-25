@@ -144,9 +144,71 @@ pub enum TaxonomicRank {
     SpecialForm,
 }
 
+impl std::fmt::Display for TaxonomicRank {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            TaxonomicRank::Domain => "Domain",
+            TaxonomicRank::Superkingdom => "Superkingdom",
+            TaxonomicRank::Kingdom => "Kingdom",
+            TaxonomicRank::Subkingdom => "Subkingdom",
+            TaxonomicRank::Phylum => "Phylum",
+            TaxonomicRank::Subphylum => "Subphylum",
+            TaxonomicRank::Superclass => "Superclass",
+            TaxonomicRank::Class => "Class",
+            TaxonomicRank::Subclass => "Subclass",
+            TaxonomicRank::Superorder => "Superorder",
+            TaxonomicRank::Order => "Order",
+            TaxonomicRank::Suborder => "Suborder",
+            TaxonomicRank::Hyporder => "Hyporder",
+            TaxonomicRank::Minorder => "Minorder",
+            TaxonomicRank::Superfamily => "Superfamily",
+            TaxonomicRank::Family => "Family",
+            TaxonomicRank::Subfamily => "Subfamily",
+            TaxonomicRank::Supertribe => "Supertribe",
+            TaxonomicRank::Tribe => "Tribe",
+            TaxonomicRank::Subtribe => "Subtribe",
+            TaxonomicRank::Genus => "Genus",
+            TaxonomicRank::Subgenus => "Subgenus",
+            TaxonomicRank::Species => "Species",
+            TaxonomicRank::Subspecies => "Subspecies",
+            TaxonomicRank::Unranked => "Unranked",
+            TaxonomicRank::HigherTaxon => "Higher Taxon",
+            TaxonomicRank::AggregateGenera => "Aggregate Genera",
+            TaxonomicRank::AggregateSpecies => "Aggregate Species",
+            TaxonomicRank::Cohort => "Cohort",
+            TaxonomicRank::Subcohort => "Subcohort",
+            TaxonomicRank::Division => "Division",
+            TaxonomicRank::IncertaeSedis => "Incertae Sedis",
+            TaxonomicRank::Infraclass => "Infraclass",
+            TaxonomicRank::Infraorder => "Infraorder",
+            TaxonomicRank::Section => "Section",
+            TaxonomicRank::Subdivision => "Subdivision",
+            TaxonomicRank::Regnum => "Regnum",
+            TaxonomicRank::Familia => "Familia",
+            TaxonomicRank::Classis => "Classis",
+            TaxonomicRank::Ordo => "Ordo",
+            TaxonomicRank::Varietas => "Varietas",
+            TaxonomicRank::Forma => "Forma",
+            TaxonomicRank::Subclassis => "Subclassis",
+            TaxonomicRank::Superordo => "Superordo",
+            TaxonomicRank::Sectio => "Sectio",
+            TaxonomicRank::Nothovarietas => "Nothovarietas",
+            TaxonomicRank::Subvarietas => "Subvarietas",
+            TaxonomicRank::Series => "Series",
+            TaxonomicRank::Infraspecies => "Infraspecies",
+            TaxonomicRank::Subfamilia => "Subfamilia",
+            TaxonomicRank::Subordo => "Subordo",
+            TaxonomicRank::Regio => "Regio",
+            TaxonomicRank::SpecialForm => "Special Form",
+        };
+
+        write!(f, "{}", s)
+    }
+}
+
 
 #[derive(Clone, Queryable, Insertable, Associations, Debug, Serialize, Deserialize)]
-#[diesel(belongs_to(FilteredTaxon, foreign_key = parent_id))]
+#[diesel(belongs_to(Taxon, foreign_key = parent_id))]
 #[diesel(table_name = schema_gnl::taxa_dag)]
 pub struct TaxonTreeNode {
     pub taxon_id: Uuid,
@@ -195,44 +257,25 @@ pub struct TaxonName {
     pub name_id: Uuid,
 }
 
-#[derive(Queryable, Debug, Default, Serialize, Deserialize)]
-#[diesel(table_name = schema_gnl::taxa_filter)]
-pub struct FilteredTaxon {
+#[derive(Queryable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema_gnl::species)]
+pub struct Species {
     pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
-    pub parent_taxon_id: Option<Uuid>,
-
-    pub status: TaxonomicStatus,
     pub scientific_name: String,
     pub canonical_name: String,
-
-    pub kingdom: Option<String>,
-    pub phylum: Option<String>,
-    pub class: Option<String>,
-    pub order: Option<String>,
-    pub family: Option<String>,
-    pub tribe: Option<String>,
-    pub genus: Option<String>,
-    pub specific_epithet: Option<String>,
-
-    pub subphylum: Option<String>,
-    pub subclass: Option<String>,
-
-    pub species_authority: Option<String>,
-    pub hierarchy: Option<Vec<String>>,
+    pub authorship: Option<String>,
 
     pub genomes: i64,
-    pub markers: i64,
+    pub loci: i64,
     pub specimens: i64,
     pub other: i64,
+    pub total_genomic: i64,
 
-    pub ecology: Option<Vec<String>>,
-    pub ibra: Option<Vec<String>>,
-    pub imcra: Option<Vec<String>>,
-    pub state: Option<Vec<String>>,
-    pub drainage_basin: Option<Vec<String>>,
-
+    pub taxon_dataset_id: Uuid,
+    pub taxon_status: TaxonomicStatus,
+    pub taxon_rank: TaxonomicRank,
+    pub taxon_id: Uuid,
+    pub classification: serde_json::Value,
     pub traits: Option<Vec<String>>,
 }
 
@@ -305,48 +348,6 @@ pub struct TaxonHistory {
     pub created_at: DateTime<Utc>,
 }
 
-
-#[derive(Queryable, Debug, Default, Serialize, Deserialize)]
-#[diesel(table_name = schema_gnl::species)]
-pub struct Species {
-    pub id: Uuid,
-    pub source: Uuid,
-    pub name_id: Uuid,
-
-    pub status: TaxonomicStatus,
-    pub scientific_name: String,
-    pub canonical_name: Option<String>,
-
-    pub kingdom: Option<String>,
-    pub phylum: Option<String>,
-    pub class: Option<String>,
-    pub order: Option<String>,
-    pub family: Option<String>,
-    pub tribe: Option<String>,
-    pub genus: Option<String>,
-    pub specific_epithet: Option<String>,
-
-    pub subphylum: Option<String>,
-    pub subclass: Option<String>,
-    pub suborder: Option<String>,
-    pub subfamily: Option<String>,
-    pub subtribe: Option<String>,
-    pub subgenus: Option<String>,
-    pub subspecific_epithet: Option<String>,
-
-    pub superclass: Option<String>,
-    pub superorder: Option<String>,
-    pub superfamily: Option<String>,
-    pub supertribe: Option<String>,
-
-    pub order_authority: Option<String>,
-    pub family_authority: Option<String>,
-    pub genus_authority: Option<String>,
-    pub species_authority: Option<String>,
-
-    pub subspecies: Option<Vec<String>>,
-    pub window_rank: i64,
-}
 
 #[derive(Queryable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema_gnl::undescribed_species)]

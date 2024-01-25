@@ -1,4 +1,4 @@
-use arga_core::models::FilteredTaxon;
+use arga_core::models::Species;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
@@ -74,34 +74,24 @@ impl SourceProvider {
         Ok(records)
     }
 
-    pub async fn species(&self, source: &Source, filters: &Vec<Filter>, page: i64, page_size: i64) -> PageResult<FilteredTaxon> {
-        use schema::{datasets, names, name_attributes as attrs};
-        use schema_gnl::taxa_filter;
+    pub async fn species(&self, source: &Source, filters: &Vec<Filter>, page: i64, page_size: i64) -> PageResult<Species> {
+        use schema::{datasets, name_attributes as attrs};
+        use schema_gnl::species;
         let mut conn = self.pool.get().await?;
 
-        let with_source = names::table
-            .inner_join(attrs::table)
+        let records = species::table
+            .inner_join(attrs::table.on(attrs::name_id.eq(species::id)))
             .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
+            .select(species::all_columns)
             .filter(datasets::source_id.eq(source.id))
-            .select(names::id)
-            .group_by(names::id)
-            .into_boxed();
-
-        let mut species = taxa_filter::table
-            .filter(taxa_filter::name_id.eq_any(with_source))
-            .into_boxed();
-
-        if let Some(filters) = with_filters(&filters) {
-            species = species.filter(filters);
-        }
-
-        let species = species
-            .order_by(taxa_filter::scientific_name)
+            // FIXME: make filterable
+            // .with_filters(&filters)
+            .order_by(species::scientific_name)
             .paginate(page)
             .per_page(page_size)
-            .load::<(FilteredTaxon, i64)>(&mut conn)
+            .load::<(Species, i64)>(&mut conn)
             .await?;
 
-        Ok(species.into())
+        Ok(records.into())
     }
 }
