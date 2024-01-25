@@ -1,7 +1,7 @@
-use arga_core::models::{TaxonTreeNode, Taxon};
+use arga_core::models::{TaxonTreeNode, Taxon, ACCEPTED_NAMES, TaxonomicRank};
 use bigdecimal::BigDecimal;
 use diesel::prelude::*;
-use diesel::sql_types::{Text, Array, Nullable};
+use diesel::sql_types::{Text, Array, Nullable, Varchar};
 use diesel_async::RunQueryDsl;
 
 use crate::database::extensions::filters::{with_filters, Filter, filter_taxa};
@@ -47,13 +47,8 @@ pub struct SpeciesSummary {
 
 #[derive(Debug, Queryable)]
 pub struct TaxonSummary {
-    /// Total amount of child taxa
-    pub children: i64,
-    /// Total amount of child taxa that have species with genomes
-    pub children_genomes: i64,
-    /// Total amount of child taxa that have species with any genomic data
-    pub children_data: i64,
-
+    /// The name of the taxon this summary pertains to
+    pub canonical_name: String,
     /// Total amount of descendant species
     pub species: i64,
     /// Total amount of descendant species with genomes
@@ -200,62 +195,58 @@ impl TaxaProvider {
     }
 
 
-    pub async fn taxon_summary(&self, classification: &ClassificationFilter) -> Result<TaxonSummary, Error> {
-        use schema::taxa;
-        use schema_gnl::{taxa_dag as dag, species};
-
+    pub async fn descendant_summary(&self, classification: &ClassificationFilter, rank: TaxonomicRank) -> Result<Vec<TaxonSummary>, Error> {
+        use diesel::dsl::{count_star, sql};
+        use schema_gnl::species;
         let mut conn = self.pool.get().await?;
 
-        let species = taxa::table
-            .filter(with_classification(classification))
-            .into_boxed()
-            .inner_join(dag::table.on(dag::id.eq(taxa::id)))
-            .filter(taxa::status.eq_any(&[
-                TaxonomicStatus::Accepted,
-                TaxonomicStatus::Undescribed,
-                TaxonomicStatus::Hybrid,
-            ]))
-            .count()
-            .get_result::<i64>(&mut conn)
-            .await?;
+        let selector = format!("species.classification->>'{}'", rank.to_string().to_lowercase());
 
-        // get the total amount of child taxa. we don't need the dag for this
-        let child = diesel::alias!(taxa as children);
-        let children = taxa::table
-            .filter(with_classification(classification))
-            .into_boxed()
-            .inner_join(child.on(child.field(taxa::parent_id).eq(taxa::id.nullable())))
-            .count()
-            .get_result::<i64>(&mut conn)
-            .await?;
-
-        // get the total amount of species with genomes and genomic data
-        let (species_genomes, species_data) = species::table
-            .group_by(species::canonical_name)
-            .select((sum_if(species::genomes.gt(0)), sum_if(species::total_genomic.gt(0))))
+        let records = species::table
             .filter(with_species_classification(classification))
-            .get_result::<(i64, i64)>(&mut conn)
-            .await
-            .optional()?
-            .unwrap_or_default();
+            .filter(species::taxon_status.eq_any(ACCEPTED_NAMES))
+            .filter(sql::<Varchar>(&selector).is_not_null())
+            .group_by(sql::<Varchar>(&selector))
+            .select((
+                sql::<Varchar>(&selector),
+                count_star(),
+                sum_if(species::genomes.gt(0)),
+                sum_if(species::total_genomic.gt(0)),
+            ))
+            .load::<TaxonSummary>(&mut conn)
+            .await?;
 
-        // get the total amount of child taxa with genomes and genomic data
-        // FIXME: get stats of species that belong to an ancestor
-        let children_genomes = 0;
-        let children_data = 0;
-        // let (children_genomes, children_data) = species::table
-        //     .group_by(species::canonical_name)
-        //     .select((sum_if(species::genomes.gt(0)), sum_if(species::total_genomic.gt(0))))
-        //     .filter(with_parent_classification(classification))
-        //     .get_result::<(i64, i64)>(&mut conn)
-        //     .await
-        //     .optional()?
-        //     .unwrap_or_default();
+        Ok(records)
+    }
+
+
+    pub async fn taxon_summary(&self, classification: &ClassificationFilter) -> Result<TaxonSummary, Error> {
+        use schema_gnl::species;
+        let mut conn = self.pool.get().await?;
+
+        let species = species::table
+            .filter(with_species_classification(classification))
+            .filter(species::taxon_status.eq_any(ACCEPTED_NAMES))
+            .count()
+            .get_result::<i64>(&mut conn)
+            .await?;
+
+        let species_genomes = species::table
+            .filter(with_species_classification(classification))
+            .filter(species::genomes.gt(0))
+            .count()
+            .get_result::<i64>(&mut conn)
+            .await?;
+
+        let species_data = species::table
+            .filter(with_species_classification(classification))
+            .filter(species::total_genomic.gt(0))
+            .count()
+            .get_result::<i64>(&mut conn)
+            .await?;
 
         Ok(TaxonSummary {
-            children,
-            children_genomes,
-            children_data,
+            canonical_name: "".to_string(),
             species,
             species_genomes,
             species_data,

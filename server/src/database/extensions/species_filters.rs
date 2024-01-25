@@ -1,8 +1,8 @@
-use diesel::pg::Pg;
+use diesel::{pg::Pg, sql_types::Nullable};
 use diesel::prelude::*;
 
 use arga_core::schema_gnl::species;
-use diesel::sql_types::Bool;
+use diesel::sql_types::{Bool, Varchar};
 
 use super::classification_filters::{Classification, decompose_classification};
 
@@ -55,20 +55,23 @@ pub fn with_filters(filters: &Vec<Filter>) -> Option<BoxedExpression> {
 
 /// Filter the classifications table that belong to the provided classification
 pub fn with_classification(classification: &Classification) -> BoxedExpression {
-    use species::taxon_rank as rank;
-    use species::canonical_name as name;
+    use diesel::dsl::sql;
 
+    // we do string interpolation here since we don't have a jsonb infix operator yet
+    // but its safe from injection as it is converting an enum to a string which has
+    // hardcoded values. in other words, its not user input
     let (taxon_rank, value) = decompose_classification(classification);
-    Box::new(rank.eq(taxon_rank).and(name.eq(value)))
+    let filter = format!("classification->>'{}'", taxon_rank.to_string().to_lowercase());
+    Box::new(sql::<Varchar>(&filter).eq(value))
 }
 
 /// Filter the classifications table that do not belong to the provided classification
 pub fn without_classification(classification: &Classification) -> BoxedExpression {
-    use species::taxon_rank as rank;
-    use species::canonical_name as name;
+    use diesel::dsl::sql;
 
     let (taxon_rank, value) = decompose_classification(classification);
-    Box::new(rank.eq(taxon_rank).and(name.ne(value)))
+    let filter = format!("classification->>'{}'", taxon_rank.to_string().to_lowercase());
+    Box::new(sql::<Varchar>(&filter).ne(value))
 }
 
 // Filter the classifications table that belong to the provided classification

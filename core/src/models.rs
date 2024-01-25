@@ -7,6 +7,16 @@ use uuid::Uuid;
 use super::{schema, schema_gnl};
 
 
+pub const ACCEPTED_NAMES: [TaxonomicStatus; 6] = [
+    TaxonomicStatus::Accepted,
+    TaxonomicStatus::Undescribed,
+    TaxonomicStatus::SpeciesInquirenda,
+    TaxonomicStatus::ManuscriptName,
+    TaxonomicStatus::Hybrid,
+    TaxonomicStatus::Informal,
+];
+
+
 #[derive(Queryable, Insertable, Debug, Clone, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::sources)]
 pub struct Source {

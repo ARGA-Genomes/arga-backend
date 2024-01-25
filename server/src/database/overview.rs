@@ -1,4 +1,4 @@
-use arga_core::models::TaxonomicStatus;
+use arga_core::models::{TaxonomicStatus, ACCEPTED_NAMES};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::Deserialize;
@@ -9,16 +9,6 @@ use crate::database::{schema, schema_gnl};
 use crate::http::Error;
 
 use super::PgPool;
-
-
-const ACCEPTED_NAMES: [TaxonomicStatus; 6] = [
-    TaxonomicStatus::Accepted,
-    TaxonomicStatus::Undescribed,
-    TaxonomicStatus::SpeciesInquirenda,
-    TaxonomicStatus::ManuscriptName,
-    TaxonomicStatus::Hybrid,
-    TaxonomicStatus::Informal,
-];
 
 
 pub struct Overview {

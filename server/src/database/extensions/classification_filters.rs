@@ -14,7 +14,7 @@ pub enum FilterKind {
     Classification(Classification),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Classification {
     Domain(String),
     Superkingdom(String),

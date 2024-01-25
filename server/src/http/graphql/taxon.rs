@@ -109,6 +109,13 @@ impl TaxonQuery {
         Ok(summary.into())
     }
 
+    async fn descendants(&self, ctx: &Context<'_>, rank: TaxonomicRank) -> Result<Vec<TaxonSummary>> {
+        let state = ctx.data::<State>().unwrap();
+        let summaries = state.database.taxa.descendant_summary(&self.classification, rank.into()).await?;
+        let summaries = summaries.into_iter().map(|r| r.into()).collect();
+        Ok(summaries)
+    }
+
     async fn data_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>().unwrap();
         let summaries = state.database.taxa.data_summary(&self.classification).await?;
@@ -153,13 +160,8 @@ impl From<models::TaxonTreeNode> for TaxonNode {
 
 #[derive(SimpleObject)]
 pub struct TaxonSummary {
-    /// Total amount of child taxa
-    pub children: i64,
-    /// Total amount of child taxa that have species with genomes
-    pub children_genomes: i64,
-    /// Total amount of child taxa that have species with any genomic data
-    pub children_data: i64,
-
+    /// The name of the taxon this summary pertains to
+    pub canonical_name: String,
     /// Total amount of descendant species
     pub species: i64,
     /// Total amount of descendant species with genomes
@@ -171,9 +173,7 @@ pub struct TaxonSummary {
 impl From<taxa::TaxonSummary> for TaxonSummary {
     fn from(value: taxa::TaxonSummary) -> Self {
         Self {
-            children: value.children,
-            children_genomes: value.children_genomes,
-            children_data: value.children_data,
+            canonical_name: value.canonical_name,
             species: value.species,
             species_genomes: value.species_genomes,
             species_data: value.species_data,

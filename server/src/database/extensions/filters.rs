@@ -4,7 +4,7 @@ use diesel::prelude::*;
 // use arga_core::schema::{taxa, ecology, names};
 use arga_core::schema_gnl::species as taxa;
 use arga_core::models::{TaxonomicStatus, TaxonomicVernacularGroup, BushfireRecoveryTrait};
-use diesel::sql_types::{Bool, Nullable};
+use diesel::sql_types::{Bool, Nullable, Varchar};
 
 use super::classification_filters::{Classification, decompose_classification};
 
@@ -210,7 +210,7 @@ pub fn with_classification(classification: &Classification) -> BoxedTaxaExpressi
     // hardcoded values. in other words, its not user input
     let (taxon_rank, value) = decompose_classification(classification);
     let filter = format!("classification->>'{}'", taxon_rank.to_string().to_lowercase());
-    Box::new(sql::<Nullable<diesel::sql_types::Varchar>>(&filter).eq(value))
+    Box::new(sql::<Nullable<Varchar>>(&filter).eq(value))
 }
 
 /// Filter the taxa table that belong to the provided classification
@@ -219,7 +219,7 @@ pub fn without_classification(classification: &Classification) -> BoxedTaxaExpre
 
     let (taxon_rank, value) = decompose_classification(classification);
     let filter = format!("classification->>'{}'", taxon_rank.to_string().to_lowercase());
-    Box::new(sql::<Nullable<diesel::sql_types::Varchar>>(&filter).ne(value))
+    Box::new(sql::<Nullable<Varchar>>(&filter).ne(value))
 }
 
 // /// Filter the taxa table with a particular trait attribute
