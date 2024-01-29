@@ -70,13 +70,34 @@ impl From<(IndigenousKnowledge, String)> for IndigenousEcologicalTrait {
 impl Species {
     #[graphql(skip)]
     pub async fn new(db: &Database, canonical_name: String) -> Result<Species, Error> {
-        use schema::names;
+        use schema::{names, taxon_names};
         let mut conn = db.pool.get().await?;
 
-        let names = names::table
+        // get all names that match the canonical name in the request
+        let mut name_ids = names::table
             .filter(names::canonical_name.eq(&canonical_name))
-            .load::<Name>(&mut conn)
+            .select(names::id)
+            .load::<Uuid>(&mut conn)
             .await?;
+
+        // get names that are identified as being the same species
+        // via a taxonomic system
+        let linked_taxa_query = taxon_names::table
+            .select(taxon_names::taxon_id)
+            .filter(taxon_names::name_id.eq_any(&name_ids))
+            .into_boxed();
+
+        let linked_name_ids = taxon_names::table
+            .filter(taxon_names::taxon_id.eq_any(linked_taxa_query))
+            .select(taxon_names::name_id)
+            .load::<Uuid>(&mut conn)
+            .await?;
+
+        name_ids.extend(linked_name_ids);
+
+        let names = names::table
+            .filter(names::id.eq_any(name_ids))
+            .load::<Name>(&mut conn).await?;
 
         if names.len() == 0 {
             return Err(Error::NotFound(canonical_name));
@@ -89,7 +110,6 @@ impl Species {
     async fn taxonomy(&self, ctx: &Context<'_>) -> Result<Vec<Taxonomy>, Error> {
         let state = ctx.data::<State>().unwrap();
         let synonyms = state.database.species.synonyms(&self.name.id).await?;
-        let vernacular_names = state.database.species.vernacular_names(&self.name.id).await?;
 
         let taxa = state.database.species.taxonomy(&self.names).await?;
         let details = taxa.into_iter().map(|t| t.into()).collect();
@@ -97,19 +117,18 @@ impl Species {
         Ok(details)
     }
 
+    async fn vernacular_names(&self, ctx: &Context<'_>) -> Result<Vec<VernacularName>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let name_ids = self.names.iter().map(|n| n.id.clone()).collect();
+        let vernacular_names = state.database.species.vernacular_names(&name_ids).await?;
+        let vernacular_names = vernacular_names.into_iter().map(|n| n.into()).collect();
+        Ok(vernacular_names)
+    }
+
     #[instrument(skip(self, _ctx))]
     async fn regions(&self, _ctx: &Context<'_>) -> Regions {
         Regions { name: self.name.clone() }
     }
-
-    // #[instrument(skip(self, ctx))]
-    // async fn data(&self, ctx: &Context<'_>) -> Result<Vec<GenomicData>, Error> {
-    //     let state = ctx.data::<State>().unwrap();
-    //     let taxonomy = state.database.taxonomy(&self.name).await?;
-    //     let data = state.solr.genomic_data(&taxonomy.canonical_name).await?;
-
-    //     Ok(data)
-    // }
 
     #[instrument(skip(self, ctx))]
     async fn photos(&self, ctx: &Context<'_>) -> Result<Vec<SpeciesPhoto>, Error> {
@@ -467,6 +486,27 @@ impl From<models::NameAttribute> for NameAttribute {
             value_decimal: value.value_decimal.map(|d| d.to_string()),
             value_str: value.value_str,
             value_timestamp: value.value_timestamp,
+        }
+    }
+}
+
+
+/// Common vernacular names for a specific species
+#[derive(Clone, Debug, SimpleObject)]
+pub struct VernacularName {
+    pub dataset_id: Uuid,
+    pub vernacular_name: String,
+    pub citation: Option<String>,
+    pub source_url: Option<String>,
+}
+
+impl From<models::VernacularName> for VernacularName {
+    fn from(value: models::VernacularName) -> Self {
+        Self {
+            dataset_id: value.dataset_id,
+            vernacular_name: value.vernacular_name,
+            citation: value.citation,
+            source_url: value.source_url,
         }
     }
 }

@@ -436,13 +436,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    name_vernacular_names (name_id, vernacular_name_id) {
-        name_id -> Uuid,
-        vernacular_name_id -> Int8,
-    }
-}
-
-diesel::table! {
     names (id) {
         id -> Uuid,
         scientific_name -> Varchar,
@@ -710,9 +703,12 @@ diesel::table! {
 
 diesel::table! {
     vernacular_names (id) {
-        id -> Int8,
+        id -> Uuid,
+        dataset_id -> Uuid,
+        name_id -> Uuid,
         vernacular_name -> Varchar,
-        language -> Nullable<Varchar>,
+        citation -> Nullable<Varchar>,
+        source_url -> Nullable<Varchar>,
     }
 }
 
@@ -744,8 +740,6 @@ diesel::joinable!(indigenous_knowledge -> datasets (dataset_id));
 diesel::joinable!(indigenous_knowledge -> names (name_id));
 diesel::joinable!(name_attributes -> datasets (dataset_id));
 diesel::joinable!(name_attributes -> names (name_id));
-diesel::joinable!(name_vernacular_names -> names (name_id));
-diesel::joinable!(name_vernacular_names -> vernacular_names (vernacular_name_id));
 diesel::joinable!(organisms -> names (name_id));
 diesel::joinable!(regions -> datasets (dataset_id));
 diesel::joinable!(regions -> names (name_id));
@@ -767,6 +761,8 @@ diesel::joinable!(taxon_names -> names (name_id));
 diesel::joinable!(taxon_names -> taxa (taxon_id));
 diesel::joinable!(taxon_photos -> taxa (taxon_id));
 diesel::joinable!(trace_files -> names (name_id));
+diesel::joinable!(vernacular_names -> datasets (dataset_id));
+diesel::joinable!(vernacular_names -> names (name_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     accession_events,
@@ -791,7 +787,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     jobs,
     name_attributes,
     name_lists,
-    name_vernacular_names,
     names,
     organisms,
     regions,

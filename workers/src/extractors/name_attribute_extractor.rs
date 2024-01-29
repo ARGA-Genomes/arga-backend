@@ -37,7 +37,7 @@ pub enum AttributeValue {
 struct Record {
     scientific_name: Option<String>,
     canonical_name: Option<String>,
-    global_id: Option<String>,
+    dataset_id: Option<String>,
     attributes: HashMap<String, AttributeValue>,
 }
 
@@ -52,7 +52,7 @@ impl From<Record> for NameRecord {
 
 impl From<Record> for DatasetRecord {
     fn from(value: Record) -> Self {
-        Self { global_id: value.global_id.unwrap_or_default() }
+        Self { global_id: value.dataset_id.unwrap_or_default() }
     }
 }
 
@@ -83,7 +83,7 @@ fn decompose_row(headers: &StringRecord, row: StringRecord) -> Result<Record, Er
     let mut record = Record {
         scientific_name: None,
         canonical_name: None,
-        global_id: None,
+        dataset_id: None,
         attributes: HashMap::new(),
     };
 
@@ -91,7 +91,7 @@ fn decompose_row(headers: &StringRecord, row: StringRecord) -> Result<Record, Er
         match header {
             "scientific_name" => { record.scientific_name = Some(field.to_string()); },
             "canonical_name" => { record.canonical_name = Some(field.to_string()); },
-            "global_id" => { record.global_id = Some(field.to_string()); },
+            "dataset_id" => { record.dataset_id = Some(field.to_string()); },
             header => {
                 if !field.trim().is_empty() {
                     record.attributes.insert(header.to_string(), infer_type(field));
@@ -130,9 +130,9 @@ fn extract_attributes(datasets: &DatasetMap, records: MatchedRecords) -> Result<
     info!(total=records.len(), "Extracting name attributes");
 
     let attrs: Result<Vec<Vec<NameAttribute>>, Error> = records.into_par_iter().map(|(name, row)| {
-        let global_id = row.global_id.clone().unwrap_or_default();
+        let dataset_id = row.dataset_id.clone().unwrap_or_default();
 
-        let attributes = match datasets.get(&global_id) {
+        let attributes = match datasets.get(&dataset_id) {
             None => vec![],
             Some(dataset) => into_name_attribute(&dataset.id, &name, row)?,
         };

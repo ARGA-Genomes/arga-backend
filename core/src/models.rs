@@ -1089,3 +1089,15 @@ pub struct AdminMedia {
     pub license: Option<String>,
     pub rights_holder: Option<String>,
 }
+
+
+#[derive(Debug, Insertable, Queryable, Deserialize)]
+#[diesel(table_name = schema::vernacular_names)]
+pub struct VernacularName {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub name_id: Uuid,
+    pub vernacular_name: String,
+    pub citation: Option<String>,
+    pub source_url: Option<String>,
+}

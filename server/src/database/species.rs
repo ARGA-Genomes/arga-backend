@@ -7,7 +7,7 @@ use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
 use crate::database::extensions::whole_genome_filters;
-use crate::index::species::{self, GetRegions, GetMedia, GetConservationStatus, GetTraceFiles};
+use crate::index::species::{self, GetRegions, GetConservationStatus, GetTraceFiles};
 
 use super::models::{
     Taxon,
@@ -22,7 +22,8 @@ use super::models::{
     WholeGenome,
     Marker,
     Regions,
-    GenomicComponent
+    GenomicComponent,
+    VernacularName,
 };
 use super::extensions::{sum_if, Paginate};
 use super::{schema, schema_gnl, Database, Error, PgPool, PageResult};
@@ -46,11 +47,6 @@ pub struct MarkerSummary {
     pub barcodes: i64,
 }
 
-#[derive(Debug, Queryable)]
-pub struct VernacularName {
-    pub name: String,
-    pub language: Option<String>,
-}
 
 #[derive(Debug, Queryable)]
 pub struct SpecimenSummary {
@@ -92,14 +88,12 @@ impl SpeciesProvider {
         Ok(taxa)
     }
 
-    pub async fn vernacular_names(&self, name_id: &Uuid) -> Result<Vec<VernacularName>, Error> {
-        use schema::{vernacular_names, name_vernacular_names};
+    pub async fn vernacular_names(&self, name_ids: &Vec<Uuid>) -> Result<Vec<VernacularName>, Error> {
+        use schema::vernacular_names::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let names = name_vernacular_names::table
-            .inner_join(vernacular_names::table)
-            .select((vernacular_names::vernacular_name, vernacular_names::language))
-            .filter(name_vernacular_names::name_id.eq(name_id))
+        let names = vernacular_names
+            .filter(name_id.eq_any(name_ids))
             .load::<VernacularName>(&mut conn)
             .await?;
 

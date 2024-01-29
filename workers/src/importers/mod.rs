@@ -3,7 +3,7 @@ pub mod dataset_importer;
 pub mod name_importer;
 // pub mod taxon_importer;
 // pub mod synonym_importer;
-// pub mod vernacular_importer;
+pub mod vernacular_importer;
 pub mod region_importer;
 pub mod ecology_importer;
 pub mod conservation_status_importer;

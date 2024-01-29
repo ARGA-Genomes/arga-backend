@@ -2,23 +2,6 @@ use async_graphql::{SimpleObject, Enum};
 use serde::{Serialize, Deserialize};
 
 use crate::database::models;
-use crate::database::species;
-
-
-#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
-pub struct VernacularName {
-    name: String,
-    language: Option<String>,
-}
-
-impl From<species::VernacularName> for VernacularName {
-    fn from(value: species::VernacularName) -> Self {
-        Self {
-            name: value.name,
-            language: value.language,
-        }
-    }
-}
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject, Default)]
@@ -71,7 +54,6 @@ pub struct Taxonomy {
 
     /// Renamed taxonomy for the same species
     pub synonyms: Vec<Taxonomy>,
-    pub vernacular_names: Vec<VernacularName>,
 }
 
 impl From<models::Taxon> for Taxonomy {
@@ -84,7 +66,6 @@ impl From<models::Taxon> for Taxonomy {
             authorship: value.authorship,
             status: value.status.into(),
             synonyms: vec![],
-            vernacular_names: vec![],
             rank: value.rank.into(),
             nomenclatural_code: value.nomenclatural_code,
             citation: value.citation,
@@ -103,7 +84,6 @@ impl From<models::Species> for Taxonomy {
             authorship: value.authorship,
             status: value.status.into(),
             synonyms: vec![],
-            vernacular_names: vec![],
             rank: value.rank.into(),
             nomenclatural_code: "".to_string(),
             citation: None,
