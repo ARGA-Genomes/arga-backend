@@ -17,20 +17,15 @@ use crate::index::species::{
     GetConservationStatus,
     GetTraceFiles,
     TraceFile,
-    GenomicData,
-    Photo,
-    GetSpecies,
-    GetGenomicData,
-    GetMedia,
 };
 use crate::database::{schema, Database};
 use crate::database::models::Name as ArgaName;
 use crate::database::models::Name;
 use crate::database::species;
-use super::common::taxonomy::TaxonDetails;
 use super::common::{
     Page,
     Taxonomy,
+    SpeciesPhoto,
     WholeGenomeFilterItem,
     convert_whole_genome_filters,
 };
@@ -80,13 +75,12 @@ impl Species {
 
         let names = names::table
             .filter(names::canonical_name.eq(&canonical_name))
-            .load::<ArgaName>(&mut conn)
-            .await;
+            .load::<Name>(&mut conn)
+            .await?;
 
-        if let Err(diesel::result::Error::NotFound) = names {
+        if names.len() == 0 {
             return Err(Error::NotFound(canonical_name));
         }
-        let names = names?;
 
         Ok(Species { canonical_name, name: names[0].clone(), names })
     }
@@ -101,17 +95,6 @@ impl Species {
         let details = taxa.into_iter().map(|t| t.into()).collect();
 
         Ok(details)
-
-        // match state.database.species.taxonomy(&self.name.id).await {
-        //     Ok(result) => {
-        //         let mut taxonomy: Taxonomy = result.into();
-        //         taxonomy.synonyms = synonyms.into_iter().map(|s| s.into()).collect();
-        //         taxonomy.vernacular_names = vernacular_names.into_iter().map(|s| s.into()).collect();
-        //         Ok(Some(taxonomy))
-        //     },
-        //     Err(crate::database::Error::NotFound(_)) => Ok(None),
-        //     Err(err) => Err(err.into()),
-        // }
     }
 
     #[instrument(skip(self, _ctx))]
@@ -129,16 +112,17 @@ impl Species {
     // }
 
     #[instrument(skip(self, ctx))]
-    async fn photos(&self, ctx: &Context<'_>) -> Result<Vec<Photo>, Error> {
+    async fn photos(&self, ctx: &Context<'_>) -> Result<Vec<SpeciesPhoto>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let photos = state.database.photos(&self.name).await?;
+        let photos = state.database.species.photos(&self.names).await?;
+        let photos = photos.into_iter().map(|p| p.into()).collect();
         Ok(photos)
     }
 
     #[instrument(skip(self, ctx))]
     async fn specimens(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpecimenSummary>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let page = state.database.species.specimens(&self.name, page, page_size).await?;
+        let page = state.database.species.specimens(&self.names, page, page_size).await?;
         let specimens = page.records.into_iter().map(|r| r.into()).collect();
         Ok(Page {
             records: specimens,
@@ -170,7 +154,7 @@ impl Species {
     {
         let state = ctx.data::<State>().unwrap();
         let filters = convert_whole_genome_filters(filters.unwrap_or_default())?;
-        let page = state.database.species.whole_genomes(&self.name, &filters, page, page_size).await?;
+        let page = state.database.species.whole_genomes(&self.names, &filters, page, page_size).await?;
         let sequences = page.records.into_iter().map(|r| r.into()).collect();
         Ok(Page {
             records: sequences,
@@ -187,7 +171,7 @@ impl Species {
 
     async fn markers(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpeciesMarker>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let page = state.database.species.markers(&self.name, page, page_size).await?;
+        let page = state.database.species.loci(&self.names, page, page_size).await?;
         let markers = page.records.into_iter().map(|m| m.into()).collect();
         Ok(Page {
             records: markers,
@@ -197,7 +181,7 @@ impl Species {
 
     async fn genomic_components(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<GenomicComponent>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let page = state.database.species.genomic_components(&self.name, page, page_size).await?;
+        let page = state.database.species.genomic_components(&self.names, page, page_size).await?;
         let components = page.records.into_iter().map(|m| m.into()).collect();
         Ok(Page {
             records: components,
@@ -207,7 +191,7 @@ impl Species {
 
     async fn reference_genome(&self, ctx: &Context<'_>) -> Result<Option<WholeGenome>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let genome = state.database.species.reference_genome(&self.name).await?;
+        let genome = state.database.species.reference_genome(&self.names).await?;
         let genome = genome.map(|g| g.into());
         Ok(genome)
     }
@@ -222,7 +206,7 @@ impl Species {
 
     async fn attributes(&self, ctx: &Context<'_>) -> Result<Vec<NameAttribute>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let records = state.database.species.attributes(&self.name).await?;
+        let records = state.database.species.attributes(&self.names).await?;
         let attributes = records.into_iter().map(|r| r.into()).collect();
         Ok(attributes)
     }

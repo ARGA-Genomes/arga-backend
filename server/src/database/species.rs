@@ -181,10 +181,12 @@ impl SpeciesProvider {
         Ok(records)
     }
 
-    pub async fn specimens(&self, name: &Name, page: i64, page_size: i64) -> PageResult<SpecimenSummary> {
+    pub async fn specimens(&self, names: &Vec<Name>, page: i64, page_size: i64) -> PageResult<SpecimenSummary> {
         use schema::{specimens, datasets, accession_events};
         use schema_gnl::specimen_stats;
         let mut conn = self.pool.get().await?;
+
+        let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
 
         let records = specimens::table
             .inner_join(datasets::table)
@@ -206,7 +208,7 @@ impl SpeciesProvider {
                 specimen_stats::whole_genomes,
                 specimen_stats::markers,
             ))
-            .filter(specimens::name_id.eq(name.id))
+            .filter(specimens::name_id.eq_any(name_ids))
             .order((
                 specimens::type_status.asc(),
                 specimen_stats::sequences.desc(),
@@ -221,7 +223,7 @@ impl SpeciesProvider {
 
     pub async fn whole_genomes(
         &self,
-        name: &Name,
+        names: &Vec<Name>,
         filters: &Vec<whole_genome_filters::Filter>,
         page: i64,
         page_size: i64
@@ -230,8 +232,10 @@ impl SpeciesProvider {
         use schema_gnl::whole_genomes;
         let mut conn = self.pool.get().await?;
 
+        let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
+
         let mut query = whole_genomes::table
-            .filter(whole_genomes::name_id.eq(name.id))
+            .filter(whole_genomes::name_id.eq_any(name_ids))
             .into_boxed();
 
         if let Some(expr) = whole_genome_filters::with_filters(&filters) {
@@ -248,12 +252,14 @@ impl SpeciesProvider {
         Ok(records.into())
     }
 
-    pub async fn markers(&self, name: &Name, page: i64, page_size: i64) -> PageResult<Marker> {
+    pub async fn loci(&self, names: &Vec<Name>, page: i64, page_size: i64) -> PageResult<Marker> {
         use schema_gnl::markers;
         let mut conn = self.pool.get().await?;
 
+        let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
+
         let records = markers::table
-            .filter(markers::name_id.eq(name.id))
+            .filter(markers::name_id.eq_any(name_ids))
             .order(markers::accession)
             .paginate(page)
             .per_page(page_size)
@@ -263,21 +269,14 @@ impl SpeciesProvider {
         Ok(records.into())
     }
 
-    pub async fn genomic_components(
-        &self,
-        name: &Name,
-        page: i64,
-        page_size: i64
-    ) -> PageResult<GenomicComponent>
-    {
+    pub async fn genomic_components(&self, names: &Vec<Name>, page: i64, page_size: i64) -> PageResult<GenomicComponent> {
         use schema_gnl::genomic_components;
         let mut conn = self.pool.get().await?;
 
-        let mut query = genomic_components::table
-            .filter(genomic_components::name_id.eq(name.id))
-            .into_boxed();
+        let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
 
-        let records = query
+        let records = genomic_components::table
+            .filter(genomic_components::name_id.eq_any(name_ids))
             .order(genomic_components::accession)
             .paginate(page)
             .per_page(page_size)
@@ -287,15 +286,17 @@ impl SpeciesProvider {
         Ok(records.into())
     }
 
-    pub async fn reference_genome(&self, name: &Name) -> Result<Option<WholeGenome>, Error> {
+    pub async fn reference_genome(&self, names: &Vec<Name>) -> Result<Option<WholeGenome>, Error> {
         use schema::datasets;
         use schema_gnl::whole_genomes;
         let mut conn = self.pool.get().await?;
 
+        let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
+
         let record = whole_genomes::table
             .inner_join(datasets::table)
             .select(whole_genomes::all_columns)
-            .filter(whole_genomes::name_id.eq(name.id))
+            .filter(whole_genomes::name_id.eq_any(name_ids))
             .filter(datasets::global_id.eq(NCBI_REFSEQ_DATASET_ID))
             .get_result::<WholeGenome>(&mut conn)
             .await.optional()?;
@@ -303,12 +304,14 @@ impl SpeciesProvider {
         Ok(record)
     }
 
-    pub async fn attributes(&self, name: &Name) -> Result<Vec<NameAttribute>, Error> {
+    pub async fn attributes(&self, names: &Vec<Name>) -> Result<Vec<NameAttribute>, Error> {
         use schema::name_attributes;
         let mut conn = self.pool.get().await?;
 
+        let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
+
         let records = name_attributes::table
-            .filter(name_attributes::name_id.eq(name.id))
+            .filter(name_attributes::name_id.eq_any(name_ids))
             .load::<NameAttribute>(&mut conn)
             .await?;
 
@@ -339,6 +342,22 @@ impl SpeciesProvider {
             .await?;
 
         Ok(regions)
+    }
+
+    pub async fn photos(&self, names: &Vec<Name>) -> Result<Vec<TaxonPhoto>, Error> {
+        use schema::{taxon_photos, taxon_names};
+        let mut conn = self.pool.get().await?;
+
+        let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
+
+        let photos = taxon_photos::table
+            .inner_join(taxon_names::table.on(taxon_names::taxon_id.eq(taxon_photos::taxon_id)))
+            .select(taxon_photos::all_columns)
+            .filter(taxon_names::name_id.eq_any(name_ids))
+            .load::<TaxonPhoto>(&mut conn)
+            .await?;
+
+        Ok(photos)
     }
 }
 
@@ -419,35 +438,6 @@ impl GetRegions for Database {
         filtered.sort();
         filtered.dedup();
         Ok(filtered)
-    }
-}
-
-
-#[async_trait]
-impl GetMedia for Database {
-    type Error = Error;
-
-    async fn photos(&self, name: &Name) -> Result<Vec<species::Photo>, Error> {
-        use schema::taxon_photos::dsl::*;
-        let mut conn = self.pool.get().await?;
-
-        let records = taxon_photos
-            .filter(name_id.eq(name.id))
-            .load::<TaxonPhoto>(&mut conn)
-            .await?;
-
-        let mut photos = Vec::with_capacity(records.len());
-        for record in records {
-            photos.push(species::Photo {
-                url: record.url,
-                publisher: record.publisher,
-                license: record.license,
-                rights_holder: record.rights_holder,
-                reference_url: record.source,
-            });
-        }
-
-        Ok(photos)
     }
 }
 

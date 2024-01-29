@@ -116,13 +116,6 @@ impl TaxonQuery {
         Ok(summaries)
     }
 
-    async fn data_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
-        let state = ctx.data::<State>().unwrap();
-        let summaries = state.database.taxa.data_summary(&self.classification).await?;
-        let summaries = summaries.into_iter().map(|r| r.into()).collect();
-        Ok(summaries)
-    }
-
     async fn species_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>().unwrap();
         let summaries = state.database.taxa.species_summary(&self.classification).await?;

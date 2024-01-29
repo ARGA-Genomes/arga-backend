@@ -44,7 +44,7 @@ pub enum Filter {
 pub fn filter_taxa(filters: &Vec<Filter>) -> taxa::BoxedQuery<Pg> {
     taxa::table
         .select(taxa::all_columns)
-        .filter(taxa::taxon_status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+        .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
         .filter(with_filters(&filters).unwrap())
         .into_boxed()
 }

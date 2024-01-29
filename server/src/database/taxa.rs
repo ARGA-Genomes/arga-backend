@@ -81,7 +81,7 @@ impl TaxaProvider {
         let mut conn = self.pool.get().await?;
 
         let records = species
-            .filter(taxon_status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
             .filter(with_filters(&filters).unwrap())
             .order_by(scientific_name)
             .paginate(page)
@@ -204,7 +204,7 @@ impl TaxaProvider {
 
         let records = species::table
             .filter(with_species_classification(classification))
-            .filter(species::taxon_status.eq_any(ACCEPTED_NAMES))
+            .filter(species::status.eq_any(ACCEPTED_NAMES))
             .filter(sql::<Varchar>(&selector).is_not_null())
             .group_by(sql::<Varchar>(&selector))
             .select((
@@ -226,7 +226,7 @@ impl TaxaProvider {
 
         let species = species::table
             .filter(with_species_classification(classification))
-            .filter(species::taxon_status.eq_any(ACCEPTED_NAMES))
+            .filter(species::status.eq_any(ACCEPTED_NAMES))
             .count()
             .get_result::<i64>(&mut conn)
             .await?;
@@ -296,31 +296,5 @@ impl TaxaProvider {
             .await?;
 
         Ok(summaries)
-    }
-
-    pub async fn data_summary(&self, filter: &ClassificationFilter) -> Result<Vec<DataSummary>, Error> {
-        use diesel::dsl::sum;
-        use schema::taxa;
-        use schema_gnl::species::dsl::*;
-
-        let mut conn = self.pool.get().await?;
-
-        // FIXME: get child taxa totals
-        Ok(vec![])
-        // let summaries = species
-        //     .group_by(canonical_name)
-        //     .select((
-        //         classification_canonical_name,
-        //         sum(markers),
-        //         sum(genomes),
-        //         sum(specimens),
-        //         sum(other),
-        //         sum(total_genomic),
-        //     ))
-        //     .filter(with_parent_classification(classification))
-        //     .load::<DataSummary>(&mut conn)
-        //     .await?;
-
-        // Ok(summaries)
     }
 }

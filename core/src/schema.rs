@@ -625,13 +625,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    taxon_names (taxon_id, name_id) {
-        taxon_id -> Uuid,
-        name_id -> Uuid,
-    }
-}
-
-diesel::table! {
     taxon_history (id) {
         id -> Uuid,
         old_taxon_id -> Uuid,
@@ -643,14 +636,22 @@ diesel::table! {
 }
 
 diesel::table! {
+    taxon_names (taxon_id, name_id) {
+        taxon_id -> Uuid,
+        name_id -> Uuid,
+    }
+}
+
+diesel::table! {
     taxon_photos (id) {
         id -> Uuid,
-        name_id -> Uuid,
+        taxon_id -> Uuid,
         url -> Varchar,
         source -> Nullable<Varchar>,
         publisher -> Nullable<Varchar>,
         license -> Nullable<Varchar>,
         rights_holder -> Nullable<Varchar>,
+        priority -> Int4,
     }
 }
 
@@ -764,7 +765,7 @@ diesel::joinable!(subsamples -> specimens (specimen_id));
 diesel::joinable!(taxa -> datasets (dataset_id));
 diesel::joinable!(taxon_names -> names (name_id));
 diesel::joinable!(taxon_names -> taxa (taxon_id));
-diesel::joinable!(taxon_photos -> names (name_id));
+diesel::joinable!(taxon_photos -> taxa (taxon_id));
 diesel::joinable!(trace_files -> names (name_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
@@ -802,8 +803,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     subsample_events,
     subsamples,
     taxa,
-    taxon_names,
     taxon_history,
+    taxon_names,
     taxon_photos,
     taxon_remarks,
     trace_files,

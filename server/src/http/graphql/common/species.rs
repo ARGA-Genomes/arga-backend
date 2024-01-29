@@ -28,6 +28,7 @@ pub struct SpeciesPhoto {
     publisher: Option<String>,
     license: Option<String>,
     rights_holder: Option<String>,
+    priority: i32,
 }
 
 impl From<TaxonPhoto> for SpeciesPhoto {
@@ -38,6 +39,7 @@ impl From<TaxonPhoto> for SpeciesPhoto {
             publisher: value.publisher,
             license: value.license,
             rights_holder: value.rights_holder,
+            priority: value.priority,
         }
     }
 }

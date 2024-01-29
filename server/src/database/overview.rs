@@ -1,4 +1,4 @@
-use arga_core::models::{TaxonomicStatus, ACCEPTED_NAMES};
+use arga_core::models::ACCEPTED_NAMES;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::Deserialize;
@@ -41,7 +41,7 @@ impl OverviewProvider {
         let mut conn = self.pool.get().await?;
 
         let total: i64 = species
-            .filter(taxon_status.eq_any(ACCEPTED_NAMES))
+            .filter(status.eq_any(ACCEPTED_NAMES))
             .filter(with_classification(&Classification::Kingdom("Animalia".to_string())))
             .count()
             .get_result(&mut conn)
@@ -57,7 +57,7 @@ impl OverviewProvider {
         let mut conn = self.pool.get().await?;
 
         let total: i64 = species
-            .filter(taxon_status.eq_any(ACCEPTED_NAMES))
+            .filter(status.eq_any(ACCEPTED_NAMES))
             .filter(with_classification(&Classification::Kingdom("Plantae".to_string())))
             .count()
             .get_result(&mut conn)
@@ -73,7 +73,7 @@ impl OverviewProvider {
         let mut conn = self.pool.get().await?;
 
         let total: i64 = species
-            .filter(taxon_status.eq_any(ACCEPTED_NAMES))
+            .filter(status.eq_any(ACCEPTED_NAMES))
             .filter(with_classification(&Classification::Kingdom("Fungi".to_string())))
             .count()
             .get_result(&mut conn)
@@ -89,7 +89,7 @@ impl OverviewProvider {
         let mut conn = self.pool.get().await?;
 
         let total: i64 = species
-            .filter(taxon_status.eq_any(ACCEPTED_NAMES))
+            .filter(status.eq_any(ACCEPTED_NAMES))
             .filter(with_classification(&Classification::Kingdom("Bacteria".to_string())))
             .count()
             .get_result(&mut conn)
@@ -105,7 +105,7 @@ impl OverviewProvider {
         let mut conn = self.pool.get().await?;
 
         let total: i64 = species
-            .filter(taxon_status.eq_any(ACCEPTED_NAMES))
+            .filter(status.eq_any(ACCEPTED_NAMES))
             .filter(with_classification(&Classification::Superkingdom("Protista".to_string())))
             .count()
             .get_result(&mut conn)

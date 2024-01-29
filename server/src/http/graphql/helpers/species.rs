@@ -23,15 +23,15 @@ impl SpeciesHelper {
     }
 
     pub async fn taxonomy(&self, name_ids: &Vec<Uuid>) -> Result<Vec<Taxon>, Error> {
-        use schema::taxa::dsl::*;
+        use schema::{taxa, taxon_names};
         let mut conn = self.database.pool.get().await?;
 
-        // FIXME: lookup name ids from taxon_names
-        let records = vec![];
-        // let records = taxa
-        //     .filter(name_id.eq_any(name_ids))
-        //     .load::<Taxon>(&mut conn)
-        //     .await?;
+        let records = taxa::table
+            .inner_join(taxon_names::table)
+            .select(taxa::all_columns)
+            .filter(taxon_names::name_id.eq_any(name_ids))
+            .load::<Taxon>(&mut conn)
+            .await?;
 
         Ok(records)
     }
@@ -44,15 +44,12 @@ impl SpeciesHelper {
         use schema::taxon_photos;
         let mut conn = self.database.pool.get().await?;
 
-        // FIXME: lookup name ids from taxon_names
-        let name_ids: Vec<Uuid> = vec![];
-        // let name_ids: Vec<Uuid> = taxa.iter().map(|taxon| taxon.name_id).collect();
+        let taxon_ids: Vec<Uuid> = taxa.iter().map(|s| s.id).collect();
 
         let mut cards: HashMap<Uuid, SpeciesCard> = HashMap::new();
 
         // create the card with the taxa and some defaults
         for taxon in taxa {
-            // FIXME: link photos and cards up via name id, or find an alternative
             cards.insert(taxon.id, SpeciesCard {
                 taxonomy: taxon.into(),
                 ..Default::default()
@@ -61,12 +58,12 @@ impl SpeciesHelper {
 
         // assign the photo associated with the name
         let photos = taxon_photos::table
-            .filter(taxon_photos::name_id.eq_any(&name_ids))
+            .filter(taxon_photos::taxon_id.eq_any(&taxon_ids))
             .load::<TaxonPhoto>(&mut conn)
             .await?;
 
         for photo in photos.into_iter() {
-            cards.entry(photo.name_id).and_modify(|card| card.photo = Some(photo.into()));
+            cards.entry(photo.taxon_id).and_modify(|card| card.photo = Some(photo.into()));
         }
 
         // sort by name and output the combined species data
@@ -79,36 +76,38 @@ impl SpeciesHelper {
     ///
     /// This will enrich the provided names with additional data such as
     /// taxonomy, species photos, and data summaries.
-    pub async fn filtered_cards(&self, taxa: Vec<Species>) -> Result<Vec<SpeciesCard>, Error> {
+    pub async fn filtered_cards(&self, species: Vec<Species>) -> Result<Vec<SpeciesCard>, Error> {
         use schema::taxon_photos;
         let mut conn = self.database.pool.get().await?;
 
-        let name_ids: Vec<Uuid> = taxa.iter().map(|taxon| taxon.id).collect();
+        // the species view is an enriched names table so we just get the taxon id
+        // of the species to look up data associated with the taxonomy
+        let taxon_ids: Vec<Uuid> = species.iter().map(|s| s.id).collect();
 
         let mut cards: HashMap<Uuid, SpeciesCard> = HashMap::new();
 
         // create the card with the taxa and some defaults
-        for taxon in taxa {
-            cards.insert(taxon.id, SpeciesCard {
+        for record in species {
+            cards.insert(record.id, SpeciesCard {
                 data_summary: SpeciesDataSummary {
-                    genomes: taxon.genomes,
-                    loci: taxon.loci,
-                    specimens: taxon.specimens,
-                    other: taxon.other,
+                    genomes: record.genomes,
+                    loci: record.loci,
+                    specimens: record.specimens,
+                    other: record.other,
                 },
-                taxonomy: taxon.into(),
+                taxonomy: record.into(),
                 ..Default::default()
             });
         }
 
         // assign the photo associated with the name
         let photos = taxon_photos::table
-            .filter(taxon_photos::name_id.eq_any(&name_ids))
+            .filter(taxon_photos::taxon_id.eq_any(&taxon_ids))
             .load::<TaxonPhoto>(&mut conn)
             .await?;
 
         for photo in photos.into_iter() {
-            cards.entry(photo.name_id).and_modify(|card| card.photo = Some(photo.into()));
+            cards.entry(photo.taxon_id).and_modify(|card| card.photo = Some(photo.into()));
         }
 
         // reorder the cards since the hashmap effectively randomises them

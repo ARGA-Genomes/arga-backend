@@ -10,7 +10,6 @@ use axum::routing::{get, post};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::Deserialize;
-use tracing::debug;
 use uuid::Uuid;
 
 use futures::{Stream, TryStreamExt};
@@ -21,7 +20,7 @@ use crate::database::extensions::Paginate;
 use crate::http::Context;
 use crate::http::error::{InternalError, Error};
 use crate::database::{schema, Database};
-use crate::database::models::{Name, TaxonPhoto, AdminMedia};
+use crate::database::models::{Taxon, TaxonPhoto, AdminMedia};
 
 use super::common::{PageResult, parse_int_param};
 
@@ -61,11 +60,11 @@ async fn main_media(
 
     let name = params.get("scientific_name").expect("must provide a scientific name parameter");
 
-    use schema::{names, taxon_photos};
+    use schema::{taxa, taxon_photos};
     let photo = taxon_photos::table
         .select(taxon_photos::all_columns)
-        .inner_join(names::table)
-        .filter(names::scientific_name.eq(name))
+        .inner_join(taxa::table)
+        .filter(taxa::scientific_name.eq(name))
         .get_result::<TaxonPhoto>(&mut conn)
         .await?;
 
@@ -89,39 +88,36 @@ async fn upsert_main_media(
 ) -> Result<(), InternalError>
 {
     // link the main photo as an attribute against the taxa
-    use schema::{names, taxon_photos};
+    use schema::{taxa, taxon_photos};
     let mut conn = db_provider.pool.get().await?;
 
-    debug!(?form, "setting main image");
-
-    let name: Name = names::table
-        .filter(names::scientific_name.eq(form.scientific_name))
+    let taxon: Taxon = taxa::table
+        .filter(taxa::scientific_name.eq(form.scientific_name))
         .get_result(&mut conn)
         .await?;
 
     // delete any previous main images
     diesel::delete(taxon_photos::table)
-        .filter(taxon_photos::name_id.eq(name.id))
+        .filter(taxon_photos::taxon_id.eq(taxon.id))
         .execute(&mut conn)
         .await?;
 
     // add a taxa photo entry linked to the name
     let photo = TaxonPhoto {
         id: Uuid::new_v4(),
-        name_id: name.id,
+        taxon_id: taxon.id,
         url: form.url,
         source: form.source,
         publisher: form.publisher,
         license: form.license,
         rights_holder: form.rights_holder,
+        priority: 0,
     };
 
     diesel::insert_into(taxon_photos::table)
         .values(&photo)
         .execute(&mut conn)
         .await?;
-
-    debug!(?photo, ?name, "main image set");
 
     Ok(())
 }
@@ -143,13 +139,11 @@ async fn upload_main_image(
 ) -> Result<(), InternalError>
 {
     // link the main photo as an attribute against the taxa
-    use schema::{names, taxon_photos};
+    use schema::{taxa, taxon_photos};
     let mut conn = db_provider.pool.get().await?;
 
-    debug!(?form, "setting main image");
-
-    let name: Name = names::table
-        .filter(names::scientific_name.eq(form.scientific_name))
+    let taxon: Taxon = taxa::table
+        .filter(taxa::scientific_name.eq(form.scientific_name))
         .get_result(&mut conn)
         .await?;
 
@@ -162,27 +156,26 @@ async fn upload_main_image(
 
     // delete any previous main images
     diesel::delete(taxon_photos::table)
-        .filter(taxon_photos::name_id.eq(name.id))
+        .filter(taxon_photos::taxon_id.eq(taxon.id))
         .execute(&mut conn)
         .await?;
 
     // add a taxa photo entry linked to the name
     let photo = TaxonPhoto {
         id: Uuid::new_v4(),
-        name_id: name.id,
+        taxon_id: taxon.id,
         url: format!("https://app.arga.org.au/assets/{}.jpg", form.file),
         source: form.source,
         publisher: form.publisher,
         license: form.license,
         rights_holder: form.rights_holder,
+        priority: 0,
     };
 
     diesel::insert_into(taxon_photos::table)
         .values(&photo)
         .execute(&mut conn)
         .await?;
-
-    debug!(?photo, ?name, "main image set");
 
     Ok(())
 }
@@ -194,7 +187,6 @@ async fn accept_image(mut multipart: Multipart) -> Result<String, Error> {
         if let Some(file_name) = field.file_name() {
             let uuid = uuid::Uuid::new_v4();
             let tmp_name = format!("arga_admin_{}", uuid.to_string());
-            debug!(?uuid, file_name, tmp_name, "Receiving file");
             stream_to_file(&tmp_name, field).await.unwrap();
 
             return Ok(uuid.to_string());

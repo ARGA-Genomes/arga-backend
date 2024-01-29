@@ -274,6 +274,10 @@ pub struct Species {
     pub scientific_name: String,
     pub canonical_name: String,
     pub authorship: Option<String>,
+    pub dataset_id: Uuid,
+    pub status: TaxonomicStatus,
+    pub rank: TaxonomicRank,
+    pub classification: serde_json::Value,
 
     pub genomes: i64,
     pub loci: i64,
@@ -281,11 +285,6 @@ pub struct Species {
     pub other: i64,
     pub total_genomic: i64,
 
-    pub taxon_dataset_id: Uuid,
-    pub taxon_status: TaxonomicStatus,
-    pub taxon_rank: TaxonomicRank,
-    pub taxon_id: Uuid,
-    pub classification: serde_json::Value,
     pub traits: Option<Vec<String>>,
 }
 
@@ -445,12 +444,13 @@ pub struct Ecology {
 #[diesel(table_name = schema::taxon_photos)]
 pub struct TaxonPhoto {
     pub id: Uuid,
-    pub name_id: Uuid,
+    pub taxon_id: Uuid,
     pub url: String,
     pub source: Option<String>,
     pub publisher: Option<String>,
     pub license: Option<String>,
     pub rights_holder: Option<String>,
+    pub priority: i32,
 }
 
 

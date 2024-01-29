@@ -193,11 +193,11 @@ diesel::table! {
 diesel::table! {
     name_data_summaries (name_id) {
         name_id -> Uuid,
-        markers -> BigInt,
-        genomes -> BigInt,
-        specimens -> BigInt,
-        other -> BigInt,
-        total_genomic -> BigInt,
+        markers -> Integer,
+        genomes -> Integer,
+        specimens -> Integer,
+        other -> Integer,
+        total_genomic -> Integer,
     }
 }
 
@@ -216,21 +216,20 @@ diesel::table! {
 }
 
 diesel::table! {
-    species (id, taxon_id) {
+    species (id) {
         id -> Uuid,
         scientific_name -> Varchar,
         canonical_name -> Varchar,
         authorship -> Nullable<Varchar>,
+        dataset_id -> Uuid,
+        status -> crate::schema::sql_types::TaxonomicStatus,
+        rank -> crate::schema::sql_types::TaxonomicRank,
+        classification -> Jsonb,
         genomes -> BigInt,
         loci -> BigInt,
         specimens -> BigInt,
         other -> BigInt,
         total_genomic -> BigInt,
-        taxon_dataset_id -> Uuid,
-        taxon_status -> crate::schema::sql_types::TaxonomicStatus,
-        taxon_rank -> crate::schema::sql_types::TaxonomicRank,
-        taxon_id -> Uuid,
-        classification -> Jsonb,
         traits -> Nullable<Array<Varchar>>,
     }
 }
@@ -240,7 +239,7 @@ use super::schema::{datasets, names, taxa, specimens, accession_events, name_att
 
 diesel::joinable!(species -> synonyms (id));
 diesel::joinable!(species -> common_names (id));
-diesel::joinable!(species -> taxa (taxon_id));
+diesel::joinable!(species -> taxa (id));
 diesel::joinable!(taxa -> synonyms (id));
 diesel::joinable!(taxa -> common_names (id));
 diesel::joinable!(whole_genomes -> datasets (dataset_id));
