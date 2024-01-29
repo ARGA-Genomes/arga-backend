@@ -125,6 +125,16 @@ impl Species {
         Ok(vernacular_names)
     }
 
+    async fn synonyms(&self, ctx: &Context<'_>) -> Result<Vec<Synonym>, Error> {
+        let mut synonyms = Vec::new();
+        for name in &self.names {
+            if name.canonical_name != self.canonical_name {
+                synonyms.push(name.clone().into())
+            }
+        }
+        Ok(synonyms)
+    }
+
     #[instrument(skip(self, _ctx))]
     async fn regions(&self, _ctx: &Context<'_>) -> Regions {
         Regions { name: self.name.clone() }
@@ -507,6 +517,24 @@ impl From<models::VernacularName> for VernacularName {
             vernacular_name: value.vernacular_name,
             citation: value.citation,
             source_url: value.source_url,
+        }
+    }
+}
+
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct Synonym {
+    pub scientific_name: String,
+    pub canonical_name: String,
+    pub authorship: Option<String>,
+}
+
+impl From<models::Name> for Synonym {
+    fn from(value: models::Name) -> Self {
+        Self {
+            scientific_name: value.scientific_name,
+            canonical_name: value.canonical_name,
+            authorship: value.authorship,
         }
     }
 }

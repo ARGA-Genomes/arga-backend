@@ -352,8 +352,7 @@ pub struct TaxonHistory {
     pub id: Uuid,
     pub old_taxon_id: Uuid,
     pub new_taxon_id: Uuid,
-    pub changed_by: Option<String>,
-    pub reason: Option<String>,
+    pub dataset_id: Uuid,
     pub created_at: DateTime<Utc>,
 }
 

@@ -622,8 +622,7 @@ diesel::table! {
         id -> Uuid,
         old_taxon_id -> Uuid,
         new_taxon_id -> Uuid,
-        changed_by -> Nullable<Varchar>,
-        reason -> Nullable<Varchar>,
+        dataset_id -> Uuid,
         created_at -> Timestamptz,
     }
 }
@@ -757,6 +756,7 @@ diesel::joinable!(subsamples -> datasets (dataset_id));
 diesel::joinable!(subsamples -> names (name_id));
 diesel::joinable!(subsamples -> specimens (specimen_id));
 diesel::joinable!(taxa -> datasets (dataset_id));
+diesel::joinable!(taxon_history -> datasets (dataset_id));
 diesel::joinable!(taxon_names -> names (name_id));
 diesel::joinable!(taxon_names -> taxa (taxon_id));
 diesel::joinable!(taxon_photos -> taxa (taxon_id));

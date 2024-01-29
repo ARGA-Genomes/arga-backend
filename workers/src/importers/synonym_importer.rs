@@ -8,9 +8,9 @@ use tracing::info;
 use arga_core::schema;
 use arga_core::models::{TaxonomicStatus, TaxonHistory, Dataset};
 use crate::error::Error;
-use crate::extractors::{name_extractor, taxon_extractor, taxon_history_extractor};
+use crate::extractors::{name_extractor, taxon_history_extractor};
 
-use super::taxon_importer::{import_taxa, import_names};
+// use super::taxon_importer::{import_taxa, import_names};
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -19,18 +19,18 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 pub fn import(path: PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<(), Error> {
     // synonyms are a superset of a taxonomy and taxon history, so we import the synonym
     // name and taxonomy before building the history
-    let names = name_extractor::extract(&path)?;
-    import_names(&names, pool)?;
+    // let names = name_extractor::extract(&path)?;
+    // import_names(&names, pool)?;
 
     // after extracting the taxa we make sure that all of them have a taxonomic status
     // of synonym since we are explicitly importing synonyms here
-    let mut taxa = taxon_extractor::extract(&path, &dataset, pool)?;
-    for taxon in taxa.iter_mut() {
-        taxon.status = TaxonomicStatus::Synonym;
-    }
-    import_taxa(&taxa, pool)?;
+    // let mut taxa = taxon_extractor::extract(&path, &dataset, pool)?;
+    // for taxon in taxa.iter_mut() {
+    //     taxon.status = TaxonomicStatus::Synonym;
+    // }
+    // import_taxa(&taxa, pool)?;
 
-    let history = taxon_history_extractor::extract(&path, pool)?;
+    let history = taxon_history_extractor::extract(&path, dataset, pool)?;
     import_taxa_history(&history, pool)?;
 
     Ok(())
