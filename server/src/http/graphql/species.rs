@@ -109,11 +109,8 @@ impl Species {
     #[instrument(skip(self, ctx))]
     async fn taxonomy(&self, ctx: &Context<'_>) -> Result<Vec<Taxonomy>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let synonyms = state.database.species.synonyms(&self.name.id).await?;
-
         let taxa = state.database.species.taxonomy(&self.names).await?;
         let details = taxa.into_iter().map(|t| t.into()).collect();
-
         Ok(details)
     }
 

@@ -1,4 +1,4 @@
-use arga_core::models::{TaxonTreeNode, Taxon, ACCEPTED_NAMES, TaxonomicRank};
+use arga_core::models::{TaxonTreeNode, Taxon, ACCEPTED_NAMES, TaxonomicRank, SPECIES_RANKS};
 use bigdecimal::BigDecimal;
 use diesel::prelude::*;
 use diesel::sql_types::{Text, Array, Nullable, Varchar};
@@ -201,15 +201,18 @@ impl TaxaProvider {
         use schema_gnl::species;
         let mut conn = self.pool.get().await?;
 
-        let selector = format!("species.classification->>'{}'", rank.to_string().to_lowercase());
+        let rank = rank.to_string().to_lowercase();
+        let selector = format!("species.classification->>'{rank}'");
+        let rank_group = sql::<Varchar>(&selector);
 
         let records = species::table
-            .filter(with_species_classification(classification))
             .filter(species::status.eq_any(ACCEPTED_NAMES))
-            .filter(sql::<Varchar>(&selector).is_not_null())
-            .group_by(sql::<Varchar>(&selector))
+            .filter(species::rank.eq_any(SPECIES_RANKS))
+            .filter(species::classification.retrieve_as_text(rank).is_not_null())
+            .filter(with_species_classification(classification))
+            .group_by(&rank_group)
             .select((
-                sql::<Varchar>(&selector),
+                &rank_group,
                 count_star(),
                 sum_if(species::genomes.gt(0)),
                 sum_if(species::total_genomic.gt(0)),
@@ -226,8 +229,9 @@ impl TaxaProvider {
         let mut conn = self.pool.get().await?;
 
         let species = species::table
-            .filter(with_species_classification(classification))
             .filter(species::status.eq_any(ACCEPTED_NAMES))
+            .filter(species::rank.eq_any(SPECIES_RANKS))
+            .filter(with_species_classification(classification))
             .count()
             .get_result::<i64>(&mut conn)
             .await?;

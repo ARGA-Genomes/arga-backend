@@ -19,8 +19,8 @@ use super::whole_genomes::{AssemblyLevel, GenomeRepresentation, ReleaseType};
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
 pub enum FilterType {
-    // VernacularGroup,
-    // HasData,
+    VernacularGroup,
+    HasData,
     // Ecology,
     // Ibra,
     // Imcra,
@@ -90,13 +90,13 @@ impl TryFrom<FilterItem> for Filter {
 
     fn try_from(source: FilterItem) -> Result<Self, Self::Error> {
         let kind = match source.filter {
-            // FilterType::VernacularGroup => FilterKind::VernacularGroup(
-            //     from_value::<TaxonomicVernacularGroup>(Value::String(source.value))?.into()
-            // ),
+            FilterType::VernacularGroup => FilterKind::VernacularGroup(
+                from_value::<TaxonomicVernacularGroup>(Value::String(source.value))?.into()
+            ),
 
-            // FilterType::HasData => FilterKind::HasData(
-            //     from_value::<DataType>(Value::String(source.value))?.into()
-            // ),
+            FilterType::HasData => FilterKind::HasData(
+                from_value::<DataType>(Value::String(source.value))?.into()
+            ),
 
             // FilterType::Ecology => FilterKind::Ecology(source.value),
             // FilterType::Ibra => FilterKind::Ibra(source.value),

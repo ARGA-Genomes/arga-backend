@@ -16,6 +16,13 @@ pub const ACCEPTED_NAMES: [TaxonomicStatus; 6] = [
     TaxonomicStatus::Informal,
 ];
 
+pub const SPECIES_RANKS: [TaxonomicRank; 4] = [
+    TaxonomicRank::Species,
+    TaxonomicRank::Subspecies,
+    TaxonomicRank::AggregateSpecies,
+    TaxonomicRank::Infraspecies,
+];
+
 
 #[derive(Queryable, Insertable, Debug, Clone, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::sources)]

@@ -1,4 +1,4 @@
-use arga_core::models::ACCEPTED_NAMES;
+use arga_core::models::{ACCEPTED_NAMES, SPECIES_RANKS};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::Deserialize;
@@ -32,7 +32,15 @@ impl OverviewProvider {
     pub async fn all_species(&self) -> Result<Overview, Error> {
         use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
-        let total: i64 = species.count().get_result(&mut conn).await?;
+
+        let total: i64 = species
+            .filter(status.eq_any(ACCEPTED_NAMES))
+            .filter(rank.eq_any(SPECIES_RANKS))
+            .filter(with_classification(&Classification::Domain("Eukaryota".to_string())))
+            .count()
+            .get_result(&mut conn)
+            .await?;
+
         Ok(Overview { total })
     }
 
@@ -42,6 +50,7 @@ impl OverviewProvider {
 
         let total: i64 = species
             .filter(status.eq_any(ACCEPTED_NAMES))
+            .filter(rank.eq_any(SPECIES_RANKS))
             .filter(with_classification(&Classification::Kingdom("Animalia".to_string())))
             .count()
             .get_result(&mut conn)
@@ -58,7 +67,8 @@ impl OverviewProvider {
 
         let total: i64 = species
             .filter(status.eq_any(ACCEPTED_NAMES))
-            .filter(with_classification(&Classification::Kingdom("Plantae".to_string())))
+            .filter(rank.eq_any(SPECIES_RANKS))
+            .filter(with_classification(&Classification::Regnum("Plantae".to_string())))
             .count()
             .get_result(&mut conn)
             .await?;
@@ -74,7 +84,8 @@ impl OverviewProvider {
 
         let total: i64 = species
             .filter(status.eq_any(ACCEPTED_NAMES))
-            .filter(with_classification(&Classification::Kingdom("Fungi".to_string())))
+            .filter(rank.eq_any(SPECIES_RANKS))
+            .filter(with_classification(&Classification::Regnum("Fungi".to_string())))
             .count()
             .get_result(&mut conn)
             .await?;
@@ -90,6 +101,7 @@ impl OverviewProvider {
 
         let total: i64 = species
             .filter(status.eq_any(ACCEPTED_NAMES))
+            .filter(rank.eq_any(SPECIES_RANKS))
             .filter(with_classification(&Classification::Kingdom("Bacteria".to_string())))
             .count()
             .get_result(&mut conn)
@@ -106,6 +118,7 @@ impl OverviewProvider {
 
         let total: i64 = species
             .filter(status.eq_any(ACCEPTED_NAMES))
+            .filter(rank.eq_any(SPECIES_RANKS))
             .filter(with_classification(&Classification::Superkingdom("Protista".to_string())))
             .count()
             .get_result(&mut conn)
