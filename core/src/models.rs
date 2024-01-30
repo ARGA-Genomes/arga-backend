@@ -453,37 +453,6 @@ pub struct TaxonPhoto {
 }
 
 
-#[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
-#[ExistingTypePath = "schema::sql_types::NameListType"]
-pub enum NameListType {
-    Regions,
-    ConservationStatus,
-    Specimen,
-    Marker,
-}
-
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::name_lists)]
-pub struct NameList {
-    pub id: Uuid,
-    pub list_type: NameListType,
-    pub name: String,
-    pub description: Option<String>,
-}
-
-
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::conservation_statuses)]
-pub struct ConservationStatus {
-    pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
-    pub status: String,
-    pub state: Option<String>,
-    pub source: Option<String>,
-}
-
-
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::indigenous_knowledge)]
 pub struct IndigenousKnowledge {
@@ -584,22 +553,6 @@ pub struct Organism {
     pub associated_organisms: Option<String>,
     pub previous_identifications: Option<String>,
     pub remarks: Option<String>,
-}
-
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::events)]
-pub struct Event {
-    pub id: Uuid,
-    pub field_number: Option<String>,
-    pub event_date: Option<chrono::NaiveDate>,
-    pub event_time: Option<chrono::NaiveTime>,
-    pub habitat: Option<String>,
-    pub sampling_protocol: Option<String>,
-    pub sampling_size_value: Option<String>,
-    pub sampling_size_unit: Option<String>,
-    pub sampling_effort: Option<String>,
-    pub field_notes: Option<String>,
-    pub event_remarks: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]

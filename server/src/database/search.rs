@@ -83,7 +83,6 @@ impl SpeciesSearchByCanonicalName for Database {
                 canonical_name: Some(name),
                 total_records: 0,
                 total_genomic_records: None,
-                data_summary: Default::default()
             });
         }
 
@@ -116,7 +115,6 @@ impl SpeciesSearchExcludingCanonicalName for Database {
                 canonical_name: Some(name),
                 total_records: 0,
                 total_genomic_records: None,
-                data_summary: Default::default(),
             });
         }
 

@@ -7,7 +7,7 @@ pub mod name_extractor;
 pub mod vernacular_extractor;
 pub mod region_extractor;
 pub mod ecology_extractor;
-pub mod conservation_status_extractor;
+// pub mod conservation_status_extractor;
 pub mod indigenous_knowledge_extractor;
 pub mod collection_extractor;
 pub mod accession_extractor;

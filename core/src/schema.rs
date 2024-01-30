@@ -18,10 +18,6 @@ pub mod sql_types {
     pub struct JobStatus;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "name_list_type"))]
-    pub struct NameListType;
-
-    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "region_type"))]
     pub struct RegionType;
 
@@ -215,17 +211,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    conservation_statuses (id) {
-        id -> Uuid,
-        dataset_id -> Uuid,
-        name_id -> Uuid,
-        status -> Varchar,
-        state -> Nullable<Varchar>,
-        source -> Nullable<Varchar>,
-    }
-}
-
-diesel::table! {
     datasets (id) {
         id -> Uuid,
         source_id -> Uuid,
@@ -305,22 +290,6 @@ diesel::table! {
         dataset_id -> Uuid,
         name_id -> Uuid,
         values -> Array<Nullable<Text>>,
-    }
-}
-
-diesel::table! {
-    events (id) {
-        id -> Uuid,
-        field_number -> Nullable<Varchar>,
-        event_date -> Nullable<Date>,
-        event_time -> Nullable<Time>,
-        habitat -> Nullable<Varchar>,
-        sampling_protocol -> Nullable<Varchar>,
-        sampling_size_value -> Nullable<Varchar>,
-        sampling_size_unit -> Nullable<Varchar>,
-        sampling_effort -> Nullable<Varchar>,
-        field_notes -> Nullable<Text>,
-        event_remarks -> Nullable<Text>,
     }
 }
 
@@ -420,18 +389,6 @@ diesel::table! {
         value_decimal -> Nullable<Numeric>,
         value_str -> Nullable<Varchar>,
         value_timestamp -> Nullable<Timestamp>,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::NameListType;
-
-    name_lists (id) {
-        id -> Uuid,
-        list_type -> NameListType,
-        name -> Varchar,
-        description -> Nullable<Text>,
     }
 }
 
@@ -648,15 +605,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    taxon_remarks (id) {
-        id -> Uuid,
-        taxon_id -> Uuid,
-        remark -> Varchar,
-        created_at -> Timestamptz,
-    }
-}
-
-diesel::table! {
     trace_files (id) {
         id -> Uuid,
         name_id -> Uuid,
@@ -723,8 +671,6 @@ diesel::joinable!(assembly_stats -> assemblies (assembly_id));
 diesel::joinable!(biosamples -> names (name_id));
 diesel::joinable!(collection_events -> datasets (dataset_id));
 diesel::joinable!(collection_events -> specimens (specimen_id));
-diesel::joinable!(conservation_statuses -> datasets (dataset_id));
-diesel::joinable!(conservation_statuses -> names (name_id));
 diesel::joinable!(datasets -> sources (source_id));
 diesel::joinable!(deposition_events -> datasets (dataset_id));
 diesel::joinable!(deposition_events -> sequences (sequence_id));
@@ -773,20 +719,17 @@ diesel::allow_tables_to_appear_in_same_query!(
     assembly_stats,
     biosamples,
     collection_events,
-    conservation_statuses,
     datasets,
     deposition_events,
     dna_extraction_events,
     dna_extracts,
     ecology,
-    events,
     ibra,
     imcra_mesoscale,
     imcra_provincial,
     indigenous_knowledge,
     jobs,
     name_attributes,
-    name_lists,
     names,
     organisms,
     regions,
@@ -801,7 +744,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     taxon_history,
     taxon_names,
     taxon_photos,
-    taxon_remarks,
     trace_files,
     users,
     vernacular_names,

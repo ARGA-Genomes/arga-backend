@@ -2,9 +2,7 @@ use axum::async_trait;
 use async_graphql::{SimpleObject, Union, Enum};
 use serde::{Serialize, Deserialize};
 
-use crate::{index::lists::ListDataSummary, http::graphql::search::WithRecordType};
-
-use super::lists::Pagination;
+use crate::http::graphql::search::WithRecordType;
 
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
@@ -124,7 +122,6 @@ pub struct SpeciesSearchItem {
     pub canonical_name: Option<String>,
     pub total_records: usize,
     pub total_genomic_records: Option<usize>,
-    pub data_summary: ListDataSummary,
 }
 
 #[derive(Debug, Deserialize, SimpleObject)]
@@ -136,7 +133,7 @@ pub struct SpeciesSearchResult {
 #[async_trait]
 pub trait SpeciesSearch {
     type Error;
-    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>, results_type: Option<WithRecordType>, pagination: Option<Pagination>) -> Result<SpeciesSearchResult, Self::Error>;
+    async fn search_species(&self, query: Option<String>, filters: &Vec<SearchFilterItem>, results_type: Option<WithRecordType>) -> Result<SpeciesSearchResult, Self::Error>;
 }
 
 #[async_trait]

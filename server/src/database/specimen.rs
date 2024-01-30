@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::database::models::{Specimen, Organism, Event, CollectionEvent, SequencingEvent, SequencingRunEvent};
+use crate::database::models::{Specimen, Organism, CollectionEvent, SequencingEvent, SequencingRunEvent};
 use crate::index::specimen::{self, GetSpecimen};
 use super::{schema, Database, Error};
 
@@ -61,24 +61,6 @@ impl From<Organism> for specimen::Organism {
     }
 }
 
-
-impl From<Event> for specimen::Event {
-    fn from(value: Event) -> Self {
-        Self {
-            id: value.id.to_string(),
-            field_number: value.field_number,
-            event_date: value.event_date.map(|d| d.to_string()),
-            habitat: value.habitat,
-            sampling_protocol: value.sampling_protocol,
-            sampling_size_value: value.sampling_size_value,
-            sampling_size_unit: value.sampling_size_unit,
-            sampling_effort: value.sampling_effort,
-            field_notes: value.field_notes,
-            event_remarks: value.event_remarks,
-            events: Vec::new(),
-        }
-    }
-}
 
 impl From<CollectionEvent> for specimen::CollectionEvent {
     fn from(value: CollectionEvent) -> Self {
