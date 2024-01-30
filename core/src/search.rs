@@ -64,6 +64,12 @@ pub struct SpeciesItem {
     pub order: Option<String>,
     pub family: Option<String>,
     pub genus: Option<String>,
+
+    pub regnum: Option<String>,
+    pub division: Option<String>,
+    pub classis: Option<String>,
+    pub ordo: Option<String>,
+    pub familia: Option<String>,
 }
 
 #[derive(Debug)]
@@ -133,6 +139,11 @@ struct TaxonFields {
     order: Field,
     family: Field,
     genus: Field,
+    regnum: Field,
+    division: Field,
+    classis: Field,
+    ordo: Field,
+    familia: Field,
 }
 
 #[derive(Debug, Clone)]
@@ -229,6 +240,11 @@ impl SearchIndex {
             order: get_field(&schema, "order")?,
             family: get_field(&schema, "family")?,
             genus: get_field(&schema, "genus")?,
+            regnum: get_field(&schema, "regnum")?,
+            division: get_field(&schema, "division")?,
+            classis: get_field(&schema, "classis")?,
+            ordo: get_field(&schema, "ordo")?,
+            familia: get_field(&schema, "familia")?,
         };
         let genome = GenomeFields {
             accession: get_field(&schema, "accession")?,
@@ -303,6 +319,12 @@ impl SearchIndex {
         schema_builder.add_text_field("order", STRING | STORED);
         schema_builder.add_text_field("family", STRING | STORED);
         schema_builder.add_text_field("genus", STRING | STORED);
+
+        schema_builder.add_text_field("regnum", STRING | STORED);
+        schema_builder.add_text_field("division", STRING | STORED);
+        schema_builder.add_text_field("classis", STRING | STORED);
+        schema_builder.add_text_field("ordo", STRING | STORED);
+        schema_builder.add_text_field("familia", STRING | STORED);
     }
 
     pub fn genome_schema(schema_builder: &mut SchemaBuilder) {
@@ -393,6 +415,11 @@ impl SearchIndex {
             self.taxon.order,
             self.taxon.family,
             self.taxon.genus,
+            self.taxon.regnum,
+            self.taxon.division,
+            self.taxon.classis,
+            self.taxon.ordo,
+            self.taxon.familia,
         ]);
 
         let query = format!(
@@ -440,6 +467,11 @@ impl SearchIndex {
                         order: get_text(&doc, self.taxon.order),
                         family: get_text(&doc, self.taxon.family),
                         genus: get_text(&doc, self.taxon.genus),
+                        regnum: get_text(&doc, self.taxon.regnum),
+                        division: get_text(&doc, self.taxon.division),
+                        classis: get_text(&doc, self.taxon.classis),
+                        ordo: get_text(&doc, self.taxon.ordo),
+                        familia: get_text(&doc, self.taxon.familia),
                     }),
                     DataType::Genome => SearchItem::Genome(GenomeItem {
                         name_id,

@@ -19,7 +19,7 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 #[derive(Debug, Queryable, Serialize, Deserialize)]
 pub struct LocusDoc {
     pub name_id: Uuid,
-    pub status: TaxonomicStatus,
+    // pub status: TaxonomicStatus,
     pub canonical_name: String,
 
     pub accession: String,
@@ -35,17 +35,19 @@ pub fn get_loci(pool: &PgPool) -> Result<Vec<LocusDoc>, Error> {
 
     let docs = markers::table
         .inner_join(names::table)
-        .inner_join(taxa::table.on(names::id.eq(taxa::name_id)))
+        // .inner_join(taxa::table.on(names::id.eq(taxa::name_id)))
         .select((
-            taxa::name_id,
-            taxa::status,
-            taxa::canonical_name,
+            names::id,
+            names::canonical_name,
+            // taxa::name_id,
+            // taxa::status,
+            // taxa::canonical_name,
             markers::record_id,
             markers::dataset_name,
             markers::target_gene,
             markers::release_date,
         ))
-        .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
+        // .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
         .load::<LocusDoc>(&mut conn)?;
 
     Ok(docs)

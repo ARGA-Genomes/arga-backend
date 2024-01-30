@@ -87,12 +87,18 @@ fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
     let family = get_field(schema, "family")?;
     let genus = get_field(schema, "genus")?;
 
+    let regnum = get_field(schema, "regnum")?;
+    let division = get_field(schema, "division")?;
+    let classis = get_field(schema, "classis")?;
+    let ordo = get_field(schema, "ordo")?;
+    let familia = get_field(schema, "familia")?;
+
     info!("Loading species from database");
     let mut species = taxon::get_species(&pool)?;
 
-    info!("Loading undescribed species from database");
-    let undescribed = taxon::get_undescribed_species(&pool)?;
-    species.extend(undescribed);
+    // info!("Loading undescribed species from database");
+    // let undescribed = taxon::get_undescribed_species(&pool)?;
+    // species.extend(undescribed);
     info!(total=species.len(), "Loaded");
 
     for chunk in species.chunks(1_000_000) {
@@ -104,21 +110,21 @@ fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
                 status => serde_json::to_string(&species.status)?,
             );
 
-            if let Some(names) = &species.subspecies {
-                for name in names {
-                    doc.add_text(subspecies, name);
-                }
-            }
-            if let Some(names) = &species.synonyms {
-                for name in names {
-                    doc.add_text(synonyms, name);
-                }
-            }
-            if let Some(names) = &species.vernacular_names {
-                for name in names {
-                    doc.add_text(common_names, name);
-                }
-            }
+            // if let Some(names) = &species.subspecies {
+            //     for name in names {
+            //         doc.add_text(subspecies, name);
+            //     }
+            // }
+            // if let Some(names) = &species.synonyms {
+            //     for name in names {
+            //         doc.add_text(synonyms, name);
+            //     }
+            // }
+            // if let Some(names) = &species.vernacular_names {
+            //     for name in names {
+            //         doc.add_text(common_names, name);
+            //     }
+            // }
 
             if let Some(value) = &species.kingdom { doc.add_text(kingdom, value); }
             if let Some(value) = &species.phylum { doc.add_text(phylum, value); }
@@ -126,6 +132,12 @@ fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
             if let Some(value) = &species.order { doc.add_text(order, value); }
             if let Some(value) = &species.family { doc.add_text(family, value); }
             if let Some(value) = &species.genus { doc.add_text(genus, value); }
+
+            if let Some(value) = &species.regnum { doc.add_text(regnum, value); }
+            if let Some(value) = &species.division { doc.add_text(division, value); }
+            if let Some(value) = &species.classis { doc.add_text(classis, value); }
+            if let Some(value) = &species.ordo { doc.add_text(ordo, value); }
+            if let Some(value) = &species.familia { doc.add_text(familia, value); }
 
             index_writer.add_document(doc)?;
         }
@@ -163,7 +175,7 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
                 canonical_name => genome.canonical_name.clone(),
                 data_type => DataType::Genome.to_string(),
                 name_id => genome.name_id.to_string(),
-                status => serde_json::to_string(&genome.status)?,
+                // status => serde_json::to_string(&genome.status)?,
                 data_source => genome.data_source.clone(),
             );
 
@@ -215,7 +227,7 @@ fn index_loci(schema: &Schema, index: &Index) -> Result<(), Error> {
                 canonical_name => locus.canonical_name.clone(),
                 data_type => DataType::Locus.to_string(),
                 name_id => locus.name_id.to_string(),
-                status => serde_json::to_string(&locus.status)?,
+                // status => serde_json::to_string(&locus.status)?,
                 accession => locus.accession.clone(),
                 data_source => locus.data_source.clone(),
                 locus_type => locus.locus_type.clone(),
@@ -261,7 +273,7 @@ fn index_specimens(schema: &Schema, index: &Index) -> Result<(), Error> {
                 canonical_name => specimen.canonical_name.clone(),
                 data_type => DataType::Specimen.to_string(),
                 name_id => specimen.name_id.to_string(),
-                status => serde_json::to_string(&specimen.status)?,
+                // status => serde_json::to_string(&specimen.status)?,
                 accession => specimen.accession.clone(),
                 data_source => specimen.data_source.clone(),
             );

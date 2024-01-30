@@ -18,7 +18,7 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 #[derive(Debug, Queryable, Serialize, Deserialize)]
 pub struct SpecimenDoc {
     pub name_id: Uuid,
-    pub status: TaxonomicStatus,
+    // pub status: TaxonomicStatus,
     pub canonical_name: String,
 
     pub accession: String,
@@ -38,11 +38,13 @@ pub fn get_specimens(pool: &PgPool) -> Result<Vec<SpecimenDoc>, Error> {
         .inner_join(datasets::table)
         .inner_join(collection_events::table)
         .inner_join(names::table)
-        .inner_join(taxa::table.on(taxa::name_id.eq(names::id)))
+        // .inner_join(taxa::table.on(taxa::name_id.eq(names::id)))
         .select((
-            taxa::name_id,
-            taxa::status,
-            taxa::canonical_name,
+            names::id,
+            names::canonical_name,
+            // taxa::name_id,
+            // taxa::status,
+            // taxa::canonical_name,
             specimens::record_id,
             datasets::name,
             specimens::institution_code,
@@ -51,7 +53,7 @@ pub fn get_specimens(pool: &PgPool) -> Result<Vec<SpecimenDoc>, Error> {
             specimens::identified_by,
             collection_events::event_date,
         ))
-        .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
+        // .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
         .load::<SpecimenDoc>(&mut conn)?;
 
     Ok(docs)

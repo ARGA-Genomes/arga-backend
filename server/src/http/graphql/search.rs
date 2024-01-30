@@ -71,6 +71,11 @@ impl Search {
                             order: item.order,
                             family: item.family,
                             genus: item.genus,
+                            regnum: item.regnum,
+                            division: item.division,
+                            classis: item.classis,
+                            ordo: item.ordo,
+                            familia: item.familia,
                         },
                     });
                 },
@@ -179,6 +184,12 @@ pub struct Classification {
     pub order: Option<String>,
     pub family: Option<String>,
     pub genus: Option<String>,
+
+    pub regnum: Option<String>,
+    pub division: Option<String>,
+    pub classis: Option<String>,
+    pub ordo: Option<String>,
+    pub familia: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, SimpleObject)]

@@ -2,7 +2,7 @@ use clap::Parser;
 
 pub mod admin;
 pub mod dataset;
-// pub mod search;
+pub mod search;
 pub mod data;
 pub mod reports;
 
@@ -18,8 +18,8 @@ struct Cli {
 #[derive(clap::Subcommand)]
 enum Commands {
     /// Run and manage the search index
-    // #[command(subcommand)]
-    // Search(search::Command),
+    #[command(subcommand)]
+    Search(search::Command),
 
     /// Create a new admin user
     CreateAdmin {
@@ -61,7 +61,7 @@ fn main() {
 
     match &cli.command {
         Commands::CreateAdmin { name, email, password } => admin::create_admin(name, email, password),
-        // Commands::Search(command) => search::process_command(command),
+        Commands::Search(command) => search::process_command(command),
         Commands::Data(command) => data::process_command(command),
         Commands::Reports(command) => reports::process_command(command),
         Commands::Dataset { worker, dataset, isolation_context, path } => dataset::import(worker, dataset, isolation_context, path),

@@ -18,7 +18,7 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 #[derive(Debug, Queryable, Serialize, Deserialize)]
 pub struct GenomeDoc {
     pub name_id: Uuid,
-    pub status: TaxonomicStatus,
+    // pub status: TaxonomicStatus,
     pub canonical_name: String,
 
     pub data_source: String,
@@ -36,11 +36,13 @@ pub fn get_genomes(pool: &PgPool) -> Result<Vec<GenomeDoc>, Error> {
 
     let docs = whole_genomes::table
         .inner_join(names::table.on(whole_genomes::name_id.eq(names::id)))
-        .inner_join(taxa::table.on(names::id.eq(taxa::name_id)))
+        // .inner_join(taxa::table.on(names::id.eq(taxa::name_id)))
         .select((
-            taxa::name_id,
-            taxa::status,
-            taxa::canonical_name,
+            names::id,
+            names::canonical_name,
+            // taxa::name_id,
+            // taxa::status,
+            // taxa::canonical_name,
             whole_genomes::dataset_name,
             whole_genomes::accession,
             whole_genomes::representation,
@@ -48,7 +50,7 @@ pub fn get_genomes(pool: &PgPool) -> Result<Vec<GenomeDoc>, Error> {
             whole_genomes::assembly_type,
             whole_genomes::release_date,
         ))
-        .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
+        // .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
         .load::<GenomeDoc>(&mut conn)?;
 
     Ok(docs)
