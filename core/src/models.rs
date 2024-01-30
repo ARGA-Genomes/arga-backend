@@ -295,63 +295,135 @@ pub struct Species {
     pub traits: Option<Vec<String>>,
 }
 
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct ClassificationJson {
+    pub domain: Option<String>,
+    pub superkingdom: Option<String>,
+    pub kingdom: Option<String>,
+    pub subkingdom: Option<String>,
+    pub phylum: Option<String>,
+    pub subphylum: Option<String>,
+    pub superclass: Option<String>,
+    pub class: Option<String>,
+    pub subclass: Option<String>,
+    pub superorder: Option<String>,
+    pub order: Option<String>,
+    pub suborder: Option<String>,
+    pub hyporder: Option<String>,
+    pub superfamily: Option<String>,
+    pub family: Option<String>,
+    pub subfamily: Option<String>,
+    pub supertribe: Option<String>,
+    pub tribe: Option<String>,
+    pub subtribe: Option<String>,
+    pub genus: Option<String>,
+    pub subgenus: Option<String>,
+    pub species: Option<String>,
+    pub subspecies: Option<String>,
+    pub unranked: Option<String>,
+    pub higher_taxon: Option<String>,
+    pub aggregate_genera: Option<String>,
+    pub aggregate_species: Option<String>,
+    pub cohort: Option<String>,
+    pub subcohort: Option<String>,
+    pub division: Option<String>,
+    pub incertae_sedis: Option<String>,
+    pub infraclass: Option<String>,
+    pub infraorder: Option<String>,
+    pub section: Option<String>,
+    pub subdivision: Option<String>,
+    pub regnum: Option<String>,
+    pub familia: Option<String>,
+    pub classis: Option<String>,
+    pub ordo: Option<String>,
+    pub varietas: Option<String>,
+    pub forma: Option<String>,
+    pub subclassis: Option<String>,
+    pub superordo: Option<String>,
+    pub sectio: Option<String>,
+    pub nothovarietas: Option<String>,
+    pub subvarietas: Option<String>,
+    pub series: Option<String>,
+    pub infraspecies: Option<String>,
+    pub subfamilia: Option<String>,
+    pub subordo: Option<String>,
+    pub regio: Option<String>,
+    pub special_form: Option<String>,
+}
 
-// impl Taxon {
-//     pub fn kingdom_str(&self) -> Option<&str> { self.kingdom.as_ref().map(String::as_str) }
-//     pub fn phylum_str(&self) -> Option<&str> { self.phylum.as_ref().map(String::as_str) }
-//     pub fn class_str(&self) -> Option<&str> { self.class.as_ref().map(String::as_str) }
-//     pub fn order_str(&self) -> Option<&str> { self.order.as_ref().map(String::as_str) }
-//     pub fn family_str(&self) -> Option<&str> { self.family.as_ref().map(String::as_str) }
-//     pub fn tribe_str(&self) -> Option<&str> { self.tribe.as_ref().map(String::as_str) }
-//     pub fn genus_str(&self) -> Option<&str> { self.genus.as_ref().map(String::as_str) }
 
-//     pub fn subphylum_str(&self) -> Option<&str> { self.subphylum.as_ref().map(String::as_str) }
-//     pub fn subclass_str(&self) -> Option<&str> { self.subclass.as_ref().map(String::as_str) }
+impl Species {
+    pub fn vernacular_group(&self) -> Option<TaxonomicVernacularGroup> {
+        use TaxonomicVernacularGroup as Group;
 
-//     pub fn vernacular_group(&self) -> Option<TaxonomicVernacularGroup> {
-//         use TaxonomicVernacularGroup as Group;
+        let classification = serde_json::from_value::<ClassificationJson>(self.classification.clone()).unwrap_or_default();
 
-//         Some(match self.kingdom_str() {
-//             Some("Archaea") => Group::Bacteria,
-//             Some("Bacteria") => match self.phylum_str() {
-//                 Some("Cyanobacteria") => Group::Cyanobacteria,
-//                 _ => Group::Bacteria,
-//             },
-//             Some("Protozoa") => Group::ProtistsAndOtherUnicellularOrganisms,
-//             Some("Fungi") => Group::Fungi,
-//             Some("Animalia") => match self.phylum_str() {
-//                 Some("Echinodermata") => Group::Echinoderms,
-//                 Some("Cnidaria") => Group::CoralsAndJellyfishes,
-//                 Some("Mollusca") => Group::Molluscs,
-//                 Some("Arthropoda") => match (self.subphylum_str(), self.class_str()) {
-//                     (Some("Crustacea"), None) => Group::Crustaceans,
-//                     (None, Some("Insecta")) => Group::Insects,
-//                     _ => Group::Animals,
-//                 }
-//                 Some("Chordata") => match self.class_str() {
-//                     Some("Amphibia") => Group::FrogsAndOtherAmphibians,
-//                     Some("Aves") => Group::Birds,
-//                     Some("Mammalia") => Group::Mammals,
-//                     Some("Actinopterygii") => Group::FinFishes,
-//                     Some("Chondrichthyes") => match self.subclass_str() {
-//                         Some("Elasmobranchii") => Group::SharksAndRays,
-//                         _ => Group::Animals,
-//                     },
-//                     _ => Group::Animals,
-//                 }
-//                 _ => Group::Animals,
-//             }
-//             Some("Chromista") => Group::Seaweeds,
-//             Some("Plantae") => match self.phylum_str() {
-//                 Some("Phaeophyceae") => Group::BrownAlgae,
-//                 Some("Rhodophyta") => Group::RedAlgae,
-//                 Some("Chlorophyta") => Group::GreenAlgae,
-//                 _ => Group::HigherPlants,
-//             }
-//             _ => return None,
-//         })
-//     }
-// }
+        let kingdom = classification.kingdom.as_ref().map(String::as_str);
+        let superkingdom = classification.superkingdom.as_ref().map(String::as_str);
+        let phylum = classification.phylum.as_ref().map(String::as_str);
+        let subphylum = classification.subphylum.as_ref().map(String::as_str);
+        let class = classification.class.as_ref().map(String::as_str);
+        let subclass = classification.subclass.as_ref().map(String::as_str);
+
+        let regnum = classification.regnum.as_ref().map(String::as_str);
+        let division = classification.division.as_ref().map(String::as_str);
+        let classis = classification.classis.as_ref().map(String::as_str);
+
+        // animals
+        Some(match kingdom {
+            Some("Archaea") => Group::Bacteria,
+            Some("Bacteria") => match phylum {
+                Some("Cyanobacteria") => Group::Cyanobacteria,
+                _ => Group::Bacteria,
+            },
+            Some("Animalia") => match phylum {
+                Some("Echinodermata") => Group::Echinoderms,
+                Some("Cnidaria") => Group::CoralsAndJellyfishes,
+                Some("Mollusca") => Group::Molluscs,
+                Some("Arthropoda") => match (subphylum, class) {
+                    (Some("Crustacea"), None) => Group::Crustaceans,
+                    (None, Some("Insecta")) => Group::Insects,
+                    _ => Group::Animals,
+                }
+                Some("Chordata") => match class {
+                    Some("Amphibia") => Group::FrogsAndOtherAmphibians,
+                    Some("Aves") => Group::Birds,
+                    Some("Mammalia") => Group::Mammals,
+                    Some("Actinopterygii") => Group::FinFishes,
+                    Some("Chondrichthyes") => match subclass {
+                        Some("Elasmobranchii") => Group::SharksAndRays,
+                        _ => Group::Animals,
+                    },
+                    _ => Group::Animals,
+                }
+                _ => Group::Animals,
+            }
+
+            // plants
+            None => match regnum {
+                Some("Plantae") => match division {
+                    Some("Phaeophyceae") => Group::BrownAlgae,
+                    Some("Rhodophyta") => Group::RedAlgae,
+                    Some("Chlorophyta") => Group::GreenAlgae,
+                    _ => match classis {
+                        Some("Phaeophyceae") => Group::BrownAlgae,
+                        _ => Group::HigherPlants,
+                    }
+                },
+                Some("Chromista") => Group::Seaweeds,
+                Some("Fungi") => Group::Fungi,
+
+                // protists
+                None => match superkingdom {
+                    Some("Protista") => Group::ProtistsAndOtherUnicellularOrganisms,
+                    _ => return None,
+                }
+                _ => return None,
+            }
+            _ => return None,
+        })
+    }
+}
 
 #[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::taxon_history)]

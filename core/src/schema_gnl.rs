@@ -120,7 +120,7 @@ diesel::table! {
 }
 
 
-use super::schema::{datasets, names, taxa, specimens, accession_events, name_attributes};
+use super::schema::{datasets, names, taxa, specimens, accession_events, name_attributes, taxon_names};
 
 diesel::joinable!(species -> taxa (id));
 diesel::joinable!(whole_genomes -> datasets (dataset_id));
@@ -130,6 +130,7 @@ diesel::joinable!(markers -> names (name_id));
 diesel::joinable!(markers -> taxa (name_id));
 diesel::joinable!(specimen_stats -> specimens (id));
 diesel::joinable!(name_data_summaries -> names (name_id));
+diesel::joinable!(taxon_names -> species (taxon_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     names,
@@ -161,11 +162,8 @@ diesel::allow_tables_to_appear_in_same_query!(
 );
 
 diesel::allow_tables_to_appear_in_same_query!(
-    taxa,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    taxa,
+    species,
+    taxon_names,
 );
 
 diesel::allow_tables_to_appear_in_same_query!(

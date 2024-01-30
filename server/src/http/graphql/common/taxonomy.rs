@@ -78,7 +78,7 @@ impl From<models::Taxon> for Taxonomy {
 impl From<models::Species> for Taxonomy {
     fn from(value: models::Species) -> Self {
         Self {
-            vernacular_group: None,
+            vernacular_group: value.vernacular_group().map(|v| v.into()),
             scientific_name: value.scientific_name,
             canonical_name: value.canonical_name,
             authorship: value.authorship,

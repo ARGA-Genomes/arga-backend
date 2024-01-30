@@ -1,3 +1,4 @@
+use arga_core::models::Species;
 use async_trait::async_trait;
 
 use diesel::prelude::*;
@@ -74,13 +75,13 @@ pub struct SpeciesProvider {
 
 impl SpeciesProvider {
     /// Get taxonomic information for a specific species.
-    pub async fn taxonomy(&self, names: &Vec<Name>) -> Result<Vec<Taxon>, Error> {
-        use schema::taxa;
+    pub async fn taxonomy(&self, names: &Vec<Name>) -> Result<Vec<Species>, Error> {
+        use schema_gnl::species;
         let mut conn = self.pool.get().await?;
 
         let taxa = TaxonName::belonging_to(names)
-            .inner_join(taxa::table)
-            .select(Taxon::as_select())
+            .inner_join(species::table)
+            .select(species::all_columns)
             .load(&mut conn)
             .await?;
 
