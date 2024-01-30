@@ -10,7 +10,6 @@ use crate::error::Error;
 
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
 struct Record {
     name: String,
     author: String,

@@ -225,7 +225,7 @@ pub struct TaxonTreeNode {
     pub taxon_scientific_name: String,
     pub taxon_canonical_name: String,
     pub id: Uuid,
-    pub parent_id: Uuid,
+    pub parent_id: Option<Uuid>,
 
     pub rank: TaxonomicRank,
     pub scientific_name: String,

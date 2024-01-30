@@ -188,6 +188,7 @@ impl TaxaProvider {
             .into_boxed()
             .inner_join(dag::table.on(dag::taxon_id.eq(taxa::id)))
             .select(dag::all_columns)
+            .filter(dag::id.ne(taxa::id))
             .load::<TaxonTreeNode>(&mut conn)
             .await?;
 
