@@ -236,6 +236,40 @@ impl Species {
         let attributes = records.into_iter().map(|r| r.into()).collect();
         Ok(attributes)
     }
+
+    async fn data_summary(&self, ctx: &Context<'_>) -> Result<SpeciesGenomicDataSummary, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let name_ids: Vec<Uuid> = self.names.iter().map(|name| name.id.clone()).collect();
+        let summary = state.database.species.data_summary(&name_ids).await?;
+        Ok(summary.into())
+    }
+}
+
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct SpeciesGenomicDataSummary {
+    /// The total amount of whole genomes available
+    pub genomes: i64,
+    /// The total amount of loci available
+    pub loci: i64,
+    /// The total amount of specimens available
+    pub specimens: i64,
+    /// The total amount of other genomic data
+    pub other: i64,
+    /// The total amount of genomic data
+    pub total_genomic: i64,
+}
+
+impl From<species::DataSummary> for SpeciesGenomicDataSummary {
+    fn from(value: species::DataSummary) -> Self {
+        Self {
+            genomes: value.genomes.unwrap_or_default(),
+            loci: value.loci.unwrap_or_default(),
+            specimens: value.specimens.unwrap_or_default(),
+            other: value.other.unwrap_or_default(),
+            total_genomic: value.total_genomic.unwrap_or_default(),
+        }
+    }
 }
 
 

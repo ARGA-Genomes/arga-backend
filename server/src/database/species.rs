@@ -1,6 +1,7 @@
 use arga_core::models::Species;
 use async_trait::async_trait;
 
+use bigdecimal::BigDecimal;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
@@ -65,6 +66,15 @@ pub struct SpecimenSummary {
     pub sequences: i64,
     pub whole_genomes: i64,
     pub markers: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DataSummary {
+    pub genomes: Option<i64>,
+    pub loci: Option<i64>,
+    pub specimens: Option<i64>,
+    pub other: Option<i64>,
+    pub total_genomic: Option<i64>,
 }
 
 
@@ -352,6 +362,33 @@ impl SpeciesProvider {
             .await?;
 
         Ok(photos)
+    }
+
+    pub async fn data_summary(&self, name_ids: &Vec<Uuid>) -> Result<DataSummary, Error> {
+        use diesel::dsl::sum;
+        use schema_gnl::name_data_summaries;
+
+        let mut conn = self.pool.get().await?;
+
+        let (genomes, loci, specimens, other, total_genomic) = name_data_summaries::table
+            .select((
+                sum(name_data_summaries::genomes),
+                sum(name_data_summaries::markers),
+                sum(name_data_summaries::specimens),
+                sum(name_data_summaries::other),
+                sum(name_data_summaries::total_genomic),
+            ))
+            .filter(name_data_summaries::name_id.eq_any(name_ids))
+            .get_result::<(Option<i64>, Option<i64>, Option<i64>, Option<i64>, Option<i64>)>(&mut conn)
+            .await?;
+
+        Ok(DataSummary {
+            genomes,
+            loci,
+            specimens,
+            other,
+            total_genomic,
+        })
     }
 }
 
