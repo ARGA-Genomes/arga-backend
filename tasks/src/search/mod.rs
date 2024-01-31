@@ -120,11 +120,11 @@ fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
             //         doc.add_text(synonyms, name);
             //     }
             // }
-            // if let Some(names) = &species.vernacular_names {
-            //     for name in names {
-            //         doc.add_text(common_names, name);
-            //     }
-            // }
+            if let Some(names) = &species.vernacular_names {
+                for name in names {
+                    doc.add_text(common_names, name);
+                }
+            }
 
             if let Some(value) = &species.kingdom { doc.add_text(kingdom, value); }
             if let Some(value) = &species.phylum { doc.add_text(phylum, value); }

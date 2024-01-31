@@ -293,6 +293,7 @@ pub struct Species {
     pub total_genomic: i64,
 
     pub traits: Option<Vec<String>>,
+    pub vernacular_names: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]

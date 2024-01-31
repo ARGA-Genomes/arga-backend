@@ -122,6 +122,7 @@ diesel::table! {
         other -> BigInt,
         total_genomic -> BigInt,
         traits -> Nullable<Array<Varchar>>,
+        vernacular_names -> Nullable<Array<Varchar>>,
     }
 }
 

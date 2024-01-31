@@ -26,7 +26,7 @@ pub struct SpeciesDoc {
     pub canonical_name: String,
     // pub subspecies: Option<Vec<String>>,
     // pub synonyms: Option<Vec<String>>,
-    // pub vernacular_names: Option<Vec<String>>,
+    pub vernacular_names: Option<Vec<String>>,
 
     pub kingdom: Option<String>,
     pub phylum: Option<String>,
@@ -50,7 +50,6 @@ pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
 
     let docs = species::table
         // .left_join(synonyms::table)
-        // .left_join(common_names::table)
         .select((
             species::id,
             species::status,
@@ -58,7 +57,7 @@ pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
             species::canonical_name,
             // species::subspecies,
             // synonyms::names.nullable(),
-            // common_names::names.nullable(),
+            species::vernacular_names,
 
             sql::<Nullable<Varchar>>("classification->>'kingdom'"),
             sql::<Nullable<Varchar>>("classification->>'phylum'"),

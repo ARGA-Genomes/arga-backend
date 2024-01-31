@@ -13,7 +13,8 @@ SELECT
     summaries.specimens,
     summaries.other,
     summaries.total_genomic,
-    name_attributes.traits
+    name_attributes.traits,
+    vernacular_names.names AS vernacular_names
 FROM taxa
 JOIN (
   SELECT
@@ -41,4 +42,12 @@ LEFT JOIN (
   FROM name_attributes
   JOIN taxon_names ON taxon_names.name_id = name_attributes.name_id
   GROUP BY taxon_id
-) name_attributes ON taxa.id = name_attributes.taxon_id;
+) name_attributes ON taxa.id = name_attributes.taxon_id
+LEFT JOIN (
+  SELECT
+    taxon_id,
+    array_agg(vernacular_name) as names
+  FROM vernacular_names
+  JOIN taxon_names ON taxon_names.name_id = vernacular_names.name_id
+  GROUP BY taxon_id
+) vernacular_names ON taxa.id = vernacular_names.taxon_id;
