@@ -372,7 +372,8 @@ impl Species {
         // animals
         Some(match kingdom {
             Some("Archaea") => Group::Bacteria,
-            Some("Bacteria") => match phylum {
+            Some("Bacteria") => match division {
+                //FIXME: links straight to eukaryota
                 Some("Cyanobacteria") => Group::Cyanobacteria,
                 _ => Group::Bacteria,
             },
@@ -1040,6 +1041,13 @@ pub struct GenomicComponent {
     pub release_date: Option<String>,
     pub deposited_by: Option<String>,
     pub data_type: Option<String>,
+
+    pub title: Option<String>,
+    pub url: Option<String>,
+    pub source_uri: Option<String>,
+    pub funding_attribution: Option<String>,
+    pub rights_holder: Option<String>,
+    pub access_rights: Option<String>,
 }
 
 

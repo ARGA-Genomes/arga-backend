@@ -383,6 +383,13 @@ pub struct GenomicComponent {
     pub release_date: Option<String>,
     pub deposited_by: Option<String>,
     pub data_type: Option<String>,
+
+    pub title: Option<String>,
+    pub url: Option<String>,
+    pub source_uri: Option<String>,
+    pub funding_attribution: Option<String>,
+    pub rights_holder: Option<String>,
+    pub access_rights: Option<String>,
 }
 
 impl From<models::GenomicComponent> for GenomicComponent {
@@ -401,6 +408,12 @@ impl From<models::GenomicComponent> for GenomicComponent {
             release_date: value.release_date,
             deposited_by: value.deposited_by,
             data_type: value.data_type,
+            title: value.title,
+            url: value.url,
+            source_uri: value.source_uri,
+            funding_attribution: value.funding_attribution,
+            rights_holder: value.rights_holder,
+            access_rights: value.access_rights,
         }
     }
 }

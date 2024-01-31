@@ -63,6 +63,12 @@ diesel::table! {
         release_date -> Nullable<Varchar>,
         deposited_by -> Nullable<Varchar>,
         data_type -> Nullable<Varchar>,
+        title -> Nullable<Varchar>,
+        url -> Nullable<Varchar>,
+        source_uri -> Nullable<Varchar>,
+        funding_attribution -> Nullable<Varchar>,
+        rights_holder -> Nullable<Varchar>,
+        access_rights -> Nullable<Varchar>,
     }
 }
 

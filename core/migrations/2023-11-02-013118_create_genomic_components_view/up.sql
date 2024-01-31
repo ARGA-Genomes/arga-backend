@@ -14,7 +14,13 @@ SELECT DISTINCT
     sequencing_events.estimated_size,
     deposition_events.event_date AS release_date,
     deposition_events.submitted_by AS deposited_by,
-    deposition_events.data_type
+    deposition_events.data_type,
+    deposition_events.title,
+    deposition_events.url,
+    deposition_events.source_uri,
+    deposition_events.funding_attribution,
+    deposition_events.rights_holder,
+    deposition_events.access_rights
 FROM sequences
 JOIN datasets ON sequences.dataset_id = datasets.id
 JOIN sequencing_events ON sequences.id = sequencing_events.sequence_id
