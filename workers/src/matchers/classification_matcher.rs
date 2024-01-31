@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use arga_core::models::{TaxonomicStatus, Taxon};
+use arga_core::models::TaxonomicStatus;
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
 use serde::Deserialize;
@@ -47,4 +47,21 @@ pub fn classification_map(pool: &mut PgPool) -> Result<ClassificationMap, Error>
 
     info!(total=map.len(), "Creating classification map finished");
     Ok(map)
+}
+
+
+pub fn match_records<T>(records: Vec<T>, classifications: &ClassificationMap) -> Vec<(ClassificationMatch, T)>
+where T: Clone + Into<ClassificationRecord>
+{
+    // associate the records with the matched taxon
+    let mut matched: Vec<(ClassificationMatch, T)> = Vec::with_capacity(records.len());
+    for record in records {
+        if let Some(scientific_name) = record.clone().into().scientific_name {
+            if let Some(classification) = classifications.get(&scientific_name) {
+                matched.push((classification.clone(), record));
+            }
+        }
+    }
+
+    matched
 }

@@ -46,7 +46,7 @@ LEFT JOIN (
 LEFT JOIN (
   SELECT
     taxon_id,
-    array_agg(vernacular_name) as names
+    array_agg(DISTINCT vernacular_name) as names
   FROM vernacular_names
   JOIN taxon_names ON taxon_names.name_id = vernacular_names.name_id
   GROUP BY taxon_id
