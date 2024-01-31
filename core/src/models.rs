@@ -16,11 +16,12 @@ pub const ACCEPTED_NAMES: [TaxonomicStatus; 6] = [
     TaxonomicStatus::Informal,
 ];
 
-pub const SPECIES_RANKS: [TaxonomicRank; 4] = [
+pub const SPECIES_RANKS: [TaxonomicRank; 5] = [
     TaxonomicRank::Species,
     TaxonomicRank::Subspecies,
     TaxonomicRank::AggregateSpecies,
     TaxonomicRank::Infraspecies,
+    TaxonomicRank::Varietas,
 ];
 
 

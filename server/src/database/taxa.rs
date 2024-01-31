@@ -237,6 +237,8 @@ impl TaxaProvider {
             .await?;
 
         let species_genomes = species::table
+            .filter(species::status.eq_any(ACCEPTED_NAMES))
+            .filter(species::rank.eq_any(SPECIES_RANKS))
             .filter(with_species_classification(classification))
             .filter(species::genomes.gt(0))
             .count()
@@ -244,6 +246,8 @@ impl TaxaProvider {
             .await?;
 
         let species_data = species::table
+            .filter(species::status.eq_any(ACCEPTED_NAMES))
+            .filter(species::rank.eq_any(SPECIES_RANKS))
             .filter(with_species_classification(classification))
             .filter(species::total_genomic.gt(0))
             .count()
