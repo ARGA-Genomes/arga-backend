@@ -53,6 +53,8 @@ impl Search {
         for item in search_results {
             match item {
                 SearchItem::Species(item) => {
+                    // NOTE: actually a taxa id. refactor the search indexing
+                    // to make the difference clear
                     name_ids.push(item.name_id.clone());
                     taxa.insert(item.name_id, TaxonItem {
                         r#type: FullTextType::Taxon,
@@ -130,23 +132,24 @@ impl Search {
         }
 
         // get statistics for all the matched names
-        let assembly_summaries = state.database.species.assembly_summary(&name_ids).await?;
-        let marker_summaries = state.database.species.marker_summary(&name_ids).await?;
+        let summaries = state.database.species.summary(&name_ids).await?;
+        // let marker_summaries = state.database.species.marker_summary(&name_ids).await?;
 
-        for stat in assembly_summaries {
-            taxa.entry(stat.name_id).and_modify(|item| {
-                item.data_summary.assemblies += stat.total;
-                item.data_summary.reference_genomes += stat.reference_genomes;
-                item.data_summary.whole_genomes += stat.whole_genomes;
-                item.data_summary.partial_genomes += stat.partial_genomes;
+        for stat in summaries {
+            taxa.entry(stat.id).and_modify(|item| {
+                item.data_summary.genomes = stat.genomes;
+                item.data_summary.loci = stat.loci;
+                item.data_summary.specimens = stat.specimens;
+                item.data_summary.other = stat.other;
+                item.data_summary.total_genomic = stat.total_genomic;
             });
         }
 
-        for stat in marker_summaries {
-            taxa.entry(stat.name_id).and_modify(|item| {
-                item.data_summary.barcodes += stat.barcodes;
-            });
-        }
+        // for stat in marker_summaries {
+        //     taxa.entry(stat.name_id).and_modify(|item| {
+        //         item.data_summary.barcodes += stat.barcodes;
+        //     });
+        // }
 
 
         // collect results
@@ -195,11 +198,11 @@ pub struct Classification {
 #[derive(Debug, Default, Deserialize, SimpleObject)]
 #[serde(rename_all = "camelCase")]
 pub struct DataSummary {
-    pub assemblies: i64,
-    pub whole_genomes: i64,
-    pub partial_genomes: i64,
-    pub reference_genomes: i64,
-    pub barcodes: i64,
+    pub genomes: i64,
+    pub loci: i64,
+    pub specimens: i64,
+    pub other: i64,
+    pub total_genomic: i64,
 }
 
 #[derive(Debug, Deserialize, SimpleObject)]

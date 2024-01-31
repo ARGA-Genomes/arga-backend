@@ -22,21 +22,22 @@ impl Statistics {
             return Err(Error::NotFound(canonical_name));
         }
 
-        let names = names.iter().map(|name| name.id).collect();
-        let assembly_summaries = state.database.species.assembly_summary(&names).await?;
-        let marker_summaries = state.database.species.marker_summary(&names).await?;
+        //FIXME: endpoint no longer needed?
+        // let names = names.iter().map(|name| name.id).collect();
+        // let assembly_summaries = state.database.species.assembly_summary(&names).await?;
+        // let marker_summaries = state.database.species.marker_summary(&names).await?;
 
         // combine the stats for all species matching the canonical name
         let mut stats = SpeciesStatistics::default();
-        for stat in assembly_summaries {
-            stats.total += (stat.whole_genomes + stat.reference_genomes + stat.partial_genomes) as usize;
-            stats.whole_genomes += stat.whole_genomes as usize;
-            stats.partial_genomes += stat.partial_genomes as usize;
-        }
-        for stat in marker_summaries {
-            stats.total += stat.barcodes as usize;
-            stats.barcodes += stat.barcodes as usize;
-        }
+        // for stat in assembly_summaries {
+        //     stats.total += (stat.whole_genomes + stat.reference_genomes + stat.partial_genomes) as usize;
+        //     stats.whole_genomes += stat.whole_genomes as usize;
+        //     stats.partial_genomes += stat.partial_genomes as usize;
+        // }
+        // for stat in marker_summaries {
+        //     stats.total += stat.barcodes as usize;
+        //     stats.barcodes += stat.barcodes as usize;
+        // }
 
         Ok(stats)
     }

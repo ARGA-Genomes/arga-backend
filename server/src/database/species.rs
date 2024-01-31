@@ -1,7 +1,6 @@
 use arga_core::models::Species;
 use async_trait::async_trait;
 
-use bigdecimal::BigDecimal;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use diesel::Queryable;
@@ -26,7 +25,7 @@ use super::models::{
     GenomicComponent,
     VernacularName,
 };
-use super::extensions::{sum_if, Paginate};
+use super::extensions::Paginate;
 use super::{schema, schema_gnl, Database, Error, PgPool, PageResult};
 
 
@@ -34,12 +33,13 @@ const NCBI_REFSEQ_DATASET_ID: &str = "ARGA:TL:0002002";
 
 
 #[derive(Debug, Clone, Default, Queryable, Serialize, Deserialize)]
-pub struct AssemblySummary {
-    pub name_id: Uuid,
-    pub total: i64,
-    pub reference_genomes: i64,
-    pub whole_genomes: i64,
-    pub partial_genomes: i64,
+pub struct Summary {
+    pub id: Uuid,
+    pub genomes: i64,
+    pub loci: i64,
+    pub specimens: i64,
+    pub other: i64,
+    pub total_genomic: i64,
 }
 
 #[derive(Debug, Clone, Default, Queryable, Serialize, Deserialize)]
@@ -129,29 +129,28 @@ impl SpeciesProvider {
         Ok(synonyms)
     }
 
-    pub async fn assembly_summary(&self, name_ids: &Vec<Uuid>) -> Result<Vec<AssemblySummary>, Error> {
-        use schema_gnl::whole_genomes::dsl::*;
-        use diesel::dsl::count_star;
+    pub async fn summary(&self, ids: &Vec<Uuid>) -> Result<Vec<Summary>, Error> {
+        use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        // get the total amounts of assembly records for each name
-        let summaries = whole_genomes
-            .group_by(name_id)
+        // get the data summaries for each species record
+        let summaries = species
             .select((
-                name_id,
-                count_star(),
-                sum_if(data_type.eq_any(vec!["reference genome", "representative genome"])),
-                sum_if(representation.eq_any(["Complete", "Full"])),
-                sum_if(representation.eq("Partial")),
+                id,
+                genomes,
+                loci,
+                specimens,
+                other,
+                total_genomic,
             ))
-            .filter(name_id.eq_any(name_ids))
-            .load::<AssemblySummary>(&mut conn)
+            .filter(id.eq_any(ids))
+            .load::<Summary>(&mut conn)
             .await?;
 
         Ok(summaries)
     }
 
-    pub async fn marker_summary(&self, name_ids: &Vec<Uuid>) -> Result<Vec<MarkerSummary>, Error> {
+    pub async fn marker_summary(&self, ids: &Vec<Uuid>) -> Result<Vec<MarkerSummary>, Error> {
         use schema_gnl::markers::dsl::*;
         let mut conn = self.pool.get().await?;
 
@@ -162,7 +161,7 @@ impl SpeciesProvider {
                 name_id,
                 diesel::dsl::count_star(),
             ))
-            .filter(name_id.eq_any(name_ids))
+            .filter(name_id.eq_any(ids))
             .load::<MarkerSummary>(&mut conn)
             .await?;
 
