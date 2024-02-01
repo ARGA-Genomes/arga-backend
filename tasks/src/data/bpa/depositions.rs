@@ -32,6 +32,7 @@ struct Record {
     ncbi_biosample_accession_number: Option<String>,
 
     url: Option<String>,
+    base_url: Option<String>,
     data_custodian: Option<String>,
     funding_agency: Option<String>,
     title: Option<String>,
@@ -52,6 +53,7 @@ pub struct DepositionEvent {
     biosample_accession: Option<String>,
     project_name: Option<String>,
     url: Option<String>,
+    source_uri: Option<String>,
     submitted_by: Option<String>,
     funding_attribution: Option<String>,
     title: Option<String>,
@@ -111,6 +113,7 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
             biosample_accession,
             project_name: record.bioplatforms_project,
             url: record.url,
+            source_uri: record.base_url,
             submitted_by: record.data_custodian,
             funding_attribution: record.funding_agency,
             title: record.title,

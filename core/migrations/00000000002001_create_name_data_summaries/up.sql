@@ -32,7 +32,8 @@ LEFT JOIN (
      SELECT name_id, count(*)::int as total
      FROM sequences
      LEFT JOIN sequencing_events se on sequences.id = se.sequence_id
+     LEFT JOIN assembly_events on sequences.id = assembly_events.sequence_id
      LEFT JOIN annotation_events ae on sequences.id = ae.sequence_id
-     WHERE (representation IS NULL OR representation NOT IN ('Complete', 'Full', 'Partial')) AND target_gene IS NULL
+     WHERE assembly_events.id IS NULL AND target_gene IS NULL
      GROUP BY name_id
 ) other_data ON other_data.name_id = names.id;
