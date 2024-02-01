@@ -83,7 +83,13 @@ impl Taxon {
     pub async fn new(db: &Database, rank: TaxonRank, canonical_name: String) -> Result<Taxon, Error> {
         let classification = into_classification(rank, canonical_name);
         let taxon = db.taxa.find_by_classification(&classification).await?;
-        let details = taxon.clone().into();
+        let mut details: TaxonDetails = taxon.clone().into();
+
+        // get source info
+        let dataset = db.datasets.find_by_id(&taxon.dataset_id).await?;
+        details.source = Some(dataset.name);
+        details.source_url = dataset.url;
+
         let query = TaxonQuery { classification };
         Ok(Taxon(details, query))
     }
