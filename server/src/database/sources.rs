@@ -75,17 +75,22 @@ impl SourceProvider {
     }
 
     pub async fn species(&self, source: &Source, filters: &Vec<Filter>, page: i64, page_size: i64) -> PageResult<Species> {
-        use schema::{datasets, name_attributes as attrs};
+        use schema::{datasets, taxon_names, name_attributes as attrs};
         use schema_gnl::species;
         let mut conn = self.pool.get().await?;
 
-        let records = species::table
-            .inner_join(attrs::table.on(attrs::name_id.eq(species::id)))
+        let query = match with_filters(&filters) {
+            Some(predicates) => species::table.filter(predicates).into_boxed(),
+            None => species::table.into_boxed(),
+        };
+
+        let records = query
+            .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
+            .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
             .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
             .select(species::all_columns)
+            .distinct()
             .filter(datasets::source_id.eq(source.id))
-            // FIXME: make filterable
-            // .with_filters(&filters)
             .order_by(species::scientific_name)
             .paginate(page)
             .per_page(page_size)
