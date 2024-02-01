@@ -35,9 +35,13 @@ impl Source {
         Ok(Source(details, query))
     }
 
-    pub async fn all(db: &Database) -> Result<Vec<SourceDetails>, Error> {
+    pub async fn all(db: &Database) -> Result<Vec<Source>, Error> {
         let records = db.sources.all_records().await?;
-        let sources = records.into_iter().map(|record| SourceDetails::from(record)).collect();
+        let sources = records.into_iter().map(|record| {
+            let details = SourceDetails::from(record.clone());
+            let query = SourceQuery { source: record, filters: vec![] };
+            Source(details, query)
+        }).collect();
         Ok(sources)
     }
 }

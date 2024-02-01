@@ -88,7 +88,7 @@ impl Query {
         Maps { tolerance }
     }
 
-    async fn sources(&self, ctx: &Context<'_>) -> Result<Vec<SourceDetails>, Error> {
+    async fn sources(&self, ctx: &Context<'_>) -> Result<Vec<Source>, Error> {
         let state = ctx.data::<State>().unwrap();
         Source::all(&state.database).await
     }
