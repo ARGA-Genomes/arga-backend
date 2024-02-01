@@ -33,6 +33,7 @@ struct Record {
 
     url: Option<String>,
     base_url: Option<String>,
+    r#type: Option<String>,
     data_custodian: Option<String>,
     funding_agency: Option<String>,
     title: Option<String>,
@@ -57,6 +58,7 @@ pub struct DepositionEvent {
     submitted_by: Option<String>,
     funding_attribution: Option<String>,
     title: Option<String>,
+    data_type: Option<String>,
 }
 
 impl DepositionEvent {
@@ -99,6 +101,11 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
             record.bpa_dataset_id,
         ].into_iter().filter_map(|r| r).collect();
 
+        let source_uri = match &record.r#type {
+            Some(data_type) => Some(format!("https://data.bioplatforms.com/{}/{}", data_type, record.id)),
+            None => None,
+        };
+
         let event = DepositionEvent {
             id: record.id,
             sequence_id,
@@ -113,10 +120,11 @@ pub fn normalise(path: &PathBuf) -> Result<(), Error> {
             biosample_accession,
             project_name: record.bioplatforms_project,
             url: record.url,
-            source_uri: record.base_url,
+            source_uri,
             submitted_by: record.data_custodian,
             funding_attribution: record.funding_agency,
             title: record.title,
+            data_type: record.r#type,
         };
 
         if event.has_data() {

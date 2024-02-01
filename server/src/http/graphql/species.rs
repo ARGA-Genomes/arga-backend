@@ -110,7 +110,16 @@ impl Species {
     async fn taxonomy(&self, ctx: &Context<'_>) -> Result<Vec<Taxonomy>, Error> {
         let state = ctx.data::<State>().unwrap();
         let taxa = state.database.species.taxonomy(&self.names).await?;
-        let details = taxa.into_iter().map(|t| t.into()).collect();
+
+        let mut details = Vec::new();
+        for taxon in taxa {
+            let dataset = state.database.datasets.find_by_id(&taxon.dataset_id).await?;
+            let mut taxon: Taxonomy = taxon.into();
+            taxon.source = Some(dataset.name);
+            taxon.source_url = dataset.url;
+            details.push(taxon);
+        }
+
         Ok(details)
     }
 
