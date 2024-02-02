@@ -25,11 +25,13 @@ fn import_datasets(records: &Vec<Dataset>, pool: &mut PgPool) -> Result<(), Erro
     use schema::datasets;
 
     info!(total=records.len(), "Importing datasets");
-    let imported: Vec<Result<usize, Error>> = records.par_chunks(1000).map(|chunk| {
+    let imported: Vec<Result<usize, Error>> = records.par_iter().map(|dataset| {
         let mut conn = pool.get()?;
         let inserted_rows = diesel::insert_into(datasets::table)
-            .values(chunk)
-            .on_conflict_do_nothing()
+            .values(dataset)
+            .on_conflict(datasets::global_id)
+            .do_update()
+            .set(dataset)
             .execute(&mut conn)?;
         Ok(inserted_rows)
     }).collect();

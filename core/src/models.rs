@@ -1,6 +1,6 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate};
-use diesel::{Queryable, Insertable, Associations, Identifiable, Selectable};
+use diesel::{Queryable, Insertable, Associations, Identifiable, Selectable, AsChangeset};
 use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 
@@ -36,7 +36,7 @@ pub struct Source {
     pub license: String,
 }
 
-#[derive(Queryable, Insertable, Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Queryable, Insertable, AsChangeset, Debug, Clone, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::datasets)]
 pub struct Dataset {
     pub id: Uuid,
