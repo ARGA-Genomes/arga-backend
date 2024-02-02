@@ -92,6 +92,7 @@ impl Search {
                         genome_rep: item.genome_rep,
                         data_source: item.data_source,
                         level: item.level,
+                        assembly_type: item.assembly_type,
                         reference_genome: item.reference_genome,
                         release_date: item.release_date.map(|d| d.format("%d/%m/%Y").to_string()),
                     });
@@ -227,6 +228,7 @@ pub struct GenomeItem {
     pub data_source: Option<String>,
     pub genome_rep: Option<String>,
     pub level: Option<String>,
+    pub assembly_type: Option<String>,
     pub reference_genome: bool,
     pub release_date: Option<String>,
     pub score: f32,

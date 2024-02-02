@@ -25,7 +25,7 @@ pub struct GenomeDoc {
     pub accession: Option<String>,
     pub genome_rep: Option<String>,
     pub level: Option<String>,
-    pub reference_genome: Option<String>,
+    pub assembly_type: Option<String>,
     pub release_date: Option<String>,
 }
 

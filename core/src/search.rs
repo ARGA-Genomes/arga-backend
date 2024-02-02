@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use chrono::{NaiveDateTime, NaiveDate};
 use tantivy::collector::{Count, TopDocs};
 use tantivy::query::QueryParser;
 use tantivy::{Index, IndexReader, ReloadPolicy, TantivyError, Document};
@@ -83,8 +83,9 @@ pub struct GenomeItem {
     pub genome_rep: Option<String>,
     pub data_source: Option<String>,
     pub level: Option<String>,
+    pub assembly_type: Option<String>,
     pub reference_genome: bool,
-    pub release_date: Option<NaiveDateTime>,
+    pub release_date: Option<NaiveDate>,
 }
 
 #[derive(Debug)]
@@ -152,6 +153,7 @@ struct GenomeFields {
     genome_rep: Field,
     data_source: Field,
     level: Field,
+    assembly_type: Field,
     reference_genome: Field,
     release_date: Field,
 }
@@ -251,6 +253,7 @@ impl SearchIndex {
             genome_rep: get_field(&schema, "genome_rep")?,
             data_source: get_field(&schema, "data_source")?,
             level: get_field(&schema, "level")?,
+            assembly_type: get_field(&schema, "assembly_type")?,
             reference_genome: get_field(&schema, "reference_genome")?,
             release_date: get_field(&schema, "release_date")?,
         };
@@ -330,6 +333,7 @@ impl SearchIndex {
     pub fn genome_schema(schema_builder: &mut SchemaBuilder) {
         schema_builder.add_text_field("genome_rep", STRING | STORED);
         schema_builder.add_text_field("level", TEXT | STORED);
+        schema_builder.add_text_field("assembly_type", TEXT | STORED);
         schema_builder.add_bool_field("reference_genome", STORED);
         schema_builder.add_date_field("release_date", STORED);
     }
@@ -400,6 +404,7 @@ impl SearchIndex {
             self.taxon.common_names,
             self.genome.accession,
             self.genome.level,
+            self.genome.assembly_type,
             self.genome.data_source,
             self.locus.accession,
             self.locus.locus_type,
@@ -482,8 +487,9 @@ impl SearchIndex {
                         genome_rep: get_text(&doc, self.genome.genome_rep),
                         data_source: get_text(&doc, self.genome.data_source),
                         level: get_text(&doc, self.genome.level),
+                        assembly_type: get_text(&doc, self.genome.assembly_type),
                         reference_genome: get_bool(&doc, self.genome.reference_genome).unwrap_or(false),
-                        release_date: get_datetime(&doc, self.genome.release_date),
+                        release_date: get_date(&doc, self.genome.release_date),
                     }),
                     DataType::Locus => SearchItem::Locus(LocusItem {
                         name_id,
@@ -576,6 +582,16 @@ fn get_all_text(doc: &Document, field: Field) -> Vec<String> {
 fn get_bool(doc: &Document, field: Field) -> Option<bool> {
     match doc.get_first(field) {
         Some(value) => value.as_bool(),
+        None => None,
+    }
+}
+
+fn get_date(doc: &Document, field: Field) -> Option<NaiveDate> {
+    match doc.get_first(field) {
+        Some(value) => match value.as_date() {
+            Some(dt) => NaiveDateTime::from_timestamp_opt(dt.into_timestamp_secs(), 0).map(|dt| dt.date()),
+            None => None,
+        },
         None => None,
     }
 }

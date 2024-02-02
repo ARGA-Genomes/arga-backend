@@ -3,6 +3,7 @@ mod genome;
 mod locus;
 mod specimen;
 
+use chrono::NaiveTime;
 use diesel::*;
 use diesel::r2d2::{ConnectionManager, Pool};
 
@@ -57,10 +58,10 @@ pub fn reindex() -> Result<(), Error> {
         index_writer.commit()?;
     }
 
-    index_names(&schema, &index)?;
+    // index_names(&schema, &index)?;
     index_genomes(&schema, &index)?;
-    index_loci(&schema, &index)?;
-    index_specimens(&schema, &index)?;
+    // index_loci(&schema, &index)?;
+    // index_specimens(&schema, &index)?;
     Ok(())
 }
 
@@ -162,7 +163,7 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
     let data_source = get_field(schema, "data_source")?;
     let genome_rep = get_field(schema, "genome_rep")?;
     let level = get_field(schema, "level")?;
-    let reference_genome = get_field(schema, "reference_genome")?;
+    let assembly_type = get_field(schema, "assembly_type")?;
     let release_date = get_field(schema, "release_date")?;
 
     info!("Loading assemblies from database");
@@ -182,12 +183,10 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
             if let Some(value) = &genome.accession { doc.add_text(accession, value); }
             if let Some(value) = &genome.genome_rep { doc.add_text(genome_rep, value); }
             if let Some(value) = &genome.level { doc.add_text(level, value); }
-            if let Some(value) = &genome.reference_genome {
-                doc.add_bool(reference_genome, value == "reference genome");
-            }
+            if let Some(value) = &genome.assembly_type { doc.add_text(assembly_type, value); }
             if let Some(value) = &genome.release_date {
-                if let Ok(date) = chrono::NaiveDateTime::parse_from_str(value, "%Y/%m/%d") {
-                    let timestamp = DateTime::from_timestamp_secs(date.timestamp());
+                if let Ok(date) = chrono::NaiveDate::parse_from_str(value, "%Y/%m/%d") {
+                    let timestamp = DateTime::from_timestamp_secs(date.and_time(NaiveTime::default()).timestamp());
                     doc.add_date(release_date, timestamp);
                 }
             }
