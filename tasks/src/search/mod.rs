@@ -58,10 +58,10 @@ pub fn reindex() -> Result<(), Error> {
         index_writer.commit()?;
     }
 
-    // index_names(&schema, &index)?;
+    index_names(&schema, &index)?;
     index_genomes(&schema, &index)?;
-    // index_loci(&schema, &index)?;
-    // index_specimens(&schema, &index)?;
+    index_loci(&schema, &index)?;
+    index_specimens(&schema, &index)?;
     Ok(())
 }
 
