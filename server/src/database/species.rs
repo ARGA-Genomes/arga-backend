@@ -321,12 +321,14 @@ impl SpeciesProvider {
         Ok(records)
     }
 
-    pub async fn regions_ibra(&self, name: &Name) -> Result<Vec<Regions>, Error> {
+    pub async fn regions_ibra(&self, names: &Vec<Name>) -> Result<Vec<Regions>, Error> {
         use schema::regions;
         let mut conn = self.pool.get().await?;
 
+        let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
+
         let regions = regions::table
-            .filter(regions::name_id.eq(name.id))
+            .filter(regions::name_id.eq_any(name_ids))
             .filter(regions::region_type.eq(RegionType::Ibra))
             .load::<Regions>(&mut conn)
             .await?;
@@ -334,12 +336,14 @@ impl SpeciesProvider {
         Ok(regions)
     }
 
-    pub async fn regions_imcra(&self, name: &Name) -> Result<Vec<Regions>, Error> {
+    pub async fn regions_imcra(&self, names: &Vec<Name>) -> Result<Vec<Regions>, Error> {
         use schema::regions;
         let mut conn = self.pool.get().await?;
 
+        let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
+
         let regions = regions::table
-            .filter(regions::name_id.eq(name.id))
+            .filter(regions::name_id.eq_any(name_ids))
             .filter(regions::region_type.eq(RegionType::Imcra))
             .load::<Regions>(&mut conn)
             .await?;

@@ -143,7 +143,7 @@ impl Species {
 
     #[instrument(skip(self, _ctx))]
     async fn regions(&self, _ctx: &Context<'_>) -> Regions {
-        Regions { name: self.name.clone() }
+        Regions { names: self.names.clone() }
     }
 
     #[instrument(skip(self, ctx))]
@@ -283,21 +283,21 @@ impl From<species::DataSummary> for SpeciesGenomicDataSummary {
 
 
 pub struct Regions {
-    name: ArgaName,
+    names: Vec<Name>,
 }
 
 #[Object]
 impl Regions {
     async fn ibra(&self, ctx: &Context<'_>) -> Result<Vec<RegionDistribution>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let regions = state.database.species.regions_ibra(&self.name).await?;
+        let regions = state.database.species.regions_ibra(&self.names).await?;
         let regions = regions.into_iter().map(RegionDistribution::new).collect();
         Ok(regions)
     }
 
     async fn imcra(&self, ctx: &Context<'_>) -> Result<Vec<RegionDistribution>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let regions = state.database.species.regions_imcra(&self.name).await?;
+        let regions = state.database.species.regions_imcra(&self.names).await?;
         let regions = regions.into_iter().map(RegionDistribution::new).collect();
         Ok(regions)
     }
