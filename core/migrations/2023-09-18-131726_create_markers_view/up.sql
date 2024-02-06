@@ -1,5 +1,5 @@
 CREATE VIEW markers AS
-SELECT
+SELECT DISTINCT
     sequences.id AS sequence_id,
     sequences.dataset_id,
     sequences.name_id,
