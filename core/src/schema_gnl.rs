@@ -126,6 +126,14 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    overview (category, name) {
+        category -> Varchar,
+        name -> Varchar,
+        total -> BigInt,
+    }
+}
+
 
 use super::schema::{datasets, names, taxa, specimens, accession_events, name_attributes, taxon_names};
 

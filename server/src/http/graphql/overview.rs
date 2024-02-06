@@ -63,10 +63,18 @@ impl Overview {
     }
 
 
-    /// Returns the amount of species in every dataset
-    async fn sources(&self, ctx: &Context<'_>) -> Result<Vec<SourceOverview>, Error> {
+    /// Returns the amount of species in every source
+    async fn sources(&self, ctx: &Context<'_>) -> Result<Vec<OverviewItem>, Error> {
         let state = ctx.data::<State>().unwrap();
         let stats = state.database.overview.sources().await?;
+        let sources = stats.into_iter().map(|s| s.into()).collect();
+        Ok(sources)
+    }
+
+    /// Returns the amount of species in every dataset
+    async fn datasets(&self, ctx: &Context<'_>) -> Result<Vec<OverviewItem>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let stats = state.database.overview.datasets().await?;
         let sources = stats.into_iter().map(|s| s.into()).collect();
         Ok(sources)
     }
@@ -74,16 +82,14 @@ impl Overview {
 
 
 #[derive(Clone, Debug, SimpleObject)]
-pub struct SourceOverview {
-    id: uuid::Uuid,
+pub struct OverviewItem {
     name: String,
     total: i64,
 }
 
-impl From<database::overview::SourceOverview> for SourceOverview {
-    fn from(value: database::overview::SourceOverview) -> Self {
+impl From<database::overview::OverviewRecord> for OverviewItem {
+    fn from(value: database::overview::OverviewRecord) -> Self {
         Self {
-            id: value.id,
             name: value.name,
             total: value.total,
         }

@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::extensions::species_filters::with_classification;
-use crate::database::{schema, schema_gnl};
+use crate::database::schema_gnl;
 use crate::http::Error;
 
 use super::PgPool;
@@ -16,8 +16,7 @@ pub struct Overview {
 }
 
 #[derive(Debug, Queryable, Clone, Deserialize)]
-pub struct SourceOverview {
-    pub id: uuid::Uuid,
+pub struct OverviewRecord {
     pub name: String,
     pub total: i64,
 }
@@ -130,58 +129,76 @@ impl OverviewProvider {
     }
 
     pub async fn sequences(&self) -> Result<Overview, Error> {
-        use schema::sequences::dsl::*;
+        use schema_gnl::overview::dsl::*;
         let mut conn = self.pool.get().await?;
-        let total: i64 = sequences.count().get_result(&mut conn).await?;
+        let count: i64 = overview
+            .filter(category.eq("data_type"))
+            .filter(name.eq("sequences"))
+            .select(total)
+            .get_result(&mut conn)
+            .await?;
 
-        Ok(Overview {
-            total,
-        })
+        Ok(Overview { total: count })
     }
 
     pub async fn whole_genomes(&self) -> Result<Overview, Error> {
-        use schema_gnl::whole_genomes::dsl::*;
+        use schema_gnl::overview::dsl::*;
         let mut conn = self.pool.get().await?;
-        let total: i64 = whole_genomes.count().get_result(&mut conn).await?;
+        let count: i64 = overview
+            .filter(category.eq("data_type"))
+            .filter(name.eq("whole_genomes"))
+            .select(total)
+            .get_result(&mut conn)
+            .await?;
 
-        Ok(Overview {
-            total,
-        })
+        Ok(Overview { total: count })
     }
 
     pub async fn loci(&self) -> Result<Overview, Error> {
-        use schema_gnl::markers::dsl::*;
+        use schema_gnl::overview::dsl::*;
         let mut conn = self.pool.get().await?;
-        let total: i64 = markers.count().get_result(&mut conn).await?;
+        let count: i64 = overview
+            .filter(category.eq("data_type"))
+            .filter(name.eq("loci"))
+            .select(total)
+            .get_result(&mut conn)
+            .await?;
 
-        Ok(Overview {
-            total,
-        })
+        Ok(Overview { total: count })
     }
 
     pub async fn specimens(&self) -> Result<Overview, Error> {
-        use schema::specimens::dsl::*;
+        use schema_gnl::overview::dsl::*;
         let mut conn = self.pool.get().await?;
-        let total: i64 = specimens.count().get_result(&mut conn).await?;
+        let count: i64 = overview
+            .filter(category.eq("data_type"))
+            .filter(name.eq("specimens"))
+            .select(total)
+            .get_result(&mut conn)
+            .await?;
 
-        Ok(Overview {
-            total,
-        })
+        Ok(Overview { total: count })
     }
 
-    pub async fn sources(&self) -> Result<Vec<SourceOverview>, Error> {
-        use schema::{sources, datasets, name_attributes};
-        use diesel::dsl::count_star;
-
+    pub async fn sources(&self) -> Result<Vec<OverviewRecord>, Error> {
+        use schema_gnl::overview::dsl::*;
         let mut conn = self.pool.get().await?;
+        let records = overview
+            .filter(category.eq("source"))
+            .select((name, total))
+            .load::<OverviewRecord>(&mut conn)
+            .await?;
 
-        let records = name_attributes::table
-            .inner_join(datasets::table)
-            .inner_join(sources::table.on(datasets::source_id.eq(sources::id)))
-            .group_by((sources::id, sources::name))
-            .select((sources::id, sources::name, count_star()))
-            .filter(name_attributes::name.eq("last_updated"))
-            .load::<SourceOverview>(&mut conn)
+        Ok(records)
+    }
+
+    pub async fn datasets(&self) -> Result<Vec<OverviewRecord>, Error> {
+        use schema_gnl::overview::dsl::*;
+        let mut conn = self.pool.get().await?;
+        let records = overview
+            .filter(category.eq("dataset"))
+            .select((name, total))
+            .load::<OverviewRecord>(&mut conn)
             .await?;
 
         Ok(records)
