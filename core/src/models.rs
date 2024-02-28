@@ -384,8 +384,8 @@ impl Species {
                 Some("Cnidaria") => Group::CoralsAndJellyfishes,
                 Some("Mollusca") => Group::Molluscs,
                 Some("Arthropoda") => match (subphylum, class) {
-                    (Some("Crustacea"), None) => Group::Crustaceans,
-                    (None, Some("Insecta")) => Group::Insects,
+                    (Some("Crustacea"), _) => Group::Crustaceans,
+                    (_, Some("Insecta")) => Group::Insects,
                     _ => Group::Animals,
                 }
                 Some("Chordata") => match class {
