@@ -1,4 +1,4 @@
-FROM rust:1.71
+FROM rust:1.76
 LABEL org.opencontainers.image.source="https://github.com/ARGA-Genomes/arga-backend"
 LABEL org.opencontainers.image.description="A container image for running migration jobs"
 LABEL org.opencontainers.image.licenses="AGPL-3.0"
@@ -10,4 +10,4 @@ CMD ["diesel", "migration", "run"]
 COPY ./core/migrations ./migrations
 COPY ./core/diesel.toml .
 
-RUN cargo install diesel_cli --no-default-features --features "postgres"
+RUN cargo install diesel_cli --no-default-features --features "postgres" --locked
