@@ -129,6 +129,8 @@ pub enum TaxonomicVernacularGroup {
     SharksAndRays,
     Insects,
     Fungi,
+    Spiders,
+    Reptiles,
 
     Bacteria,
     ProtistsAndOtherUnicellularOrganisms,

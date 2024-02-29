@@ -89,6 +89,8 @@ pub enum TaxonomicVernacularGroup {
     SharksAndRays,
     Insects,
     Fungi,
+    Spiders,
+    Reptiles,
 
     Bacteria,
     ProtistsAndOtherUnicellularOrganisms,
@@ -366,6 +368,7 @@ impl Species {
         let subphylum = classification.subphylum.as_ref().map(String::as_str);
         let class = classification.class.as_ref().map(String::as_str);
         let subclass = classification.subclass.as_ref().map(String::as_str);
+        let order = classification.order.as_ref().map(String::as_str);
 
         let regnum = classification.regnum.as_ref().map(String::as_str);
         let division = classification.division.as_ref().map(String::as_str);
@@ -386,11 +389,16 @@ impl Species {
                 Some("Arthropoda") => match (subphylum, class) {
                     (Some("Crustacea"), _) => Group::Crustaceans,
                     (_, Some("Insecta")) => Group::Insects,
+                    (_, Some("Arachnida")) => match order {
+                        Some("Araneae") => Group::Spiders, // new icon: spiders taxon = Araneae
+                        _ => Group::Animals,
+                    },
                     _ => Group::Animals,
                 }
                 Some("Chordata") => match class {
                     Some("Amphibia") => Group::FrogsAndOtherAmphibians,
                     Some("Aves") => Group::Birds,
+                    Some("Reptilia") => Group::Reptiles, // new icon: reptiles taxon = Reptilia
                     Some("Mammalia") => Group::Mammals,
                     Some("Actinopterygii") => Group::FinFishes,
                     Some("Chondrichthyes") => match subclass {
