@@ -413,7 +413,7 @@ impl Species {
             // plants
             None => match regnum {
                 Some("Plantae") => match division {
-                    Some("Phaeophyceae") => Group::BrownAlgae,
+                    Some("Phaeophyta") => Group::BrownAlgae,
                     Some("Rhodophyta") => Group::RedAlgae,
                     Some("Chlorophyta") => Group::GreenAlgae,
                     _ => match classis {
