@@ -372,7 +372,7 @@ impl Species {
 
         let regnum = classification.regnum.as_ref().map(String::as_str);
         let division = classification.division.as_ref().map(String::as_str);
-        let classis = classification.classis.as_ref().map(String::as_str);
+        // let classis = classification.classis.as_ref().map(String::as_str);
 
         // animals
         Some(match kingdom {
@@ -412,21 +412,29 @@ impl Species {
 
             // plants
             None => match regnum {
-                Some("Plantae") => match division {
-                    Some("Phaeophyta") => Group::BrownAlgae,
-                    Some("Rhodophyta") => Group::RedAlgae,
-                    Some("Chlorophyta") => Group::GreenAlgae,
-                    _ => match classis {
-                        Some("Phaeophyceae") => Group::BrownAlgae,
-                        _ => Group::HigherPlants,
-                    }
-                },
+                Some("Plantae") => Group:: HigherPlants,
+                // Some("Plantae") => match division {
+                //     Some("Phaeophyta") => Group::BrownAlgae,
+                //     Some("Rhodophyta") => Group::RedAlgae,
+                //     Some("Chlorophyta") => Group::GreenAlgae,
+                //     _ => match classis {
+                //         Some("Phaeophyceae") => Group::BrownAlgae,
+                //         _ => Group::HigherPlants,
+                //     }
+                // },
                 Some("Chromista") => Group::Seaweeds,
                 Some("Fungi") => Group::Fungi,
 
                 // protists
                 None => match superkingdom {
                     Some("Protista") => Group::ProtistsAndOtherUnicellularOrganisms,
+                    // algae
+                    None => match division {
+                        Some("Phaeophyta") => Group::BrownAlgae,
+                        Some("Rhodophyta") => Group::RedAlgae,
+                        Some("Chlorophyta") => Group::GreenAlgae,
+                        _ => return None,
+                    },
                     _ => return None,
                 }
                 _ => return None,
