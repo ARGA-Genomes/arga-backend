@@ -374,7 +374,7 @@ impl Species {
 
         let regnum = classification.regnum.as_ref().map(String::as_str);
         let division = classification.division.as_ref().map(String::as_str);
-        // let classis = classification.classis.as_ref().map(String::as_str);
+        let classis = classification.classis.as_ref().map(String::as_str);
 
         // animals
         Some(match kingdom {
@@ -415,8 +415,8 @@ impl Species {
 
             // plants
             None => match regnum {
-                Some("Plantae") => match division {
-                    Some("Bryophyta") => Group::Mosses,
+                Some("Plantae") => match classis {
+                    Some("Bryopsida") => Group::Mosses,
                     _ => Group::HigherPlants,
                 },
                 Some("Chromista") => Group::Seaweeds,
