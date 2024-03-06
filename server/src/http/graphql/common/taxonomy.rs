@@ -139,6 +139,7 @@ pub enum TaxonomicVernacularGroup {
     Mammals,
     Seaweeds,
     HigherPlants,
+    Mosses,
 }
 
 

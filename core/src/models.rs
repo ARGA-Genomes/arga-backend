@@ -99,6 +99,7 @@ pub enum TaxonomicVernacularGroup {
     Mammals,
     Seaweeds,
     HigherPlants,
+    Mosses,
 }
 
 
@@ -412,16 +413,10 @@ impl Species {
 
             // plants
             None => match regnum {
-                Some("Plantae") => Group:: HigherPlants,
-                // Some("Plantae") => match division {
-                //     Some("Phaeophyta") => Group::BrownAlgae,
-                //     Some("Rhodophyta") => Group::RedAlgae,
-                //     Some("Chlorophyta") => Group::GreenAlgae,
-                //     _ => match classis {
-                //         Some("Phaeophyceae") => Group::BrownAlgae,
-                //         _ => Group::HigherPlants,
-                //     }
-                // },
+                Some("Plantae") => match division {
+                    Some("Bryophyta") => Group::Mosses,
+                    _ => Group::HigherPlants,
+                },
                 Some("Chromista") => Group::Seaweeds,
                 Some("Fungi") => Group::Fungi,
 

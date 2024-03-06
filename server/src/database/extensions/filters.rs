@@ -170,8 +170,9 @@ pub fn with_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpressio
         Group::Mammals => Box::new(species::classification.retrieve_as_text("class").eq("Mammalia")),
         Group::Seaweeds => Box::new(species::classification.retrieve_as_text("regnum").eq("Chromista")),
         Group::HigherPlants => Box::new(species::classification.retrieve_as_text("regnum").eq("Plantae")),
-        Group::Spiders => Box::new(species::classification.retrieve_as_text("regnum").eq("Araneae")),
-        Group::Reptiles => Box::new(species::classification.retrieve_as_text("regnum").eq("Reptilia")),
+        Group::Spiders => Box::new(species::classification.retrieve_as_text("order").eq("Araneae")),
+        Group::Reptiles => Box::new(species::classification.retrieve_as_text("class").eq("Reptilia")),
+        Group::Mosses => Box::new(species::classification.retrieve_as_text("division").eq("Bryophyta")),
     }
 }
 
@@ -202,6 +203,7 @@ pub fn without_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpres
         Group::HigherPlants => Box::new(species::classification.retrieve_as_text("regnum").ne("Plantae")),
         Group::Spiders => Box::new(species::classification.retrieve_as_text("order").ne("Araneae")),
         Group::Reptiles => Box::new(species::classification.retrieve_as_text("class").ne("Reptilia")),
+        Group::Mosses => Box::new(species::classification.retrieve_as_text("division").ne("Bryophyta")),
     }
 }
 
