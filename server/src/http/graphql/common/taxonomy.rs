@@ -131,6 +131,7 @@ pub enum TaxonomicVernacularGroup {
     Fungi,
     Spiders,
     Reptiles,
+    Sponges,
 
     Bacteria,
     ProtistsAndOtherUnicellularOrganisms,

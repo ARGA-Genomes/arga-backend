@@ -91,6 +91,7 @@ pub enum TaxonomicVernacularGroup {
     Fungi,
     Spiders,
     Reptiles,
+    Sponges,
 
     Bacteria,
     ProtistsAndOtherUnicellularOrganisms,
@@ -387,6 +388,7 @@ impl Species {
                 Some("Echinodermata") => Group::Echinoderms,
                 Some("Cnidaria") => Group::CoralsAndJellyfishes,
                 Some("Mollusca") => Group::Molluscs,
+                Some("Porifera") => Group::Sponges,
                 Some("Arthropoda") => match (subphylum, class) {
                     (Some("Crustacea"), _) => Group::Crustaceans,
                     (_, Some("Insecta")) => Group::Insects,

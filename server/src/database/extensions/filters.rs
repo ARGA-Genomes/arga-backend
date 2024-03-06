@@ -173,6 +173,7 @@ pub fn with_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpressio
         Group::Spiders => Box::new(species::classification.retrieve_as_text("order").eq("Araneae")),
         Group::Reptiles => Box::new(species::classification.retrieve_as_text("class").eq("Reptilia")),
         Group::Mosses => Box::new(species::classification.retrieve_as_text("division").eq("Bryophyta")),
+        Group::Sponges => Box::new(species::classification.retrieve_as_text("phylum").eq("Porifera")),
     }
 }
 
@@ -204,6 +205,7 @@ pub fn without_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpres
         Group::Spiders => Box::new(species::classification.retrieve_as_text("order").ne("Araneae")),
         Group::Reptiles => Box::new(species::classification.retrieve_as_text("class").ne("Reptilia")),
         Group::Mosses => Box::new(species::classification.retrieve_as_text("division").ne("Bryophyta")),
+        Group::Sponges => Box::new(species::classification.retrieve_as_text("phylum").ne("Porifera")),
     }
 }
 
