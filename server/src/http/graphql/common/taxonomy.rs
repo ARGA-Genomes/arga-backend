@@ -138,9 +138,12 @@ pub enum TaxonomicVernacularGroup {
     FrogsAndOtherAmphibians,
     Birds,
     Mammals,
-    Seaweeds,
     HigherPlants,
     Mosses,
+    Liverworts,
+    Hornworts,
+    Diatoms,
+    Chromists
 }
 
 

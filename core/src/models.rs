@@ -98,9 +98,12 @@ pub enum TaxonomicVernacularGroup {
     FrogsAndOtherAmphibians,
     Birds,
     Mammals,
-    Seaweeds,
     HigherPlants,
     Mosses,
+    Liverworts,
+    Hornworts,
+    Diatoms,
+    Chromists,
 }
 
 
@@ -415,11 +418,16 @@ impl Species {
 
             // plants
             None => match regnum {
-                Some("Plantae") => match classis {
-                    Some("Bryopsida") => Group::Mosses,
+                Some("Plantae") => match division {
+                    Some("Bryophyta") => match classis {
+                        Some("Bryopsida") => Group::Mosses,
+                        _ => Group::HigherPlants,
+                    },
+                    Some("Marchantiophyta") => Group::Liverworts,
+                    Some("Anthocerotophyta") => Group::Hornworts,
                     _ => Group::HigherPlants,
                 },
-                Some("Chromista") => Group::Seaweeds,
+                Some("Chromista") => Group::Chromists,
                 Some("Fungi") => Group::Fungi,
 
                 // protists
@@ -430,6 +438,7 @@ impl Species {
                         Some("Phaeophyta") => Group::BrownAlgae,
                         Some("Rhodophyta") => Group::RedAlgae,
                         Some("Chlorophyta") => Group::GreenAlgae,
+                        Some("Bacillariophyta") => Group::Diatoms,
                         _ => return None,
                     },
                     _ => return None,
