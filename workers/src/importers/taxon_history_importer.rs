@@ -6,9 +6,9 @@ use rayon::prelude::*;
 use tracing::info;
 
 use arga_core::schema;
-use arga_core::models::{TaxonomicStatus, TaxonHistory, Dataset};
+use arga_core::models::{TaxonHistory, Dataset};
 use crate::error::Error;
-use crate::extractors::{name_extractor, taxon_history_extractor};
+use crate::extractors::taxon_history_extractor;
 
 // use super::taxon_importer::{import_taxa, import_names};
 

@@ -1,4 +1,4 @@
-use chrono::{NaiveDateTime, NaiveDate};
+use chrono::{NaiveDateTime, NaiveDate, DateTime, Utc};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
@@ -64,7 +64,6 @@ pub fn parse_lat_lng(lat_long: &str) -> Result<Coordinates, Error> {
     })
 }
 
-
 pub fn parse_naive_date_time(value: &str) -> Result<NaiveDateTime, ParseError> {
     if let Ok(datetime) = NaiveDateTime::parse_from_str(value, "%d/%m/%Y %H:%M:%S") {
         return Ok(datetime);
@@ -73,6 +72,13 @@ pub fn parse_naive_date_time(value: &str) -> Result<NaiveDateTime, ParseError> {
         return Ok(datetime);
     }
     Ok(NaiveDateTime::parse_from_str(value, "%Y-%m-%dT%H:%M:%SZ")?)
+}
+
+pub fn parse_date_time(value: &str) -> Result<DateTime<Utc>, ParseError> {
+    if let Ok(datetime) = DateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S%z") {
+        return Ok(datetime.into());
+    }
+    Ok(DateTime::parse_from_str(value, "%Y-%m-%dT%H:%M:%S%z")?.into())
 }
 
 
@@ -91,6 +97,27 @@ where D: serde::Deserializer<'de>
     Ok(match s {
         None => None,
         Some(s) => match NaiveDate::parse_from_str(&s, "%Y-%m-%d") {
+            Ok(date) => Some(date),
+            Err(_) => None,
+        },
+    })
+}
+
+pub fn date_time_from_str<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+where D: serde::Deserializer<'de>
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    parse_date_time(&s).map_err(serde::de::Error::custom)
+}
+
+pub fn date_time_from_str_opt<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
+where D: serde::Deserializer<'de>
+{
+    let s: Option<String> = Deserialize::deserialize(deserializer)?;
+
+    Ok(match s {
+        None => None,
+        Some(s) => match parse_date_time(&s) {
             Ok(date) => Some(date),
             Err(_) => None,
         },

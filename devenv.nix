@@ -6,6 +6,7 @@
     protobuf
     diesel-cli
     cargo-udeps
+    mold
   ];
 
   languages.rust.enable = true;

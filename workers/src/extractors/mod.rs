@@ -3,7 +3,7 @@ pub mod source_extractor;
 pub mod dataset_extractor;
 pub mod name_extractor;
 // pub mod taxon_extractor;
-// pub mod taxon_history_extractor;
+pub mod taxon_history_extractor;
 pub mod taxon_photo_extractor;
 pub mod vernacular_extractor;
 pub mod region_extractor;
@@ -22,3 +22,4 @@ pub mod name_attribute_extractor;
 pub mod admin_media_extractor;
 
 pub mod classification_extractor;
+pub mod name_publication_extractor;

@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use chrono::Utc;
+use arga_core::schema;
+use chrono::{Utc, DateTime};
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
 use rayon::prelude::*;
@@ -11,8 +12,9 @@ use uuid::Uuid;
 
 use arga_core::models::{TaxonHistory, Dataset};
 use crate::error::Error;
-use crate::matchers::classification_matcher::classification_map;
-use crate::matchers::taxon_matcher::{self, TaxonRecord, TaxonMatch};
+use crate::matchers::taxon_matcher::{self, TaxonMatch};
+
+use super::utils::date_time_from_str;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -20,10 +22,15 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
-    new_scientific_name: String,
-    old_scientific_name: String,
-    changed_by: Option<String>,
-    reason: Option<String>,
+    acted_on: String,
+    scientific_name: String,
+    taxonomic_status: String,
+    publication: Option<String>,
+    source_url: Option<String>,
+    // #[serde(deserialize_with = "date_time_from_str")]
+    // created_at: DateTime<Utc>,
+    // #[serde(deserialize_with = "date_time_from_str")]
+    // updated_at: DateTime<Utc>,
 }
 
 
@@ -34,36 +41,44 @@ pub fn extract(path: &PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<V
         records.push(row?);
     }
 
-    // combine valid names and synonyms so that we can grab the uuid
-    // for each when building the history
-    let mut all_names = Vec::new();
-    for record in &records {
-        all_names.push(TaxonRecord { scientific_name: record.new_scientific_name.clone() });
-        all_names.push(TaxonRecord { scientific_name: record.old_scientific_name.clone() });
-    }
-
-    let classifications = classification_map(pool);
-
-    // let taxa = taxon_matcher::match_taxa(dataset, &all_names, pool);
-    let history = extract_history(&records, &taxa);
+    let taxa = taxon_matcher::taxa_map(dataset, pool)?;
+    let acts = acts_map(pool)?;
+    let publications = publications_map(pool)?;
+    let history = extract_history(dataset, &records, &taxa, &acts, &publications);
     Ok(history)
 }
 
 
-fn extract_history(dataset: &Dataset, records: &Vec<Record>, taxa: &HashMap<String, TaxonMatch>) -> Vec<TaxonHistory> {
+fn extract_history(
+    dataset: &Dataset,
+    records: &Vec<Record>,
+    taxa: &HashMap<String, TaxonMatch>,
+    acts: &HashMap<String, Uuid>,
+    publications: &HashMap<String, Uuid>,
+) -> Vec<TaxonHistory> {
     info!(total=records.len(), "Extracting taxon history");
 
     let history = records.par_iter().map(|row| {
-        let old_taxon_id = taxa.get(&row.old_scientific_name);
-        let new_taxon_id = taxa.get(&row.new_scientific_name);
+        let act = extract_act(&row.taxonomic_status);
+        let acted_on = taxa.get(&row.acted_on);
+        let taxon_id = taxa.get(&row.scientific_name);
+        let act_id = acts.get(&act).expect(&format!("Cannot find nomenclatural act {}", act));
+        let publication_id = match &row.publication {
+            Some(publication) => publications.get(publication).map(|id| id.clone()),
+            None => None,
+        };
 
-        match (old_taxon_id, new_taxon_id) {
-            (Some(old_taxon_id), Some(new_taxon_id)) => Some(TaxonHistory {
+        match (acted_on, taxon_id) {
+            (Some(acted_on), Some(taxon_id)) => Some(TaxonHistory {
                 id: Uuid::new_v4(),
-                old_taxon_id: old_taxon_id.id,
-                new_taxon_id: new_taxon_id.id,
+                acted_on: acted_on.id,
+                taxon_id: taxon_id.id,
+                act_id: act_id.clone(),
+                publication_id,
+                source_url: row.source_url.clone(),
                 dataset_id: dataset.id.clone(),
                 created_at: Utc::now(),
+                updated_at: Utc::now(),
             }),
             _ => None,
         }
@@ -73,4 +88,45 @@ fn extract_history(dataset: &Dataset, records: &Vec<Record>, taxa: &HashMap<Stri
 
     info!(history=history.len(), "Extracting taxon history finished");
     history
+}
+
+
+fn extract_act(status: &str) -> String {
+    match status {
+        "accepted" => "Original description".to_string(),
+        "taxonomic synonym" => "Original description".to_string(),
+        _ => "Original description".to_string(),
+    }
+}
+
+
+fn acts_map(pool: &mut PgPool) -> Result<HashMap<String, Uuid>, Error> {
+    use schema::nomenclatural_acts::dsl::*;
+    let mut conn = pool.get()?;
+
+    let records = nomenclatural_acts.select((id, name)).load::<(Uuid, String)>(&mut conn)?;
+
+    let mut map = HashMap::new();
+    for (act_id, act_name) in records.into_iter() {
+        map.insert(act_name, act_id);
+    }
+
+    Ok(map)
+}
+
+fn publications_map(pool: &mut PgPool) -> Result<HashMap<String, Uuid>, Error> {
+    use schema::name_publications::dsl::*;
+    let mut conn = pool.get()?;
+
+    let records = name_publications
+        .select((id, citation.assume_not_null()))
+        .filter(citation.is_not_null())
+        .load::<(Uuid, String)>(&mut conn)?;
+
+    let mut map = HashMap::new();
+    for (pub_id, pub_citation) in records {
+        map.insert(pub_citation, pub_id);
+    }
+
+    Ok(map)
 }

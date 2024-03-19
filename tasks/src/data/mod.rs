@@ -1,6 +1,7 @@
 pub mod ncbi;
 pub mod bpa;
 // pub mod bold;
+pub mod oplogger;
 
 
 #[derive(clap::Subcommand)]
@@ -14,6 +15,9 @@ pub enum Command {
     // Extra processing for BOLD datasets
     // #[command(subcommand)]
     // Bold(bold::Command),
+
+    #[command(subcommand)]
+    Oplog(oplogger::Command),
 }
 
 pub fn process_command(command: &Command) {
@@ -23,6 +27,7 @@ pub fn process_command(command: &Command) {
         Command::Ncbi(cmd) => ncbi::process_command(cmd),
         Command::Bpa(cmd) => bpa::process_command(cmd),
         // Command::Bold(cmd) => bold::process_command(cmd),
+        Command::Oplog(cmd) => oplogger::process_command(cmd),
     }
 }
 
