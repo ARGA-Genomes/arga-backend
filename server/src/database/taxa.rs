@@ -1,8 +1,10 @@
-use arga_core::models::{TaxonTreeNode, Taxon, ACCEPTED_NAMES, TaxonomicRank, SPECIES_RANKS};
+use arga_core::models::{TaxonTreeNode, Taxon, ACCEPTED_NAMES, TaxonomicRank, SPECIES_RANKS, TaxonHistory, Dataset, NamePublication, NomenclaturalAct};
+use arga_core::schema::nomenclatural_acts;
 use bigdecimal::BigDecimal;
 use diesel::prelude::*;
 use diesel::sql_types::{Text, Array, Nullable, Varchar};
 use diesel_async::RunQueryDsl;
+use uuid::Uuid;
 
 use crate::database::extensions::filters::{with_filters, Filter, filter_taxa};
 use crate::database::extensions::classification_filters::{
@@ -55,6 +57,21 @@ pub struct TaxonSummary {
     pub species_genomes: i64,
     /// Total amount of descendant species with any genomic data
     pub species_data: i64,
+}
+
+#[derive(Debug, Queryable, Selectable)]
+#[diesel(table_name = schema::taxon_history)]
+pub struct HistoryItem {
+    pub source_url: Option<String>,
+
+    #[diesel(embed)]
+    pub dataset: Dataset,
+    #[diesel(embed)]
+    pub taxon: Taxon,
+    #[diesel(embed)]
+    pub act: NomenclaturalAct,
+    #[diesel(embed)]
+    pub publication: Option<NamePublication>,
 }
 
 
@@ -305,5 +322,32 @@ impl TaxaProvider {
             .await?;
 
         Ok(summaries)
+    }
+
+    pub async fn history(&self, taxon_id: &Uuid) -> Result<Vec<HistoryItem>, Error> {
+        use schema::{datasets, taxa, name_publications as publications, taxon_history as history};
+        let mut conn = self.pool.get().await?;
+
+        let synonym_original_descriptions = history::table
+            .filter(history::acted_on.eq(taxon_id))
+            .select(history::taxon_id)
+            .into_boxed();
+
+        let items = history::table
+            .inner_join(datasets::table)
+            .inner_join(taxa::table.on(taxa::id.eq(history::taxon_id)))
+            .inner_join(nomenclatural_acts::table)
+            .left_join(publications::table)
+            .filter(history::taxon_id.eq(taxon_id))
+            .or_filter(history::acted_on.eq(taxon_id))
+            .or_filter(history::taxon_id.eq_any(synonym_original_descriptions))
+            .select(HistoryItem::as_select())
+            .order((publications::published_year.asc(), taxa::scientific_name.asc()))
+            .load::<HistoryItem>(&mut conn)
+            .await?;
+
+// (select taxon_id from taxon_history where acted_on='6063fed6-c8ef-429f-af61-750a562a4166')
+
+        Ok(items)
     }
 }

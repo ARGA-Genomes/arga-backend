@@ -10,8 +10,8 @@ use crate::http::Error;
 use crate::http::Context as State;
 
 use crate::database::taxa;
-use super::common::taxonomy::TaxonDetails;
-use super::common::taxonomy::TaxonomicRank;
+use super::common::taxonomy::{TaxonDetails, TaxonomicRank, TaxonomicStatus};
+use super::dataset::DatasetDetails;
 
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -90,7 +90,7 @@ impl Taxon {
         details.source = Some(dataset.name);
         details.source_url = dataset.url;
 
-        let query = TaxonQuery { classification };
+        let query = TaxonQuery { classification, taxon };
         Ok(Taxon(details, query))
     }
 }
@@ -98,6 +98,7 @@ impl Taxon {
 
 pub struct TaxonQuery {
     classification: Classification,
+    taxon: models::Taxon,
 }
 
 #[Object]
@@ -134,6 +135,64 @@ impl TaxonQuery {
         let summaries = state.database.taxa.species_genome_summary(&self.classification).await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
+    }
+
+    async fn history(&self, ctx: &Context<'_>) -> Result<Vec<HistoryItem>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let history = state.database.taxa.history(&self.taxon.id).await?;
+        let history = history.into_iter().map(|r| r.into()).collect();
+        Ok(history)
+    }
+}
+
+
+#[derive(SimpleObject)]
+pub struct NamePublication {
+    pub citation: Option<String>,
+    pub published_year: Option<i32>,
+    pub source_url: Option<String>,
+    pub type_citation: Option<String>,
+}
+
+impl From<models::NamePublication> for NamePublication {
+    fn from(value: models::NamePublication) -> Self {
+        Self {
+            citation: value.citation,
+            published_year: value.published_year,
+            source_url: value.source_url,
+            type_citation: value.type_citation,
+        }
+    }
+}
+
+#[derive(SimpleObject)]
+pub struct HistoryItem {
+    pub dataset: DatasetDetails,
+    pub nomenclatural_act: String,
+    pub status: TaxonomicStatus,
+    pub rank: TaxonomicRank,
+    pub scientific_name: String,
+    pub canonical_name: String,
+    pub authorship: Option<String>,
+    pub citation: Option<String>,
+    pub source_url: Option<String>,
+    pub publication: Option<NamePublication>,
+}
+
+impl From<taxa::HistoryItem> for HistoryItem {
+    fn from(value: taxa::HistoryItem) -> Self {
+        Self {
+            dataset: value.dataset.into(),
+            nomenclatural_act: value.act.name,
+            status: value.taxon.status.into(),
+            rank: value.taxon.rank.into(),
+            scientific_name: value.taxon.scientific_name,
+            canonical_name: value.taxon.canonical_name,
+            authorship: value.taxon.authorship,
+            citation: value.taxon.citation,
+            source_url: value.source_url,
+            publication: value.publication.map(|publication| publication.into()),
+        }
     }
 }
 

@@ -420,24 +420,53 @@ impl Species {
                 None => match superkingdom {
                     Some("Protista") => Group::ProtistsAndOtherUnicellularOrganisms,
                     _ => return None,
-                }
+                },
                 _ => return None,
-            }
+            },
             _ => return None,
         })
     }
 }
 
-#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[derive(Identifiable, Insertable, Selectable, Queryable, Associations, Debug, Clone)]
+#[diesel(belongs_to(Dataset))]
+#[diesel(belongs_to(Taxon))]
+#[diesel(belongs_to(NamePublication, foreign_key = publication_id))]
 #[diesel(table_name = schema::taxon_history)]
 pub struct TaxonHistory {
     pub id: Uuid,
-    pub old_taxon_id: Uuid,
-    pub new_taxon_id: Uuid,
+    pub acted_on: Uuid,
+    pub taxon_id: Uuid,
     pub dataset_id: Uuid,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub act_id: Uuid,
+    pub publication_id: Option<Uuid>,
+    pub source_url: Option<String>,
 }
 
+#[derive(Queryable, Selectable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::name_publications)]
+pub struct NamePublication {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub citation: Option<String>,
+    pub published_year: Option<i32>,
+    pub source_url: Option<String>,
+    pub type_citation: Option<String>,
+    pub record_created_at: Option<DateTime<Utc>>,
+    pub record_updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Queryable, Selectable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::nomenclatural_acts)]
+pub struct NomenclaturalAct {
+    pub id: Uuid,
+    pub name: String,
+    pub source_url: Option<String>,
+    pub citation: Option<String>,
+    pub example: Option<String>,
+}
 
 #[derive(Queryable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema_gnl::undescribed_species)]
@@ -1141,4 +1170,45 @@ pub struct VernacularName {
     pub vernacular_name: String,
     pub citation: Option<String>,
     pub source_url: Option<String>,
+}
+
+
+#[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::OperationAction"]
+pub enum Action {
+    Create,
+    Update,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum Atom {
+    Empty,
+    ScientificName { value: String },
+    ActedOn { value: String },
+    SourceUrl { value: String },
+}
+
+#[derive(Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::operation_logs)]
+pub struct Operation {
+    pub operation_id: BigDecimal,
+    pub object_id: String,
+    pub reference_id: BigDecimal,
+    pub action: Action,
+    pub atom: Option<serde_json::Value>,
+}
+
+impl std::fmt::Display for Operation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} {} {} {:?} {:?}",
+            self.operation_id,
+            self.object_id,
+            self.reference_id,
+            self.action,
+            self.atom,
+        )
+    }
 }
