@@ -22,7 +22,12 @@ pub use filters::{
 
 use async_graphql::{SimpleObject, OutputType};
 
-use super::{species::SpecimenSummary, markers::SpeciesMarker, species::WholeGenome, species::GenomicComponent};
+use super::{
+    species::SpecimenSummary,
+    markers::SpeciesMarker,
+    species::WholeGenome,
+    species::GenomicComponent,
+};
 
 
 #[derive(SimpleObject)]

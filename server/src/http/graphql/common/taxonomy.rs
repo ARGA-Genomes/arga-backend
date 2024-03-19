@@ -105,6 +105,24 @@ pub enum TaxonomicStatus {
     Unaccepted,
     Informal,
     Placeholder,
+
+    Basionym,
+    NomenclaturalSynonym,
+    TaxonomicSynonym,
+    ReplacedSynonym,
+
+    OrthographicVariant,
+    Misapplied,
+    Excluded,
+    AlternativeName,
+
+    ProParteMisapplied,
+    ProParteTaxonomicSynonym,
+
+    DoubtfulMisapplied,
+    DoubtfulTaxonomicSynonym,
+    DoubtfulProParteMisapplied,
+    DoubtfulProParteTaxonomicSynonym,
 }
 
 impl Default for TaxonomicStatus {
@@ -179,6 +197,7 @@ pub enum TaxonomicRank {
     IncertaeSedis,
     Infraclass,
     Infraorder,
+    Infragenus,
     Section,
     Subdivision,
 
@@ -188,12 +207,16 @@ pub enum TaxonomicRank {
     Ordo,
     Varietas,
     Forma,
+    Subforma,
     Subclassis,
     Superordo,
     Sectio,
+    Subsectio,
     Nothovarietas,
     Subvarietas,
     Series,
+    Subseries,
+    Superspecies,
     Infraspecies,
     Subfamilia,
     Subordo,
