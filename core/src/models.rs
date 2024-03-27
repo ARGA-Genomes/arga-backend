@@ -104,6 +104,8 @@ pub enum TaxonomicVernacularGroup {
     Hornworts,
     Diatoms,
     Chromists,
+    ConifersAndCycads,
+    Ferns,
 }
 
 
@@ -378,6 +380,8 @@ impl Species {
         let regnum = classification.regnum.as_ref().map(String::as_str);
         let division = classification.division.as_ref().map(String::as_str);
         let classis = classification.classis.as_ref().map(String::as_str);
+        let ordo = classification.ordo.as_ref().map(String::as_str);
+        let subclassis = classification.subclassis.as_ref().map(String::as_str);
 
         // animals
         Some(match kingdom {
@@ -425,6 +429,13 @@ impl Species {
                     },
                     Some("Marchantiophyta") => Group::Liverworts,
                     Some("Anthocerotophyta") => Group::Hornworts,
+                    Some("Charophyta") => match (ordo, subclassis) {
+                        (Some("Pinales"), _) => Group::ConifersAndCycads,
+                        (Some("Cycadales"), _) => Group::ConifersAndCycads,
+                        (_, Some("Polypodiidae")) => Group::Ferns,
+                        (_, Some("Magnoliidae")) => Group::FloweringPlants,
+                        _ => Group::HigherPlants,
+                    },
                     _ => Group::HigherPlants,
                 },
                 Some("Chromista") => Group::Chromists,

@@ -143,7 +143,9 @@ pub enum TaxonomicVernacularGroup {
     Liverworts,
     Hornworts,
     Diatoms,
-    Chromists
+    Chromists,
+    ConifersAndCycads,
+    Ferns,
 }
 
 

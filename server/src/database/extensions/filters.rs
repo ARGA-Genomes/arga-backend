@@ -149,7 +149,7 @@ pub fn with_filters(filters: &Vec<Filter>) -> Option<BoxedExpression> {
 pub fn with_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpression {
     use TaxonomicVernacularGroup as Group;
     match group {
-        Group::FloweringPlants => Box::new(species::classification.retrieve_as_text("regnum").eq("Plantae")),
+        Group::FloweringPlants => Box::new(species::classification.retrieve_as_text("subclassis").eq("Magnoliidae")),
         Group::Animals => Box::new(species::classification.retrieve_as_text("kingdom").eq("Animalia")),
         Group::BrownAlgae => Box::new(species::classification.retrieve_as_text("classis").eq("Phaeophyceae")),
         Group::RedAlgae => Box::new(species::classification.retrieve_as_text("division").eq("Rhodophyta")),
@@ -177,6 +177,8 @@ pub fn with_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpressio
         Group::Hornworts => Box::new(species::classification.retrieve_as_text("division").eq("Anthocerotophyta")),
         Group::Diatoms => Box::new(species::classification.retrieve_as_text("division").eq("Bacillariophyta")),
         Group::Chromists => Box::new(species::classification.retrieve_as_text("regnum").eq("Chromista")),
+        Group::ConifersAndCycads => Box::new(species::classification.retrieve_as_text("ordo").eq_any(vec!["Pinales", "Cycadales"])),
+        Group::Ferns => Box::new(species::classification.retrieve_as_text("subclassis").eq("Polypodiidae")),
     }
 }
 
@@ -184,7 +186,7 @@ pub fn with_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpressio
 pub fn without_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpression {
     use TaxonomicVernacularGroup as Group;
     match group {
-        Group::FloweringPlants => Box::new(species::classification.retrieve_as_text("regnum").ne("Plantae")),
+        Group::FloweringPlants => Box::new(species::classification.retrieve_as_text("subclassis").ne("Magnoliidae")),
         Group::Animals => Box::new(species::classification.retrieve_as_text("kingdom").ne("Animalia")),
         Group::BrownAlgae => Box::new(species::classification.retrieve_as_text("classis").ne("Phaeophyceae")),
         Group::RedAlgae => Box::new(species::classification.retrieve_as_text("division").ne("Rhodophyta")),
@@ -212,6 +214,8 @@ pub fn without_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpres
         Group::Hornworts => Box::new(species::classification.retrieve_as_text("division").ne("Anthocerotophyta")),
         Group::Diatoms => Box::new(species::classification.retrieve_as_text("division").ne("Bacillariophyta")),
         Group::Chromists => Box::new(species::classification.retrieve_as_text("regnum").ne("Chromista")),
+        Group::ConifersAndCycads => Box::new(species::classification.retrieve_as_text("ordo").ne("Pinales").and(species::classification.retrieve_as_text("ordo").ne("Cycadales"))),
+        Group::Ferns => Box::new(species::classification.retrieve_as_text("subclassis").ne("Polypodiidae")),
     }
 }
 
