@@ -1,6 +1,14 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
-use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable};
+use diesel::{
+    backend::Backend,
+    deserialize::{self, FromSql},
+    pg::Pg,
+    serialize::{self, Output, ToSql},
+    sql_types::Jsonb,
+    AsChangeset, AsExpression, Associations, FromSqlRow, Identifiable, Insertable, Queryable,
+    Selectable,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -88,6 +96,37 @@ pub enum TaxonomicStatus {
 impl Default for TaxonomicStatus {
     fn default() -> Self {
         TaxonomicStatus::Unaccepted
+    }
+}
+
+impl From<String> for TaxonomicStatus {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "Accepted" => TaxonomicStatus::Accepted,
+            "Undescribed" => TaxonomicStatus::Undescribed,
+            "SpeciesInquirenda" => TaxonomicStatus::SpeciesInquirenda,
+            "ManuscriptName" => TaxonomicStatus::ManuscriptName,
+            "Hybrid" => TaxonomicStatus::Hybrid,
+            "Synonym" => TaxonomicStatus::Synonym,
+            "Unaccepted" => TaxonomicStatus::Unaccepted,
+            "Informal" => TaxonomicStatus::Informal,
+            "Placeholder" => TaxonomicStatus::Placeholder,
+            "Basionym" => TaxonomicStatus::Basionym,
+            "NomenclaturalSynonym" => TaxonomicStatus::NomenclaturalSynonym,
+            "TaxonomicSynonym" => TaxonomicStatus::TaxonomicSynonym,
+            "ReplacedSynonym" => TaxonomicStatus::ReplacedSynonym,
+            "OrthographicVariant" => TaxonomicStatus::OrthographicVariant,
+            "Misapplied" => TaxonomicStatus::Misapplied,
+            "Excluded" => TaxonomicStatus::Excluded,
+            "AlternativeName" => TaxonomicStatus::AlternativeName,
+            "ProParteMisapplied" => TaxonomicStatus::ProParteMisapplied,
+            "ProParteTaxonomicSynonym" => TaxonomicStatus::ProParteTaxonomicSynonym,
+            "DoubtfulMisapplied" => TaxonomicStatus::DoubtfulMisapplied,
+            "DoubtfulTaxonomicSynonym" => TaxonomicStatus::DoubtfulTaxonomicSynonym,
+            "DoubtfulProParteMisapplied" => TaxonomicStatus::DoubtfulProParteMisapplied,
+            "DoubtfulProParteTaxonomicSynonym" => TaxonomicStatus::DoubtfulProParteTaxonomicSynonym,
+            _ => TaxonomicStatus::Unaccepted,
+        }
     }
 }
 
@@ -469,6 +508,7 @@ pub struct TaxonHistory {
     pub act_id: Uuid,
     pub publication_id: Option<Uuid>,
     pub source_url: Option<String>,
+    pub entity_id: String,
 }
 
 #[derive(Queryable, Selectable, Insertable, Debug, Default, Serialize, Deserialize)]
@@ -1177,7 +1217,6 @@ pub struct VernacularName {
     pub source_url: Option<String>,
 }
 
-
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::OperationAction"]
 pub enum Action {
@@ -1185,23 +1224,58 @@ pub enum Action {
     Update,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[derive(Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow)]
+#[diesel(sql_type = diesel::sql_types::Jsonb)]
 pub enum Atom {
     Empty,
     ScientificName { value: String },
     ActedOn { value: String },
+    TaxonomicStatus(TaxonomicStatus),
+    NomenclaturalAct { value: String },
     SourceUrl { value: String },
+    Publication { value: String },
+    CreatedAt(DateTime<Utc>),
+    UpdatedAt(DateTime<Utc>),
+}
+
+impl FromSql<Jsonb, Pg> for Atom {
+    fn from_sql(value: <Pg as Backend>::RawValue<'_>) -> deserialize::Result<Self> {
+        serde_json::from_value(FromSql::<Jsonb, Pg>::from_sql(value)?).map_err(|e| e.into())
+    }
+}
+
+impl ToSql<Jsonb, Pg> for Atom {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        let json = serde_json::to_value(self)?;
+        <serde_json::Value as ToSql<Jsonb, Pg>>::to_sql(&json, &mut out.reborrow())
+    }
+}
+
+impl ToString for Atom {
+    fn to_string(&self) -> String {
+        match self {
+            Atom::Empty => "Empty",
+            Atom::ScientificName { value: _ } => "ScientificName",
+            Atom::ActedOn { value: _ } => "ActedOn",
+            Atom::TaxonomicStatus(_) => "TaxonomicStatus",
+            Atom::NomenclaturalAct { value: _ } => "NomenclaturalAct",
+            Atom::SourceUrl { value: _ } => "SourceUrl",
+            Atom::Publication { value: _ } => "Publication",
+            Atom::CreatedAt(_) => "CreatedAt",
+            Atom::UpdatedAt(_) => "UpdatedAt",
+        }
+        .to_string()
+    }
 }
 
 #[derive(Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::operation_logs)]
 pub struct Operation {
     pub operation_id: BigDecimal,
-    pub object_id: String,
     pub reference_id: BigDecimal,
+    pub object_id: String,
     pub action: Action,
-    pub atom: Option<serde_json::Value>,
+    pub atom: Atom,
 }
 
 impl std::fmt::Display for Operation {
@@ -1209,11 +1283,7 @@ impl std::fmt::Display for Operation {
         write!(
             f,
             "{} {} {} {:?} {:?}",
-            self.operation_id,
-            self.object_id,
-            self.reference_id,
-            self.action,
-            self.atom,
+            self.operation_id, self.object_id, self.reference_id, self.action, self.atom,
         )
     }
 }

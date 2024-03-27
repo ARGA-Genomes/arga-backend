@@ -10,5 +10,5 @@ CREATE TABLE operation_logs (
     reference_id numeric NOT NULL,
     object_id varchar NOT NULL,
     action operation_action NOT NULL,
-    atom jsonb
+    atom jsonb DEFAULT '{}' NOT NULL
 );

@@ -437,7 +437,7 @@ diesel::table! {
         reference_id -> Numeric,
         object_id -> Varchar,
         action -> OperationAction,
-        atom -> Nullable<Jsonb>,
+        atom -> Jsonb,
     }
 }
 
@@ -625,6 +625,7 @@ diesel::table! {
         act_id -> Uuid,
         publication_id -> Nullable<Uuid>,
         source_url -> Nullable<Varchar>,
+        entity_id -> Varchar,
     }
 }
 
