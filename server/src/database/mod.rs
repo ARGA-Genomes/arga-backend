@@ -1,36 +1,35 @@
 pub mod extensions;
 
-pub mod search;
-pub mod species;
-pub mod stats;
-pub mod maps;
-pub mod sources;
 pub mod datasets;
-pub mod names;
-pub mod specimen;
-pub mod markers;
-pub mod overview;
-pub mod taxa;
-pub mod specimens;
-pub mod subsamples;
 pub mod dna_extracts;
+pub mod maps;
+pub mod markers;
+pub mod names;
+pub mod overview;
+pub mod provenance;
+pub mod search;
 pub mod sequences;
+pub mod sources;
+pub mod species;
+pub mod specimen;
+pub mod specimens;
+pub mod stats;
+pub mod subsamples;
+pub mod taxa;
 
-pub use arga_core::{schema, schema_gnl, models, get_database_url};
+pub use arga_core::{get_database_url, models, schema, schema_gnl};
 
 use thiserror::Error;
 
-use diesel_async::AsyncPgConnection;
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::pooled_connection::bb8::Pool;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use diesel_async::AsyncPgConnection;
 
 use crate::http::Error as HttpError;
 
 use self::extensions::pagination::Page;
 
-
 pub type PgPool = Pool<AsyncPgConnection>;
-
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -65,9 +64,7 @@ impl From<diesel_async::pooled_connection::bb8::RunError> for HttpError {
     }
 }
 
-
 pub type PageResult<T> = Result<Page<T>, Error>;
-
 
 #[derive(Clone)]
 pub struct Database {
@@ -86,6 +83,7 @@ pub struct Database {
     pub dna_extracts: dna_extracts::DnaExtractProvider,
     pub sequences: sequences::SequenceProvider,
     pub maps: maps::MapsProvider,
+    pub provenance: provenance::ProvenanceProvider,
 }
 
 impl Database {
@@ -108,7 +106,8 @@ impl Database {
             dna_extracts: dna_extracts::DnaExtractProvider { pool: pool.clone() },
             sequences: sequences::SequenceProvider { pool: pool.clone() },
             maps: maps::MapsProvider { pool: pool.clone() },
-            pool
+            provenance: provenance::ProvenanceProvider { pool: pool.clone() },
+            pool,
         })
     }
 }

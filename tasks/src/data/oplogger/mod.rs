@@ -3,7 +3,9 @@ pub mod nomenclatural_acts;
 
 use arga_core::models::{Action, Atom, Operation};
 use chrono::Utc;
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
+use std::path::PathBuf;
+use uuid::Uuid;
 
 use self::hlc::HybridTimestamp;
 
@@ -28,16 +30,18 @@ impl Version {
 
 #[derive(Debug)]
 pub struct ObjectFrame {
+    pub dataset_id: Uuid,
     pub previous: Version,
     pub object_id: String,
     pub operations: Vec<Operation>,
 }
 
 impl ObjectFrame {
-    pub fn new(version: Version, object_id: String) -> ObjectFrame {
+    pub fn new(dataset_id: Uuid, version: Version, object_id: String) -> ObjectFrame {
         let next = version.next();
 
         let creation = Operation {
+            dataset_id: dataset_id.clone(),
             operation_id: next.0.as_u64().into(),
             object_id: object_id.clone(),
             reference_id: version.0.as_u64().into(),
@@ -47,6 +51,7 @@ impl ObjectFrame {
 
         ObjectFrame {
             previous: next,
+            dataset_id,
             object_id,
             operations: vec![creation],
         }
@@ -57,6 +62,7 @@ impl ObjectFrame {
         let next = self.previous.0.inc();
 
         let op = Operation {
+            dataset_id: self.dataset_id.clone(),
             operation_id: next.as_u64().into(),
             object_id: last_op.object_id.clone(),
             reference_id: self.previous.0.as_u64().into(),
@@ -116,7 +122,7 @@ pub enum Command {
 #[derive(clap::Subcommand)]
 pub enum ImportCommand {
     /// Extract nomenclatural acts from a CSV dataset
-    NomenclaturalActs { path: PathBuf },
+    NomenclaturalActs { dataset_id: String, path: PathBuf },
 }
 
 #[derive(clap::Subcommand)]
@@ -127,8 +133,8 @@ pub enum ReduceCommand {
 pub fn process_command(cmd: &Command) {
     match cmd {
         Command::Import(cmd) => match cmd {
-            ImportCommand::NomenclaturalActs { path } => {
-                nomenclatural_acts::process(path.clone()).unwrap()
+            ImportCommand::NomenclaturalActs { dataset_id, path } => {
+                nomenclatural_acts::process(path.clone(), dataset_id.clone()).unwrap()
             }
         },
         Command::Reduce(cmd) => match cmd {

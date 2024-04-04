@@ -1,18 +1,17 @@
 use arga_core::models;
 use async_graphql::*;
+use bigdecimal::ToPrimitive;
 use serde::Deserialize;
 use serde::Serialize;
-use bigdecimal::ToPrimitive;
 
-use crate::database::Database;
 use crate::database::extensions::classification_filters::Classification;
-use crate::http::Error;
+use crate::database::Database;
 use crate::http::Context as State;
+use crate::http::Error;
 
-use crate::database::taxa;
 use super::common::taxonomy::{TaxonDetails, TaxonomicRank, TaxonomicStatus};
 use super::dataset::DatasetDetails;
-
+use crate::database::taxa;
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
 #[graphql(remote = "models::TaxonomicRank")]
@@ -80,12 +79,15 @@ pub enum TaxonRank {
     SpecialForm,
 }
 
-
 #[derive(MergedObject)]
 pub struct Taxon(TaxonDetails, TaxonQuery);
 
 impl Taxon {
-    pub async fn new(db: &Database, rank: TaxonRank, canonical_name: String) -> Result<Taxon, Error> {
+    pub async fn new(
+        db: &Database,
+        rank: TaxonRank,
+        canonical_name: String,
+    ) -> Result<Taxon, Error> {
         let classification = into_classification(rank, canonical_name);
         let taxon = db.taxa.find_by_classification(&classification).await?;
         let mut details: TaxonDetails = taxon.clone().into();
@@ -95,11 +97,13 @@ impl Taxon {
         details.source = Some(dataset.name);
         details.source_url = dataset.url;
 
-        let query = TaxonQuery { classification, taxon };
+        let query = TaxonQuery {
+            classification,
+            taxon,
+        };
         Ok(Taxon(details, query))
     }
 }
-
 
 pub struct TaxonQuery {
     classification: Classification,
@@ -117,27 +121,47 @@ impl TaxonQuery {
 
     async fn summary(&self, ctx: &Context<'_>) -> Result<TaxonSummary, Error> {
         let state = ctx.data::<State>().unwrap();
-        let summary = state.database.taxa.taxon_summary(&self.classification).await?;
+        let summary = state
+            .database
+            .taxa
+            .taxon_summary(&self.classification)
+            .await?;
         Ok(summary.into())
     }
 
-    async fn descendants(&self, ctx: &Context<'_>, rank: TaxonomicRank) -> Result<Vec<TaxonSummary>> {
+    async fn descendants(
+        &self,
+        ctx: &Context<'_>,
+        rank: TaxonomicRank,
+    ) -> Result<Vec<TaxonSummary>> {
         let state = ctx.data::<State>().unwrap();
-        let summaries = state.database.taxa.descendant_summary(&self.classification, rank.into()).await?;
+        let summaries = state
+            .database
+            .taxa
+            .descendant_summary(&self.classification, rank.into())
+            .await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
 
     async fn species_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let summaries = state.database.taxa.species_summary(&self.classification).await?;
+        let summaries = state
+            .database
+            .taxa
+            .species_summary(&self.classification)
+            .await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
 
     async fn species_genome_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let summaries = state.database.taxa.species_genome_summary(&self.classification).await?;
+        let summaries = state
+            .database
+            .taxa
+            .species_genome_summary(&self.classification)
+            .await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
@@ -149,7 +173,6 @@ impl TaxonQuery {
         Ok(history)
     }
 }
-
 
 #[derive(SimpleObject)]
 pub struct NamePublication {
@@ -182,6 +205,7 @@ pub struct HistoryItem {
     pub citation: Option<String>,
     pub source_url: Option<String>,
     pub publication: Option<NamePublication>,
+    pub entity_id: String,
 }
 
 impl From<taxa::HistoryItem> for HistoryItem {
@@ -197,10 +221,10 @@ impl From<taxa::HistoryItem> for HistoryItem {
             citation: value.taxon.citation,
             source_url: value.source_url,
             publication: value.publication.map(|publication| publication.into()),
+            entity_id: value.entity_id,
         }
     }
 }
-
 
 #[derive(SimpleObject)]
 pub struct TaxonNode {
@@ -244,7 +268,6 @@ impl From<taxa::TaxonSummary> for TaxonSummary {
     }
 }
 
-
 #[derive(SimpleObject)]
 pub struct DataBreakdown {
     pub name: String,
@@ -261,9 +284,15 @@ impl From<taxa::DataSummary> for DataBreakdown {
             name: value.canonical_name,
             markers: value.markers.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
             genomes: value.genomes.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
-            specimens: value.specimens.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
+            specimens: value
+                .specimens
+                .map(|v| v.to_i64().unwrap_or(0))
+                .unwrap_or(0),
             other: value.other.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
-            total_genomic: value.total_genomic.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
+            total_genomic: value
+                .total_genomic
+                .map(|v| v.to_i64().unwrap_or(0))
+                .unwrap_or(0),
         }
     }
 }
@@ -280,7 +309,6 @@ impl From<taxa::SpeciesSummary> for DataBreakdown {
         }
     }
 }
-
 
 fn into_classification(rank: TaxonRank, value: String) -> Classification {
     match rank {

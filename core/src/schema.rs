@@ -435,6 +435,7 @@ diesel::table! {
     operation_logs (operation_id) {
         operation_id -> Numeric,
         reference_id -> Numeric,
+        dataset_id -> Uuid,
         object_id -> Varchar,
         action -> OperationAction,
         atom -> Jsonb,

@@ -1268,11 +1268,13 @@ impl ToString for Atom {
     }
 }
 
-#[derive(Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[derive(Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize)]
+#[diesel(belongs_to(Dataset))]
 #[diesel(table_name = schema::operation_logs)]
 pub struct Operation {
     pub operation_id: BigDecimal,
     pub reference_id: BigDecimal,
+    pub dataset_id: Uuid,
     pub object_id: String,
     pub action: Action,
     pub atom: Atom,
@@ -1282,8 +1284,13 @@ impl std::fmt::Display for Operation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} {} {} {:?} {:?}",
-            self.operation_id, self.object_id, self.reference_id, self.action, self.atom,
+            "{} {} {} {} {:?} {:?}",
+            self.operation_id,
+            self.object_id,
+            self.dataset_id,
+            self.reference_id,
+            self.action,
+            self.atom,
         )
     }
 }

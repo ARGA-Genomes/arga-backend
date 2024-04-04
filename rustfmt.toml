@@ -1,0 +1,15 @@
+edition = "2021"
+version = "Two"
+unstable_features = true
+
+indent_style = "Block"
+reorder_imports = true
+blank_lines_upper_bound = 2
+combine_control_expr = false
+control_brace_style = "ClosingNextLine"
+imports_layout = "HorizontalVertical"
+imports_granularity = "Module"
+newline_style = "Unix"
+reorder_impl_items = true
+group_imports = "StdExternalCrate"
+use_field_init_shorthand = true

@@ -8,13 +8,12 @@ use serde::Serialize;
 use tracing::instrument;
 use uuid::Uuid;
 
-use crate::http::Error;
-use crate::http::Context as State;
 use crate::database::Database;
+use crate::http::Context as State;
+use crate::http::Error;
 
 use super::common::{Page, SpeciesCard};
 use super::helpers::SpeciesHelper;
-
 
 #[derive(OneofObject)]
 pub enum DatasetBy {
@@ -37,7 +36,6 @@ impl Dataset {
     }
 }
 
-
 pub struct DatasetQuery {
     dataset: models::Dataset,
 }
@@ -59,8 +57,7 @@ impl DatasetQuery {
     }
 }
 
-
-#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject, Default)]
 pub struct DatasetDetails {
     pub id: Uuid,
     pub global_id: String,

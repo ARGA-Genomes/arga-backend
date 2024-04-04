@@ -7,6 +7,7 @@ use chrono::{DateTime, Utc};
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::*;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use xxhash_rust::xxh3::Xxh3;
 
 use crate::data::oplogger::LWWMap;
@@ -99,6 +100,7 @@ impl From<LWWMap> for OriginalDescription {
 
 pub struct NomenclaturalActs {
     pub path: PathBuf,
+    pub dataset_id: Uuid,
 }
 
 impl NomenclaturalActs {
@@ -120,7 +122,7 @@ impl NomenclaturalActs {
             hasher.update(record.scientific_name.as_bytes());
             let hash = hasher.digest();
 
-            let mut object = ObjectFrame::new(version, hash.to_string());
+            let mut object = ObjectFrame::new(self.dataset_id, version, hash.to_string());
 
             if record.acted_on == record.scientific_name {
                 object.update(Atom::ActedOn {
@@ -159,16 +161,30 @@ impl NomenclaturalActs {
     }
 }
 
-pub fn process(path: PathBuf) -> Result<(), Error> {
-    let acts = NomenclaturalActs { path };
+pub fn process(path: PathBuf, dataset_id: String) -> Result<(), Error> {
+    let dataset_id = find_dataset_id(dataset_id)?;
+    let acts = NomenclaturalActs { path, dataset_id };
     let records = acts.original_descriptions()?;
     import_operations(records)?;
-
     Ok(())
 }
 
 pub fn reduce() -> Result<(), Error> {
     reduce_operations()
+}
+
+fn find_dataset_id(dataset_id: String) -> Result<Uuid, Error> {
+    use schema::datasets::dsl::*;
+
+    let pool = get_pool()?;
+    let mut conn = pool.get()?;
+
+    let uuid = datasets
+        .filter(global_id.eq(dataset_id))
+        .select(id)
+        .get_result::<Uuid>(&mut conn)?;
+
+    Ok(uuid)
 }
 
 fn import_operations(records: Vec<Operation>) -> Result<(), Error> {

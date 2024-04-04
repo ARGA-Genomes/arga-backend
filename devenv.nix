@@ -2,14 +2,16 @@
 
 {
   packages = with pkgs; [
-    rust-analyzer
     protobuf
     diesel-cli
     cargo-udeps
     mold
   ];
 
-  languages.rust.enable = true;
+  languages.rust = {
+    enable = true;
+    components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-analyzer" ];
+  };
 
   services.postgres.enable = true;
   services.postgres.package = pkgs.postgresql_15.withPackages (p: [ p.postgis ]);
@@ -19,4 +21,8 @@
   };
 
   dotenv.disableHint = true;
+
+  pre-commit.hooks = {
+    clippy.enable = false;
+  };
 }
