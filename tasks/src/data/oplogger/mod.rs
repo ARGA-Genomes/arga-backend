@@ -1,112 +1,17 @@
-pub mod hlc;
 pub mod nomenclatural_acts;
+pub mod specimens;
 
-use arga_core::models::{Action, Atom, Operation};
-use chrono::Utc;
-use std::collections::HashMap;
+use arga_core::models::DatasetVersion;
+use arga_core::schema;
+use chrono::{DateTime, Utc};
+use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::*;
 use std::path::PathBuf;
 use uuid::Uuid;
 
-use self::hlc::HybridTimestamp;
+use super::Error;
 
-#[derive(Debug)]
-pub struct Version(HybridTimestamp);
-
-impl Version {
-    /// Get the next frame version.
-    ///
-    /// This will generate a new hybrid logical clock and if it is greater
-    /// than the current version it will return it. However, if the current
-    /// clock is ahead we keep incrementing it.
-    pub fn next(&self) -> Version {
-        let ts: HybridTimestamp = Utc::now().into();
-        if ts > self.0 {
-            Version(ts)
-        } else {
-            Version(self.0.inc())
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct ObjectFrame {
-    pub dataset_id: Uuid,
-    pub previous: Version,
-    pub object_id: String,
-    pub operations: Vec<Operation>,
-}
-
-impl ObjectFrame {
-    pub fn new(dataset_id: Uuid, version: Version, object_id: String) -> ObjectFrame {
-        let next = version.next();
-
-        let creation = Operation {
-            dataset_id: dataset_id.clone(),
-            operation_id: next.0.as_u64().into(),
-            object_id: object_id.clone(),
-            reference_id: version.0.as_u64().into(),
-            action: Action::Create,
-            atom: Atom::Empty,
-        };
-
-        ObjectFrame {
-            previous: next,
-            dataset_id,
-            object_id,
-            operations: vec![creation],
-        }
-    }
-
-    pub fn update(&mut self, atom: Atom) {
-        let last_op = self.operations.last().unwrap();
-        let next = self.previous.0.inc();
-
-        let op = Operation {
-            dataset_id: self.dataset_id.clone(),
-            operation_id: next.as_u64().into(),
-            object_id: last_op.object_id.clone(),
-            reference_id: self.previous.0.as_u64().into(),
-            action: Action::Update,
-            atom,
-        };
-
-        self.operations.push(op);
-        self.previous.0 = next;
-    }
-}
-
-// a map that uses the last-write-wins policy for each entry
-#[derive(Debug)]
-pub struct LWWMap {
-    pub entity_id: String,
-    pub map: HashMap<String, Atom>,
-}
-
-impl LWWMap {
-    pub fn new(entity_id: String) -> Self {
-        Self {
-            entity_id,
-            map: HashMap::new(),
-        }
-    }
-
-    fn update(&mut self, atom: Atom) {
-        self.map.insert(atom.to_string(), atom);
-    }
-
-    pub fn reduce(&mut self, operations: &Vec<Operation>) {
-        // this doesn't use versioned values an thus requires the operations
-        // to be in causal order. that is to say that it should be ordered by
-        // the id which in turn should be some representation of causality like
-        // a timestamp
-        for op in operations {
-            match op.action {
-                Action::Create => {}
-                Action::Update => self.update(op.atom.clone()),
-            }
-        }
-    }
-}
+type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 #[derive(clap::Subcommand)]
 pub enum Command {
@@ -122,23 +27,99 @@ pub enum Command {
 #[derive(clap::Subcommand)]
 pub enum ImportCommand {
     /// Extract nomenclatural acts from a CSV dataset
-    NomenclaturalActs { dataset_id: String, path: PathBuf },
+    NomenclaturalActs {
+        dataset_id: String,
+        version: String,
+        created_at: String,
+        path: PathBuf,
+    },
+
+    /// Extract specimens from a CSV dataset
+    Specimens {
+        dataset_id: String,
+        version: String,
+        created_at: String,
+        path: PathBuf,
+    },
 }
 
 #[derive(clap::Subcommand)]
 pub enum ReduceCommand {
     NomenclaturalActs,
+    Specimens,
 }
 
 pub fn process_command(cmd: &Command) {
     match cmd {
         Command::Import(cmd) => match cmd {
-            ImportCommand::NomenclaturalActs { dataset_id, path } => {
-                nomenclatural_acts::process(path.clone(), dataset_id.clone()).unwrap()
-            }
+            ImportCommand::NomenclaturalActs {
+                dataset_id,
+                version,
+                created_at,
+                path,
+            } => nomenclatural_acts::process(
+                path.clone(),
+                create_dataset_version(dataset_id, version, created_at).unwrap(),
+            )
+            .unwrap(),
+            ImportCommand::Specimens {
+                dataset_id,
+                version,
+                created_at,
+                path,
+            } => specimens::process(
+                path.clone(),
+                create_dataset_version(dataset_id, version, created_at).unwrap(),
+            )
+            .unwrap(),
         },
         Command::Reduce(cmd) => match cmd {
             ReduceCommand::NomenclaturalActs => nomenclatural_acts::reduce().unwrap(),
+            ReduceCommand::Specimens => specimens::reduce().unwrap(),
         },
     }
+}
+
+pub fn get_pool() -> Result<PgPool, Error> {
+    let url = arga_core::get_database_url();
+    let manager = ConnectionManager::<PgConnection>::new(url);
+    let pool = Pool::builder().build(manager)?;
+    Ok(pool)
+}
+
+fn create_dataset_version(
+    dataset_id: &str,
+    version: &str,
+    created_at: &str,
+) -> Result<DatasetVersion, Error> {
+    use schema::dataset_versions;
+
+    let pool = get_pool()?;
+    let mut conn = pool.get()?;
+
+    let dataset_version = diesel::insert_into(dataset_versions::table)
+        .values(DatasetVersion {
+            id: Uuid::new_v4(),
+            dataset_id: find_database_id(&dataset_id)?,
+            version: version.to_string(),
+            created_at: DateTime::parse_from_rfc3339(&created_at).unwrap().to_utc(),
+            imported_at: Utc::now(),
+        })
+        .returning(DatasetVersion::as_select())
+        .get_result(&mut conn)?;
+
+    Ok(dataset_version)
+}
+
+fn find_database_id(dataset_id: &str) -> Result<Uuid, Error> {
+    use schema::datasets::dsl::*;
+
+    let pool = get_pool()?;
+    let mut conn = pool.get()?;
+
+    let uuid = datasets
+        .filter(global_id.eq(dataset_id))
+        .select(id)
+        .get_result::<Uuid>(&mut conn)?;
+    Ok(uuid)
 }

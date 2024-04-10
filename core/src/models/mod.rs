@@ -1,14 +1,9 @@
+pub mod operation_logs;
+
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
-use diesel::{
-    backend::Backend,
-    deserialize::{self, FromSql},
-    pg::Pg,
-    serialize::{self, Output, ToSql},
-    sql_types::Jsonb,
-    AsChangeset, AsExpression, Associations, FromSqlRow, Identifiable, Insertable, Queryable,
-    Selectable,
-};
+use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable};
+pub use operation_logs::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -42,9 +37,7 @@ pub struct Source {
     pub license: String,
 }
 
-#[derive(
-    Queryable, Selectable, Insertable, AsChangeset, Debug, Clone, Default, Serialize, Deserialize,
-)]
+#[derive(Queryable, Selectable, Insertable, AsChangeset, Debug, Clone, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::datasets)]
 pub struct Dataset {
     pub id: Uuid,
@@ -61,7 +54,18 @@ pub struct Dataset {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[derive(Debug, Clone, Queryable, Selectable, Identifiable, Insertable, Associations)]
+#[diesel(belongs_to(Dataset))]
+#[diesel(table_name = schema::dataset_versions)]
+pub struct DatasetVersion {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub version: String,
+    pub created_at: DateTime<Utc>,
+    pub imported_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::TaxonomicStatus"]
 pub enum TaxonomicStatus {
     Accepted,
@@ -422,8 +426,7 @@ impl Species {
         use TaxonomicVernacularGroup as Group;
 
         let classification =
-            serde_json::from_value::<ClassificationJson>(self.classification.clone())
-                .unwrap_or_default();
+            serde_json::from_value::<ClassificationJson>(self.classification.clone()).unwrap_or_default();
 
         let kingdom = classification.kingdom.as_ref().map(String::as_str);
         let superkingdom = classification.superkingdom.as_ref().map(String::as_str);
@@ -508,7 +511,7 @@ pub struct TaxonHistory {
     pub act_id: Uuid,
     pub publication_id: Option<Uuid>,
     pub source_url: Option<String>,
-    pub entity_id: String,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Queryable, Selectable, Insertable, Debug, Default, Serialize, Deserialize)]
@@ -672,6 +675,7 @@ pub struct Specimen {
     pub details: Option<String>,
     pub remarks: Option<String>,
     pub identification_remarks: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -687,6 +691,7 @@ pub struct Subsample {
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
     pub type_status: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -697,6 +702,7 @@ pub struct DnaExtract {
     pub name_id: Uuid,
     pub subsample_id: Uuid,
     pub record_id: String,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -707,6 +713,7 @@ pub struct Sequence {
     pub name_id: Uuid,
     pub dna_extract_id: Uuid,
     pub record_id: String,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -764,6 +771,7 @@ pub struct CollectionEvent {
 
     pub field_notes: Option<String>,
     pub remarks: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -782,6 +790,7 @@ pub struct AccessionEvent {
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
     pub type_status: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -794,6 +803,7 @@ pub struct SubsampleEvent {
     pub event_time: Option<String>,
     pub subsampled_by: Option<String>,
     pub preparation_type: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -817,6 +827,7 @@ pub struct DnaExtractionEvent {
     pub concentration: Option<f64>,
     pub absorbance_260_230: Option<f64>,
     pub absorbance_260_280: Option<f64>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -839,6 +850,7 @@ pub struct SequencingEvent {
 
     pub target_gene: Option<String>,
     pub dna_sequence: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -864,6 +876,7 @@ pub struct SequencingRunEvent {
     pub library_protocol: Option<String>,
     pub analysis_description: Option<String>,
     pub analysis_software: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -882,6 +895,7 @@ pub struct AssemblyEvent {
     pub quality: Option<String>,
     pub assembly_type: Option<String>,
     pub genome_size: Option<i64>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -900,6 +914,7 @@ pub struct AnnotationEvent {
     pub coverage: Option<String>,
     pub replicons: Option<i64>,
     pub standard_operating_procedures: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -931,6 +946,7 @@ pub struct DepositionEvent {
     pub access_rights: Option<String>,
     pub reference: Option<String>,
     pub last_updated: Option<NaiveDate>,
+    pub entity_id: Option<String>,
 }
 
 // postgres arrays allows nulls to be entered into an array
@@ -1215,82 +1231,4 @@ pub struct VernacularName {
     pub vernacular_name: String,
     pub citation: Option<String>,
     pub source_url: Option<String>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
-#[ExistingTypePath = "schema::sql_types::OperationAction"]
-pub enum Action {
-    Create,
-    Update,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow)]
-#[diesel(sql_type = diesel::sql_types::Jsonb)]
-pub enum Atom {
-    Empty,
-    ScientificName { value: String },
-    ActedOn { value: String },
-    TaxonomicStatus(TaxonomicStatus),
-    NomenclaturalAct { value: String },
-    SourceUrl { value: String },
-    Publication { value: String },
-    CreatedAt(DateTime<Utc>),
-    UpdatedAt(DateTime<Utc>),
-}
-
-impl FromSql<Jsonb, Pg> for Atom {
-    fn from_sql(value: <Pg as Backend>::RawValue<'_>) -> deserialize::Result<Self> {
-        serde_json::from_value(FromSql::<Jsonb, Pg>::from_sql(value)?).map_err(|e| e.into())
-    }
-}
-
-impl ToSql<Jsonb, Pg> for Atom {
-    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
-        let json = serde_json::to_value(self)?;
-        <serde_json::Value as ToSql<Jsonb, Pg>>::to_sql(&json, &mut out.reborrow())
-    }
-}
-
-impl ToString for Atom {
-    fn to_string(&self) -> String {
-        match self {
-            Atom::Empty => "Empty",
-            Atom::ScientificName { value: _ } => "ScientificName",
-            Atom::ActedOn { value: _ } => "ActedOn",
-            Atom::TaxonomicStatus(_) => "TaxonomicStatus",
-            Atom::NomenclaturalAct { value: _ } => "NomenclaturalAct",
-            Atom::SourceUrl { value: _ } => "SourceUrl",
-            Atom::Publication { value: _ } => "Publication",
-            Atom::CreatedAt(_) => "CreatedAt",
-            Atom::UpdatedAt(_) => "UpdatedAt",
-        }
-        .to_string()
-    }
-}
-
-#[derive(Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize)]
-#[diesel(belongs_to(Dataset))]
-#[diesel(table_name = schema::operation_logs)]
-pub struct Operation {
-    pub operation_id: BigDecimal,
-    pub reference_id: BigDecimal,
-    pub dataset_id: Uuid,
-    pub object_id: String,
-    pub action: Action,
-    pub atom: Atom,
-}
-
-impl std::fmt::Display for Operation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} {} {} {} {:?} {:?}",
-            self.operation_id,
-            self.object_id,
-            self.dataset_id,
-            self.reference_id,
-            self.action,
-            self.atom,
-        )
-    }
 }

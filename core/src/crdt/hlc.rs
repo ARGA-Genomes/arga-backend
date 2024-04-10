@@ -9,7 +9,7 @@
 //
 // hlc paper has:
 // timestamp = 48bits (microsecond granularity)
-//     32bits = seconds from epoch (136 years)
+//     32bits = seconds from epoc (136 years)
 //     16bits = fractional second
 // logical = 16 bits
 

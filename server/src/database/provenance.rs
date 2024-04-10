@@ -1,4 +1,4 @@
-use arga_core::models::{Dataset, Operation};
+use arga_core::models::{Dataset, NomenclaturalActOperation, SpecimenOperation};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
@@ -10,13 +10,13 @@ pub struct ProvenanceProvider {
 }
 
 impl ProvenanceProvider {
-    pub async fn find_by_entity_id(&self, entity_id: &str) -> Result<Vec<Operation>, Error> {
-        use schema::operation_logs;
+    pub async fn find_by_entity_id(&self, entity_id: &str) -> Result<Vec<NomenclaturalActOperation>, Error> {
+        use schema::nomenclatural_act_logs;
         let mut conn = self.pool.get().await?;
 
-        let operations = operation_logs::table
-            .filter(operation_logs::object_id.eq(entity_id))
-            .load::<Operation>(&mut conn)
+        let operations = nomenclatural_act_logs::table
+            .filter(nomenclatural_act_logs::entity_id.eq(entity_id))
+            .load::<NomenclaturalActOperation>(&mut conn)
             .await?;
 
         Ok(operations)
@@ -25,15 +25,34 @@ impl ProvenanceProvider {
     pub async fn find_by_entity_id_with_dataset(
         &self,
         entity_id: &str,
-    ) -> Result<Vec<(Operation, Dataset)>, Error> {
-        use schema::{datasets, operation_logs};
+    ) -> Result<Vec<(NomenclaturalActOperation, Dataset)>, Error> {
+        use schema::{dataset_versions, datasets, nomenclatural_act_logs};
         let mut conn = self.pool.get().await?;
 
-        let operations = operation_logs::table
-            .inner_join(datasets::table.on(datasets::id.eq(operation_logs::dataset_id)))
-            .filter(operation_logs::object_id.eq(entity_id))
-            .select((Operation::as_select(), Dataset::as_select()))
-            .load::<(Operation, Dataset)>(&mut conn)
+        let operations = nomenclatural_act_logs::table
+            .inner_join(dataset_versions::table.on(dataset_versions::id.eq(nomenclatural_act_logs::dataset_version_id)))
+            .inner_join(datasets::table.on(datasets::id.eq(dataset_versions::dataset_id)))
+            .filter(nomenclatural_act_logs::entity_id.eq(entity_id))
+            .select((NomenclaturalActOperation::as_select(), Dataset::as_select()))
+            .load::<(NomenclaturalActOperation, Dataset)>(&mut conn)
+            .await?;
+
+        Ok(operations)
+    }
+
+    pub async fn find_specimen_logs_by_entity_id_with_dataset(
+        &self,
+        entity_id: &str,
+    ) -> Result<Vec<(SpecimenOperation, Dataset)>, Error> {
+        use schema::{dataset_versions, datasets, specimen_logs};
+        let mut conn = self.pool.get().await?;
+
+        let operations = specimen_logs::table
+            .inner_join(dataset_versions::table.on(dataset_versions::id.eq(specimen_logs::dataset_version_id)))
+            .inner_join(datasets::table.on(datasets::id.eq(dataset_versions::dataset_id)))
+            .filter(specimen_logs::entity_id.eq(entity_id))
+            .select((SpecimenOperation::as_select(), Dataset::as_select()))
+            .load::<(SpecimenOperation, Dataset)>(&mut conn)
             .await?;
 
         Ok(operations)

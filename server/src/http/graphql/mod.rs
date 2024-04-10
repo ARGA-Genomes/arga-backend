@@ -23,39 +23,37 @@ pub mod subsample;
 pub mod taxa;
 pub mod taxon;
 
-use axum::response::IntoResponse;
-use axum::routing::get;
-use axum::{Extension, Router};
-
 use async_graphql::extensions::Tracing;
 use async_graphql::http::GraphiQLSource;
 use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
+use axum::response::IntoResponse;
+use axum::routing::get;
+use axum::{Extension, Router};
 
 use self::common::{FilterItem, SearchFilterItem};
 use self::dataset::Dataset;
-use self::extensions::ErrorLogging;
-use self::maps::Maps;
-use self::overview::Overview;
-use self::search::Search;
-use self::source::Source;
-use self::species::Species;
-use self::stats::Statistics;
-use self::traces::Traces;
-use crate::http::Context as State;
 // use self::assembly::Assembly;
 // use self::assemblies::Assemblies;
 use self::dna_extract::DnaExtract;
+use self::extensions::ErrorLogging;
+use self::maps::Maps;
 use self::marker::Marker;
 use self::markers::Markers;
-use self::provenance::Operation;
+use self::overview::Overview;
+use self::provenance::Provenance;
+use self::search::Search;
 use self::sequence::Sequence;
+use self::source::Source;
+use self::species::Species;
 use self::specimen::Specimen;
+use self::stats::Statistics;
 use self::subsample::Subsample;
 use self::taxa::Taxa;
 use self::taxon::Taxon;
-
+use self::traces::Traces;
 use super::error::Error;
+use crate::http::Context as State;
 
 pub type ArgaSchema = Schema<Query, EmptyMutation, EmptySubscription>;
 
@@ -121,11 +119,7 @@ impl Query {
     //     Assemblies {}
     // }
 
-    async fn specimen(
-        &self,
-        ctx: &Context<'_>,
-        by: specimen::SpecimenBy,
-    ) -> Result<Specimen, Error> {
+    async fn specimen(&self, ctx: &Context<'_>, by: specimen::SpecimenBy) -> Result<Specimen, Error> {
         let state = ctx.data::<State>().unwrap();
         Specimen::new(&state.database, &by).await
     }
@@ -143,50 +137,28 @@ impl Query {
         Taxa::new(filters)
     }
 
-    async fn subsample(
-        &self,
-        ctx: &Context<'_>,
-        by: subsample::SubsampleBy,
-    ) -> Result<Option<Subsample>, Error> {
+    async fn subsample(&self, ctx: &Context<'_>, by: subsample::SubsampleBy) -> Result<Option<Subsample>, Error> {
         let state = ctx.data::<State>().unwrap();
         Subsample::new(&state.database, &by).await
     }
 
-    async fn dna_extract(
-        &self,
-        ctx: &Context<'_>,
-        by: dna_extract::DnaExtractBy,
-    ) -> Result<Option<DnaExtract>, Error> {
+    async fn dna_extract(&self, ctx: &Context<'_>, by: dna_extract::DnaExtractBy) -> Result<Option<DnaExtract>, Error> {
         let state = ctx.data::<State>().unwrap();
         DnaExtract::new(&state.database, &by).await
     }
 
-    async fn sequence(
-        &self,
-        ctx: &Context<'_>,
-        by: sequence::SequenceBy,
-    ) -> Result<Vec<Sequence>, Error> {
+    async fn sequence(&self, ctx: &Context<'_>, by: sequence::SequenceBy) -> Result<Vec<Sequence>, Error> {
         let state = ctx.data::<State>().unwrap();
         Sequence::new(&state.database, &by).await
     }
 
-    async fn taxon(
-        &self,
-        ctx: &Context<'_>,
-        rank: taxon::TaxonRank,
-        canonical_name: String,
-    ) -> Result<Taxon, Error> {
+    async fn taxon(&self, ctx: &Context<'_>, rank: taxon::TaxonRank, canonical_name: String) -> Result<Taxon, Error> {
         let state = ctx.data::<State>().unwrap();
         Taxon::new(&state.database, rank, canonical_name).await
     }
 
-    async fn provenance(
-        &self,
-        ctx: &Context<'_>,
-        by: provenance::OperationBy,
-    ) -> Result<Vec<Operation>, Error> {
-        let state = ctx.data::<State>().unwrap();
-        Operation::new(&state.database, by).await
+    async fn provenance(&self, ctx: &Context<'_>) -> Provenance {
+        Provenance {}
     }
 }
 

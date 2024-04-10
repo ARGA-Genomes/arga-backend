@@ -1,17 +1,13 @@
 use arga_core::models;
 use async_graphql::*;
 use bigdecimal::ToPrimitive;
-use serde::Deserialize;
-use serde::Serialize;
-
-use crate::database::extensions::classification_filters::Classification;
-use crate::database::Database;
-use crate::http::Context as State;
-use crate::http::Error;
+use serde::{Deserialize, Serialize};
 
 use super::common::taxonomy::{TaxonDetails, TaxonomicRank, TaxonomicStatus};
 use super::dataset::DatasetDetails;
-use crate::database::taxa;
+use crate::database::extensions::classification_filters::Classification;
+use crate::database::{taxa, Database};
+use crate::http::{Context as State, Error};
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
 #[graphql(remote = "models::TaxonomicRank")]
@@ -83,11 +79,7 @@ pub enum TaxonRank {
 pub struct Taxon(TaxonDetails, TaxonQuery);
 
 impl Taxon {
-    pub async fn new(
-        db: &Database,
-        rank: TaxonRank,
-        canonical_name: String,
-    ) -> Result<Taxon, Error> {
+    pub async fn new(db: &Database, rank: TaxonRank, canonical_name: String) -> Result<Taxon, Error> {
         let classification = into_classification(rank, canonical_name);
         let taxon = db.taxa.find_by_classification(&classification).await?;
         let mut details: TaxonDetails = taxon.clone().into();
@@ -97,10 +89,7 @@ impl Taxon {
         details.source = Some(dataset.name);
         details.source_url = dataset.url;
 
-        let query = TaxonQuery {
-            classification,
-            taxon,
-        };
+        let query = TaxonQuery { classification, taxon };
         Ok(Taxon(details, query))
     }
 }
@@ -121,19 +110,11 @@ impl TaxonQuery {
 
     async fn summary(&self, ctx: &Context<'_>) -> Result<TaxonSummary, Error> {
         let state = ctx.data::<State>().unwrap();
-        let summary = state
-            .database
-            .taxa
-            .taxon_summary(&self.classification)
-            .await?;
+        let summary = state.database.taxa.taxon_summary(&self.classification).await?;
         Ok(summary.into())
     }
 
-    async fn descendants(
-        &self,
-        ctx: &Context<'_>,
-        rank: TaxonomicRank,
-    ) -> Result<Vec<TaxonSummary>> {
+    async fn descendants(&self, ctx: &Context<'_>, rank: TaxonomicRank) -> Result<Vec<TaxonSummary>> {
         let state = ctx.data::<State>().unwrap();
         let summaries = state
             .database
@@ -146,22 +127,14 @@ impl TaxonQuery {
 
     async fn species_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let summaries = state
-            .database
-            .taxa
-            .species_summary(&self.classification)
-            .await?;
+        let summaries = state.database.taxa.species_summary(&self.classification).await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
 
     async fn species_genome_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let summaries = state
-            .database
-            .taxa
-            .species_genome_summary(&self.classification)
-            .await?;
+        let summaries = state.database.taxa.species_genome_summary(&self.classification).await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
@@ -205,7 +178,7 @@ pub struct HistoryItem {
     pub citation: Option<String>,
     pub source_url: Option<String>,
     pub publication: Option<NamePublication>,
-    pub entity_id: String,
+    pub entity_id: Option<String>,
 }
 
 impl From<taxa::HistoryItem> for HistoryItem {
@@ -284,15 +257,9 @@ impl From<taxa::DataSummary> for DataBreakdown {
             name: value.canonical_name,
             markers: value.markers.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
             genomes: value.genomes.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
-            specimens: value
-                .specimens
-                .map(|v| v.to_i64().unwrap_or(0))
-                .unwrap_or(0),
+            specimens: value.specimens.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
             other: value.other.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
-            total_genomic: value
-                .total_genomic
-                .map(|v| v.to_i64().unwrap_or(0))
-                .unwrap_or(0),
+            total_genomic: value.total_genomic.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
         }
     }
 }

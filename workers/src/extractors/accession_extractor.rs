@@ -1,16 +1,22 @@
 use std::path::PathBuf;
 
+use arga_core::models::{AccessionEvent, Dataset};
 use csv::DeserializeRecordsIntoIter;
+use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::*;
-use diesel::r2d2::{Pool, ConnectionManager};
 use rayon::prelude::*;
 use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{Dataset, AccessionEvent};
 use crate::error::Error;
-use crate::matchers::specimen_matcher::{SpecimenMatch, SpecimenRecord, SpecimenMap, specimen_map, match_records_mapped};
+use crate::matchers::specimen_matcher::{
+    match_records_mapped,
+    specimen_map,
+    SpecimenMap,
+    SpecimenMatch,
+    SpecimenRecord,
+};
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -21,6 +27,7 @@ type MatchedRecords = Vec<(SpecimenMatch, Record)>;
 struct Record {
     record_id: String,
     accession: String,
+    entity_id: Option<String>,
     institution_name: Option<String>,
     institution_code: Option<String>,
     type_status: Option<String>,
@@ -32,7 +39,9 @@ struct Record {
 
 impl From<Record> for SpecimenRecord {
     fn from(value: Record) -> Self {
-        Self { record_id: value.record_id }
+        Self {
+            record_id: value.record_id,
+        }
     }
 }
 
@@ -61,17 +70,18 @@ impl Iterator for AccessionExtractIterator {
         for row in self.reader.by_ref().take(1_000_000) {
             match row {
                 Ok(record) => records.push(record),
-                Err(err) => return Some(Err(err.into()))
+                Err(err) => return Some(Err(err.into())),
             }
         }
 
-        info!(total=records.len(), "Deserialising CSV finished");
+        info!(total = records.len(), "Deserialising CSV finished");
 
         // if empth we've reached the end, otherwise do the expensive work
         // of extracting the chunk of data within the iterator call
         if records.is_empty() {
             None
-        } else {
+        }
+        else {
             Some(extract_chunk(records, &self.dataset, &self.specimens))
         }
     }
@@ -79,7 +89,12 @@ impl Iterator for AccessionExtractIterator {
 
 
 /// Extract accession events and other related data from a CSV file
-pub fn extract(path: PathBuf, dataset: &Dataset, context: &Vec<Dataset>, pool: &mut PgPool) -> Result<AccessionExtractIterator, Error> {
+pub fn extract(
+    path: PathBuf,
+    dataset: &Dataset,
+    context: &Vec<Dataset>,
+    pool: &mut PgPool,
+) -> Result<AccessionExtractIterator, Error> {
     let isolated_datasets = context.iter().map(|d| d.id.clone()).collect();
 
     let specimens = specimen_map(&isolated_datasets, pool)?;
@@ -99,34 +114,35 @@ fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, specimens: &SpecimenMap)
     let records = match_records_mapped(chunk, specimens);
     let accession_events = extract_accession_events(dataset, records);
 
-    Ok(AccessionExtract {
-        accession_events,
-    })
+    Ok(AccessionExtract { accession_events })
 }
 
 
-fn extract_accession_events(dataset: &Dataset, records: MatchedRecords) -> Vec<AccessionEvent>
-{
-    info!(total=records.len(), "Extracting accession events");
+fn extract_accession_events(dataset: &Dataset, records: MatchedRecords) -> Vec<AccessionEvent> {
+    info!(total = records.len(), "Extracting accession events");
 
-    let accessions = records.into_par_iter().map(|record| {
-        let (specimen, row) = record;
+    let accessions = records
+        .into_par_iter()
+        .map(|record| {
+            let (specimen, row) = record;
 
-        AccessionEvent {
-            id: Uuid::new_v4(),
-            dataset_id: dataset.id.clone(),
-            specimen_id: specimen.id,
-            event_date: row.event_date,
-            event_time: row.event_time,
-            accession: row.accession,
-            accessioned_by: row.accessioned_by,
-            material_sample_id: row.material_sample_id,
-            institution_name: row.institution_name,
-            institution_code: row.institution_code,
-            type_status: row.type_status,
-        }
-    }).collect::<Vec<AccessionEvent>>();
+            AccessionEvent {
+                id: Uuid::new_v4(),
+                dataset_id: dataset.id.clone(),
+                specimen_id: specimen.id,
+                entity_id: row.entity_id,
+                event_date: row.event_date,
+                event_time: row.event_time,
+                accession: row.accession,
+                accessioned_by: row.accessioned_by,
+                material_sample_id: row.material_sample_id,
+                institution_name: row.institution_name,
+                institution_code: row.institution_code,
+                type_status: row.type_status,
+            }
+        })
+        .collect::<Vec<AccessionEvent>>();
 
-    info!(accession_events=accessions.len(), "Extracting accession events finished");
+    info!(accession_events = accessions.len(), "Extracting accession events finished");
     accessions
 }

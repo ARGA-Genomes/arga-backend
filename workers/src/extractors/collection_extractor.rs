@@ -1,18 +1,18 @@
 use std::path::PathBuf;
 
+use arga_core::models::{CollectionEvent, Dataset, Specimen};
 use csv::DeserializeRecordsIntoIter;
+use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::*;
-use diesel::r2d2::{Pool, ConnectionManager};
 use rayon::prelude::*;
 use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{Specimen, CollectionEvent, Dataset};
 use crate::error::Error;
 use crate::extractors::utils::parse_lat_lng;
-use crate::matchers::name_matcher::{NameMatch, NameRecord, match_records_mapped, NameMap, name_map};
-use crate::matchers::specimen_matcher::{SpecimenMap, specimen_map};
+use crate::matchers::name_matcher::{match_records_mapped, name_map, NameMap, NameMatch, NameRecord};
+use crate::matchers::specimen_matcher::{specimen_map, SpecimenMap};
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -22,6 +22,7 @@ type MatchedRecords = Vec<(NameMatch, Record)>;
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
     record_id: String,
+    entity_id: Option<String>,
     scientific_name: Option<String>,
     canonical_name: Option<String>,
 
@@ -123,17 +124,18 @@ impl Iterator for CollectionExtractIterator {
         for row in self.reader.by_ref().take(1_000_000) {
             match row {
                 Ok(record) => records.push(record),
-                Err(err) => return Some(Err(err.into()))
+                Err(err) => return Some(Err(err.into())),
             }
         }
 
-        info!(total=records.len(), "Deserialising CSV finished");
+        info!(total = records.len(), "Deserialising CSV finished");
 
         // if empth we've reached the end, otherwise do the expensive work
         // of extracting the chunk of data within the iterator call
         if records.is_empty() {
             None
-        } else {
+        }
+        else {
             Some(extract_chunk(records, &self.dataset, &self.names, &self.specimens))
         }
     }
@@ -146,7 +148,12 @@ impl Iterator for CollectionExtractIterator {
 /// it and a parent event tracking common event metadata. A specimen can be further
 /// used by other events but a collection event will *always* create a new specimen
 /// since it is the _collection_ of a particular specimen that it describes.
-pub fn extract(path: PathBuf, dataset: &Dataset, context: &Vec<Dataset>, pool: &mut PgPool) -> Result<CollectionExtractIterator, Error> {
+pub fn extract(
+    path: PathBuf,
+    dataset: &Dataset,
+    context: &Vec<Dataset>,
+    pool: &mut PgPool,
+) -> Result<CollectionExtractIterator, Error> {
     let isolated_datasets = context.iter().map(|d| d.id.clone()).collect();
 
     let names = name_map(pool)?;
@@ -162,7 +169,12 @@ pub fn extract(path: PathBuf, dataset: &Dataset, context: &Vec<Dataset>, pool: &
 }
 
 
-fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, names: &NameMap, existing: &SpecimenMap) -> Result<CollectionExtract, Error> {
+fn extract_chunk(
+    chunk: Vec<Record>,
+    dataset: &Dataset,
+    names: &NameMap,
+    existing: &SpecimenMap,
+) -> Result<CollectionExtract, Error> {
     // match the records to names in the database. this will filter out any names
     // that could not be matched
     let records = match_records_mapped(chunk, names)?;
@@ -194,105 +206,117 @@ fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, names: &NameMap, existin
 
 
 fn extract_specimens(dataset: &Dataset, records: &MatchedRecords) -> Vec<Specimen> {
-    info!(total=records.len(), "Extracting specimens");
+    info!(total = records.len(), "Extracting specimens");
 
-    let specimens = records.par_iter().map(|(name, row)| {
-        let coords = match &row.verbatim_lat_long {
-            Some(lat_long) => parse_lat_lng(&lat_long).ok(),
-            None => None,
-        };
+    let specimens = records
+        .par_iter()
+        .map(|(name, row)| {
+            let coords = match &row.verbatim_lat_long {
+                Some(lat_long) => parse_lat_lng(&lat_long).ok(),
+                None => None,
+            };
 
-        Specimen {
-            id: Uuid::new_v4(),
-            dataset_id: dataset.id.clone(),
-            name_id: name.id.clone(),
+            Specimen {
+                id: Uuid::new_v4(),
+                dataset_id: dataset.id.clone(),
+                name_id: name.id.clone(),
+                entity_id: row.entity_id.clone(),
 
-            record_id: row.record_id.clone(),
-            material_sample_id: row.material_sample_id.clone(),
-            organism_id: row.organism_id.clone(),
+                record_id: row.record_id.clone(),
+                material_sample_id: row.material_sample_id.clone(),
+                organism_id: row.organism_id.clone(),
 
-            institution_name: row.institution_name.clone(),
-            institution_code: row.institution_code.clone(),
-            collection_code: row.collection_code.clone(),
-            recorded_by: row.collected_by.clone(),
-            identified_by: row.identified_by.clone(),
-            identified_date: row.identified_date.clone(),
+                institution_name: row.institution_name.clone(),
+                institution_code: row.institution_code.clone(),
+                collection_code: row.collection_code.clone(),
+                recorded_by: row.collected_by.clone(),
+                identified_by: row.identified_by.clone(),
+                identified_date: row.identified_date.clone(),
 
-            type_status: row.type_status.clone(),
-            locality: row.locality.clone(),
-            latitude: row.latitude.or_else(|| coords.clone().map(|c| c.latitude)),
-            longitude: row.longitude.or_else(|| coords.clone().map(|c| c.longitude)),
-            country: row.country.clone(),
-            country_code: row.country_code.clone(),
-            state_province: row.state_province.clone(),
-            county: row.county.clone(),
-            municipality: row.municipality.clone(),
-            elevation: row.elevation.clone(),
-            depth: row.depth.clone(),
-            elevation_accuracy: row.elevation_accuracy.clone(),
-            depth_accuracy: row.depth_accuracy.clone(),
-            location_source: row.location_source.clone(),
+                type_status: row.type_status.clone(),
+                locality: row.locality.clone(),
+                latitude: row.latitude.or_else(|| coords.clone().map(|c| c.latitude)),
+                longitude: row.longitude.or_else(|| coords.clone().map(|c| c.longitude)),
+                country: row.country.clone(),
+                country_code: row.country_code.clone(),
+                state_province: row.state_province.clone(),
+                county: row.county.clone(),
+                municipality: row.municipality.clone(),
+                elevation: row.elevation.clone(),
+                depth: row.depth.clone(),
+                elevation_accuracy: row.elevation_accuracy.clone(),
+                depth_accuracy: row.depth_accuracy.clone(),
+                location_source: row.location_source.clone(),
 
-            details: row.details.clone(),
-            remarks: row.remarks.clone(),
-            identification_remarks: row.identification_remarks.clone(),
-        }
-    }).collect::<Vec<Specimen>>();
+                details: row.details.clone(),
+                remarks: row.remarks.clone(),
+                identification_remarks: row.identification_remarks.clone(),
+            }
+        })
+        .collect::<Vec<Specimen>>();
 
-    info!(specimens=specimens.len(), "Extracting specimens finished");
+    info!(specimens = specimens.len(), "Extracting specimens finished");
     specimens
 }
 
 
-fn extract_collection_events(dataset: &Dataset, records: MatchedRecords, specimens: &Vec<Specimen>) -> Vec<CollectionEvent> {
-    info!(total=records.len(), "Extracting collection events");
+fn extract_collection_events(
+    dataset: &Dataset,
+    records: MatchedRecords,
+    specimens: &Vec<Specimen>,
+) -> Vec<CollectionEvent> {
+    info!(total = records.len(), "Extracting collection events");
 
-    let collections = (records, specimens).into_par_iter().map(|(record, specimen)| {
-        let (_name, row) = record;
+    let collections = (records, specimens)
+        .into_par_iter()
+        .map(|(record, specimen)| {
+            let (_name, row) = record;
 
-        CollectionEvent {
-            id: Uuid::new_v4(),
-            dataset_id: dataset.id.clone(),
-            specimen_id: specimen.id.clone(),
+            CollectionEvent {
+                id: Uuid::new_v4(),
+                dataset_id: dataset.id.clone(),
+                specimen_id: specimen.id.clone(),
+                entity_id: row.entity_id,
 
-            event_date: row.event_date,
-            event_time: row.event_time,
-            collected_by: row.collected_by,
+                event_date: row.event_date,
+                event_time: row.event_time,
+                collected_by: row.collected_by,
 
-            field_number: row.field_number,
-            catalog_number: row.catalog_number,
-            record_number: row.record_number,
-            individual_count: row.individual_count,
-            organism_quantity: row.organism_quantity,
-            organism_quantity_type: row.organism_quantity_type,
-            sex: row.sex,
-            genotypic_sex: row.genotypic_sex,
-            phenotypic_sex: row.phenotypic_sex,
-            life_stage: row.life_stage,
-            reproductive_condition: row.reproductive_condition,
-            behavior: row.behavior,
-            establishment_means: row.establishment_means,
-            degree_of_establishment: row.degree_of_establishment,
-            pathway: row.pathway,
-            occurrence_status: row.occurrence_status,
-            preparation: row.preparation,
-            other_catalog_numbers: row.other_catalog_numbers,
+                field_number: row.field_number,
+                catalog_number: row.catalog_number,
+                record_number: row.record_number,
+                individual_count: row.individual_count,
+                organism_quantity: row.organism_quantity,
+                organism_quantity_type: row.organism_quantity_type,
+                sex: row.sex,
+                genotypic_sex: row.genotypic_sex,
+                phenotypic_sex: row.phenotypic_sex,
+                life_stage: row.life_stage,
+                reproductive_condition: row.reproductive_condition,
+                behavior: row.behavior,
+                establishment_means: row.establishment_means,
+                degree_of_establishment: row.degree_of_establishment,
+                pathway: row.pathway,
+                occurrence_status: row.occurrence_status,
+                preparation: row.preparation,
+                other_catalog_numbers: row.other_catalog_numbers,
 
-            env_broad_scale: row.env_broad_scale,
-            env_local_scale: row.env_local_scale,
-            env_medium: row.env_medium,
-            habitat: row.habitat,
-            ref_biomaterial: row.ref_biomaterial,
-            source_mat_id: row.source_mat_id,
-            specific_host: row.specific_host,
-            strain: row.strain,
-            isolate: row.isolate,
+                env_broad_scale: row.env_broad_scale,
+                env_local_scale: row.env_local_scale,
+                env_medium: row.env_medium,
+                habitat: row.habitat,
+                ref_biomaterial: row.ref_biomaterial,
+                source_mat_id: row.source_mat_id,
+                specific_host: row.specific_host,
+                strain: row.strain,
+                isolate: row.isolate,
 
-            field_notes: row.field_notes,
-            remarks: row.remarks,
-        }
-    }).collect::<Vec<CollectionEvent>>();
+                field_notes: row.field_notes,
+                remarks: row.remarks,
+            }
+        })
+        .collect::<Vec<CollectionEvent>>();
 
-    info!(collection_events=collections.len(), "Extracting collection events finished");
+    info!(collection_events = collections.len(), "Extracting collection events finished");
     collections
 }

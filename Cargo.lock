@@ -206,6 +206,7 @@ dependencies = [
  "anyhow",
  "arga-core",
  "argon2",
+ "bigdecimal",
  "blake3 1.5.0",
  "chrono",
  "clap",

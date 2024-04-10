@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use arga_core::models::{Dataset, TaxonHistory};
 use arga_core::schema;
 use chrono::{DateTime, Utc};
 use diesel::r2d2::{ConnectionManager, Pool};
@@ -10,11 +11,9 @@ use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
+use super::utils::date_time_from_str;
 use crate::error::Error;
 use crate::matchers::taxon_matcher::{self, TaxonMatch};
-use arga_core::models::{Dataset, TaxonHistory};
-
-use super::utils::date_time_from_str;
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
@@ -29,15 +28,11 @@ struct Record {
     created_at: DateTime<Utc>,
     #[serde(deserialize_with = "date_time_from_str")]
     updated_at: DateTime<Utc>,
-    entity_id: String,
+    entity_id: Option<String>,
 }
 
 /// Extract simple taxonomic history from a CSV file
-pub fn extract(
-    path: &PathBuf,
-    dataset: &Dataset,
-    pool: &mut PgPool,
-) -> Result<Vec<TaxonHistory>, Error> {
+pub fn extract(path: &PathBuf, dataset: &Dataset, pool: &mut PgPool) -> Result<Vec<TaxonHistory>, Error> {
     let mut records: Vec<Record> = Vec::new();
     for row in csv::Reader::from_path(&path)?.deserialize() {
         records.push(row?);
@@ -65,9 +60,7 @@ fn extract_history(
             let act = extract_act(&row.taxonomic_status);
             let acted_on = taxa.get(&row.acted_on);
             let taxon_id = taxa.get(&row.scientific_name);
-            let act_id = acts
-                .get(&act)
-                .expect(&format!("Cannot find nomenclatural act {}", act));
+            let act_id = acts.get(&act).expect(&format!("Cannot find nomenclatural act {}", act));
             let publication_id = match &row.publication {
                 Some(publication) => publications.get(publication).map(|id| id.clone()),
                 None => None,
