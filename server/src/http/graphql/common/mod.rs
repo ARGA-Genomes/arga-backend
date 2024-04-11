@@ -1,4 +1,5 @@
 pub mod attributes;
+pub mod datasets;
 pub mod filters;
 pub mod operation_logs;
 pub mod search;
@@ -7,6 +8,7 @@ pub mod taxonomy;
 pub mod whole_genomes;
 
 use async_graphql::{OutputType, SimpleObject};
+pub use datasets::{DatasetDetails, DatasetVersion};
 pub use filters::{
     convert_filters,
     convert_search_filters,

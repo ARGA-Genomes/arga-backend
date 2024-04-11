@@ -4,6 +4,7 @@ use bigdecimal::ToPrimitive;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::datasets::{DatasetDetails, DatasetVersion};
 use super::taxonomy::TaxonomicStatus;
 use crate::database::{models, Database};
 use crate::http::Error;
@@ -157,7 +158,8 @@ pub struct NomenclaturalActOperation {
     pub operation_id: u64,
     pub parent_id: u64,
     pub entity_id: String,
-    // pub dataset: DatasetDetails,
+    pub dataset: DatasetDetails,
+    pub dataset_version: DatasetVersion,
     pub action: Action,
     pub atom: NomenclaturalActAtom,
     pub logged_at: DateTime<Utc>,
@@ -170,9 +172,10 @@ impl NomenclaturalActOperation {
         };
 
         let mut operations = Vec::with_capacity(records.len());
-        for (record, dataset) in records {
+        for (record, dataset_version, dataset) in records {
             let mut op = NomenclaturalActOperation::try_from(record)?;
-            // op.dataset = dataset.into();
+            op.dataset = dataset.into();
+            op.dataset_version = dataset_version.into();
             operations.push(op);
         }
 
@@ -200,7 +203,8 @@ impl TryFrom<models::NomenclaturalActOperation> for NomenclaturalActOperation {
             entity_id: value.entity_id,
             action: value.action.into(),
             atom: value.atom.into(),
-            // dataset: DatasetDetails::default(),
+            dataset: DatasetDetails::default(),
+            dataset_version: DatasetVersion::default(),
             logged_at: ts.into(),
         })
     }
@@ -230,12 +234,14 @@ impl From<models::NomenclaturalActAtom> for NomenclaturalActAtom {
     }
 }
 
+
 #[derive(SimpleObject)]
 pub struct SpecimenOperation {
     pub operation_id: u64,
     pub parent_id: u64,
     pub entity_id: String,
-    // pub dataset: DatasetDetails,
+    pub dataset_version: DatasetVersion,
+    pub dataset: DatasetDetails,
     pub action: Action,
     pub atom: SpecimenAtom,
     pub logged_at: DateTime<Utc>,
@@ -248,9 +254,10 @@ impl SpecimenOperation {
         };
 
         let mut operations = Vec::with_capacity(records.len());
-        for (record, dataset) in records {
+        for (record, version, dataset) in records {
             let mut op = SpecimenOperation::try_from(record)?;
-            // op.dataset = dataset.into();
+            op.dataset = dataset.into();
+            op.dataset_version = version.into();
             operations.push(op);
         }
 
@@ -278,7 +285,8 @@ impl TryFrom<models::SpecimenOperation> for SpecimenOperation {
             entity_id: value.entity_id,
             action: value.action.into(),
             atom: value.atom.into(),
-            // dataset: DatasetDetails::default(),
+            dataset: DatasetDetails::default(),
+            dataset_version: DatasetVersion::default(),
             logged_at: ts.into(),
         })
     }

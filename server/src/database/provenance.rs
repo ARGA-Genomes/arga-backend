@@ -1,4 +1,4 @@
-use arga_core::models::{Dataset, NomenclaturalActOperation, SpecimenOperation};
+use arga_core::models::{Dataset, DatasetVersion, NomenclaturalActOperation, SpecimenOperation};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
@@ -25,7 +25,7 @@ impl ProvenanceProvider {
     pub async fn find_by_entity_id_with_dataset(
         &self,
         entity_id: &str,
-    ) -> Result<Vec<(NomenclaturalActOperation, Dataset)>, Error> {
+    ) -> Result<Vec<(NomenclaturalActOperation, DatasetVersion, Dataset)>, Error> {
         use schema::{dataset_versions, datasets, nomenclatural_act_logs};
         let mut conn = self.pool.get().await?;
 
@@ -33,8 +33,8 @@ impl ProvenanceProvider {
             .inner_join(dataset_versions::table.on(dataset_versions::id.eq(nomenclatural_act_logs::dataset_version_id)))
             .inner_join(datasets::table.on(datasets::id.eq(dataset_versions::dataset_id)))
             .filter(nomenclatural_act_logs::entity_id.eq(entity_id))
-            .select((NomenclaturalActOperation::as_select(), Dataset::as_select()))
-            .load::<(NomenclaturalActOperation, Dataset)>(&mut conn)
+            .select((NomenclaturalActOperation::as_select(), DatasetVersion::as_select(), Dataset::as_select()))
+            .load::<(NomenclaturalActOperation, DatasetVersion, Dataset)>(&mut conn)
             .await?;
 
         Ok(operations)
@@ -43,7 +43,7 @@ impl ProvenanceProvider {
     pub async fn find_specimen_logs_by_entity_id_with_dataset(
         &self,
         entity_id: &str,
-    ) -> Result<Vec<(SpecimenOperation, Dataset)>, Error> {
+    ) -> Result<Vec<(SpecimenOperation, DatasetVersion, Dataset)>, Error> {
         use schema::{dataset_versions, datasets, specimen_logs};
         let mut conn = self.pool.get().await?;
 
@@ -51,8 +51,8 @@ impl ProvenanceProvider {
             .inner_join(dataset_versions::table.on(dataset_versions::id.eq(specimen_logs::dataset_version_id)))
             .inner_join(datasets::table.on(datasets::id.eq(dataset_versions::dataset_id)))
             .filter(specimen_logs::entity_id.eq(entity_id))
-            .select((SpecimenOperation::as_select(), Dataset::as_select()))
-            .load::<(SpecimenOperation, Dataset)>(&mut conn)
+            .select((SpecimenOperation::as_select(), DatasetVersion::as_select(), Dataset::as_select()))
+            .load::<(SpecimenOperation, DatasetVersion, Dataset)>(&mut conn)
             .await?;
 
         Ok(operations)

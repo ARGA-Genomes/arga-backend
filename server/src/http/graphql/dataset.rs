@@ -1,19 +1,13 @@
 use arga_core::models;
 use async_graphql::*;
-
-use chrono::DateTime;
-use chrono::Utc;
-use serde::Deserialize;
-use serde::Serialize;
 use tracing::instrument;
 use uuid::Uuid;
 
-use crate::database::Database;
-use crate::http::Context as State;
-use crate::http::Error;
-
+use super::common::datasets::DatasetDetails;
 use super::common::{Page, SpeciesCard};
 use super::helpers::SpeciesHelper;
+use crate::database::Database;
+use crate::http::{Context as State, Error};
 
 #[derive(OneofObject)]
 pub enum DatasetBy {
@@ -54,38 +48,5 @@ impl DatasetQuery {
             records: cards,
             total: page.total,
         })
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject, Default)]
-pub struct DatasetDetails {
-    pub id: Uuid,
-    pub global_id: String,
-    pub name: String,
-    pub short_name: Option<String>,
-    pub description: Option<String>,
-    pub url: Option<String>,
-    pub citation: Option<String>,
-    pub license: Option<String>,
-    pub rights_holder: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-}
-
-impl From<models::Dataset> for DatasetDetails {
-    fn from(value: models::Dataset) -> Self {
-        Self {
-            id: value.id,
-            global_id: value.global_id,
-            name: value.name,
-            short_name: value.short_name,
-            description: value.description,
-            url: value.url,
-            citation: value.citation,
-            license: value.license,
-            rights_holder: value.rights_holder,
-            created_at: value.created_at,
-            updated_at: value.updated_at,
-        }
     }
 }

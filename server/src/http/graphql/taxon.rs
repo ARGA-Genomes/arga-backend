@@ -3,8 +3,8 @@ use async_graphql::*;
 use bigdecimal::ToPrimitive;
 use serde::{Deserialize, Serialize};
 
+use super::common::datasets::DatasetDetails;
 use super::common::taxonomy::{TaxonDetails, TaxonomicRank, TaxonomicStatus};
-use super::dataset::DatasetDetails;
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::{taxa, Database};
 use crate::http::{Context as State, Error};
