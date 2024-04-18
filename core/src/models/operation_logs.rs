@@ -1,13 +1,11 @@
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
-use diesel::{
-    backend::Backend,
-    deserialize::{self, FromSql},
-    pg::Pg,
-    serialize::{self, Output, ToSql},
-    sql_types::Jsonb,
-    AsExpression, Associations, FromSqlRow, Insertable, Queryable, Selectable,
-};
+use diesel::backend::Backend;
+use diesel::deserialize::{self, FromSql};
+use diesel::pg::Pg;
+use diesel::serialize::{self, Output, ToSql};
+use diesel::sql_types::Jsonb;
+use diesel::{AsExpression, Associations, FromSqlRow, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -157,6 +155,39 @@ impl ToString for SpecimenAtom {
 #[diesel(sql_type = diesel::sql_types::Jsonb)]
 pub enum CollectionEventAtom {
     Empty,
+    SpecimenId(String),
+    EventDate(String),
+    EventTime(String),
+    CollectedBy(String),
+    FieldNumber(String),
+    CatalogNumber(String),
+    RecordNumber(String),
+    IndividualCount(String),
+    OrganismQuantity(String),
+    OrganismQuantityType(String),
+    Sex(String),
+    GenotypicSex(String),
+    PhenotypicSex(String),
+    LifeStage(String),
+    ReproductiveCondition(String),
+    Behavior(String),
+    EstablishmentMeans(String),
+    DegreeOfEstablishment(String),
+    Pathway(String),
+    OccurrenceStatus(String),
+    Preparation(String),
+    OtherCatalogNumbers(String),
+    EnvBroadScale(String),
+    EnvLocalScale(String),
+    EnvMedium(String),
+    Habitat(String),
+    RefBiomaterial(String),
+    SourceMatId(String),
+    SpecificHost(String),
+    Strain(String),
+    Isolate(String),
+    FieldNotes(String),
+    Remarks(String),
 }
 
 impl FromSql<Jsonb, Pg> for CollectionEventAtom {
@@ -178,12 +209,46 @@ impl ToString for CollectionEventAtom {
 
         match self {
             Empty => "Empty",
+            SpecimenId(_) => "SpecimenId",
+            EventDate(_) => "EventDate",
+            EventTime(_) => "EventTime",
+            CollectedBy(_) => "CollectedBy",
+            FieldNumber(_) => "FieldNumber",
+            CatalogNumber(_) => "CatalogNumber",
+            RecordNumber(_) => "RecordNumber",
+            IndividualCount(_) => "IndividualCount",
+            OrganismQuantity(_) => "OrganismQuantity",
+            OrganismQuantityType(_) => "OrganismQuantityType",
+            Sex(_) => "Sex",
+            GenotypicSex(_) => "GenotypicSex",
+            PhenotypicSex(_) => "PhenotypicSex",
+            LifeStage(_) => "LifeStage",
+            ReproductiveCondition(_) => "ReproductiveCondition",
+            Behavior(_) => "Behavior",
+            EstablishmentMeans(_) => "EstablishmentMeans",
+            DegreeOfEstablishment(_) => "DegreeOfEstablishment",
+            Pathway(_) => "Pathway",
+            OccurrenceStatus(_) => "OccurrenceStatus",
+            Preparation(_) => "Preparation",
+            OtherCatalogNumbers(_) => "OtherCatalogNumbers",
+            EnvBroadScale(_) => "EnvBroadScale",
+            EnvLocalScale(_) => "EnvLocalScale",
+            EnvMedium(_) => "EnvMedium",
+            Habitat(_) => "Habitat",
+            RefBiomaterial(_) => "RefBiomaterial",
+            SourceMatId(_) => "SourceMatId",
+            SpecificHost(_) => "SpecificHost",
+            Strain(_) => "Strain",
+            Isolate(_) => "Isolate",
+            FieldNotes(_) => "FieldNotes",
+            Remarks(_) => "Remarks",
         }
         .to_string()
     }
 }
 
 pub trait LogOperation<T> {
+    fn id(&self) -> &String;
     fn action(&self) -> &Action;
     fn atom(&self) -> &T;
 }
@@ -202,6 +267,10 @@ pub struct NomenclaturalActOperation {
 }
 
 impl LogOperation<NomenclaturalActAtom> for NomenclaturalActOperation {
+    fn id(&self) -> &String {
+        &self.entity_id
+    }
+
     fn action(&self) -> &Action {
         &self.action
     }
@@ -225,6 +294,10 @@ pub struct SpecimenOperation {
 }
 
 impl LogOperation<SpecimenAtom> for SpecimenOperation {
+    fn id(&self) -> &String {
+        &self.entity_id
+    }
+
     fn action(&self) -> &Action {
         &self.action
     }
@@ -241,13 +314,17 @@ impl LogOperation<SpecimenAtom> for SpecimenOperation {
 pub struct CollectionEventOperation {
     pub operation_id: BigDecimal,
     pub parent_id: BigDecimal,
-    pub dataset_version_id: Uuid,
     pub entity_id: String,
+    pub dataset_version_id: Uuid,
     pub action: Action,
     pub atom: CollectionEventAtom,
 }
 
 impl LogOperation<CollectionEventAtom> for CollectionEventOperation {
+    fn id(&self) -> &String {
+        &self.entity_id
+    }
+
     fn action(&self) -> &Action {
         &self.action
     }

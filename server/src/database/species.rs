@@ -1,32 +1,30 @@
 use arga_core::models::Species;
 use async_trait::async_trait;
-
 use diesel::prelude::*;
-use diesel_async::RunQueryDsl;
 use diesel::Queryable;
-use serde::{Serialize, Deserialize};
+use diesel_async::RunQueryDsl;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::database::extensions::whole_genome_filters;
-use crate::index::species::{self, GetRegions, GetConservationStatus, GetTraceFiles};
-
+use super::extensions::Paginate;
 use super::models::{
-    Taxon,
-    TaxonName,
+    GenomicComponent,
+    IndigenousKnowledge,
+    Marker,
     Name,
     NameAttribute,
     RegionType,
+    Regions,
+    Taxon,
+    TaxonName,
     TaxonPhoto,
     TraceFile,
-    IndigenousKnowledge,
-    WholeGenome,
-    Marker,
-    Regions,
-    GenomicComponent,
     VernacularName,
+    WholeGenome,
 };
-use super::extensions::Paginate;
-use super::{schema, schema_gnl, Database, Error, PgPool, PageResult};
+use super::{schema, schema_gnl, Database, Error, PageResult, PgPool};
+use crate::database::extensions::whole_genome_filters;
+use crate::index::species::{self, GetConservationStatus, GetRegions, GetTraceFiles};
 
 
 const NCBI_REFSEQ_DATASET_ID: &str = "ARGA:TL:0002002";
@@ -54,6 +52,7 @@ pub struct SpecimenSummary {
     pub id: Uuid,
     pub dataset_name: String,
     pub record_id: String,
+    pub entity_id: Option<String>,
     pub accession: Option<String>,
     pub institution_code: Option<String>,
     pub institution_name: Option<String>,
@@ -111,7 +110,7 @@ impl SpeciesProvider {
     }
 
     pub async fn synonyms(&self, name_id: &Uuid) -> Result<Vec<Taxon>, Error> {
-        use schema::{taxon_history, taxa};
+        use schema::{taxa, taxon_history};
         let mut conn = self.pool.get().await?;
 
         let (old_taxa, new_taxa) = diesel::alias!(taxa as old_taxa, taxa as new_taxa);
@@ -135,14 +134,7 @@ impl SpeciesProvider {
 
         // get the data summaries for each species record
         let summaries = species
-            .select((
-                id,
-                genomes,
-                loci,
-                specimens,
-                other,
-                total_genomic,
-            ))
+            .select((id, genomes, loci, specimens, other, total_genomic))
             .filter(id.eq_any(ids))
             .load::<Summary>(&mut conn)
             .await?;
@@ -157,10 +149,7 @@ impl SpeciesProvider {
         // get the total amounts of assembly records for each name
         let summaries = markers
             .group_by(name_id)
-            .select((
-                name_id,
-                diesel::dsl::count_star(),
-            ))
+            .select((name_id, diesel::dsl::count_star()))
             .filter(name_id.eq_any(ids))
             .load::<MarkerSummary>(&mut conn)
             .await?;
@@ -168,7 +157,10 @@ impl SpeciesProvider {
         Ok(summaries)
     }
 
-    pub async fn indigenous_knowledge(&self, name_ids: &Vec<Uuid>) -> Result<Vec<(IndigenousKnowledge, String)>, Error> {
+    pub async fn indigenous_knowledge(
+        &self,
+        name_ids: &Vec<Uuid>,
+    ) -> Result<Vec<(IndigenousKnowledge, String)>, Error> {
         use schema::datasets;
         use schema::indigenous_knowledge::dsl::*;
 
@@ -185,7 +177,7 @@ impl SpeciesProvider {
     }
 
     pub async fn specimens(&self, names: &Vec<Name>, page: i64, page_size: i64) -> PageResult<SpecimenSummary> {
-        use schema::{specimens, datasets, accession_events};
+        use schema::{accession_events, datasets, specimens};
         use schema_gnl::specimen_stats;
         let mut conn = self.pool.get().await?;
 
@@ -199,6 +191,7 @@ impl SpeciesProvider {
                 specimens::id,
                 datasets::name,
                 specimens::record_id,
+                specimens::entity_id,
                 accession_events::accession.nullable(),
                 specimens::institution_code,
                 specimens::institution_name,
@@ -212,10 +205,7 @@ impl SpeciesProvider {
                 specimen_stats::markers,
             ))
             .filter(specimens::name_id.eq_any(name_ids))
-            .order((
-                specimens::type_status.asc(),
-                specimen_stats::sequences.desc(),
-            ))
+            .order((specimens::type_status.asc(), specimen_stats::sequences.desc()))
             .paginate(page)
             .per_page(page_size)
             .load::<(SpecimenSummary, i64)>(&mut conn)
@@ -229,9 +219,8 @@ impl SpeciesProvider {
         names: &Vec<Name>,
         filters: &Vec<whole_genome_filters::Filter>,
         page: i64,
-        page_size: i64
-    ) -> PageResult<WholeGenome>
-    {
+        page_size: i64,
+    ) -> PageResult<WholeGenome> {
         use schema_gnl::whole_genomes;
         let mut conn = self.pool.get().await?;
 
@@ -272,7 +261,12 @@ impl SpeciesProvider {
         Ok(records.into())
     }
 
-    pub async fn genomic_components(&self, names: &Vec<Name>, page: i64, page_size: i64) -> PageResult<GenomicComponent> {
+    pub async fn genomic_components(
+        &self,
+        names: &Vec<Name>,
+        page: i64,
+        page_size: i64,
+    ) -> PageResult<GenomicComponent> {
         use schema_gnl::genomic_components;
         let mut conn = self.pool.get().await?;
 
@@ -302,7 +296,8 @@ impl SpeciesProvider {
             .filter(whole_genomes::name_id.eq_any(name_ids))
             .filter(datasets::global_id.eq(NCBI_REFSEQ_DATASET_ID))
             .get_result::<WholeGenome>(&mut conn)
-            .await.optional()?;
+            .await
+            .optional()?;
 
         Ok(record)
     }
@@ -352,7 +347,7 @@ impl SpeciesProvider {
     }
 
     pub async fn photos(&self, names: &Vec<Name>) -> Result<Vec<TaxonPhoto>, Error> {
-        use schema::{taxon_photos, taxon_names};
+        use schema::{taxon_names, taxon_photos};
         let mut conn = self.pool.get().await?;
 
         let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
@@ -396,8 +391,6 @@ impl SpeciesProvider {
 }
 
 
-
-
 #[derive(Queryable, Debug)]
 struct Distribution {
     pub locality: Option<String>,
@@ -438,9 +431,7 @@ impl GetRegions for Database {
         let mut filtered = Vec::new();
         for region in regions.concat() {
             if let Some(name) = region {
-                filtered.push(species::Region {
-                    name,
-                });
+                filtered.push(species::Region { name });
             }
         }
 
@@ -463,9 +454,7 @@ impl GetRegions for Database {
         let mut filtered = Vec::new();
         for region in regions.concat() {
             if let Some(name) = region {
-                filtered.push(species::Region {
-                    name,
-                });
+                filtered.push(species::Region { name });
             }
         }
 
@@ -533,7 +522,6 @@ impl From<TraceFile> for species::TraceFile {
             raw_a: value.raw_a.map(from_int_array),
             raw_t: value.raw_t.map(from_int_array),
             raw_c: value.raw_c.map(from_int_array),
-
         }
     }
 }

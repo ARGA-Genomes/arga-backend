@@ -11,7 +11,7 @@ pub struct Map<T> {
 
 impl<T> Map<T>
 where
-    T: ToString + Clone + PartialEq + std::fmt::Debug,
+    T: ToString + Clone + PartialEq,
 {
     pub fn new(entity_id: String) -> Self {
         Self {

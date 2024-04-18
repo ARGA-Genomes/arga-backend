@@ -1,6 +1,8 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use arga_core::models::{CollectionEvent, Dataset, Specimen};
+use arga_core::schema;
 use csv::DeserializeRecordsIntoIter;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::*;
@@ -108,6 +110,7 @@ pub struct CollectionExtractIterator {
     dataset: Dataset,
     names: NameMap,
     specimens: SpecimenMap,
+    collections: CollectionMap,
     reader: DeserializeRecordsIntoIter<std::fs::File, Record>,
 }
 
@@ -136,7 +139,7 @@ impl Iterator for CollectionExtractIterator {
             None
         }
         else {
-            Some(extract_chunk(records, &self.dataset, &self.names, &self.specimens))
+            Some(extract_chunk(records, &self.dataset, &self.names, &self.specimens, &self.collections))
         }
     }
 }
@@ -158,12 +161,14 @@ pub fn extract(
 
     let names = name_map(pool)?;
     let specimens = specimen_map(&isolated_datasets, pool)?;
+    let collections = collection_map(pool)?;
     let reader = csv::Reader::from_path(&path)?.into_deserialize();
 
     Ok(CollectionExtractIterator {
         dataset: dataset.clone(),
         names,
         specimens,
+        collections,
         reader,
     })
 }
@@ -174,6 +179,7 @@ fn extract_chunk(
     dataset: &Dataset,
     names: &NameMap,
     existing: &SpecimenMap,
+    collections: &CollectionMap,
 ) -> Result<CollectionExtract, Error> {
     // match the records to names in the database. this will filter out any names
     // that could not be matched
@@ -194,11 +200,21 @@ fn extract_chunk(
         collection_events: Vec::new(),
     };
 
-    for (specimen, collection_event) in specimens.into_iter().zip(collection_events.into_iter()) {
-        if !existing.contains_key(&specimen.record_id) {
-            extract.specimens.push(specimen);
-            extract.collection_events.push(collection_event);
+    for (mut specimen, mut collection_event) in specimens.into_iter().zip(collection_events.into_iter()) {
+        if let Some(existing_specimen) = existing.get(&specimen.record_id) {
+            specimen.id = existing_specimen.id;
+            collection_event.specimen_id = existing_specimen.id;
         }
+
+        if let Some(specimen_collections) = collections.get(&specimen.id) {
+            for collection in specimen_collections {
+                if collection.dataset_id == collection_event.dataset_id {
+                    collection_event.id = collection.id;
+                }
+            }
+        }
+        extract.specimens.push(specimen);
+        extract.collection_events.push(collection_event);
     }
 
     Ok(extract)
@@ -319,4 +335,35 @@ fn extract_collection_events(
 
     info!(collection_events = collections.len(), "Extracting collection events finished");
     collections
+}
+
+
+#[derive(Debug, Clone, Queryable, Deserialize)]
+struct CollectionMatch {
+    id: Uuid,
+    dataset_id: Uuid,
+    specimen_id: Uuid,
+}
+
+type CollectionMap = HashMap<Uuid, Vec<CollectionMatch>>;
+
+fn collection_map(pool: &mut PgPool) -> Result<CollectionMap, Error> {
+    use schema::collection_events::dsl::*;
+    info!("Creating collection event map");
+
+    let mut conn = pool.get()?;
+
+    let results = collection_events
+        .select((id, dataset_id, specimen_id))
+        .load::<CollectionMatch>(&mut conn)?;
+
+    let mut map = CollectionMap::new();
+    for collection_match in results {
+        map.entry(collection_match.specimen_id)
+            .and_modify(|arr| arr.push(collection_match.clone()))
+            .or_insert(vec![collection_match]);
+    }
+
+    info!(total = map.len(), "Creating collection event map finished");
+    Ok(map)
 }

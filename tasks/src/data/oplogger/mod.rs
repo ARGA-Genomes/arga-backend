@@ -1,12 +1,13 @@
 pub mod nomenclatural_acts;
 pub mod specimens;
 
+use std::path::PathBuf;
+
 use arga_core::models::DatasetVersion;
 use arga_core::schema;
 use chrono::{DateTime, Utc};
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::*;
-use std::path::PathBuf;
 use uuid::Uuid;
 
 use super::Error;
@@ -47,6 +48,7 @@ pub enum ImportCommand {
 pub enum ReduceCommand {
     NomenclaturalActs,
     Specimens,
+    CollectionEvents,
 }
 
 pub fn process_command(cmd: &Command) {
@@ -67,15 +69,13 @@ pub fn process_command(cmd: &Command) {
                 version,
                 created_at,
                 path,
-            } => specimens::process(
-                path.clone(),
-                create_dataset_version(dataset_id, version, created_at).unwrap(),
-            )
-            .unwrap(),
+            } => specimens::process(path.clone(), create_dataset_version(dataset_id, version, created_at).unwrap())
+                .unwrap(),
         },
         Command::Reduce(cmd) => match cmd {
             ReduceCommand::NomenclaturalActs => nomenclatural_acts::reduce().unwrap(),
-            ReduceCommand::Specimens => specimens::reduce().unwrap(),
+            ReduceCommand::Specimens => specimens::reduce_specimens().unwrap(),
+            ReduceCommand::CollectionEvents => specimens::reduce_collections().unwrap(),
         },
     }
 }
@@ -87,11 +87,7 @@ pub fn get_pool() -> Result<PgPool, Error> {
     Ok(pool)
 }
 
-fn create_dataset_version(
-    dataset_id: &str,
-    version: &str,
-    created_at: &str,
-) -> Result<DatasetVersion, Error> {
+fn create_dataset_version(dataset_id: &str, version: &str, created_at: &str) -> Result<DatasetVersion, Error> {
     use schema::dataset_versions;
 
     let pool = get_pool()?;

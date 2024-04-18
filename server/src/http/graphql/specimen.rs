@@ -2,11 +2,8 @@ use async_graphql::*;
 use tracing::instrument;
 use uuid::Uuid;
 
-use crate::database::Database;
-use crate::http::Error;
-use crate::http::Context as State;
-
-use crate::database::models;
+use crate::database::{models, Database};
+use crate::http::{Context as State, Error};
 
 
 #[derive(OneofObject)]
@@ -65,6 +62,7 @@ impl SpecimenQuery {
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SpecimenDetails {
     pub id: Uuid,
+    pub entity_id: Option<String>,
 
     pub record_id: String,
     pub material_sample_id: Option<String>,
@@ -101,6 +99,7 @@ impl From<models::Specimen> for SpecimenDetails {
     fn from(value: models::Specimen) -> Self {
         Self {
             id: value.id,
+            entity_id: value.entity_id,
             record_id: value.record_id,
             material_sample_id: value.material_sample_id,
             organism_id: value.organism_id,
@@ -142,6 +141,7 @@ pub struct SpecimenEvents {
 #[derive(Clone, Debug, SimpleObject)]
 pub struct CollectionEvent {
     pub id: Uuid,
+    pub entity_id: Option<String>,
 
     pub event_date: Option<String>,
     pub event_time: Option<String>,
@@ -184,6 +184,7 @@ impl From<models::CollectionEvent> for CollectionEvent {
     fn from(value: models::CollectionEvent) -> Self {
         Self {
             id: value.id,
+            entity_id: value.entity_id,
             event_date: value.event_date,
             event_time: value.event_time,
             collected_by: value.collected_by,
