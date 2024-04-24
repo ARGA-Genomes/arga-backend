@@ -147,14 +147,23 @@ pub enum TaxonomicVernacularGroup {
     SharksAndRays,
     Insects,
     Fungi,
+    Spiders,
+    Reptiles,
+    Sponges,
 
     Bacteria,
     ProtistsAndOtherUnicellularOrganisms,
     FrogsAndOtherAmphibians,
     Birds,
     Mammals,
-    Seaweeds,
     HigherPlants,
+    Mosses,
+    Liverworts,
+    Hornworts,
+    Diatoms,
+    Chromists,
+    ConifersAndCycads,
+    Ferns,
 }
 
 

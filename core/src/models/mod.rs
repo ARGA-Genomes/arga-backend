@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 use super::{schema, schema_gnl};
 
+
 pub const ACCEPTED_NAMES: [TaxonomicStatus; 6] = [
     TaxonomicStatus::Accepted,
     TaxonomicStatus::Undescribed,
@@ -25,6 +26,7 @@ pub const SPECIES_RANKS: [TaxonomicRank; 5] = [
     TaxonomicRank::Infraspecies,
     TaxonomicRank::Varietas,
 ];
+
 
 #[derive(Queryable, Insertable, Debug, Clone, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::sources)]
@@ -150,14 +152,23 @@ pub enum TaxonomicVernacularGroup {
     SharksAndRays,
     Insects,
     Fungi,
+    Spiders,
+    Reptiles,
+    Sponges,
 
     Bacteria,
     ProtistsAndOtherUnicellularOrganisms,
     FrogsAndOtherAmphibians,
     Birds,
     Mammals,
-    Seaweeds,
     HigherPlants,
+    Mosses,
+    Liverworts,
+    Hornworts,
+    Diatoms,
+    Chromists,
+    ConifersAndCycads,
+    Ferns,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash, diesel_derive_enum::DbEnum)]
@@ -434,10 +445,13 @@ impl Species {
         let subphylum = classification.subphylum.as_ref().map(String::as_str);
         let class = classification.class.as_ref().map(String::as_str);
         let subclass = classification.subclass.as_ref().map(String::as_str);
+        let order = classification.order.as_ref().map(String::as_str);
 
         let regnum = classification.regnum.as_ref().map(String::as_str);
         let division = classification.division.as_ref().map(String::as_str);
         let classis = classification.classis.as_ref().map(String::as_str);
+        let ordo = classification.ordo.as_ref().map(String::as_str);
+        let subclassis = classification.subclassis.as_ref().map(String::as_str);
 
         // animals
         Some(match kingdom {
@@ -451,14 +465,20 @@ impl Species {
                 Some("Echinodermata") => Group::Echinoderms,
                 Some("Cnidaria") => Group::CoralsAndJellyfishes,
                 Some("Mollusca") => Group::Molluscs,
+                Some("Porifera") => Group::Sponges,
                 Some("Arthropoda") => match (subphylum, class) {
                     (Some("Crustacea"), _) => Group::Crustaceans,
                     (_, Some("Insecta")) => Group::Insects,
+                    (_, Some("Arachnida")) => match order {
+                        Some("Araneae") => Group::Spiders, // new icon: spiders taxon = Araneae
+                        _ => Group::Animals,
+                    },
                     _ => Group::Animals,
                 },
                 Some("Chordata") => match class {
                     Some("Amphibia") => Group::FrogsAndOtherAmphibians,
                     Some("Aves") => Group::Birds,
+                    Some("Reptilia") => Group::Reptiles, // new icon: reptiles taxon = Reptilia
                     Some("Mammalia") => Group::Mammals,
                     Some("Actinopterygii") => Group::FinFishes,
                     Some("Chondrichthyes") => match subclass {
@@ -473,20 +493,35 @@ impl Species {
             // plants
             None => match regnum {
                 Some("Plantae") => match division {
-                    Some("Phaeophyceae") => Group::BrownAlgae,
-                    Some("Rhodophyta") => Group::RedAlgae,
-                    Some("Chlorophyta") => Group::GreenAlgae,
-                    _ => match classis {
-                        Some("Phaeophyceae") => Group::BrownAlgae,
+                    Some("Bryophyta") => match classis {
+                        Some("Bryopsida") => Group::Mosses,
                         _ => Group::HigherPlants,
                     },
+                    Some("Marchantiophyta") => Group::Liverworts,
+                    Some("Anthocerotophyta") => Group::Hornworts,
+                    Some("Charophyta") => match (ordo, subclassis) {
+                        (Some("Pinales"), _) => Group::ConifersAndCycads,
+                        (Some("Cycadales"), _) => Group::ConifersAndCycads,
+                        (_, Some("Polypodiidae")) => Group::Ferns,
+                        (_, Some("Magnoliidae")) => Group::FloweringPlants,
+                        _ => Group::HigherPlants,
+                    },
+                    _ => Group::HigherPlants,
                 },
-                Some("Chromista") => Group::Seaweeds,
+                Some("Chromista") => Group::Chromists,
                 Some("Fungi") => Group::Fungi,
 
                 // protists
                 None => match superkingdom {
                     Some("Protista") => Group::ProtistsAndOtherUnicellularOrganisms,
+                    // algae
+                    None => match division {
+                        Some("Phaeophyta") => Group::BrownAlgae,
+                        Some("Rhodophyta") => Group::RedAlgae,
+                        Some("Chlorophyta") => Group::GreenAlgae,
+                        Some("Bacillariophyta") => Group::Diatoms,
+                        _ => return None,
+                    },
                     _ => return None,
                 },
                 _ => return None,
