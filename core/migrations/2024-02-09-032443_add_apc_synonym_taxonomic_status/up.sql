@@ -1,0 +1,14 @@
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'basionym';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'nomenclatural_synonym';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'taxonomic_synonym';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'replaced_synonym';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'orthographic_variant';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'misapplied';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'excluded';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'alternative_name';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'pro_parte_misapplied';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'pro_parte_taxonomic_synonym';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'doubtful_misapplied';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'doubtful_taxonomic_synonym';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'doubtful_pro_parte_misapplied';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'doubtful_pro_parte_taxonomic_synonym';

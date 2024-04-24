@@ -1,18 +1,13 @@
 use arga_core::models;
 use async_graphql::*;
-use serde::Deserialize;
-use serde::Serialize;
 use bigdecimal::ToPrimitive;
+use serde::{Deserialize, Serialize};
 
-use crate::database::Database;
+use super::common::datasets::DatasetDetails;
+use super::common::taxonomy::{TaxonDetails, TaxonomicRank, TaxonomicStatus};
 use crate::database::extensions::classification_filters::Classification;
-use crate::http::Error;
-use crate::http::Context as State;
-
-use crate::database::taxa;
-use super::common::taxonomy::TaxonDetails;
-use super::common::taxonomy::TaxonomicRank;
-
+use crate::database::{taxa, Database};
+use crate::http::{Context as State, Error};
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
 #[graphql(remote = "models::TaxonomicRank")]
@@ -53,6 +48,7 @@ pub enum TaxonRank {
     IncertaeSedis,
     Infraclass,
     Infraorder,
+    Infragenus,
     Section,
     Subdivision,
 
@@ -62,19 +58,22 @@ pub enum TaxonRank {
     Ordo,
     Varietas,
     Forma,
+    Subforma,
     Subclassis,
     Superordo,
     Sectio,
+    Subsectio,
     Nothovarietas,
     Subvarietas,
     Series,
+    Subseries,
+    Superspecies,
     Infraspecies,
     Subfamilia,
     Subordo,
     Regio,
     SpecialForm,
 }
-
 
 #[derive(MergedObject)]
 pub struct Taxon(TaxonDetails, TaxonQuery);
@@ -90,14 +89,14 @@ impl Taxon {
         details.source = Some(dataset.name);
         details.source_url = dataset.url;
 
-        let query = TaxonQuery { classification };
+        let query = TaxonQuery { classification, taxon };
         Ok(Taxon(details, query))
     }
 }
 
-
 pub struct TaxonQuery {
     classification: Classification,
+    taxon: models::Taxon,
 }
 
 #[Object]
@@ -117,7 +116,11 @@ impl TaxonQuery {
 
     async fn descendants(&self, ctx: &Context<'_>, rank: TaxonomicRank) -> Result<Vec<TaxonSummary>> {
         let state = ctx.data::<State>().unwrap();
-        let summaries = state.database.taxa.descendant_summary(&self.classification, rank.into()).await?;
+        let summaries = state
+            .database
+            .taxa
+            .descendant_summary(&self.classification, rank.into())
+            .await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
@@ -135,8 +138,66 @@ impl TaxonQuery {
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
+
+    async fn history(&self, ctx: &Context<'_>) -> Result<Vec<HistoryItem>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let history = state.database.taxa.history(&self.taxon.id).await?;
+        let history = history.into_iter().map(|r| r.into()).collect();
+        Ok(history)
+    }
 }
 
+#[derive(SimpleObject)]
+pub struct NamePublication {
+    pub citation: Option<String>,
+    pub published_year: Option<i32>,
+    pub source_url: Option<String>,
+    pub type_citation: Option<String>,
+}
+
+impl From<models::NamePublication> for NamePublication {
+    fn from(value: models::NamePublication) -> Self {
+        Self {
+            citation: value.citation,
+            published_year: value.published_year,
+            source_url: value.source_url,
+            type_citation: value.type_citation,
+        }
+    }
+}
+
+#[derive(SimpleObject)]
+pub struct HistoryItem {
+    pub dataset: DatasetDetails,
+    pub nomenclatural_act: String,
+    pub status: TaxonomicStatus,
+    pub rank: TaxonomicRank,
+    pub scientific_name: String,
+    pub canonical_name: String,
+    pub authorship: Option<String>,
+    pub citation: Option<String>,
+    pub source_url: Option<String>,
+    pub publication: Option<NamePublication>,
+    pub entity_id: Option<String>,
+}
+
+impl From<taxa::HistoryItem> for HistoryItem {
+    fn from(value: taxa::HistoryItem) -> Self {
+        Self {
+            dataset: value.dataset.into(),
+            nomenclatural_act: value.act.name,
+            status: value.taxon.status.into(),
+            rank: value.taxon.rank.into(),
+            scientific_name: value.taxon.scientific_name,
+            canonical_name: value.taxon.canonical_name,
+            authorship: value.taxon.authorship,
+            citation: value.taxon.citation,
+            source_url: value.source_url,
+            publication: value.publication.map(|publication| publication.into()),
+            entity_id: value.entity_id,
+        }
+    }
+}
 
 #[derive(SimpleObject)]
 pub struct TaxonNode {
@@ -180,7 +241,6 @@ impl From<taxa::TaxonSummary> for TaxonSummary {
     }
 }
 
-
 #[derive(SimpleObject)]
 pub struct DataBreakdown {
     pub name: String,
@@ -216,7 +276,6 @@ impl From<taxa::SpeciesSummary> for DataBreakdown {
         }
     }
 }
-
 
 fn into_classification(rank: TaxonRank, value: String) -> Classification {
     match rank {
@@ -254,6 +313,7 @@ fn into_classification(rank: TaxonRank, value: String) -> Classification {
         TaxonRank::IncertaeSedis => Classification::IncertaeSedis(value),
         TaxonRank::Infraclass => Classification::Infraclass(value),
         TaxonRank::Infraorder => Classification::Infraorder(value),
+        TaxonRank::Infragenus => Classification::Infragenus(value),
         TaxonRank::Section => Classification::Section(value),
         TaxonRank::Subdivision => Classification::Subdivision(value),
         TaxonRank::Regnum => Classification::Regnum(value),
@@ -262,12 +322,16 @@ fn into_classification(rank: TaxonRank, value: String) -> Classification {
         TaxonRank::Ordo => Classification::Ordo(value),
         TaxonRank::Varietas => Classification::Varietas(value),
         TaxonRank::Forma => Classification::Forma(value),
+        TaxonRank::Subforma => Classification::Subforma(value),
         TaxonRank::Subclassis => Classification::Subclassis(value),
         TaxonRank::Superordo => Classification::Superordo(value),
         TaxonRank::Sectio => Classification::Sectio(value),
+        TaxonRank::Subsectio => Classification::Subsectio(value),
         TaxonRank::Nothovarietas => Classification::Nothovarietas(value),
         TaxonRank::Subvarietas => Classification::Subvarietas(value),
         TaxonRank::Series => Classification::Series(value),
+        TaxonRank::Subseries => Classification::Subseries(value),
+        TaxonRank::Superspecies => Classification::Superspecies(value),
         TaxonRank::Infraspecies => Classification::Infraspecies(value),
         TaxonRank::Subfamilia => Classification::Subfamilia(value),
         TaxonRank::Subordo => Classification::Subordo(value),

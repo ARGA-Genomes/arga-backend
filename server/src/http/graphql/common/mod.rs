@@ -1,28 +1,31 @@
-pub mod taxonomy;
-pub mod species;
-pub mod filters;
 pub mod attributes;
-pub mod whole_genomes;
+pub mod datasets;
+pub mod filters;
+pub mod operation_logs;
 pub mod search;
+pub mod species;
+pub mod taxonomy;
+pub mod whole_genomes;
 
-pub use taxonomy::Taxonomy;
-pub use species::{SpeciesCard, SpeciesPhoto, SpeciesDataSummary};
+use async_graphql::{OutputType, SimpleObject};
+pub use datasets::{DatasetDetails, DatasetVersion};
 pub use filters::{
+    convert_filters,
+    convert_search_filters,
+    convert_whole_genome_filters,
     FilterAction,
     FilterItem,
     FilterType,
-    WholeGenomeFilterItem,
-    WholeGenomeFilterType,
     SearchFilterItem,
     SearchFilterType,
-    convert_filters,
-    convert_whole_genome_filters,
-    convert_search_filters,
+    WholeGenomeFilterItem,
+    WholeGenomeFilterType,
 };
+pub use species::{SpeciesCard, SpeciesDataSummary, SpeciesPhoto};
+pub use taxonomy::Taxonomy;
 
-use async_graphql::{SimpleObject, OutputType};
-
-use super::{species::SpecimenSummary, markers::SpeciesMarker, species::WholeGenome, species::GenomicComponent};
+use super::markers::SpeciesMarker;
+use super::species::{GenomicComponent, SpecimenSummary, WholeGenome};
 
 
 #[derive(SimpleObject)]
@@ -33,5 +36,5 @@ use super::{species::SpecimenSummary, markers::SpeciesMarker, species::WholeGeno
 #[graphql(concrete(name = "GenomicComponentPage", params(GenomicComponent)))]
 pub struct Page<T: OutputType> {
     pub records: Vec<T>,
-    pub total: i64
+    pub total: i64,
 }

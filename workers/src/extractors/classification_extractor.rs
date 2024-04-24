@@ -188,6 +188,7 @@ fn str_to_taxonomic_rank(value: &str) -> Result<TaxonomicRank, Error> {
         "incertae sedis" => Ok(TaxonomicRank::IncertaeSedis),
         "infraclass" => Ok(TaxonomicRank::Infraclass),
         "infraorder" => Ok(TaxonomicRank::Infraorder),
+        "infragenus" => Ok(TaxonomicRank::Infragenus),
         "section" => Ok(TaxonomicRank::Section),
         "subdivision" => Ok(TaxonomicRank::Subdivision),
 
@@ -197,12 +198,16 @@ fn str_to_taxonomic_rank(value: &str) -> Result<TaxonomicRank, Error> {
         "ordo" => Ok(TaxonomicRank::Ordo),
         "varietas" => Ok(TaxonomicRank::Varietas),
         "forma" => Ok(TaxonomicRank::Forma),
+        "subforma" => Ok(TaxonomicRank::Subforma),
         "subclassis" => Ok(TaxonomicRank::Subclassis),
         "superordo" => Ok(TaxonomicRank::Superordo),
         "sectio" => Ok(TaxonomicRank::Sectio),
+        "subsectio" => Ok(TaxonomicRank::Subsectio),
         "nothovarietas" => Ok(TaxonomicRank::Nothovarietas),
         "subvarietas" => Ok(TaxonomicRank::Subvarietas),
         "series" => Ok(TaxonomicRank::Series),
+        "subseries" => Ok(TaxonomicRank::Subseries),
+        "superspecies" => Ok(TaxonomicRank::Superspecies),
         "infraspecies" => Ok(TaxonomicRank::Infraspecies),
         "subfamilia" => Ok(TaxonomicRank::Subfamilia),
         "subordo" => Ok(TaxonomicRank::Subordo),
@@ -234,12 +239,30 @@ fn str_to_taxonomic_status(value: &str) -> Result<TaxonomicStatus, Error> {
         "invalid name" => Ok(TaxonomicStatus::Unaccepted),
         "unaccepted" => Ok(TaxonomicStatus::Unaccepted),
         "unaccepted name" => Ok(TaxonomicStatus::Unaccepted),
-        "excluded" => Ok(TaxonomicStatus::Unaccepted),
+        // "excluded" => Ok(TaxonomicStatus::Unaccepted),
 
         "informal" => Ok(TaxonomicStatus::Informal),
         "informal name" => Ok(TaxonomicStatus::Informal),
 
         "placeholder" => Ok(TaxonomicStatus::Placeholder),
+
+        "basionym" => Ok(TaxonomicStatus::Basionym),
+        "nomenclatural synonym" => Ok(TaxonomicStatus::NomenclaturalSynonym),
+        "taxonomic synonym" => Ok(TaxonomicStatus::TaxonomicSynonym),
+        "replaced synonym" => Ok(TaxonomicStatus::ReplacedSynonym),
+
+        "orthographic variant" => Ok(TaxonomicStatus::OrthographicVariant),
+        "misapplied" => Ok(TaxonomicStatus::Misapplied),
+        "excluded" => Ok(TaxonomicStatus::Excluded),
+        "alternative name" => Ok(TaxonomicStatus::AlternativeName),
+
+        "pro parte misapplied" => Ok(TaxonomicStatus::ProParteMisapplied),
+        "pro parte taxonomic synonym" => Ok(TaxonomicStatus::ProParteTaxonomicSynonym),
+
+        "doubtful misapplied" => Ok(TaxonomicStatus::DoubtfulMisapplied),
+        "doubtful taxonomic synonym" => Ok(TaxonomicStatus::DoubtfulTaxonomicSynonym),
+        "doubtful pro parte misapplied" => Ok(TaxonomicStatus::DoubtfulProParteMisapplied),
+        "doubtful pro parte taxonomic synonym" => Ok(TaxonomicStatus::DoubtfulProParteTaxonomicSynonym),
 
         val => Err(Error::Parsing(ParseError::InvalidValue(val.to_string()))),
     }

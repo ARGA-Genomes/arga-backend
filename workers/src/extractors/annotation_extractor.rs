@@ -1,16 +1,22 @@
 use std::path::PathBuf;
 
+use arga_core::models::{AnnotationEvent, Dataset};
 use csv::DeserializeRecordsIntoIter;
+use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::*;
-use diesel::r2d2::{Pool, ConnectionManager};
 use rayon::prelude::*;
 use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{Dataset, AnnotationEvent};
 use crate::error::Error;
-use crate::matchers::sequence_matcher::{SequenceMatch, SequenceRecord, SequenceMap, sequence_map, match_records_mapped};
+use crate::matchers::sequence_matcher::{
+    match_records_mapped,
+    sequence_map,
+    SequenceMap,
+    SequenceMatch,
+    SequenceRecord,
+};
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -20,6 +26,7 @@ type MatchedRecords = Vec<(SequenceMatch, Record)>;
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
     sequence_id: String,
+    entity_id: Option<String>,
     annotated_by: Option<String>,
 
     event_date: Option<String>,
@@ -35,7 +42,9 @@ struct Record {
 
 impl From<Record> for SequenceRecord {
     fn from(value: Record) -> Self {
-        Self { record_id: value.sequence_id }
+        Self {
+            record_id: value.sequence_id,
+        }
     }
 }
 
@@ -64,17 +73,18 @@ impl Iterator for AnnotationExtractIterator {
         for row in self.reader.by_ref().take(1_000_000) {
             match row {
                 Ok(record) => records.push(record),
-                Err(err) => return Some(Err(err.into()))
+                Err(err) => return Some(Err(err.into())),
             }
         }
 
-        info!(total=records.len(), "Deserialising CSV finished");
+        info!(total = records.len(), "Deserialising CSV finished");
 
         // if empth we've reached the end, otherwise do the expensive work
         // of extracting the chunk of data within the iterator call
         if records.is_empty() {
             None
-        } else {
+        }
+        else {
             Some(extract_chunk(records, &self.dataset, &self.sequences))
         }
     }
@@ -100,34 +110,35 @@ fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, sequences: &SequenceMap)
     let records = match_records_mapped(chunk, sequences);
     let annotation_events = extract_annotation_events(dataset, records);
 
-    Ok(AnnotationExtract {
-        annotation_events,
-    })
+    Ok(AnnotationExtract { annotation_events })
 }
 
 
-fn extract_annotation_events(dataset: &Dataset, records: MatchedRecords) -> Vec<AnnotationEvent>
-{
-    info!(total=records.len(), "Extracting annotation events");
+fn extract_annotation_events(dataset: &Dataset, records: MatchedRecords) -> Vec<AnnotationEvent> {
+    info!(total = records.len(), "Extracting annotation events");
 
-    let annotations = records.into_par_iter().map(|record| {
-        let (sequence, row) = record;
+    let annotations = records
+        .into_par_iter()
+        .map(|record| {
+            let (sequence, row) = record;
 
-        AnnotationEvent {
-            id: Uuid::new_v4(),
-            dataset_id: dataset.id.clone(),
-            sequence_id: sequence.id.clone(),
-            event_date: row.event_date,
-            event_time: row.event_time,
-            annotated_by: row.annotated_by,
-            representation: row.genome_representation,
-            release_type: row.genome_release_type,
-            coverage: row.sequencing_coverage,
-            replicons: row.num_replicons,
-            standard_operating_procedures: row.sop,
-        }
-    }).collect::<Vec<AnnotationEvent>>();
+            AnnotationEvent {
+                id: Uuid::new_v4(),
+                dataset_id: dataset.id.clone(),
+                sequence_id: sequence.id.clone(),
+                entity_id: row.entity_id,
+                event_date: row.event_date,
+                event_time: row.event_time,
+                annotated_by: row.annotated_by,
+                representation: row.genome_representation,
+                release_type: row.genome_release_type,
+                coverage: row.sequencing_coverage,
+                replicons: row.num_replicons,
+                standard_operating_procedures: row.sop,
+            }
+        })
+        .collect::<Vec<AnnotationEvent>>();
 
-    info!(annotation_events=annotations.len(), "Extracting annotation events finished");
+    info!(annotation_events = annotations.len(), "Extracting annotation events finished");
     annotations
 }

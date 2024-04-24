@@ -1,18 +1,13 @@
 use arga_core::models;
 use async_graphql::*;
-
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::database::extensions::filters::Filter;
-use crate::http::Error;
-use crate::http::Context as State;
-use crate::database::Database;
-
-use super::common::{Page, SpeciesCard, FilterItem, convert_filters};
-use super::dataset::DatasetDetails;
+use super::common::{convert_filters, DatasetDetails, FilterItem, Page, SpeciesCard};
 use super::helpers::SpeciesHelper;
+use crate::database::extensions::filters::Filter;
+use crate::database::Database;
+use crate::http::{Context as State, Error};
 
 
 #[derive(OneofObject)]
@@ -31,17 +26,26 @@ impl Source {
             SourceBy::Name(name) => db.sources.find_by_name(name).await?,
         };
         let details = source.clone().into();
-        let query = SourceQuery { source, filters: convert_filters(filters)? };
+        let query = SourceQuery {
+            source,
+            filters: convert_filters(filters)?,
+        };
         Ok(Source(details, query))
     }
 
     pub async fn all(db: &Database) -> Result<Vec<Source>, Error> {
         let records = db.sources.all_records().await?;
-        let sources = records.into_iter().map(|record| {
-            let details = SourceDetails::from(record.clone());
-            let query = SourceQuery { source: record, filters: vec![] };
-            Source(details, query)
-        }).collect();
+        let sources = records
+            .into_iter()
+            .map(|record| {
+                let details = SourceDetails::from(record.clone());
+                let query = SourceQuery {
+                    source: record,
+                    filters: vec![],
+                };
+                Source(details, query)
+            })
+            .collect();
         Ok(sources)
     }
 }
@@ -65,7 +69,11 @@ impl SourceQuery {
         let state = ctx.data::<State>().unwrap();
         let helper = SpeciesHelper::new(&state.database);
 
-        let page = state.database.sources.species(&self.source, &self.filters, page, page_size).await?;
+        let page = state
+            .database
+            .sources
+            .species(&self.source, &self.filters, page, page_size)
+            .await?;
         let cards = helper.filtered_cards(page.records).await?;
 
         Ok(Page {

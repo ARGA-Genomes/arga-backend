@@ -2,35 +2,25 @@ use arga_core::models;
 use arga_core::models::IndigenousKnowledge;
 use async_graphql::*;
 use chrono::NaiveDateTime;
-use serde::Deserialize;
-use serde::Serialize;
-use tracing::instrument;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use serde::{Deserialize, Serialize};
+use tracing::instrument;
 use uuid::Uuid;
 
-use crate::http::Error;
-use crate::http::Context as State;
-
-use crate::index::species::{
-    ConservationStatus,
-    GetConservationStatus,
-    GetTraceFiles,
-    TraceFile,
-};
-use crate::database::{schema, Database};
-use crate::database::models::Name as ArgaName;
-use crate::database::models::Name;
-use crate::database::species;
 use super::common::{
-    Page,
-    Taxonomy,
-    SpeciesPhoto,
-    WholeGenomeFilterItem,
     convert_whole_genome_filters,
+    DatasetDetails,
+    Page,
+    SpeciesPhoto,
+    Taxonomy,
+    WholeGenomeFilterItem,
 };
-use super::dataset::DatasetDetails;
 use super::markers::SpeciesMarker;
+use crate::database::models::{Name as ArgaName, Name};
+use crate::database::{schema, species, Database};
+use crate::http::{Context as State, Error};
+use crate::index::species::{ConservationStatus, GetConservationStatus, GetTraceFiles, TraceFile};
 
 
 pub struct Species {
@@ -97,13 +87,18 @@ impl Species {
 
         let names = names::table
             .filter(names::id.eq_any(name_ids))
-            .load::<Name>(&mut conn).await?;
+            .load::<Name>(&mut conn)
+            .await?;
 
         if names.len() == 0 {
             return Err(Error::NotFound(canonical_name));
         }
 
-        Ok(Species { canonical_name, name: names[0].clone(), names })
+        Ok(Species {
+            canonical_name,
+            name: names[0].clone(),
+            names,
+        })
     }
 
     #[instrument(skip(self, ctx))]
@@ -143,7 +138,9 @@ impl Species {
 
     #[instrument(skip(self, _ctx))]
     async fn regions(&self, _ctx: &Context<'_>) -> Regions {
-        Regions { names: self.names.clone() }
+        Regions {
+            names: self.names.clone(),
+        }
     }
 
     #[instrument(skip(self, ctx))]
@@ -185,11 +182,14 @@ impl Species {
         page: i64,
         page_size: i64,
         filters: Option<Vec<WholeGenomeFilterItem>>,
-    ) -> Result<Page<WholeGenome>, Error>
-    {
+    ) -> Result<Page<WholeGenome>, Error> {
         let state = ctx.data::<State>().unwrap();
         let filters = convert_whole_genome_filters(filters.unwrap_or_default())?;
-        let page = state.database.species.whole_genomes(&self.names, &filters, page, page_size).await?;
+        let page = state
+            .database
+            .species
+            .whole_genomes(&self.names, &filters, page, page_size)
+            .await?;
         let sequences = page.records.into_iter().map(|r| r.into()).collect();
         Ok(Page {
             records: sequences,
@@ -214,9 +214,18 @@ impl Species {
         })
     }
 
-    async fn genomic_components(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<GenomicComponent>, Error> {
+    async fn genomic_components(
+        &self,
+        ctx: &Context<'_>,
+        page: i64,
+        page_size: i64,
+    ) -> Result<Page<GenomicComponent>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let page = state.database.species.genomic_components(&self.names, page, page_size).await?;
+        let page = state
+            .database
+            .species
+            .genomic_components(&self.names, page, page_size)
+            .await?;
         let components = page.records.into_iter().map(|m| m.into()).collect();
         Ok(Page {
             records: components,
@@ -231,7 +240,10 @@ impl Species {
         Ok(genome)
     }
 
-    async fn indigenous_ecological_knowledge(&self, ctx: &Context<'_>) -> Result<Vec<IndigenousEcologicalTrait>, Error> {
+    async fn indigenous_ecological_knowledge(
+        &self,
+        ctx: &Context<'_>,
+    ) -> Result<Vec<IndigenousEcologicalTrait>, Error> {
         let state = ctx.data::<State>().unwrap();
         let name_ids: Vec<Uuid> = self.names.iter().map(|name| name.id.clone()).collect();
         let records = state.database.species.indigenous_knowledge(&name_ids).await?;
@@ -468,6 +480,7 @@ pub struct SpecimenSummary {
     pub id: Uuid,
     pub dataset_name: String,
     pub record_id: String,
+    pub entity_id: Option<String>,
     pub accession: Option<String>,
     pub institution_code: Option<String>,
     pub institution_name: Option<String>,
@@ -488,6 +501,7 @@ impl From<species::SpecimenSummary> for SpecimenSummary {
             id: value.id,
             dataset_name: value.dataset_name,
             record_id: value.record_id,
+            entity_id: value.entity_id,
             accession: value.accession,
             institution_code: value.institution_code,
             institution_name: value.institution_name,

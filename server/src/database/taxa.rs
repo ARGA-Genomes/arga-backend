@@ -1,14 +1,29 @@
-use arga_core::models::{TaxonTreeNode, Taxon, ACCEPTED_NAMES, TaxonomicRank, SPECIES_RANKS};
+use arga_core::models::{
+    Dataset,
+    NamePublication,
+    NomenclaturalAct,
+    Taxon,
+    TaxonHistory,
+    TaxonTreeNode,
+    TaxonomicRank,
+    ACCEPTED_NAMES,
+    SPECIES_RANKS,
+};
+use arga_core::schema::nomenclatural_acts;
 use bigdecimal::BigDecimal;
 use diesel::prelude::*;
-use diesel::sql_types::{Text, Array, Nullable, Varchar};
+use diesel::sql_types::{Array, Nullable, Text, Varchar};
 use diesel_async::RunQueryDsl;
+use uuid::Uuid;
 
-use crate::database::extensions::filters::{with_filters, Filter, filter_taxa};
+use super::extensions::Paginate;
+use super::models::{Species, TaxonomicStatus};
+use super::{schema, schema_gnl, Error, PageResult, PgPool};
 use crate::database::extensions::classification_filters::{
     with_classification,
     Classification as ClassificationFilter,
 };
+use crate::database::extensions::filters::{filter_taxa, with_filters, Filter};
 use crate::database::extensions::species_filters::{
     // with_parent_classification,
     with_classification as with_species_classification,
@@ -17,13 +32,7 @@ use crate::database::extensions::species_filters::{
 };
 use crate::database::extensions::sum_if;
 
-use super::extensions::Paginate;
-use super::{schema, schema_gnl, PgPool, PageResult, Error};
-use super::models::{Species, TaxonomicStatus};
-
-
 sql_function!(fn unnest(x: Nullable<Array<Text>>) -> Text);
-
 
 #[derive(Debug, Queryable)]
 pub struct DataSummary {
@@ -57,6 +66,21 @@ pub struct TaxonSummary {
     pub species_data: i64,
 }
 
+#[derive(Debug, Queryable, Selectable)]
+#[diesel(table_name = schema::taxon_history)]
+pub struct HistoryItem {
+    pub source_url: Option<String>,
+    pub entity_id: Option<String>,
+
+    #[diesel(embed)]
+    pub dataset: Dataset,
+    #[diesel(embed)]
+    pub taxon: Taxon,
+    #[diesel(embed)]
+    pub act: NomenclaturalAct,
+    #[diesel(embed)]
+    pub publication: Option<NamePublication>,
+}
 
 #[derive(Clone)]
 pub struct TaxaProvider {
@@ -81,7 +105,11 @@ impl TaxaProvider {
         let mut conn = self.pool.get().await?;
 
         let records = species
-            .filter(status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+            .filter(status.eq_any(&[
+                TaxonomicStatus::Accepted,
+                TaxonomicStatus::Undescribed,
+                TaxonomicStatus::Hybrid,
+            ]))
             .filter(with_filters(&filters).unwrap())
             .order_by(scientific_name)
             .paginate(page)
@@ -172,7 +200,6 @@ impl TaxaProvider {
         // Ok(options)
     }
 
-
     pub async fn hierarchy(&self, classification: &ClassificationFilter) -> Result<Vec<TaxonTreeNode>, Error> {
         use schema::taxa;
         use schema_gnl::taxa_dag as dag;
@@ -195,8 +222,11 @@ impl TaxaProvider {
         Ok(nodes)
     }
 
-
-    pub async fn descendant_summary(&self, classification: &ClassificationFilter, rank: TaxonomicRank) -> Result<Vec<TaxonSummary>, Error> {
+    pub async fn descendant_summary(
+        &self,
+        classification: &ClassificationFilter,
+        rank: TaxonomicRank,
+    ) -> Result<Vec<TaxonSummary>, Error> {
         use diesel::dsl::{count_star, sql};
         use schema_gnl::species;
         let mut conn = self.pool.get().await?;
@@ -211,18 +241,12 @@ impl TaxaProvider {
             .filter(species::classification.retrieve_as_text(rank).is_not_null())
             .filter(with_species_classification(classification))
             .group_by(&rank_group)
-            .select((
-                &rank_group,
-                count_star(),
-                sum_if(species::genomes.gt(0)),
-                sum_if(species::total_genomic.gt(0)),
-            ))
+            .select((&rank_group, count_star(), sum_if(species::genomes.gt(0)), sum_if(species::total_genomic.gt(0))))
             .load::<TaxonSummary>(&mut conn)
             .await?;
 
         Ok(records)
     }
-
 
     pub async fn taxon_summary(&self, classification: &ClassificationFilter) -> Result<TaxonSummary, Error> {
         use schema_gnl::species;
@@ -262,20 +286,12 @@ impl TaxaProvider {
         })
     }
 
-
     pub async fn species_summary(&self, filter: &ClassificationFilter) -> Result<Vec<SpeciesSummary>, Error> {
         use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let summaries = species
-            .select((
-                canonical_name,
-                genomes,
-                loci,
-                specimens,
-                other,
-                total_genomic,
-            ))
+            .select((canonical_name, genomes, loci, specimens, other, total_genomic))
             .filter(with_species_classification(filter))
             .order(total_genomic.desc())
             .limit(10)
@@ -290,14 +306,7 @@ impl TaxaProvider {
         let mut conn = self.pool.get().await?;
 
         let summaries = species
-            .select((
-                canonical_name,
-                genomes,
-                loci,
-                specimens,
-                other,
-                total_genomic,
-            ))
+            .select((canonical_name, genomes, loci, specimens, other, total_genomic))
             .filter(with_species_classification(filter))
             .order(genomes.desc())
             .limit(10)
@@ -305,5 +314,30 @@ impl TaxaProvider {
             .await?;
 
         Ok(summaries)
+    }
+
+    pub async fn history(&self, taxon_id: &Uuid) -> Result<Vec<HistoryItem>, Error> {
+        use schema::{datasets, name_publications as publications, taxa, taxon_history as history};
+        let mut conn = self.pool.get().await?;
+
+        let synonym_original_descriptions = history::table
+            .filter(history::acted_on.eq(taxon_id))
+            .select(history::taxon_id)
+            .into_boxed();
+
+        let items = history::table
+            .inner_join(datasets::table)
+            .inner_join(taxa::table.on(taxa::id.eq(history::taxon_id)))
+            .inner_join(nomenclatural_acts::table)
+            .left_join(publications::table)
+            .filter(history::taxon_id.eq(taxon_id))
+            .or_filter(history::acted_on.eq(taxon_id))
+            .or_filter(history::taxon_id.eq_any(synonym_original_descriptions))
+            .select(HistoryItem::as_select())
+            .order((publications::published_year.asc(), taxa::scientific_name.asc()))
+            .load::<HistoryItem>(&mut conn)
+            .await?;
+
+        Ok(items)
     }
 }

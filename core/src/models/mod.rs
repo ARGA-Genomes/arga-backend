@@ -1,7 +1,10 @@
+pub mod operation_logs;
+
 use bigdecimal::BigDecimal;
-use chrono::{DateTime, Utc, NaiveDateTime, NaiveDate};
-use diesel::{Queryable, Insertable, Associations, Identifiable, Selectable, AsChangeset};
-use serde::{Serialize, Deserialize};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
+use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable};
+pub use operation_logs::*;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::{schema, schema_gnl};
@@ -36,7 +39,7 @@ pub struct Source {
     pub license: String,
 }
 
-#[derive(Queryable, Insertable, AsChangeset, Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Queryable, Selectable, Insertable, AsChangeset, Debug, Clone, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::datasets)]
 pub struct Dataset {
     pub id: Uuid,
@@ -53,7 +56,18 @@ pub struct Dataset {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[derive(Debug, Clone, Queryable, Selectable, Identifiable, Insertable, Associations)]
+#[diesel(belongs_to(Dataset))]
+#[diesel(table_name = schema::dataset_versions)]
+pub struct DatasetVersion {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub version: String,
+    pub created_at: DateTime<Utc>,
+    pub imported_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::TaxonomicStatus"]
 pub enum TaxonomicStatus {
     Accepted,
@@ -65,11 +79,60 @@ pub enum TaxonomicStatus {
     Unaccepted,
     Informal,
     Placeholder,
+
+    Basionym,
+    NomenclaturalSynonym,
+    TaxonomicSynonym,
+    ReplacedSynonym,
+
+    OrthographicVariant,
+    Misapplied,
+    Excluded,
+    AlternativeName,
+
+    ProParteMisapplied,
+    ProParteTaxonomicSynonym,
+
+    DoubtfulMisapplied,
+    DoubtfulTaxonomicSynonym,
+    DoubtfulProParteMisapplied,
+    DoubtfulProParteTaxonomicSynonym,
 }
 
 impl Default for TaxonomicStatus {
     fn default() -> Self {
         TaxonomicStatus::Unaccepted
+    }
+}
+
+impl From<String> for TaxonomicStatus {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "Accepted" => TaxonomicStatus::Accepted,
+            "Undescribed" => TaxonomicStatus::Undescribed,
+            "SpeciesInquirenda" => TaxonomicStatus::SpeciesInquirenda,
+            "ManuscriptName" => TaxonomicStatus::ManuscriptName,
+            "Hybrid" => TaxonomicStatus::Hybrid,
+            "Synonym" => TaxonomicStatus::Synonym,
+            "Unaccepted" => TaxonomicStatus::Unaccepted,
+            "Informal" => TaxonomicStatus::Informal,
+            "Placeholder" => TaxonomicStatus::Placeholder,
+            "Basionym" => TaxonomicStatus::Basionym,
+            "NomenclaturalSynonym" => TaxonomicStatus::NomenclaturalSynonym,
+            "TaxonomicSynonym" => TaxonomicStatus::TaxonomicSynonym,
+            "ReplacedSynonym" => TaxonomicStatus::ReplacedSynonym,
+            "OrthographicVariant" => TaxonomicStatus::OrthographicVariant,
+            "Misapplied" => TaxonomicStatus::Misapplied,
+            "Excluded" => TaxonomicStatus::Excluded,
+            "AlternativeName" => TaxonomicStatus::AlternativeName,
+            "ProParteMisapplied" => TaxonomicStatus::ProParteMisapplied,
+            "ProParteTaxonomicSynonym" => TaxonomicStatus::ProParteTaxonomicSynonym,
+            "DoubtfulMisapplied" => TaxonomicStatus::DoubtfulMisapplied,
+            "DoubtfulTaxonomicSynonym" => TaxonomicStatus::DoubtfulTaxonomicSynonym,
+            "DoubtfulProParteMisapplied" => TaxonomicStatus::DoubtfulProParteMisapplied,
+            "DoubtfulProParteTaxonomicSynonym" => TaxonomicStatus::DoubtfulProParteTaxonomicSynonym,
+            _ => TaxonomicStatus::Unaccepted,
+        }
     }
 }
 
@@ -108,8 +171,6 @@ pub enum TaxonomicVernacularGroup {
     Ferns,
 }
 
-
-
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::TaxonomicRank"]
 pub enum TaxonomicRank {
@@ -124,9 +185,10 @@ pub enum TaxonomicRank {
     Subclass,
     Superorder,
     Order,
-    Suborder,
     Hyporder,
     Minorder,
+    Suborder,
+    Infraorder,
     Superfamily,
     Family,
     Subfamily,
@@ -135,6 +197,7 @@ pub enum TaxonomicRank {
     Subtribe,
     Genus,
     Subgenus,
+    Infragenus,
     Species,
     Subspecies,
 
@@ -148,7 +211,6 @@ pub enum TaxonomicRank {
     Division,
     IncertaeSedis,
     Infraclass,
-    Infraorder,
     Section,
     Subdivision,
 
@@ -158,12 +220,16 @@ pub enum TaxonomicRank {
     Ordo,
     Varietas,
     Forma,
+    Subforma,
     Subclassis,
     Superordo,
     Sectio,
+    Subsectio,
     Nothovarietas,
     Subvarietas,
     Series,
+    Subseries,
+    Superspecies,
     Infraspecies,
     Subfamilia,
     Subordo,
@@ -208,6 +274,7 @@ impl std::fmt::Display for TaxonomicRank {
             TaxonomicRank::IncertaeSedis => "Incertae Sedis",
             TaxonomicRank::Infraclass => "Infraclass",
             TaxonomicRank::Infraorder => "Infraorder",
+            TaxonomicRank::Infragenus => "Infragenus",
             TaxonomicRank::Section => "Section",
             TaxonomicRank::Subdivision => "Subdivision",
             TaxonomicRank::Regnum => "Regnum",
@@ -216,12 +283,16 @@ impl std::fmt::Display for TaxonomicRank {
             TaxonomicRank::Ordo => "Ordo",
             TaxonomicRank::Varietas => "Varietas",
             TaxonomicRank::Forma => "Forma",
+            TaxonomicRank::Subforma => "Subforma",
             TaxonomicRank::Subclassis => "Subclassis",
             TaxonomicRank::Superordo => "Superordo",
             TaxonomicRank::Sectio => "Sectio",
+            TaxonomicRank::Subsectio => "Subsectio",
             TaxonomicRank::Nothovarietas => "Nothovarietas",
             TaxonomicRank::Subvarietas => "Subvarietas",
             TaxonomicRank::Series => "Series",
+            TaxonomicRank::Subseries => "Subseries",
+            TaxonomicRank::Superspecies => "Superspecies",
             TaxonomicRank::Infraspecies => "Infraspecies",
             TaxonomicRank::Subfamilia => "Subfamilia",
             TaxonomicRank::Subordo => "Subordo",
@@ -232,7 +303,6 @@ impl std::fmt::Display for TaxonomicRank {
         write!(f, "{}", s)
     }
 }
-
 
 #[derive(Clone, Queryable, Insertable, Associations, Debug, Serialize, Deserialize)]
 #[diesel(belongs_to(Taxon, foreign_key = parent_id))]
@@ -362,12 +432,12 @@ pub struct ClassificationJson {
     pub special_form: Option<String>,
 }
 
-
 impl Species {
     pub fn vernacular_group(&self) -> Option<TaxonomicVernacularGroup> {
         use TaxonomicVernacularGroup as Group;
 
-        let classification = serde_json::from_value::<ClassificationJson>(self.classification.clone()).unwrap_or_default();
+        let classification =
+            serde_json::from_value::<ClassificationJson>(self.classification.clone()).unwrap_or_default();
 
         let kingdom = classification.kingdom.as_ref().map(String::as_str);
         let superkingdom = classification.superkingdom.as_ref().map(String::as_str);
@@ -404,7 +474,7 @@ impl Species {
                         _ => Group::Animals,
                     },
                     _ => Group::Animals,
-                }
+                },
                 Some("Chordata") => match class {
                     Some("Amphibia") => Group::FrogsAndOtherAmphibians,
                     Some("Aves") => Group::Birds,
@@ -416,9 +486,9 @@ impl Species {
                         _ => Group::Animals,
                     },
                     _ => Group::Animals,
-                }
+                },
                 _ => Group::Animals,
-            }
+            },
 
             // plants
             None => match regnum {
@@ -453,24 +523,54 @@ impl Species {
                         _ => return None,
                     },
                     _ => return None,
-                }
+                },
                 _ => return None,
-            }
+            },
             _ => return None,
         })
     }
 }
 
-#[derive(Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[derive(Identifiable, Insertable, Selectable, Queryable, Associations, Debug, Clone)]
+#[diesel(belongs_to(Dataset))]
+#[diesel(belongs_to(Taxon))]
+#[diesel(belongs_to(NamePublication, foreign_key = publication_id))]
 #[diesel(table_name = schema::taxon_history)]
 pub struct TaxonHistory {
     pub id: Uuid,
-    pub old_taxon_id: Uuid,
-    pub new_taxon_id: Uuid,
+    pub acted_on: Uuid,
+    pub taxon_id: Uuid,
     pub dataset_id: Uuid,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub act_id: Uuid,
+    pub publication_id: Option<Uuid>,
+    pub source_url: Option<String>,
+    pub entity_id: Option<String>,
 }
 
+#[derive(Queryable, Selectable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::name_publications)]
+pub struct NamePublication {
+    pub id: Uuid,
+    pub dataset_id: Uuid,
+    pub citation: Option<String>,
+    pub published_year: Option<i32>,
+    pub source_url: Option<String>,
+    pub type_citation: Option<String>,
+    pub record_created_at: Option<DateTime<Utc>>,
+    pub record_updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Queryable, Selectable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::nomenclatural_acts)]
+pub struct NomenclaturalAct {
+    pub id: Uuid,
+    pub name: String,
+    pub source_url: Option<String>,
+    pub citation: Option<String>,
+    pub example: Option<String>,
+}
 
 #[derive(Queryable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema_gnl::undescribed_species)]
@@ -480,7 +580,6 @@ pub struct UndescribedSpecies {
     pub names: Vec<String>,
 }
 
-
 #[derive(Clone, Queryable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::users)]
 pub struct User {
@@ -488,7 +587,6 @@ pub struct User {
     pub name: String,
     pub email: String,
 }
-
 
 #[derive(Debug, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::JobStatus"]
@@ -512,8 +610,6 @@ pub struct Job {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-
-
 #[derive(Clone, Identifiable, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::names)]
 pub struct Name {
@@ -522,7 +618,6 @@ pub struct Name {
     pub canonical_name: String,
     pub authorship: Option<String>,
 }
-
 
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::RegionType"]
@@ -543,7 +638,6 @@ pub struct Regions {
     pub values: Vec<Option<String>>,
 }
 
-
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::ecology)]
 pub struct Ecology {
@@ -552,7 +646,6 @@ pub struct Ecology {
     pub name_id: Uuid,
     pub values: Vec<String>,
 }
-
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::taxon_photos)]
@@ -567,7 +660,6 @@ pub struct TaxonPhoto {
     pub priority: i32,
 }
 
-
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::indigenous_knowledge)]
 pub struct IndigenousKnowledge {
@@ -581,7 +673,6 @@ pub struct IndigenousKnowledge {
     pub last_updated: DateTime<Utc>,
     pub source_url: Option<String>,
 }
-
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::specimens)]
@@ -619,6 +710,7 @@ pub struct Specimen {
     pub details: Option<String>,
     pub remarks: Option<String>,
     pub identification_remarks: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -634,6 +726,7 @@ pub struct Subsample {
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
     pub type_status: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -644,6 +737,7 @@ pub struct DnaExtract {
     pub name_id: Uuid,
     pub subsample_id: Uuid,
     pub record_id: String,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -654,8 +748,8 @@ pub struct Sequence {
     pub name_id: Uuid,
     pub dna_extract_id: Uuid,
     pub record_id: String,
+    pub entity_id: Option<String>,
 }
-
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::organisms)]
@@ -712,6 +806,7 @@ pub struct CollectionEvent {
 
     pub field_notes: Option<String>,
     pub remarks: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -730,6 +825,7 @@ pub struct AccessionEvent {
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
     pub type_status: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -742,6 +838,7 @@ pub struct SubsampleEvent {
     pub event_time: Option<String>,
     pub subsampled_by: Option<String>,
     pub preparation_type: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -765,6 +862,7 @@ pub struct DnaExtractionEvent {
     pub concentration: Option<f64>,
     pub absorbance_260_230: Option<f64>,
     pub absorbance_260_280: Option<f64>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -787,6 +885,7 @@ pub struct SequencingEvent {
 
     pub target_gene: Option<String>,
     pub dna_sequence: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -812,6 +911,7 @@ pub struct SequencingRunEvent {
     pub library_protocol: Option<String>,
     pub analysis_description: Option<String>,
     pub analysis_software: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -830,6 +930,7 @@ pub struct AssemblyEvent {
     pub quality: Option<String>,
     pub assembly_type: Option<String>,
     pub genome_size: Option<i64>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -848,6 +949,7 @@ pub struct AnnotationEvent {
     pub coverage: Option<String>,
     pub replicons: Option<i64>,
     pub standard_operating_procedures: Option<String>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
@@ -879,8 +981,8 @@ pub struct DepositionEvent {
     pub access_rights: Option<String>,
     pub reference: Option<String>,
     pub last_updated: Option<NaiveDate>,
+    pub entity_id: Option<String>,
 }
-
 
 // postgres arrays allows nulls to be entered into an array
 // so diesel will treat it as an array of optional numbers.
@@ -918,7 +1020,6 @@ pub struct TraceFile {
     pub raw_t: Option<IntArray>,
     pub raw_c: Option<IntArray>,
 }
-
 
 #[derive(Debug, Queryable, Insertable, Default, Clone)]
 #[diesel(table_name = schema::assemblies)]
@@ -978,7 +1079,6 @@ pub struct AssemblyStats {
     pub gc_perc: Option<i32>,
 }
 
-
 #[derive(Debug, Queryable, Insertable, Default, Clone)]
 #[diesel(table_name = schema::biosamples)]
 pub struct BioSample {
@@ -996,7 +1096,6 @@ pub struct BioSample {
     pub owner: Option<String>,
     pub attributes: Option<serde_json::Value>,
 }
-
 
 #[derive(Debug, Clone, Queryable, Insertable, Default)]
 #[diesel(table_name = schema_gnl::markers)]
@@ -1016,7 +1115,6 @@ pub struct Marker {
     pub target_gene: String,
     pub release_date: Option<String>,
 }
-
 
 /// Whole genomes are chromosome assemblies. For our model this requires
 /// at least an annotation event so that we can determine whether it is
@@ -1055,7 +1153,6 @@ pub struct WholeGenome {
     pub excluded_from_refseq: Option<String>,
 }
 
-
 #[derive(Debug, Queryable, Default, Clone)]
 #[diesel(table_name = schema_gnl::genomic_components)]
 pub struct GenomicComponent {
@@ -1084,7 +1181,6 @@ pub struct GenomicComponent {
     pub rights_holder: Option<String>,
     pub access_rights: Option<String>,
 }
-
 
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::AttributeCategory"]
@@ -1119,7 +1215,6 @@ pub struct NameAttribute {
     pub value_timestamp: Option<NaiveDateTime>,
 }
 
-
 #[derive(Clone)]
 pub enum BushfireRecoveryTrait {
     VulnerableToWildfire,
@@ -1135,7 +1230,6 @@ pub enum BushfireRecoveryTrait {
     OtherThreats,
 }
 
-
 #[derive(Debug, Queryable, Default, Clone)]
 pub struct TraceData {
     pub accession: Option<String>,
@@ -1143,7 +1237,6 @@ pub struct TraceData {
     pub trace_name: Option<String>,
     pub trace_link: Option<String>,
 }
-
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::admin_media)]
@@ -1163,7 +1256,6 @@ pub struct AdminMedia {
     pub license: Option<String>,
     pub rights_holder: Option<String>,
 }
-
 
 #[derive(Debug, Insertable, Queryable, Deserialize)]
 #[diesel(table_name = schema::vernacular_names)]

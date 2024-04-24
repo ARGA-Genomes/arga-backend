@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use arga_core::models::Dataset;
 use diesel::*;
 use diesel::r2d2::{Pool, ConnectionManager};
 use rayon::prelude::*;
@@ -26,7 +27,28 @@ pub struct TaxonMatch {
 }
 
 
-pub fn match_taxa(records: &Vec<TaxonRecord>, pool: &mut PgPool) -> HashMap<String, TaxonMatch> {
+pub fn taxa_map(dataset: &Dataset, pool: &mut PgPool) -> Result<HashMap<String, TaxonMatch>, Error> {
+    use schema::taxa::dsl::*;
+    let mut conn = pool.get()?;
+
+    info!("Generating taxa map");
+
+    let records = taxa
+        .select((id, scientific_name))
+        .filter(dataset_id.eq(dataset.id))
+        .load::<TaxonMatch>(&mut conn)?;
+
+    let mut map = HashMap::new();
+    for record in records.into_iter() {
+        map.insert(record.scientific_name.clone(), record);
+    }
+
+    info!(total=map.len(), "Generating taxa map finished");
+    Ok(map)
+}
+
+
+pub fn match_taxa(dataset: &Dataset, records: &Vec<TaxonRecord>, pool: &mut PgPool) -> HashMap<String, TaxonMatch> {
     use schema::taxa::dsl::*;
     info!(total=records.len(), "Matching taxa");
 
@@ -38,6 +60,7 @@ pub fn match_taxa(records: &Vec<TaxonRecord>, pool: &mut PgPool) -> HashMap<Stri
 
         let results = taxa
             .select((id, scientific_name))
+            .filter(dataset_id.eq(dataset.id))
             .filter(scientific_name.eq_any(&all_names))
             .load::<TaxonMatch>(&mut conn)?;
 

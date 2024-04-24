@@ -1,11 +1,10 @@
-use chrono::{NaiveDateTime, NaiveDate};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
 use tracing::info;
 
 use crate::error::{Error, ParseError};
-
 
 // regex features used:
 // - name capture groups (?<>)
@@ -17,7 +16,6 @@ use crate::error::{Error, ParseError};
 // - name capture groups (?<>)
 // - non-capture groups (?:)
 const SCIENTIFIC_NAME_REGEX: &str = r"(?<genus>[A-Z][a-z]+) (?:\((?<subgenus>[A-Z][a-z]+)\) )?(?<epithet>[a-z]+ )(?<subepithet>[a-z]+ )?(?<authority>.*)";
-
 
 #[derive(Debug, Clone)]
 pub struct ScientificNameComponents {
@@ -37,11 +35,10 @@ impl ScientificNameComponents {
 
         match &self.subspecific_epithet {
             Some(subspecies) => format!("{genus} {} {subspecies}", self.specific_epithet),
-            None => format!("{genus} {}", self.specific_epithet)
+            None => format!("{genus} {}", self.specific_epithet),
         }
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Coordinates {
@@ -64,7 +61,6 @@ pub fn parse_lat_lng(lat_long: &str) -> Result<Coordinates, Error> {
     })
 }
 
-
 pub fn parse_naive_date_time(value: &str) -> Result<NaiveDateTime, ParseError> {
     if let Ok(datetime) = NaiveDateTime::parse_from_str(value, "%d/%m/%Y %H:%M:%S") {
         return Ok(datetime);
@@ -75,16 +71,31 @@ pub fn parse_naive_date_time(value: &str) -> Result<NaiveDateTime, ParseError> {
     Ok(NaiveDateTime::parse_from_str(value, "%Y-%m-%dT%H:%M:%SZ")?)
 }
 
+pub fn parse_date_time(value: &str) -> Result<DateTime<Utc>, ParseError> {
+    if let Ok(datetime) = DateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S%z") {
+        return Ok(datetime.into());
+    }
+    if let Ok(datetime) = DateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S%#z") {
+        return Ok(datetime.into());
+    }
+    if let Ok(datetime) = DateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S%.3f%#z") {
+        return Ok(datetime.into());
+    }
+    // Ok(DateTime::parse_from_str(value, "%Y-%m-%dT%H:%M:%S%.3fZ")?.into())
+    Ok(DateTime::parse_from_rfc3339(value)?.into())
+}
 
 pub fn naive_date_time_from_str<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
-where D: serde::Deserializer<'de>
+where
+    D: serde::Deserializer<'de>,
 {
     let s: String = Deserialize::deserialize(deserializer)?;
     parse_naive_date_time(&s).map_err(serde::de::Error::custom)
 }
 
 pub fn naive_date_from_str_opt<'de, D>(deserializer: D) -> Result<Option<NaiveDate>, D::Error>
-where D: serde::Deserializer<'de>
+where
+    D: serde::Deserializer<'de>,
 {
     let s: Option<String> = Deserialize::deserialize(deserializer)?;
 
@@ -97,18 +108,42 @@ where D: serde::Deserializer<'de>
     })
 }
 
+pub fn date_time_from_str<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    parse_date_time(&s).map_err(serde::de::Error::custom)
+}
+
+pub fn date_time_from_str_opt<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: Option<String> = Deserialize::deserialize(deserializer)?;
+
+    Ok(match s {
+        None => None,
+        Some(s) => match parse_date_time(&s) {
+            Ok(date) => Some(date),
+            Err(_) => None,
+        },
+    })
+}
 
 pub fn extract_authority(name: &Option<String>, full_name: &Option<String>) -> Option<String> {
     match (name, full_name) {
-        (Some(name), Some(full_name)) => Some(full_name.trim_start_matches(name).trim().to_string()),
-        _ => None
+        (Some(name), Some(full_name)) => {
+            Some(full_name.trim_start_matches(name).trim().to_string())
+        }
+        _ => None,
     }
 }
 
-
 pub fn decompose_scientific_name(scientific_name: &str) -> Option<ScientificNameComponents> {
     // TODO: bubble regex creation failures
-    static RE: Lazy<Regex> = Lazy::new(|| Regex::new(SCIENTIFIC_NAME_REGEX).expect("Couldn't compile regex"));
+    static RE: Lazy<Regex> =
+        Lazy::new(|| Regex::new(SCIENTIFIC_NAME_REGEX).expect("Couldn't compile regex"));
 
     if let Some(groups) = RE.captures(scientific_name) {
         let genus = groups.name("genus");
@@ -120,7 +155,8 @@ pub fn decompose_scientific_name(scientific_name: &str) -> Option<ScientificName
         // decompose the regex match into a struct
         match (genus, epithet, authority) {
             (Some(genus), Some(epithet), Some(authority)) => {
-                let mut subspecific_epithet: Option<String> = subepithet.map(|v| v.as_str().trim().into());
+                let mut subspecific_epithet: Option<String> =
+                    subepithet.map(|v| v.as_str().trim().into());
                 let mut authority = authority.as_str().trim().into();
 
                 // some authorities have a name like `van de Poll` which will be picked
@@ -138,7 +174,7 @@ pub fn decompose_scientific_name(scientific_name: &str) -> Option<ScientificName
                         "van" | "von" | "de" | "del" | "le" => {
                             authority = format!("{name} {authority}");
                             subspecific_epithet = None;
-                        },
+                        }
                         // valid subspecies, do nothing
                         _ => {}
                     }
@@ -154,16 +190,17 @@ pub fn decompose_scientific_name(scientific_name: &str) -> Option<ScientificName
             }
             _ => None,
         }
-    }
-    else {
+    } else {
         None
     }
 }
 
-
 /// Read and deserialize the next million records
-pub fn read_chunk<T>(reader: &mut csv::DeserializeRecordsIntoIter<std::fs::File, T>) -> Result<Vec<T>, Error>
-where T: serde::de::DeserializeOwned
+pub fn read_chunk<T>(
+    reader: &mut csv::DeserializeRecordsIntoIter<std::fs::File, T>,
+) -> Result<Vec<T>, Error>
+where
+    T: serde::de::DeserializeOwned,
 {
     info!("Deserialising CSV");
     let mut records: Vec<T> = Vec::with_capacity(1_000_000);
@@ -171,15 +208,13 @@ where T: serde::de::DeserializeOwned
     for row in reader.by_ref().take(1_000_000) {
         match row {
             Ok(record) => records.push(record),
-            Err(err) => return Err(err.into())
+            Err(err) => return Err(err.into()),
         }
     }
 
-    info!(total=records.len(), "Deserialising CSV finished");
+    info!(total = records.len(), "Deserialising CSV finished");
     Ok(records)
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -207,7 +242,8 @@ mod tests {
 
     #[test]
     fn it_decomposes_scientific_names_with_subgenus() {
-        let result = decompose_scientific_name("Stigmodera (Castiarina) chamelauci Barker, 1987").unwrap();
+        let result =
+            decompose_scientific_name("Stigmodera (Castiarina) chamelauci Barker, 1987").unwrap();
         assert_eq!(result.genus, "Stigmodera");
         assert_eq!(result.subgenus, Some("Castiarina".to_string()));
         assert_eq!(result.specific_epithet, "chamelauci");
@@ -217,14 +253,17 @@ mod tests {
 
     #[test]
     fn it_decomposes_scientific_names_with_multiple_authors() {
-        let result = decompose_scientific_name("Rhombus grandisquama Temminck & Schlegel, 1846").unwrap();
+        let result =
+            decompose_scientific_name("Rhombus grandisquama Temminck & Schlegel, 1846").unwrap();
         assert_eq!(result.genus, "Rhombus");
         assert_eq!(result.subgenus, None);
         assert_eq!(result.specific_epithet, "grandisquama");
         assert_eq!(result.subspecific_epithet, None);
         assert_eq!(result.authority, "Temminck & Schlegel, 1846");
 
-        let result = decompose_scientific_name("Ozimops kitcheneri McKenzie, Reardon & Adams, 2014").unwrap();
+        let result =
+            decompose_scientific_name("Ozimops kitcheneri McKenzie, Reardon & Adams, 2014")
+                .unwrap();
         assert_eq!(result.genus, "Ozimops");
         assert_eq!(result.subgenus, None);
         assert_eq!(result.specific_epithet, "kitcheneri");
@@ -234,7 +273,8 @@ mod tests {
 
     #[test]
     fn it_decomposes_scientific_names_with_moved_genus() {
-        let result = decompose_scientific_name("Phascolarctos cinereus cinereus (Goldfuss, 1817)").unwrap();
+        let result =
+            decompose_scientific_name("Phascolarctos cinereus cinereus (Goldfuss, 1817)").unwrap();
         assert_eq!(result.genus, "Phascolarctos");
         assert_eq!(result.subgenus, None);
         assert_eq!(result.specific_epithet, "cinereus");
@@ -254,7 +294,8 @@ mod tests {
 
     #[test]
     fn it_decomposes_scientific_names_with_subgenus_and_subspecies() {
-        let result = decompose_scientific_name("Clivina (Clivina) gemina gemina Baehr, 2017").unwrap();
+        let result =
+            decompose_scientific_name("Clivina (Clivina) gemina gemina Baehr, 2017").unwrap();
         assert_eq!(result.genus, "Clivina");
         assert_eq!(result.subgenus, Some("Clivina".to_string()));
         assert_eq!(result.specific_epithet, "gemina");
@@ -278,14 +319,16 @@ mod tests {
         assert_eq!(result.subspecific_epithet, None);
         assert_eq!(result.authority, "von Lendenfeld, 1882");
 
-        let result = decompose_scientific_name("Metapenaeopsis mannarensis de Bruin, 1965").unwrap();
+        let result =
+            decompose_scientific_name("Metapenaeopsis mannarensis de Bruin, 1965").unwrap();
         assert_eq!(result.genus, "Metapenaeopsis");
         assert_eq!(result.subgenus, None);
         assert_eq!(result.specific_epithet, "mannarensis");
         assert_eq!(result.subspecific_epithet, None);
         assert_eq!(result.authority, "de Bruin, 1965");
 
-        let result = decompose_scientific_name("Pterygotrigla robertsi del Cerro & Lloris, 1997").unwrap();
+        let result =
+            decompose_scientific_name("Pterygotrigla robertsi del Cerro & Lloris, 1997").unwrap();
         assert_eq!(result.genus, "Pterygotrigla");
         assert_eq!(result.subgenus, None);
         assert_eq!(result.specific_epithet, "robertsi");
@@ -298,6 +341,5 @@ mod tests {
         assert_eq!(result.specific_epithet, "ludwigi");
         assert_eq!(result.subspecific_epithet, None);
         assert_eq!(result.authority, "le Roi, 1905");
-
     }
 }

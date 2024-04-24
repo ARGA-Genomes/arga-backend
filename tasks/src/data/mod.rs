@@ -1,7 +1,7 @@
-pub mod ncbi;
 pub mod bpa;
+pub mod ncbi;
 // pub mod bold;
-
+pub mod oplogger;
 
 #[derive(clap::Subcommand)]
 pub enum Command {
@@ -14,6 +14,8 @@ pub enum Command {
     // Extra processing for BOLD datasets
     // #[command(subcommand)]
     // Bold(bold::Command),
+    #[command(subcommand)]
+    Oplog(oplogger::Command),
 }
 
 pub fn process_command(command: &Command) {
@@ -23,9 +25,9 @@ pub fn process_command(command: &Command) {
         Command::Ncbi(cmd) => ncbi::process_command(cmd),
         Command::Bpa(cmd) => bpa::process_command(cmd),
         // Command::Bold(cmd) => bold::process_command(cmd),
+        Command::Oplog(cmd) => oplogger::process_command(cmd),
     }
 }
-
 
 #[derive(Debug)]
 pub enum Error {
@@ -35,6 +37,7 @@ pub enum Error {
     Csv(csv::Error),
     Database(diesel::result::Error),
     Pool(diesel::r2d2::PoolError),
+    Parsing(ParseError),
     // Http(ureq::Error),
     // Abif(abif::Error),
 }
@@ -67,6 +70,18 @@ impl From<diesel::r2d2::PoolError> for Error {
     fn from(value: diesel::r2d2::PoolError) -> Self {
         Self::Pool(value)
     }
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum ParseError {
+    #[error("invalid value: {0}")]
+    InvalidValue(String),
+
+    #[error(transparent)]
+    DateTime(#[from] chrono::ParseError),
+
+    #[error("value not found: {0}")]
+    NotFound(String),
 }
 
 // impl From<ureq::Error> for Error {

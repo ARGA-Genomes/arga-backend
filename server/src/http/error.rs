@@ -2,7 +2,6 @@ use axum::response::{IntoResponse, Response};
 use hyper::StatusCode;
 use tracing::error;
 
-
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("missing the '{0}' parameter in the request")]
@@ -13,6 +12,9 @@ pub enum Error {
 
     #[error("invalid configuration value for {0}. value = {1}")]
     Configuration(String, String),
+
+    #[error("invalid data found for {0} in the record {1}. id = {2}")]
+    InvalidData(String, String, String),
 
     #[error("an authentication error occurred")]
     Authentication,
@@ -47,13 +49,13 @@ impl From<crate::database::Error> for Error {
     }
 }
 
-
 impl Error {
     fn status_code(&self) -> StatusCode {
         match self {
             Error::MissingParam(_) => StatusCode::BAD_REQUEST,
             Error::GraphQL(_) => StatusCode::BAD_REQUEST,
             Error::NotFound(_) => StatusCode::NOT_FOUND,
+            Error::InvalidData(_, _, _) => StatusCode::INTERNAL_SERVER_ERROR,
 
             Error::Configuration(_, _) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Authentication => StatusCode::INTERNAL_SERVER_ERROR,
@@ -66,36 +68,35 @@ impl Error {
     }
 }
 
-
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         match &self {
             Error::Configuration(name, value) => {
                 error!(name, value, "Invalid configuration value");
-            },
+            }
             Error::Authentication => {
                 error!("Authentication error");
-            },
+            }
             Error::Internal(err) => {
                 error!(?err, "Internal error");
-            },
+            }
             Error::Database(err) => {
                 error!(?err, "Database error");
-            },
+            }
             Error::SearchIndex(err) => {
                 error!(?err, "Search index error");
-            },
+            }
             Error::Timeout => {
                 tracing::debug!("Timeout");
                 error!("Timeout");
-            },
+            }
             Error::GatewayTimeout => {
                 tracing::debug!("Gateway timeout");
                 error!("Gateway timeout");
-            },
+            }
             Error::GraphQL(err) => {
                 error!(?err, "Deserializer error")
-            },
+            }
 
             _ => {}
         }
@@ -103,7 +104,6 @@ impl IntoResponse for Error {
         (self.status_code(), self.to_string()).into_response()
     }
 }
-
 
 pub struct InternalError(anyhow::Error);
 
@@ -114,7 +114,8 @@ impl IntoResponse for InternalError {
 }
 
 impl<E> From<E> for InternalError
-where E: Into<anyhow::Error>
+where
+    E: Into<anyhow::Error>,
 {
     fn from(source: E) -> Self {
         Self(source.into())

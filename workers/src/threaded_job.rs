@@ -23,7 +23,7 @@ use super::importers::{
     deposition_importer,
     name_importer,
     // taxon_importer,
-    // synonym_importer,
+    taxon_history_importer,
     taxon_photo_importer,
     vernacular_importer,
     region_importer,
@@ -34,6 +34,7 @@ use super::importers::{
     admin_media_importer,
 
     classification_importer,
+    name_publication_importer,
 };
 
 
@@ -120,7 +121,7 @@ impl ThreadedJob {
             "import_dataset" => dataset_importer::import(path, pool)?,
             "import_name" => name_importer::import(path, &dataset?, pool)?,
             // "import_taxon" => taxon_importer::import(path, &dataset?, pool)?,
-            // "import_synonym" => synonym_importer::import(path, &dataset?, pool)?,
+            "import_taxon_history" => taxon_history_importer::import(path, &dataset?, pool)?,
             "import_taxon_photo" => taxon_photo_importer::import(path, pool)?,
             "import_vernacular" => vernacular_importer::import(path, &dataset?, pool)?,
             "import_region" => region_importer::import(path, pool)?,
@@ -139,6 +140,7 @@ impl ThreadedJob {
             "import_admin_media" => admin_media_importer::import(path, data.dataset.clone(), pool)?,
 
             "import_classification" => classification_importer::import(path, pool)?,
+            "import_name_publication" => name_publication_importer::import(path, &dataset?, pool)?,
             _ => panic!("Unknown job worker: {}", worker),
         }
 

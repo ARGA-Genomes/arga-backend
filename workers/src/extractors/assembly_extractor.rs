@@ -1,16 +1,22 @@
 use std::path::PathBuf;
 
+use arga_core::models::{AssemblyEvent, Dataset};
 use csv::DeserializeRecordsIntoIter;
+use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::*;
-use diesel::r2d2::{Pool, ConnectionManager};
 use rayon::prelude::*;
 use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{Dataset, AssemblyEvent};
 use crate::error::Error;
-use crate::matchers::sequence_matcher::{SequenceMatch, SequenceRecord, SequenceMap, sequence_map, match_records_mapped};
+use crate::matchers::sequence_matcher::{
+    match_records_mapped,
+    sequence_map,
+    SequenceMap,
+    SequenceMatch,
+    SequenceRecord,
+};
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -22,6 +28,7 @@ struct Record {
     sequence_id: String,
     // record_id: String,
     // sequence_record_id: Option<String>,
+    entity_id: Option<String>,
     assembled_by: Option<String>,
 
     event_date: Option<String>,
@@ -37,7 +44,9 @@ struct Record {
 
 impl From<Record> for SequenceRecord {
     fn from(value: Record) -> Self {
-        Self { record_id: value.sequence_id }
+        Self {
+            record_id: value.sequence_id,
+        }
         // Self { record_id: value.sequence_record_id.unwrap_or(value.record_id) }
     }
 }
@@ -67,17 +76,18 @@ impl Iterator for AssemblyExtractIterator {
         for row in self.reader.by_ref().take(1_000_000) {
             match row {
                 Ok(record) => records.push(record),
-                Err(err) => return Some(Err(err.into()))
+                Err(err) => return Some(Err(err.into())),
             }
         }
 
-        info!(total=records.len(), "Deserialising CSV finished");
+        info!(total = records.len(), "Deserialising CSV finished");
 
         // if empth we've reached the end, otherwise do the expensive work
         // of extracting the chunk of data within the iterator call
         if records.is_empty() {
             None
-        } else {
+        }
+        else {
             Some(extract_chunk(records, &self.dataset, &self.sequences))
         }
     }
@@ -103,34 +113,36 @@ fn extract_chunk(chunk: Vec<Record>, dataset: &Dataset, sequences: &SequenceMap)
     let records = match_records_mapped(chunk, sequences);
     let assembly_events = extract_assembly_events(dataset, records);
 
-    Ok(AssemblyExtract {
-        assembly_events,
-    })
+    Ok(AssemblyExtract { assembly_events })
 }
 
 
 fn extract_assembly_events(dataset: &Dataset, records: MatchedRecords) -> Vec<AssemblyEvent> {
-    info!(total=records.len(), "Extracting assembly events");
+    info!(total = records.len(), "Extracting assembly events");
 
-    let assemblies = records.into_par_iter().map(|record| {
-        let (sequence, row) = record;
+    let assemblies = records
+        .into_par_iter()
+        .map(|record| {
+            let (sequence, row) = record;
 
-        AssemblyEvent {
-            id: Uuid::new_v4(),
-            dataset_id: dataset.id.clone(),
-            sequence_id: sequence.id.clone(),
-            event_date: row.event_date,
-            event_time: row.event_time,
-            assembled_by: row.assembled_by,
-            name: row.assembly_name,
-            version_status: row.version_status,
-            quality: row.assembly_quality,
-            assembly_type: row.assembly_type,
-            genome_size: parse_i64(row.genome_size),
-        }
-    }).collect::<Vec<AssemblyEvent>>();
+            AssemblyEvent {
+                id: Uuid::new_v4(),
+                dataset_id: dataset.id.clone(),
+                sequence_id: sequence.id.clone(),
+                entity_id: row.entity_id,
+                event_date: row.event_date,
+                event_time: row.event_time,
+                assembled_by: row.assembled_by,
+                name: row.assembly_name,
+                version_status: row.version_status,
+                quality: row.assembly_quality,
+                assembly_type: row.assembly_type,
+                genome_size: parse_i64(row.genome_size),
+            }
+        })
+        .collect::<Vec<AssemblyEvent>>();
 
-    info!(assembly_events=assemblies.len(), "Extracting assembly events finished");
+    info!(assembly_events = assemblies.len(), "Extracting assembly events finished");
     assemblies
 }
 
