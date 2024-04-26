@@ -1,7 +1,5 @@
 use tracing::warn;
 
-use crate::data::{Error, ParseError};
-
 
 #[derive(Debug)]
 pub struct SpanProperties {
@@ -20,6 +18,8 @@ pub enum Span {
     BibRefCitation(String),
     NormalizedToken(String),
     PageBreakToken(String),
+    PageStartToken(String),
+    Authority(String),
 }
 
 impl Span {
@@ -55,6 +55,14 @@ impl Span {
         Self::PageBreakToken(text.to_string())
     }
 
+    pub fn page_start_token(text: &str) -> Self {
+        Self::PageStartToken(text.to_string())
+    }
+
+    pub fn authority(text: &str) -> Self {
+        Self::Authority(text.to_string())
+    }
+
     pub fn push_child(&mut self, child: Span) {
         match self {
             Span::Root(children) => children.push(child),
@@ -66,6 +74,8 @@ impl Span {
             Span::BibRefCitation(_) => warn!("Ignoring attempt to push a child into a BibRefCitation span"),
             Span::NormalizedToken(_) => warn!("Ignoring attempt to push a child into a NormalizedToken span"),
             Span::PageBreakToken(_) => warn!("Ignoring attempt to push a child into a PageBreakToken span"),
+            Span::PageStartToken(_) => warn!("Ignoring attempt to push a child into a PageStartToken span"),
+            Span::Authority(_) => warn!("Ignoring attempt to push a child into a PageStartToken span"),
         }
     }
 }
@@ -88,6 +98,8 @@ impl SpanStack {
             Span::BibRefCitation(_) => true,
             Span::NormalizedToken(_) => true,
             Span::PageBreakToken(_) => true,
+            Span::PageStartToken(_) => true,
+            Span::Authority(_) => true,
             _ => false,
         };
 
