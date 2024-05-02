@@ -7,16 +7,27 @@ use quick_xml::name::QName;
 use quick_xml::Reader;
 use tracing::info;
 
+use super::formatting::PageBreakToken;
 use crate::data::plazi::formatting::{Span, SpanStack};
 use crate::data::{Error, ParseError};
 
 
+/// Parse a section and it's hierarchy
 pub trait ParseSection<T>
 where
     T: BufRead,
     Self: Sized,
 {
     fn parse(reader: &mut Reader<T>, event: &BytesStart) -> Result<Self, Error>;
+}
+
+/// Parse a formatting element with its children
+pub trait ParseFormat<T>
+where
+    T: BufRead,
+    Self: Sized,
+{
+    fn parse(reader: &mut Reader<T>, event: &BytesStart) -> Result<(Self, Vec<Span>), Error>;
 }
 
 
@@ -132,6 +143,7 @@ pub enum Section {
     FeedsOn(Skipped),
     Comments(Skipped),
     DistributionMapLink(Skipped),
+    LectotypeSpecies(Skipped),
 }
 
 #[derive(Debug)]
@@ -188,15 +200,6 @@ pub struct NormalizedToken {
     pub id: Option<String>,
     pub original_value: String,
     pub value: String,
-}
-
-#[derive(Debug)]
-pub struct PageBreakToken {
-    pub id: Option<String>,
-    pub page_number: String,
-    pub value: String,
-    pub page_id: Option<String>,
-    pub start: Option<String>,
 }
 
 #[derive(Debug)]
@@ -294,12 +297,11 @@ impl<T: BufRead> ParseSection<T> for Treatment {
         let mut sections = Vec::new();
 
         let mut buf = Vec::new();
-        let mut state = State::Treatment;
 
         loop {
-            state = match (state, reader.read_event_into(&mut buf)?) {
-                (State::Treatment, Event::End(e)) if end_eq(&e, "treatment") => break,
-                (State::Treatment, Event::Start(e)) if start_eq(&e, "subSubSection") => {
+            match reader.read_event_into(&mut buf)? {
+                Event::End(e) if end_eq(&e, "treatment") => break,
+                Event::Start(e) if start_eq(&e, "subSubSection") => {
                     let section_type = parse_attribute(&reader, &e, "type")?;
                     let section = match section_type.as_str() {
                         "nomenclature" => Section::Nomenclature(Nomenclature::parse(reader, &e)?),
@@ -354,20 +356,26 @@ impl<T: BufRead> ParseSection<T> for Treatment {
                         "feeds on" => Section::FeedsOn(Skipped::parse(reader, &e)?),
                         "comments" => Section::Comments(Skipped::parse(reader, &e)?),
                         "link to distribution map" => Section::DistributionMapLink(Skipped::parse(reader, &e)?),
+                        "lectotype species" => Section::LectotypeSpecies(Skipped::parse(reader, &e)?),
+                        "key to new zealand kunzea" => Section::Key(Skipped::parse(reader, &e)?),
+
                         subsection_type => panic!("Unknown subsection type: {subsection_type}"),
                     };
 
                     sections.push(section);
-                    State::Treatment
                 }
 
                 // ignore captions
-                (State::Treatment, Event::Start(e)) if start_eq(&e, "caption") => {
+                Event::Start(e) if start_eq(&e, "caption") => {
                     skip_section(reader)?;
-                    State::Treatment
                 }
 
-                (state, event) => panic!("Unknown element. current_state: {state:?}, event: {event:#?}"),
+                // formatting elements wrapping subsections. we want to unwrap these and ignore the formatting.
+                // by continuing with the loop we basically pretend it doesn't exist
+                Event::Start(e) if start_eq(&e, "title") => continue,
+                Event::End(e) if end_eq(&e, "title") => continue,
+
+                event => panic!("Unknown element. event: {event:#?}"),
             }
         }
 
@@ -511,8 +519,8 @@ impl<T: BufRead> ParseSection<T> for TaxonomicName {
                 }
 
                 (state, Event::Start(e)) if start_eq(&e, "pageBreakToken") => {
-                    let token = PageBreakToken::parse(reader, &e)?;
-                    stack.push(Span::page_break_token(&token.value));
+                    let (token, children) = PageBreakToken::parse(reader, &e)?;
+                    stack.push(Span::page_break_token(token, children));
                     state
                 }
 
@@ -612,26 +620,36 @@ impl<T: BufRead> ParseSection<T> for NormalizedToken {
     }
 }
 
-impl<T: BufRead> ParseSection<T> for PageBreakToken {
-    fn parse(reader: &mut Reader<T>, event: &BytesStart) -> Result<Self, Error> {
-        let mut value = None;
+impl<T: BufRead> ParseFormat<T> for PageBreakToken {
+    fn parse(reader: &mut Reader<T>, event: &BytesStart) -> Result<(Self, Vec<Span>), Error> {
+        let mut stack = SpanStack::new();
         let mut buf = Vec::new();
 
         loop {
             match reader.read_event_into(&mut buf)? {
-                Event::Text(txt) => value = Some(txt.unescape()?.into_owned()),
-                Event::End(e) if end_eq(&e, "pageBreakToken") => break,
+                Event::Text(txt) => {
+                    stack.push(Span::text(&txt.unescape()?.into_owned()));
+                }
+                Event::Start(e) if start_eq(&e, "normalizedToken") => {
+                    let token = NormalizedToken::parse(reader, &e)?;
+                    stack.push(Span::normalized_token(&token.value));
+                }
+                Event::End(e) if end_eq(&e, "pageBreakToken") => {
+                    break;
+                }
                 event => panic!("Unknown element. event: {event:#?}"),
             }
         }
 
-        Ok(PageBreakToken {
-            id: parse_attribute_opt(reader, event, "id")?,
-            page_number: parse_attribute(reader, event, "pageNumber")?,
-            value: unwrap_element(value, "pageBreakToken")?,
-            page_id: parse_attribute_opt(reader, event, "pageId")?,
-            start: parse_attribute_opt(reader, event, "start")?,
-        })
+        Ok((
+            PageBreakToken {
+                id: parse_attribute_opt(reader, event, "id")?,
+                page_number: parse_attribute(reader, event, "pageNumber")?,
+                page_id: parse_attribute_opt(reader, event, "pageId")?,
+                start: parse_attribute_opt(reader, event, "start")?,
+            },
+            stack.commit_and_pop_all(),
+        ))
     }
 }
 
