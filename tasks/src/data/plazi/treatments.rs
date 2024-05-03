@@ -7,7 +7,7 @@ use quick_xml::name::QName;
 use quick_xml::Reader;
 use tracing::info;
 
-use super::formatting::PageBreakToken;
+use super::formatting::{CollectingRegion, Date, PageBreakToken, Quantity, Table, TableNote, Uri, Uuid};
 use crate::data::plazi::formatting::{Span, SpanStack};
 use crate::data::{Error, ParseError};
 
@@ -41,6 +41,7 @@ pub enum Classification {
     Book,
     BookChapter,
     JournalArticle,
+    JournalVolume,
     ProceedingsPaper,
 }
 
@@ -52,6 +53,7 @@ impl FromStr for Classification {
             "book" => Ok(Self::Book),
             "book chapter" => Ok(Self::BookChapter),
             "journal article" => Ok(Self::JournalArticle),
+            "journal volume" => Ok(Self::JournalVolume),
             "proceedings paper" => Ok(Self::ProceedingsPaper),
             val => Err(Error::Parsing(ParseError::InvalidValue(val.to_string()))),
         }
@@ -99,10 +101,12 @@ pub struct Treatment {
 pub enum Section {
     Nomenclature(Nomenclature),
     Description(Skipped),
+    OriginalDescription(Skipped),
     ReferenceGroup(Skipped),
     MaterialsExamined(Skipped),
     SpecimensExamined(Skipped),
     BiologyEcology(Skipped),
+    Biology(Skipped),
     Discussion(Skipped),
     Occurrence(Skipped),
     TypeSpecimens(Skipped),
@@ -117,7 +121,7 @@ pub enum Section {
     InfectionSite(Skipped),
     TypeLocality(Skipped),
     Paratype(Skipped),
-    Reference(Skipped),
+    References(Skipped),
     OriginalSource(Skipped),
     TypeHorizon(Skipped),
     VernacularNames(Skipped),
@@ -125,11 +129,11 @@ pub enum Section {
     TypeSpecies(Skipped),
     FamilyPlacement(Skipped),
     Holotype(Skipped),
-    Host(Skipped),
+    Hosts(Skipped),
     MolecularData(Skipped),
     Records(Skipped),
     EcologicalInteractions(Skipped),
-    Type(Skipped),
+    Types(Skipped),
     Ecology(Skipped),
     ConservationStatus(Skipped),
     Key(Skipped),
@@ -144,6 +148,85 @@ pub enum Section {
     Comments(Skipped),
     DistributionMapLink(Skipped),
     LectotypeSpecies(Skipped),
+    Diagnostics(Skipped),
+    EmendedDiagnosis(Skipped),
+    Variation(Skipped),
+    Call(Skipped),
+    Names(Skipped),
+    Range(Skipped),
+    Uses(Skipped),
+    Bionomics(Skipped),
+    HolotypeRedescription(Skipped),
+    Color(Skipped),
+    Morphology(Skipped),
+    NewRecords(Skipped),
+    SimilarSpecies(Skipped),
+    SynonymicList(Skipped),
+    SpeciesChecklist(Skipped),
+    CurrentStatus(Skipped),
+    TypeDeposit(Skipped),
+    Label(Skipped),
+    Dimensions(Skipped),
+    CurrentSystematicPosition(Skipped),
+    ComparativeDiagnosis(Skipped),
+    OriginalCombination(Skipped),
+    CurrentCombination(Skipped),
+    CollectionHabitat(Skipped),
+    Diversity(Skipped),
+    ColourationInLife(Skipped),
+    ColourationInAlcohol(Skipped),
+    ColourationInPreservative(Skipped),
+    TimeOfActivity(Skipped),
+    PublishedRecords(Skipped),
+    Taxonomy(Skipped),
+    Variability(Skipped),
+    Affinities(Skipped),
+    Chemistry(Skipped),
+    NameDerivation(Skipped),
+    Locality(Skipped),
+    Method(Skipped),
+    Eggs(Skipped),
+    Collection(Skipped),
+    PhotographicEvidence(Skipped),
+    NaturalHistory(Skipped),
+    Phenology(Skipped),
+    DistinguishingFeatures(Skipped),
+    Identification(Skipped),
+    Associations(Skipped),
+    TaxonomicAccount(Skipped),
+    TypeGenus(Skipped),
+    TaxonomicHistory(Skipped),
+    MisappliedName(Skipped),
+    HybridizationEvidence(Skipped),
+    Gender(Skipped),
+    PhylogeneticRelationships(Skipped),
+    LocusTypicus(Skipped),
+    Colour(Skipped),
+    Translation(Skipped),
+    NativeStatus(Skipped),
+    Size(Skipped),
+    Adult(Skipped),
+    LarvaPupa(Skipped),
+    LarvalMine(Skipped),
+    Fitch(Skipped),
+    CurrentSeniorSynonym(Skipped),
+    Syntypes(Skipped),
+    Measurements(Skipped),
+    Male(Skipped),
+    SelectedLiterature(Skipped),
+    AdultMorphology(Skipped),
+    Phylogeny(Skipped),
+    GeneticData(Skipped),
+    Pollen(Skipped),
+    SpeciesExamined(Skipped),
+    LiteratureRecords(Skipped),
+    TemporalData(Skipped),
+    SpecificEpithet(Skipped),
+}
+
+#[derive(Debug)]
+pub struct SubSection {
+    section: Section,
 }
 
 #[derive(Debug)]
@@ -186,13 +269,18 @@ pub struct TaxonomicName {
 pub struct Citation {
     pub id: String,
 
-    pub author: String,
+    pub author: Option<String>,
     pub reference_id: Option<String>,
     pub reference: String,
     pub classification: Classification,
-    pub year: usize,
+    pub year: Option<usize>,
 
     pub citation: String,
+}
+
+#[derive(Debug)]
+pub struct TaxonomicNameLabel {
+    pub value: String,
 }
 
 #[derive(Debug)]
@@ -211,27 +299,22 @@ pub struct PageStartToken {
 
 #[derive(Debug)]
 pub struct Authority {
-    pub page_number: String,
+    pub page_number: Option<String>,
     pub page_id: Option<String>,
     pub value: String,
 }
+
+#[derive(Debug)]
+pub struct Caption;
+
+#[derive(Debug)]
+pub struct MaterialsCitation;
 
 
 #[derive(Debug)]
 enum State {
     Root,
     Document,
-    Treatment,
-    SubSubSection,
-    Caption,
-
-    TaxonomicName,
-    TaxonomicNameLabel,
-
-    Paragraph,
-    Heading,
-    Emphasis,
-    BibRefCitation,
 }
 
 
@@ -302,78 +385,37 @@ impl<T: BufRead> ParseSection<T> for Treatment {
             match reader.read_event_into(&mut buf)? {
                 Event::End(e) if end_eq(&e, "treatment") => break,
                 Event::Start(e) if start_eq(&e, "subSubSection") => {
-                    let section_type = parse_attribute(&reader, &e, "type")?;
-                    let section = match section_type.as_str() {
-                        "nomenclature" => Section::Nomenclature(Nomenclature::parse(reader, &e)?),
-                        "description" => Section::Description(Skipped::parse(reader, &e)?),
-                        "reference_group" => Section::ReferenceGroup(Skipped::parse(reader, &e)?),
-                        "materials_examined" => Section::MaterialsExamined(Skipped::parse(reader, &e)?),
-                        "material examined" => Section::MaterialsExamined(Skipped::parse(reader, &e)?),
-                        "specimen examined" => Section::SpecimensExamined(Skipped::parse(reader, &e)?),
-                        "specimens examined" => Section::SpecimensExamined(Skipped::parse(reader, &e)?),
-                        "biology_ecology" => Section::BiologyEcology(Skipped::parse(reader, &e)?),
-                        "discussion" => Section::Discussion(Skipped::parse(reader, &e)?),
-                        "occurrence" => Section::Occurrence(Skipped::parse(reader, &e)?),
-                        "type specimens" => Section::TypeSpecimens(Skipped::parse(reader, &e)?),
-                        "diagnosis" => Section::Diagnosis(Skipped::parse(reader, &e)?),
-                        "etymology" => Section::Etymology(Skipped::parse(reader, &e)?),
-                        "distribution" => Section::Distribution(Skipped::parse(reader, &e)?),
-                        "notes" => Section::Notes(Skipped::parse(reader, &e)?),
-                        "remarks" => Section::Remarks(Skipped::parse(reader, &e)?),
-                        "multiple" => Section::Multiple(Skipped::parse(reader, &e)?),
-                        "type_taxon" => Section::TypeTaxon(Skipped::parse(reader, &e)?),
-                        "type host" => Section::TypeHost(Skipped::parse(reader, &e)?),
-                        "infection site" => Section::InfectionSite(Skipped::parse(reader, &e)?),
-                        "type locality" => Section::TypeLocality(Skipped::parse(reader, &e)?),
-                        "paratype" => Section::Paratype(Skipped::parse(reader, &e)?),
-                        "paratypes" => Section::Paratype(Skipped::parse(reader, &e)?),
-                        "reference" => Section::Reference(Skipped::parse(reader, &e)?),
-                        "original source" => Section::OriginalSource(Skipped::parse(reader, &e)?),
-                        "type horizon" => Section::TypeHorizon(Skipped::parse(reader, &e)?),
-                        "vernacular_names" => Section::VernacularNames(Skipped::parse(reader, &e)?),
-                        "vernacular name" => Section::VernacularNames(Skipped::parse(reader, &e)?),
-                        "conservation" => Section::Conservation(Skipped::parse(reader, &e)?),
-                        "type species" => Section::TypeSpecies(Skipped::parse(reader, &e)?),
-                        "family placement" => Section::FamilyPlacement(Skipped::parse(reader, &e)?),
-                        "holotype" => Section::Holotype(Skipped::parse(reader, &e)?),
-                        "host" => Section::Host(Skipped::parse(reader, &e)?),
-                        "molecular data" => Section::MolecularData(Skipped::parse(reader, &e)?),
-                        "records" => Section::Records(Skipped::parse(reader, &e)?),
-                        "ecological interactions" => Section::EcologicalInteractions(Skipped::parse(reader, &e)?),
-                        "type" => Section::Type(Skipped::parse(reader, &e)?),
-                        "ecology" => Section::Ecology(Skipped::parse(reader, &e)?),
-                        "conservation status" => Section::ConservationStatus(Skipped::parse(reader, &e)?),
-                        "key" => Section::Key(Skipped::parse(reader, &e)?),
-                        "diagnostic characters" => Section::DiagnosticCharacters(Skipped::parse(reader, &e)?),
-                        "redescription" => Section::Redescription(Skipped::parse(reader, &e)?),
-                        "parasite of" => Section::ParasiteOf(Skipped::parse(reader, &e)?),
-                        "chorology" => Section::Chorology(Skipped::parse(reader, &e)?),
-                        "biogeographical characterization" => {
-                            Section::BiogeographicalCharacterization(Skipped::parse(reader, &e)?)
-                        }
-                        "habitat" => Section::Habitat(Skipped::parse(reader, &e)?),
-                        "type material" => Section::TypeMaterial(Skipped::parse(reader, &e)?),
-                        "feeds on" => Section::FeedsOn(Skipped::parse(reader, &e)?),
-                        "comments" => Section::Comments(Skipped::parse(reader, &e)?),
-                        "link to distribution map" => Section::DistributionMapLink(Skipped::parse(reader, &e)?),
-                        "lectotype species" => Section::LectotypeSpecies(Skipped::parse(reader, &e)?),
-                        "key to new zealand kunzea" => Section::Key(Skipped::parse(reader, &e)?),
-
-                        subsection_type => panic!("Unknown subsection type: {subsection_type}"),
-                    };
-
-                    sections.push(section);
+                    let subsection = SubSection::parse(reader, &e)?;
+                    sections.push(subsection.section);
                 }
 
                 // ignore captions
                 Event::Start(e) if start_eq(&e, "caption") => {
-                    skip_section(reader)?;
+                    let _caption = Caption::parse(reader, &e)?;
                 }
 
                 // formatting elements wrapping subsections. we want to unwrap these and ignore the formatting.
                 // by continuing with the loop we basically pretend it doesn't exist
                 Event::Start(e) if start_eq(&e, "title") => continue,
                 Event::End(e) if end_eq(&e, "title") => continue,
+
+                // example: EF51B220FFD2FFFDFF24FDB01FDDF821.xml
+                Event::Start(e) if start_eq(&e, "treatmentCitationGroup") => continue,
+                Event::End(e) if end_eq(&e, "treatmentCitationGroup") => continue,
+
+                // example: EF0787806241345B052DF9D6FD7555B9.xml
+                Event::Start(e) if start_eq(&e, "paragraph") => continue,
+                Event::End(e) if end_eq(&e, "paragraph") => continue,
+
+                // example: EF7587ECFFEDFD3BFF46495F101CFE19.xml
+                Event::Start(e) if start_eq(&e, "tableNote") => {
+                    let _table_note = TableNote::parse(reader, &e);
+                }
+
+                // example: EF4C87F8FFA9FFD0FF78EC2DFDF4607E.xml
+                Event::Start(e) if start_eq(&e, "table") => {
+                    let _table = Table::parse(reader, &e);
+                }
 
                 event => panic!("Unknown element. event: {event:#?}"),
             }
@@ -386,6 +428,193 @@ impl<T: BufRead> ParseSection<T> for Treatment {
     }
 }
 
+impl<T: BufRead> ParseSection<T> for SubSection {
+    fn parse(reader: &mut Reader<T>, e: &BytesStart) -> Result<Self, Error> {
+        let section_type = parse_attribute(&reader, &e, "type")?;
+        let section = match section_type.as_str() {
+            "nomenclature" => Section::Nomenclature(Nomenclature::parse(reader, &e)?),
+            "description" => Section::Description(Skipped::parse(reader, &e)?),
+            "reference_group" => Section::ReferenceGroup(Skipped::parse(reader, &e)?),
+            "materials_examined" => Section::MaterialsExamined(Skipped::parse(reader, &e)?),
+            "material examined" => Section::MaterialsExamined(Skipped::parse(reader, &e)?),
+            "specimen examined" => Section::SpecimensExamined(Skipped::parse(reader, &e)?),
+            "specimens examined" => Section::SpecimensExamined(Skipped::parse(reader, &e)?),
+            "other specimen examined" => Section::SpecimensExamined(Skipped::parse(reader, &e)?),
+            "biology_ecology" => Section::BiologyEcology(Skipped::parse(reader, &e)?),
+            "biology" => Section::Biology(Skipped::parse(reader, &e)?),
+            "discussion" => Section::Discussion(Skipped::parse(reader, &e)?),
+            "occurrence" => Section::Occurrence(Skipped::parse(reader, &e)?),
+            "occurrence data" => Section::Occurrence(Skipped::parse(reader, &e)?),
+            "type specimens" => Section::TypeSpecimens(Skipped::parse(reader, &e)?),
+            "type specimen" => Section::TypeSpecimens(Skipped::parse(reader, &e)?),
+            "diagnosis" => Section::Diagnosis(Skipped::parse(reader, &e)?),
+            "etymology" => Section::Etymology(Skipped::parse(reader, &e)?),
+            "distribution" => Section::Distribution(Skipped::parse(reader, &e)?),
+            "notes" => Section::Notes(Skipped::parse(reader, &e)?),
+            "note" => Section::Notes(Skipped::parse(reader, &e)?),
+            "remarks" => Section::Remarks(Skipped::parse(reader, &e)?),
+            "multiple" => Section::Multiple(Skipped::parse(reader, &e)?),
+            "type_taxon" => Section::TypeTaxon(Skipped::parse(reader, &e)?),
+            "type host" => Section::TypeHost(Skipped::parse(reader, &e)?),
+            "infection site" => Section::InfectionSite(Skipped::parse(reader, &e)?),
+            "type locality" => Section::TypeLocality(Skipped::parse(reader, &e)?),
+            "paratype" => Section::Paratype(Skipped::parse(reader, &e)?),
+            "paratypes" => Section::Paratype(Skipped::parse(reader, &e)?),
+            "reference" => Section::References(Skipped::parse(reader, &e)?),
+            "references" => Section::References(Skipped::parse(reader, &e)?),
+            "original source" => Section::OriginalSource(Skipped::parse(reader, &e)?),
+            "type horizon" => Section::TypeHorizon(Skipped::parse(reader, &e)?),
+            "vernacular_names" => Section::VernacularNames(Skipped::parse(reader, &e)?),
+            "vernacular name" => Section::VernacularNames(Skipped::parse(reader, &e)?),
+            "conservation" => Section::Conservation(Skipped::parse(reader, &e)?),
+            "type species" => Section::TypeSpecies(Skipped::parse(reader, &e)?),
+            "family placement" => Section::FamilyPlacement(Skipped::parse(reader, &e)?),
+            "holotype" => Section::Holotype(Skipped::parse(reader, &e)?),
+            "holotype ♀" => Section::Holotype(Skipped::parse(reader, &e)?),
+            "host" => Section::Hosts(Skipped::parse(reader, &e)?),
+            "hosts" => Section::Hosts(Skipped::parse(reader, &e)?),
+            "molecular data" => Section::MolecularData(Skipped::parse(reader, &e)?),
+            "records" => Section::Records(Skipped::parse(reader, &e)?),
+            "ecological interactions" => Section::EcologicalInteractions(Skipped::parse(reader, &e)?),
+            "type" => Section::Types(Skipped::parse(reader, &e)?),
+            "types" => Section::Types(Skipped::parse(reader, &e)?),
+            "ecology" => Section::Ecology(Skipped::parse(reader, &e)?),
+            "conservation status" => Section::ConservationStatus(Skipped::parse(reader, &e)?),
+            "key" => Section::Key(Skipped::parse(reader, &e)?),
+            "diagnostic characters" => Section::DiagnosticCharacters(Skipped::parse(reader, &e)?),
+            "redescription" => Section::Redescription(Skipped::parse(reader, &e)?),
+            "parasite of" => Section::ParasiteOf(Skipped::parse(reader, &e)?),
+            "chorology" => Section::Chorology(Skipped::parse(reader, &e)?),
+            "biogeographical characterization" => Section::BiogeographicalCharacterization(Skipped::parse(reader, &e)?),
+            "habitat" => Section::Habitat(Skipped::parse(reader, &e)?),
+            "type material" => Section::TypeMaterial(Skipped::parse(reader, &e)?),
+            "feeds on" => Section::FeedsOn(Skipped::parse(reader, &e)?),
+            "comments" => Section::Comments(Skipped::parse(reader, &e)?),
+            "link to distribution map" => Section::DistributionMapLink(Skipped::parse(reader, &e)?),
+            "lectotype species" => Section::LectotypeSpecies(Skipped::parse(reader, &e)?),
+            "diagnostics" => Section::Diagnostics(Skipped::parse(reader, &e)?),
+            "diagnostic features" => Section::Diagnostics(Skipped::parse(reader, &e)?),
+            "emended diagnosis" => Section::EmendedDiagnosis(Skipped::parse(reader, &e)?),
+            "variation" => Section::Variation(Skipped::parse(reader, &e)?),
+            "call" => Section::Call(Skipped::parse(reader, &e)?),
+            "name" => Section::Names(Skipped::parse(reader, &e)?),
+            "range" => Section::Range(Skipped::parse(reader, &e)?),
+            "uses" => Section::Uses(Skipped::parse(reader, &e)?),
+            "bionomics" => Section::Bionomics(Skipped::parse(reader, &e)?),
+            "redescription based on holotype" => Section::HolotypeRedescription(Skipped::parse(reader, &e)?),
+            "color" => Section::Color(Skipped::parse(reader, &e)?),
+            "morphology" => Section::Morphology(Skipped::parse(reader, &e)?),
+            "new records" => Section::NewRecords(Skipped::parse(reader, &e)?),
+            "similar species" => Section::SimilarSpecies(Skipped::parse(reader, &e)?),
+            "synonymic_list" => Section::SynonymicList(Skipped::parse(reader, &e)?),
+            "current status" => Section::CurrentStatus(Skipped::parse(reader, &e)?),
+            "type deposit" => Section::TypeDeposit(Skipped::parse(reader, &e)?),
+            "label" => Section::Label(Skipped::parse(reader, &e)?),
+            "dimensions" => Section::Dimensions(Skipped::parse(reader, &e)?),
+            "current systematic position" => Section::CurrentSystematicPosition(Skipped::parse(reader, &e)?),
+            "comparative diagnosis" => Section::ComparativeDiagnosis(Skipped::parse(reader, &e)?),
+            "original combination" => Section::OriginalCombination(Skipped::parse(reader, &e)?),
+            "current combination" => Section::CurrentCombination(Skipped::parse(reader, &e)?),
+            "collection and habitat data" => Section::CollectionHabitat(Skipped::parse(reader, &e)?),
+            "diversity" => Section::Diversity(Skipped::parse(reader, &e)?),
+            "colouration in life" => Section::ColourationInLife(Skipped::parse(reader, &e)?),
+            "colouration in alcohol" => Section::ColourationInAlcohol(Skipped::parse(reader, &e)?),
+            "colour in life" => Section::ColourationInLife(Skipped::parse(reader, &e)?),
+            "colour in preservative" => Section::ColourationInPreservative(Skipped::parse(reader, &e)?),
+            "time of activity" => Section::TimeOfActivity(Skipped::parse(reader, &e)?),
+            "published records" => Section::PublishedRecords(Skipped::parse(reader, &e)?),
+            "taxonomy" => Section::Taxonomy(Skipped::parse(reader, &e)?),
+            "variability" => Section::Variability(Skipped::parse(reader, &e)?),
+            "affinities" => Section::Affinities(Skipped::parse(reader, &e)?),
+            "affinity" => Section::Affinities(Skipped::parse(reader, &e)?),
+            "chemistry" => Section::Chemistry(Skipped::parse(reader, &e)?),
+            "name derivation" => Section::NameDerivation(Skipped::parse(reader, &e)?),
+            "preliminary conservation status" => Section::ConservationStatus(Skipped::parse(reader, &e)?),
+            "locality" => Section::Locality(Skipped::parse(reader, &e)?),
+            "method" => Section::Method(Skipped::parse(reader, &e)?),
+            "collection" => Section::Collection(Skipped::parse(reader, &e)?),
+            "photographic evidence" => Section::PhotographicEvidence(Skipped::parse(reader, &e)?),
+            "natural history" => Section::NaturalHistory(Skipped::parse(reader, &e)?),
+            "phenology" => Section::Phenology(Skipped::parse(reader, &e)?),
+            "distinguishing features" => Section::DistinguishingFeatures(Skipped::parse(reader, &e)?),
+            "identification" => Section::Identification(Skipped::parse(reader, &e)?),
+            "associations" => Section::Associations(Skipped::parse(reader, &e)?),
+            "taxonomic account" => Section::TaxonomicAccount(Skipped::parse(reader, &e)?),
+            "type genus" => Section::TypeGenus(Skipped::parse(reader, &e)?),
+            "taxonomic history" => Section::TaxonomicHistory(Skipped::parse(reader, &e)?),
+            "misapplied name" => Section::MisappliedName(Skipped::parse(reader, &e)?),
+            "evidence of hybridization" => Section::HybridizationEvidence(Skipped::parse(reader, &e)?),
+            "gender" => Section::Gender(Skipped::parse(reader, &e)?),
+            "female" => Section::Gender(Skipped::parse(reader, &e)?),
+            "phylogenetic relationships" => Section::PhylogeneticRelationships(Skipped::parse(reader, &e)?),
+            "described species" => Section::Description(Skipped::parse(reader, &e)?),
+            "locus typicus" => Section::LocusTypicus(Skipped::parse(reader, &e)?),
+            "differential diagnosis" => Section::Diagnosis(Skipped::parse(reader, &e)?),
+            "colour" => Section::Colour(Skipped::parse(reader, &e)?),
+            "translation" => Section::Translation(Skipped::parse(reader, &e)?),
+            "habit and habitat" => Section::Habitat(Skipped::parse(reader, &e)?),
+            "vernacular" => Section::VernacularNames(Skipped::parse(reader, &e)?),
+            "native status" => Section::NativeStatus(Skipped::parse(reader, &e)?),
+            "lineage diagnosis" => Section::Diagnosis(Skipped::parse(reader, &e)?),
+            "size" => Section::Size(Skipped::parse(reader, &e)?),
+            "adult" => Section::Adult(Skipped::parse(reader, &e)?),
+            "larva and pupa" => Section::LarvaPupa(Skipped::parse(reader, &e)?),
+            "larval mine" => Section::LarvalMine(Skipped::parse(reader, &e)?),
+            "original description of" => Section::OriginalDescription(Skipped::parse(reader, &e)?),
+            "fitch" => Section::Fitch(Skipped::parse(reader, &e)?),
+            "current senior synonym" => Section::CurrentSeniorSynonym(Skipped::parse(reader, &e)?),
+            "syntypes" => Section::Syntypes(Skipped::parse(reader, &e)?),
+            "measurements" => Section::Measurements(Skipped::parse(reader, &e)?),
+            "selected literature" => Section::SelectedLiterature(Skipped::parse(reader, &e)?),
+            "described species and range" => Section::Description(Skipped::parse(reader, &e)?),
+            "adult morphology" => Section::AdultMorphology(Skipped::parse(reader, &e)?),
+            "life history notes" => Section::Notes(Skipped::parse(reader, &e)?),
+            "taxonomical notes" => Section::Notes(Skipped::parse(reader, &e)?),
+            "type data" => Section::Types(Skipped::parse(reader, &e)?),
+            "type material examined" => Section::MaterialsExamined(Skipped::parse(reader, &e)?),
+            "phylogeny and classification" => Section::Phylogeny(Skipped::parse(reader, &e)?),
+            "common names" => Section::VernacularNames(Skipped::parse(reader, &e)?),
+            "preliminary conservation assessment" => Section::Conservation(Skipped::parse(reader, &e)?),
+            "genetic data" => Section::GeneticData(Skipped::parse(reader, &e)?),
+            "pollen" => Section::Pollen(Skipped::parse(reader, &e)?),
+            "species examined" => Section::SpeciesExamined(Skipped::parse(reader, &e)?),
+            "literature records" => Section::LiteratureRecords(Skipped::parse(reader, &e)?),
+            "temporal data" => Section::TemporalData(Skipped::parse(reader, &e)?),
+            "names" => Section::Names(Skipped::parse(reader, &e)?),
+            "use" => Section::Uses(Skipped::parse(reader, &e)?),
+            "specific epithet" => Section::SpecificEpithet(Skipped::parse(reader, &e)?),
+            "taxon discussion" => Section::Discussion(Skipped::parse(reader, &e)?),
+
+            "argentinian species checklist" => Section::SpeciesChecklist(Skipped::parse(reader, &e)?),
+
+            "key to new zealand kunzea" => Section::Key(Skipped::parse(reader, &e)?),
+            "key to poa subgen. pseudopoa taxa and other annual species of poa in the coincident geographic region" => {
+                Section::Key(Skipped::parse(reader, &e)?)
+            }
+            "revised key to species of eotrechus" => Section::Key(Skipped::parse(reader, &e)?),
+
+            "local and common names known in cameroon" => Section::VernacularNames(Skipped::parse(reader, &e)?),
+            "uses in cameroon" => Section::Uses(Skipped::parse(reader, &e)?),
+            "common names and uses" => Section::VernacularNames(Skipped::parse(reader, &e)?),
+            "iucn conservation status" => Section::ConservationStatus(Skipped::parse(reader, &e)?),
+            "published (original) locality" => Section::Locality(Skipped::parse(reader, &e)?),
+
+            "distribution in canada and alaska" => Section::Distribution(Skipped::parse(reader, &e)?),
+            "s. parvulus worker diagnosis" => Section::Diagnosis(Skipped::parse(reader, &e)?),
+            "s. parvulus male" => Section::Male(Skipped::parse(reader, &e)?),
+            "s. parvulus geographic range" => Section::Range(Skipped::parse(reader, &e)?),
+            "s. parvulus larva" => Section::LarvaPupa(Skipped::parse(reader, &e)?),
+            "s. parvulus notes" => Section::Notes(Skipped::parse(reader, &e)?),
+
+            "eggs/spiderlings" => Section::Eggs(Skipped::parse(reader, &e)?),
+
+            subsection_type => panic!("Unknown subsection type: {subsection_type}"),
+        };
+
+        Ok(SubSection { section })
+    }
+}
+
 
 impl<T: BufRead> ParseSection<T> for Nomenclature {
     fn parse(reader: &mut Reader<T>, event: &BytesStart) -> Result<Self, Error> {
@@ -393,83 +622,126 @@ impl<T: BufRead> ParseSection<T> for Nomenclature {
         let mut taxon_label = None;
 
         let mut stack = SpanStack::new();
-
         let mut buf = Vec::new();
-        let mut state = State::SubSubSection;
 
         loop {
-            state = match (state, reader.read_event_into(&mut buf)?) {
-                (state, Event::Start(e)) if start_eq(&e, "paragraph") => {
-                    stack.push(Span::paragraph());
-                    state
-                }
-                (state, Event::End(e)) if end_eq(&e, "paragraph") => {
+            match reader.read_event_into(&mut buf)? {
+                Event::Start(e) if start_eq(&e, "paragraph") => stack.push(Span::paragraph()),
+                Event::End(e) if end_eq(&e, "paragraph") => stack.commit_top(),
+
+                Event::Start(e) if start_eq(&e, "heading") => stack.push(Span::heading()),
+                Event::End(e) if end_eq(&e, "heading") => stack.commit_top(),
+
+                Event::Start(e) if start_eq(&e, "emphasis") => stack.push(Span::emphasis()),
+                Event::End(e) if end_eq(&e, "emphasis") => stack.commit_top(),
+
+                Event::Start(e) if start_eq(&e, "smallCapsWord") => stack.push(Span::small_caps()),
+                Event::End(e) if end_eq(&e, "smallCapsWord") => stack.commit_top(),
+
+                Event::Start(e) if start_eq(&e, "table") => {
+                    let (_table, children) = Table::parse(reader, &e)?;
+                    stack.push(Span::Table(children));
                     stack.commit_top();
-                    state
+                }
+                Event::End(e) if end_eq(&e, "table") => stack.commit_top(),
+
+                Event::Start(e) if start_eq(&e, "treatmentCitationGroup") => {
+                    stack.push(Span::treatment_citation_group())
+                }
+                Event::End(e) if end_eq(&e, "treatmentCitationGroup") => stack.commit_top(),
+
+                Event::Start(e) if start_eq(&e, "treatmentCitation") => stack.push(Span::treatment_citation_group()),
+                Event::End(e) if end_eq(&e, "treatmentCitation") => stack.commit_top(),
+
+                Event::Start(e) if start_eq(&e, "materialsCitation") => {
+                    // TODO: include citations in nomenclature block
+                    let _cit = MaterialsCitation::parse(reader, &e)?;
                 }
 
-                (state, Event::Start(e)) if start_eq(&e, "heading") => {
-                    stack.push(Span::heading());
-                    state
-                }
-                (state, Event::End(e)) if end_eq(&e, "heading") => {
-                    stack.commit_top();
-                    state
-                }
-
-                (state, Event::Start(e)) if start_eq(&e, "emphasis") => {
-                    stack.push(Span::emphasis());
-                    state
-                }
-                (state, Event::End(e)) if end_eq(&e, "emphasis") => {
-                    stack.commit_top();
-                    state
-                }
-
-                (state, Event::Start(e)) if start_eq(&e, "pageStartToken") => {
+                Event::Start(e) if start_eq(&e, "pageStartToken") => {
                     let token = PageStartToken::parse(reader, &e)?;
                     stack.push(Span::page_start_token(&token.value));
-                    state
                 }
 
-                (state, Event::Start(e)) if start_eq(&e, "taxonomicName") => {
+                Event::Start(e) if start_eq(&e, "pageBreakToken") => {
+                    let (token, children) = PageBreakToken::parse(reader, &e)?;
+                    stack.push(Span::page_break_token(token, children));
+                }
+
+                Event::Start(e) if start_eq(&e, "bibRefCitation") => {
+                    let cit = Citation::parse(reader, &e)?;
+                    stack.push(Span::citation(&cit.citation));
+                }
+
+                Event::Start(e) if start_eq(&e, "taxonomicName") => {
                     taxon = Some(TaxonomicName::parse(reader, &e)?);
-                    state
                 }
 
-                (_, Event::Start(e)) if start_eq(&e, "taxonomicNameLabel") => State::TaxonomicNameLabel,
-                (State::TaxonomicNameLabel, Event::End(e)) if end_eq(&e, "taxonomicNameLabel") => State::SubSubSection,
-                (State::TaxonomicNameLabel, Event::Text(txt)) => {
-                    taxon_label = Some(txt.unescape()?.into_owned());
-                    State::TaxonomicNameLabel
+                Event::Start(e) if start_eq(&e, "taxonomicNameLabel") => {
+                    let label = TaxonomicNameLabel::parse(reader, &e)?;
+                    taxon_label = Some(label.value);
                 }
 
-                (state, Event::Start(e)) if start_eq(&e, "typeStatus") => state,
-                (state, Event::End(e)) if end_eq(&e, "typeStatus") => state,
+                Event::Start(e) if start_eq(&e, "uri") => {
+                    let (_uri, children) = Uri::parse(reader, &e)?;
+                    stack.push(Span::uri(children));
+                }
 
-                (state, Event::Start(e)) if start_eq(&e, "figureCitation") => state,
-                (state, Event::End(e)) if end_eq(&e, "figureCitation") => state,
+                Event::Start(e) if start_eq(&e, "typeStatus") => {}
+                Event::End(e) if end_eq(&e, "typeStatus") => {}
 
-                (state, Event::Start(e)) if start_eq(&e, "geoCoordinate") => state,
-                (state, Event::End(e)) if end_eq(&e, "geoCoordinate") => state,
+                Event::Start(e) if start_eq(&e, "figureCitation") => {}
+                Event::End(e) if end_eq(&e, "figureCitation") => {}
 
-                (state, Event::Start(e)) if start_eq(&e, "quantity") => state,
-                (state, Event::End(e)) if end_eq(&e, "quantity") => state,
+                Event::Start(e) if start_eq(&e, "tableCitation") => {}
+                Event::End(e) if end_eq(&e, "tableCitation") => {}
 
-                (state, Event::Start(e)) if start_eq(&e, "date") => state,
-                (state, Event::End(e)) if end_eq(&e, "date") => state,
+                Event::Start(e) if start_eq(&e, "geoCoordinate") => {}
+                Event::End(e) if end_eq(&e, "geoCoordinate") => {}
 
-                (state, Event::Start(e)) if start_eq(&e, "collectingCountry") => state,
-                (state, Event::End(e)) if end_eq(&e, "collectingCountry") => state,
+                Event::Start(e) if start_eq(&e, "quantity") => {}
+                Event::End(e) if end_eq(&e, "quantity") => {}
 
-                (state, Event::Text(txt)) => {
+                Event::Start(e) if start_eq(&e, "date") => {}
+                Event::End(e) if end_eq(&e, "date") => {}
+
+                Event::Start(e) if start_eq(&e, "collectingRegion") => {}
+                Event::End(e) if end_eq(&e, "collectingRegion") => {}
+
+                Event::Start(e) if start_eq(&e, "collectingCountry") => {}
+                Event::End(e) if end_eq(&e, "collectingCountry") => {}
+
+                Event::Start(e) if start_eq(&e, "collectorName") => {}
+                Event::End(e) if end_eq(&e, "collectorName") => {}
+
+                Event::Start(e) if start_eq(&e, "specimenCount") => {}
+                Event::End(e) if end_eq(&e, "specimenCount") => {}
+
+                Event::Start(e) if start_eq(&e, "normalizedToken") => {
+                    let token = NormalizedToken::parse(reader, &e)?;
+                    stack.push(Span::normalized_token(&token.value));
+                }
+
+                Event::Text(txt) => {
                     let txt = txt.unescape()?.into_owned();
                     stack.push(Span::text(&txt));
-                    state
                 }
 
-                (State::SubSubSection, Event::End(e)) if end_eq(&e, "subSubSection") => break,
-                (state, event) => panic!("Unknown element. current_state: {state:?}, event: {event:#?}"),
+                // TODO: this might just be a formatting issue. could be worth
+                // unnesting subsections in the nomenclature section to get more
+                // details
+                // example: EF0787806245345A07D3FB14FCCD5142.xml
+                Event::Start(e) if start_eq(&e, "subSubSection") => {
+                    let _subsection = SubSection::parse(reader, &e)?;
+                }
+
+                // example: EF63878E9A1FFFC2FF6F4E2EFD25FDF4.xml
+                Event::Start(e) if start_eq(&e, "caption") => {
+                    let _caption = Caption::parse(reader, &e)?;
+                }
+
+                Event::End(e) if end_eq(&e, "subSubSection") => break,
+                event => panic!("Unknown element. event: {event:#?}"),
             }
         }
 
@@ -485,65 +757,65 @@ impl<T: BufRead> ParseSection<T> for Nomenclature {
 impl<T: BufRead> ParseSection<T> for TaxonomicName {
     fn parse(reader: &mut Reader<T>, event: &BytesStart) -> Result<Self, Error> {
         let mut citation = None;
-
         let mut stack = SpanStack::new();
-
         let mut buf = Vec::new();
-        let mut state = State::TaxonomicName;
 
         loop {
-            state = match (state, reader.read_event_into(&mut buf)?) {
-                (state, Event::Start(e)) if start_eq(&e, "emphasis") => {
-                    stack.push(Span::emphasis());
-                    state
-                }
-                (state, Event::End(e)) if end_eq(&e, "emphasis") => {
-                    stack.commit_top();
-                    state
-                }
+            match reader.read_event_into(&mut buf)? {
+                Event::Start(e) if start_eq(&e, "emphasis") => stack.push(Span::emphasis()),
+                Event::End(e) if end_eq(&e, "emphasis") => stack.commit_top(),
 
-                (state, Event::Start(e)) if start_eq(&e, "authority") => {
+                Event::Start(e) if start_eq(&e, "smallCapsWord") => stack.push(Span::small_caps()),
+                Event::End(e) if end_eq(&e, "smallCapsWord") => stack.commit_top(),
+
+                Event::Start(e) if start_eq(&e, "authority") => {
                     let auth = Authority::parse(reader, &e)?;
                     stack.push(Span::authority(&auth.value));
-                    state
                 }
-                (state, Event::End(e)) if end_eq(&e, "authority") => {
-                    stack.commit_top();
-                    state
-                }
+                Event::End(e) if end_eq(&e, "authority") => stack.commit_top(),
 
-                (state, Event::Start(e)) if start_eq(&e, "normalizedToken") => {
+                Event::Start(e) if start_eq(&e, "taxonNameAuthority") => stack.push(Span::taxon_name_authority()),
+                Event::End(e) if end_eq(&e, "taxonNameAuthority") => stack.commit_top(),
+
+                Event::Start(e) if start_eq(&e, "authorityName") => {
+                    let auth = Authority::parse(reader, &e)?;
+                    stack.push(Span::authority(&auth.value));
+                }
+                Event::End(e) if end_eq(&e, "authorityName") => stack.commit_top(),
+
+                Event::Start(e) if start_eq(&e, "normalizedToken") => {
                     let token = NormalizedToken::parse(reader, &e)?;
                     stack.push(Span::normalized_token(&token.value));
-                    state
                 }
 
-                (state, Event::Start(e)) if start_eq(&e, "pageBreakToken") => {
+                Event::Start(e) if start_eq(&e, "pageBreakToken") => {
                     let (token, children) = PageBreakToken::parse(reader, &e)?;
                     stack.push(Span::page_break_token(token, children));
-                    state
                 }
 
-                (state, Event::Text(txt)) => {
+                Event::Text(txt) => {
                     let text = Some(txt.unescape()?.into_owned());
                     if let Some(text) = &text {
                         stack.push(Span::text(&text));
                     }
-                    state
                 }
 
-                (state, Event::Start(e)) if start_eq(&e, "bibRefCitation") => {
+                Event::Start(e) if start_eq(&e, "bibRefCitation") => {
                     let cit = Citation::parse(reader, &e)?;
                     stack.push(Span::citation(&cit.citation));
                     citation = Some(cit);
-                    state
                 }
 
-                (State::TaxonomicName, Event::End(e)) if end_eq(&e, "taxonomicName") => {
+                // possible format scanning issues
+                // example: EF03B66BB047FFD10EBEF8BCA576FD6B.xml
+                Event::Start(e) if start_eq(&e, "collectingCountry") => {}
+                Event::End(e) if end_eq(&e, "collectingCountry") => {}
+
+                Event::End(e) if end_eq(&e, "taxonomicName") => {
                     stack.commit_top();
                     break;
                 }
-                (state, event) => panic!("Unknown element. current_state: {state:?}, event: {event:#?}"),
+                event => panic!("Unknown element. event: {event:#?}"),
             }
         }
 
@@ -572,29 +844,48 @@ impl<T: BufRead> ParseSection<T> for TaxonomicName {
 impl<T: BufRead> ParseSection<T> for Citation {
     fn parse(reader: &mut Reader<T>, event: &BytesStart) -> Result<Self, Error> {
         let mut citation = None;
-
         let mut buf = Vec::new();
-        let mut state = State::BibRefCitation;
 
         loop {
-            state = match (state, reader.read_event_into(&mut buf)?) {
-                (State::BibRefCitation, Event::Text(txt)) => {
-                    citation = Some(txt.unescape()?.into_owned());
-                    State::BibRefCitation
-                }
-                (State::BibRefCitation, Event::End(e)) if end_eq(&e, "bibRefCitation") => break,
-                (state, event) => panic!("Unknown element. current_state: {state:?}, event: {event:#?}"),
+            match reader.read_event_into(&mut buf)? {
+                // ignore tags that appear to be an error from format scanning
+                // example: EF7587ECFFE9FD39FF464EB61360F9BD.xml
+                Event::Start(e) if start_eq(&e, "collectingCountry") => continue,
+                Event::End(e) if end_eq(&e, "collectingCountry") => continue,
+
+                Event::Text(txt) => citation = Some(txt.unescape()?.into_owned()),
+                Event::End(e) if end_eq(&e, "bibRefCitation") => break,
+                event => panic!("Unknown element. event: {event:#?}"),
             }
         }
 
         Ok(Citation {
             id: parse_attribute(reader, event, "id")?,
-            author: parse_attribute(reader, event, "author")?,
+            author: parse_attribute_opt(reader, event, "author")?,
             reference_id: parse_attribute_opt(reader, event, "refId")?,
             reference: parse_attribute(reader, event, "refString")?,
             classification: parse_attribute_string(reader, event, "type")?,
-            year: parse_attribute_string(reader, event, "year")?,
+            year: parse_attribute_string_opt(reader, event, "year")?,
             citation: unwrap_element(citation, "bibRefCitation")?,
+        })
+    }
+}
+
+impl<T: BufRead> ParseSection<T> for TaxonomicNameLabel {
+    fn parse(reader: &mut Reader<T>, _event: &BytesStart) -> Result<Self, Error> {
+        let mut value = None;
+        let mut buf = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf)? {
+                Event::Text(txt) => value = Some(txt.unescape()?.into_owned()),
+                Event::End(e) if end_eq(&e, "taxonomicNameLabel") => break,
+                event => panic!("Unknown element. event: {event:#?}"),
+            }
+        }
+
+        Ok(TaxonomicNameLabel {
+            value: unwrap_element(value, "taxonomicNameLabel")?,
         })
     }
 }
@@ -674,6 +965,27 @@ impl<T: BufRead> ParseSection<T> for PageStartToken {
     }
 }
 
+impl<T: BufRead> ParseSection<T> for Uuid {
+    fn parse(reader: &mut Reader<T>, event: &BytesStart) -> Result<Self, Error> {
+        let mut value = None;
+        let mut buf = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf)? {
+                Event::Text(txt) => value = Some(txt.unescape()?.into_owned()),
+                Event::End(e) if end_eq(&e, "uuid") => break,
+                event => panic!("Unknown element. event: {event:#?}"),
+            }
+        }
+
+        Ok(Uuid {
+            page_id: parse_attribute_opt(reader, event, "pageId")?,
+            page_number: parse_attribute_opt(reader, event, "pageNumber")?,
+            value: unwrap_element(value, "uuid")?,
+        })
+    }
+}
+
 impl<T: BufRead> ParseSection<T> for Authority {
     fn parse(reader: &mut Reader<T>, event: &BytesStart) -> Result<Self, Error> {
         let mut value = None;
@@ -683,15 +995,171 @@ impl<T: BufRead> ParseSection<T> for Authority {
             match reader.read_event_into(&mut buf)? {
                 Event::Text(txt) => value = Some(txt.unescape()?.into_owned()),
                 Event::End(e) if end_eq(&e, "authority") => break,
+                Event::End(e) if end_eq(&e, "authorityName") => break,
                 event => panic!("Unknown element. event: {event:#?}"),
             }
         }
 
         Ok(Authority {
             page_id: parse_attribute_opt(reader, event, "pageId")?,
-            page_number: parse_attribute(reader, event, "pageNumber")?,
+            page_number: parse_attribute_opt(reader, event, "pageNumber")?,
             value: unwrap_element(value, "authority")?,
         })
+    }
+}
+
+impl<T: BufRead> ParseSection<T> for Caption {
+    fn parse(reader: &mut Reader<T>, _event: &BytesStart) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf)? {
+                Event::End(e) if end_eq(&e, "caption") => break,
+                _ => {}
+            }
+        }
+
+        Ok(Caption)
+    }
+}
+
+impl<T: BufRead> ParseSection<T> for MaterialsCitation {
+    fn parse(reader: &mut Reader<T>, _event: &BytesStart) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf)? {
+                Event::End(e) if end_eq(&e, "materialsCitation") => break,
+                _ => {}
+            }
+        }
+
+        Ok(MaterialsCitation)
+    }
+}
+
+impl<T: BufRead> ParseSection<T> for TableNote {
+    fn parse(reader: &mut Reader<T>, _event: &BytesStart) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf)? {
+                Event::End(e) if end_eq(&e, "tableNote") => break,
+                _ => {}
+            }
+        }
+
+        Ok(TableNote)
+    }
+}
+
+
+impl<T: BufRead> ParseFormat<T> for Table {
+    fn parse(reader: &mut Reader<T>, _event: &BytesStart) -> Result<(Self, Vec<Span>), Error> {
+        let mut stack = SpanStack::new();
+        let mut buf = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf)? {
+                Event::Start(e) if start_eq(&e, "th") => stack.push(Span::th()),
+                Event::Start(e) if start_eq(&e, "emphasis") => stack.push(Span::emphasis()),
+                Event::Start(e) if start_eq(&e, "tr") => stack.push(Span::tr()),
+                Event::Start(e) if start_eq(&e, "td") => stack.push(Span::td()),
+                Event::End(e) if end_eq(&e, "th") => stack.commit_top(),
+                Event::End(e) if end_eq(&e, "tr") => stack.commit_top(),
+                Event::End(e) if end_eq(&e, "td") => stack.commit_top(),
+                Event::End(e) if end_eq(&e, "emphasis") => stack.commit_top(),
+
+                // TODO: include parsed details rather than an empty span
+                Event::Start(e) if start_eq(&e, "taxonomicName") => {
+                    let _taxon = TaxonomicName::parse(reader, &e)?;
+                    stack.push(Span::taxonomic_name());
+                }
+
+                Event::Start(e) if start_eq(&e, "normalizedToken") => {
+                    let token = NormalizedToken::parse(reader, &e)?;
+                    stack.push(Span::normalized_token(&token.value));
+                }
+
+                Event::Text(txt) => stack.push(Span::text(&txt.unescape()?.into_owned())),
+                Event::End(e) if end_eq(&e, "table") => break,
+                event => panic!("Unknown element. event: {event:#?}"),
+            }
+        }
+
+        Ok((Table, stack.commit_and_pop_all()))
+    }
+}
+
+impl<T: BufRead> ParseFormat<T> for Uri {
+    fn parse(reader: &mut Reader<T>, event: &BytesStart) -> Result<(Self, Vec<Span>), Error> {
+        let mut stack = SpanStack::new();
+        let mut buf = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf)? {
+                Event::Start(e) if start_eq(&e, "uuid") => {
+                    let uuid = Uuid::parse(reader, &e)?;
+                    stack.push(Span::uuid(&uuid.value));
+                }
+                Event::Text(txt) => stack.push(Span::text(&txt.unescape()?.into_owned())),
+                Event::End(e) if end_eq(&e, "uri") => break,
+                event => panic!("Unknown element. event: {event:#?}"),
+            }
+        }
+
+        Ok((
+            Uri {
+                page_id: parse_attribute_opt(reader, event, "pageId")?,
+                page_number: parse_attribute_opt(reader, event, "pageNumber")?,
+            },
+            stack.commit_and_pop_all(),
+        ))
+    }
+}
+
+impl<T: BufRead> ParseSection<T> for Quantity {
+    fn parse(reader: &mut Reader<T>, _event: &BytesStart) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf)? {
+                Event::End(e) if end_eq(&e, "quantity") => break,
+                _ => {}
+            }
+        }
+
+        Ok(Quantity)
+    }
+}
+
+impl<T: BufRead> ParseSection<T> for Date {
+    fn parse(reader: &mut Reader<T>, _event: &BytesStart) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf)? {
+                Event::End(e) if end_eq(&e, "date") => break,
+                _ => {}
+            }
+        }
+
+        Ok(Date)
+    }
+}
+
+impl<T: BufRead> ParseSection<T> for CollectingRegion {
+    fn parse(reader: &mut Reader<T>, _event: &BytesStart) -> Result<Self, Error> {
+        let mut buf = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf)? {
+                Event::End(e) if end_eq(&e, "collectingRegion") => break,
+                _ => {}
+            }
+        }
+
+        Ok(CollectingRegion)
     }
 }
 
@@ -706,9 +1174,20 @@ impl<T: BufRead> ParseSection<T> for Skipped {
 
 fn skip_section<T: BufRead>(reader: &mut Reader<T>) -> Result<(), Error> {
     let mut buf = Vec::new();
+    let mut depth = 0;
     loop {
         match reader.read_event_into(&mut buf)? {
-            Event::End(e) if end_eq(&e, "subSubSection") => break,
+            Event::Start(e) if start_eq(&e, "subSubSection") => depth += 1,
+            Event::End(e) if end_eq(&e, "subSubSection") => {
+                // also skip nested subsections
+                // example: EFB5B55CDA31F8FB1F839CC060557790.xml
+                if depth <= 0 {
+                    break;
+                }
+                else {
+                    depth -= 1;
+                }
+            }
             _ => {}
         }
     }
@@ -730,7 +1209,13 @@ fn end_eq(event: &BytesEnd, name: &str) -> bool {
 
 fn parse_attribute<R>(reader: &Reader<R>, event: &BytesStart, name: &str) -> Result<String, Error> {
     match event.try_get_attribute(name)? {
-        Some(value) => Ok(value.decode_and_unescape_value(reader)?.into_owned()),
+        Some(value) => {
+            let value = value.decode_and_unescape_value(reader)?;
+            // remove unicode breakpoints
+            // example: EF2B5D36DE955281B27A2E77DF660D0F.xml
+            let value = value.trim_matches('\u{feff}');
+            Ok(value.trim().to_string())
+        }
         None => Err(Error::Parsing(ParseError::NotFound(name.to_string()))),
     }
 }

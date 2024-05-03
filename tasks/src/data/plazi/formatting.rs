@@ -9,6 +9,35 @@ pub struct PageBreakToken {
     pub start: Option<String>,
 }
 
+#[derive(Debug)]
+pub struct Table;
+
+#[derive(Debug)]
+pub struct Quantity;
+
+#[derive(Debug)]
+pub struct Date;
+
+#[derive(Debug)]
+pub struct CollectingRegion;
+
+#[derive(Debug)]
+pub struct TableNote;
+
+
+#[derive(Debug)]
+pub struct Uri {
+    pub page_number: Option<String>,
+    pub page_id: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct Uuid {
+    pub page_number: Option<String>,
+    pub page_id: Option<String>,
+    pub value: String,
+}
+
 
 #[derive(Debug)]
 pub struct SpanProperties {
@@ -22,16 +51,32 @@ pub enum Span {
     Paragraph(Vec<Span>),
     Heading(Vec<Span>),
     Emphasis(Vec<Span>),
+    SmallCaps(Vec<Span>),
     TaxonomicName(Vec<Span>),
     PageBreakToken {
         attributes: PageBreakToken,
         children: Vec<Span>,
     },
+    TreatmentCitationGroup(Vec<Span>),
+    TreatmentCitation(Vec<Span>),
+    TaxonNameAuthority(Vec<Span>),
+    Uri(Vec<Span>),
+
     Text(String),
+    Uuid(String),
     BibRefCitation(String),
     NormalizedToken(String),
     PageStartToken(String),
     Authority(String),
+
+    Table(Vec<Span>),
+    Tr(Vec<Span>),
+    Th(Vec<Span>),
+    Td(Vec<Span>),
+
+    Quantity(String),
+    Date(String),
+    CollectingRegion(String),
 }
 
 impl Span {
@@ -47,6 +92,10 @@ impl Span {
         Self::Emphasis(Vec::new())
     }
 
+    pub fn small_caps() -> Self {
+        Self::SmallCaps(Vec::new())
+    }
+
     pub fn taxonomic_name() -> Self {
         Self::TaxonomicName(Vec::new())
     }
@@ -55,8 +104,28 @@ impl Span {
         Self::PageBreakToken { attributes, children }
     }
 
+    pub fn treatment_citation_group() -> Self {
+        Self::TreatmentCitationGroup(Vec::new())
+    }
+
+    pub fn treatment_citation() -> Self {
+        Self::TreatmentCitation(Vec::new())
+    }
+
+    pub fn taxon_name_authority() -> Self {
+        Self::TaxonNameAuthority(Vec::new())
+    }
+
+    pub fn uri(children: Vec<Span>) -> Self {
+        Self::Uri(children)
+    }
+
     pub fn text(text: &str) -> Self {
         Self::Text(text.to_string())
+    }
+
+    pub fn uuid(text: &str) -> Self {
+        Self::Uuid(text.to_string())
     }
 
     pub fn citation(text: &str) -> Self {
@@ -75,19 +144,64 @@ impl Span {
         Self::Authority(text.to_string())
     }
 
+    pub fn table() -> Self {
+        Self::Table(Vec::new())
+    }
+
+    pub fn tr() -> Self {
+        Self::Tr(Vec::new())
+    }
+
+    pub fn th() -> Self {
+        Self::Th(Vec::new())
+    }
+
+    pub fn td() -> Self {
+        Self::Td(Vec::new())
+    }
+
+    pub fn quantity(text: &str) -> Self {
+        Self::Quantity(text.to_string())
+    }
+
+    pub fn date(text: &str) -> Self {
+        Self::Date(text.to_string())
+    }
+
+    pub fn collecting_region(text: &str) -> Self {
+        Self::CollectingRegion(text.to_string())
+    }
+
     pub fn push_child(&mut self, child: Span) {
+        use Span::*;
+
         match self {
-            Span::Root(children) => children.push(child),
-            Span::Paragraph(children) => children.push(child),
-            Span::Heading(children) => children.push(child),
-            Span::Emphasis(children) => children.push(child),
-            Span::TaxonomicName(children) => children.push(child),
-            Span::PageBreakToken { children, .. } => children.push(child),
-            Span::Text(_) => warn!("Ignoring attempt to push a child into a Text span"),
-            Span::BibRefCitation(_) => warn!("Ignoring attempt to push a child into a BibRefCitation span"),
-            Span::NormalizedToken(_) => warn!("Ignoring attempt to push a child into a NormalizedToken span"),
-            Span::PageStartToken(_) => warn!("Ignoring attempt to push a child into a PageStartToken span"),
-            Span::Authority(_) => warn!("Ignoring attempt to push a child into a PageStartToken span"),
+            Root(children) => children.push(child),
+            Paragraph(children) => children.push(child),
+            Heading(children) => children.push(child),
+            Emphasis(children) => children.push(child),
+            SmallCaps(children) => children.push(child),
+            TaxonomicName(children) => children.push(child),
+            PageBreakToken { children, .. } => children.push(child),
+            TreatmentCitationGroup(children) => children.push(child),
+            TreatmentCitation(children) => children.push(child),
+            TaxonNameAuthority(children) => children.push(child),
+            Text(_) => warn!("Ignoring attempt to push a child into a Text span"),
+            Uri(_) => warn!("Ignoring attempt to push a child into a Uri span"),
+            Uuid(_) => warn!("Ignoring attempt to push a child into a Uuid span"),
+            BibRefCitation(_) => warn!("Ignoring attempt to push a child into a BibRefCitation span"),
+            NormalizedToken(_) => warn!("Ignoring attempt to push a child into a NormalizedToken span"),
+            PageStartToken(_) => warn!("Ignoring attempt to push a child into a PageStartToken span"),
+            Authority(_) => warn!("Ignoring attempt to push a child into a PageStartToken span"),
+
+            Table(children) => children.push(child),
+            Tr(children) => children.push(child),
+            Th(children) => children.push(child),
+            Td(children) => children.push(child),
+
+            Quantity(_) => warn!("Ignoring attempt to push a child into a Quantity span"),
+            CollectingRegion(_) => warn!("Ignoring attempt to push a child into a CollectingRegion span"),
+            Date(_) => warn!("Ignoring attempt to push a child into a Date span"),
         }
     }
 }
@@ -105,13 +219,20 @@ impl SpanStack {
     }
 
     pub fn push(&mut self, child: Span) {
+        use Span::*;
+
         let commit = match child {
-            Span::Text(_) => true,
-            Span::BibRefCitation(_) => true,
-            Span::NormalizedToken(_) => true,
-            Span::PageBreakToken { .. } => true,
-            Span::PageStartToken(_) => true,
-            Span::Authority(_) => true,
+            Text(_) => true,
+            Uri(_) => true,
+            Uuid(_) => true,
+            BibRefCitation(_) => true,
+            NormalizedToken(_) => true,
+            PageBreakToken { .. } => true,
+            PageStartToken(_) => true,
+            Authority(_) => true,
+            Quantity(_) => true,
+            CollectingRegion(_) => true,
+            Date(_) => true,
             _ => false,
         };
 
