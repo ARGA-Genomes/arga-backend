@@ -1,4 +1,35 @@
+use std::str::FromStr;
+
 use tracing::warn;
+
+use crate::data::{Error, ParseError};
+
+
+#[derive(Debug)]
+pub enum Classification {
+    Book,
+    BookChapter,
+    JournalArticle,
+    JournalVolume,
+    ProceedingsPaper,
+    Url,
+}
+
+impl FromStr for Classification {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "book" => Ok(Self::Book),
+            "book chapter" => Ok(Self::BookChapter),
+            "journal article" => Ok(Self::JournalArticle),
+            "journal volume" => Ok(Self::JournalVolume),
+            "proceedings paper" => Ok(Self::ProceedingsPaper),
+            "url" => Ok(Self::Url),
+            val => Err(Error::Parsing(ParseError::InvalidValue(val.to_string()))),
+        }
+    }
+}
 
 
 #[derive(Debug)]
@@ -7,6 +38,40 @@ pub struct PageBreakToken {
     pub page_number: String,
     pub page_id: Option<String>,
     pub start: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct Citation {
+    pub id: Option<String>,
+    pub author: Option<String>,
+    pub reference_id: Option<String>,
+    pub reference: String,
+    pub classification: Classification,
+    pub year: Option<usize>,
+}
+
+#[derive(Debug)]
+pub struct BibCitation {
+    pub id: Option<String>,
+    pub author: Option<String>,
+    pub volume: Option<String>,
+    pub journal: Option<String>,
+    pub issue: Option<String>,
+    pub year: Option<usize>,
+}
+
+#[derive(Debug)]
+pub struct CollectionCode {
+    pub id: String,
+    pub country: String,
+    pub uri: String,
+    pub name: String,
+}
+
+#[derive(Debug)]
+pub struct TypeStatus {
+    pub id: String,
+    pub r#type: String,
 }
 
 #[derive(Debug)]
@@ -23,6 +88,15 @@ pub struct CollectingRegion;
 
 #[derive(Debug)]
 pub struct TableNote;
+
+#[derive(Debug)]
+pub struct BibRef;
+
+#[derive(Debug)]
+pub struct KeyLead;
+
+#[derive(Debug)]
+pub struct KeyStep;
 
 
 #[derive(Debug)]
@@ -48,6 +122,7 @@ pub struct SpanProperties {
 #[derive(Debug)]
 pub enum Span {
     Root(Vec<Span>),
+    SubSection(Vec<Span>),
     Paragraph(Vec<Span>),
     Heading(Vec<Span>),
     Emphasis(Vec<Span>),
@@ -61,13 +136,25 @@ pub enum Span {
     TreatmentCitation(Vec<Span>),
     TaxonNameAuthority(Vec<Span>),
     Uri(Vec<Span>),
+    BibRef(Vec<Span>),
+    KeyLead(Vec<Span>),
+    KeyStep(Vec<Span>),
 
     Text(String),
     Uuid(String),
-    BibRefCitation(String),
     NormalizedToken(String),
     PageStartToken(String),
     Authority(String),
+
+    BibRefCitation {
+        attributes: Citation,
+        children: Vec<Span>,
+    },
+
+    BibCitation {
+        attributes: BibCitation,
+        children: Vec<Span>,
+    },
 
     Table(Vec<Span>),
     Tr(Vec<Span>),
@@ -77,10 +164,24 @@ pub enum Span {
     Quantity(String),
     Date(String),
     CollectingRegion(String),
+
+    CollectionCode {
+        attributes: CollectionCode,
+        children: Vec<Span>,
+    },
+
+    TypeStatus {
+        attributes: TypeStatus,
+        children: Vec<Span>,
+    },
 }
 
 impl Span {
     pub fn paragraph() -> Self {
+        Self::Paragraph(Vec::new())
+    }
+
+    pub fn subsection() -> Self {
         Self::Paragraph(Vec::new())
     }
 
@@ -116,6 +217,18 @@ impl Span {
         Self::TaxonNameAuthority(Vec::new())
     }
 
+    pub fn bib_ref(children: Vec<Span>) -> Self {
+        Self::BibRef(children)
+    }
+
+    pub fn key_lead() -> Self {
+        Self::KeyLead(Vec::new())
+    }
+
+    pub fn key_step() -> Self {
+        Self::KeyStep(Vec::new())
+    }
+
     pub fn uri(children: Vec<Span>) -> Self {
         Self::Uri(children)
     }
@@ -128,8 +241,20 @@ impl Span {
         Self::Uuid(text.to_string())
     }
 
-    pub fn citation(text: &str) -> Self {
-        Self::BibRefCitation(text.to_string())
+    pub fn citation(attributes: Citation, children: Vec<Span>) -> Self {
+        Self::BibRefCitation { attributes, children }
+    }
+
+    pub fn bib_citation(attributes: BibCitation, children: Vec<Span>) -> Self {
+        Self::BibCitation { attributes, children }
+    }
+
+    pub fn collection_code(attributes: CollectionCode, children: Vec<Span>) -> Self {
+        Self::CollectionCode { attributes, children }
+    }
+
+    pub fn type_status(attributes: TypeStatus, children: Vec<Span>) -> Self {
+        Self::TypeStatus { attributes, children }
     }
 
     pub fn normalized_token(text: &str) -> Self {
@@ -177,6 +302,7 @@ impl Span {
 
         match self {
             Root(children) => children.push(child),
+            SubSection(children) => children.push(child),
             Paragraph(children) => children.push(child),
             Heading(children) => children.push(child),
             Emphasis(children) => children.push(child),
@@ -186,10 +312,16 @@ impl Span {
             TreatmentCitationGroup(children) => children.push(child),
             TreatmentCitation(children) => children.push(child),
             TaxonNameAuthority(children) => children.push(child),
+            BibRefCitation { children, .. } => children.push(child),
+            BibCitation { children, .. } => children.push(child),
+            CollectionCode { children, .. } => children.push(child),
+            TypeStatus { children, .. } => children.push(child),
+            BibRef(children) => children.push(child),
+            KeyLead(children) => children.push(child),
+            KeyStep(children) => children.push(child),
             Text(_) => warn!("Ignoring attempt to push a child into a Text span"),
             Uri(_) => warn!("Ignoring attempt to push a child into a Uri span"),
             Uuid(_) => warn!("Ignoring attempt to push a child into a Uuid span"),
-            BibRefCitation(_) => warn!("Ignoring attempt to push a child into a BibRefCitation span"),
             NormalizedToken(_) => warn!("Ignoring attempt to push a child into a NormalizedToken span"),
             PageStartToken(_) => warn!("Ignoring attempt to push a child into a PageStartToken span"),
             Authority(_) => warn!("Ignoring attempt to push a child into a PageStartToken span"),
@@ -225,7 +357,6 @@ impl SpanStack {
             Text(_) => true,
             Uri(_) => true,
             Uuid(_) => true,
-            BibRefCitation(_) => true,
             NormalizedToken(_) => true,
             PageBreakToken { .. } => true,
             PageStartToken(_) => true,
