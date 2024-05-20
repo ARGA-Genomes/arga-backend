@@ -18,6 +18,41 @@ pub enum Action {
     Update,
 }
 
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum NomenclaturalActStatus {
+    SpeciesNova,
+    CombinatioNova,
+    RevivedStatus,
+    GenusSpeciesNova,
+    SubspeciesNova,
+}
+
+#[derive(Debug)]
+pub enum NomenclaturalActStatusError {
+    InvalidTaxonStatus(String),
+}
+
+impl TryFrom<&str> for NomenclaturalActStatus {
+    type Error = NomenclaturalActStatusError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        use NomenclaturalActStatus::*;
+
+        match value {
+            "sp. nov." => Ok(SpeciesNova),
+            "spec. nov." => Ok(SpeciesNova),
+            "new species" => Ok(SpeciesNova),
+            "comb. nov." => Ok(CombinatioNova),
+            "stat. rev." => Ok(RevivedStatus),
+            "gen. et sp. nov." => Ok(GenusSpeciesNova),
+            "subsp. nov." => Ok(SubspeciesNova),
+            val => Err(NomenclaturalActStatusError::InvalidTaxonStatus(val.to_string())),
+        }
+    }
+}
+
+
 #[derive(Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq)]
 #[diesel(sql_type = diesel::sql_types::Jsonb)]
 pub enum NomenclaturalActAtom {
@@ -30,6 +65,16 @@ pub enum NomenclaturalActAtom {
     Publication(String),
     CreatedAt(DateTime<Utc>),
     UpdatedAt(DateTime<Utc>),
+
+    // species name components
+    Genus(String),
+    SpecificEpithet(String),
+    BaseAuthorityName(String),
+    BaseAuthorityYear(String),
+    AuthorityName(String),
+    AuthorityYear(String),
+    Status(NomenclaturalActStatus),
+    Rank(String),
 }
 
 impl FromSql<Jsonb, Pg> for NomenclaturalActAtom {
@@ -59,6 +104,15 @@ impl ToString for NomenclaturalActAtom {
             Publication(_) => "Publication",
             CreatedAt(_) => "CreatedAt",
             UpdatedAt(_) => "UpdatedAt",
+
+            Genus(_) => "Genus",
+            SpecificEpithet(_) => "SpecificEpithet",
+            BaseAuthorityName(_) => "BaseAuthorityName",
+            BaseAuthorityYear(_) => "BaseAuthorityYear",
+            AuthorityName(_) => "AuthorityName",
+            AuthorityYear(_) => "AuthorityYear",
+            Status(_) => "Status",
+            Rank(_) => "Rank",
         }
         .to_string()
     }

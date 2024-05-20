@@ -1,4 +1,5 @@
 use arga_core::crdt::hlc::HybridTimestamp;
+use arga_core::models::NomenclaturalActStatus;
 use async_graphql::*;
 use bigdecimal::ToPrimitive;
 use chrono::{DateTime, Utc};
@@ -23,6 +24,10 @@ type UtcDateTime = DateTime<Utc>;
     name = "NomenclaturalActAtomDateTime",
     params(NomenclaturalActAtomDateTimeType, UtcDateTime)
 ))]
+#[graphql(concrete(
+    name = "NomenclaturalActAtomStatus",
+    params(NomenclaturalActAtomStatusType, TaxonomicStatus)
+))]
 #[graphql(concrete(name = "SpecimenAtomText", params(SpecimenAtomTextType, String)))]
 #[graphql(concrete(name = "SpecimenAtomNumber", params(SpecimenAtomNumberType, f64)))]
 pub struct Atom<A: OutputType, T: OutputType> {
@@ -34,6 +39,7 @@ pub struct Atom<A: OutputType, T: OutputType> {
 type NomenclaturalActAtomText = Atom<NomenclaturalActAtomTextType, String>;
 type NomenclaturalActAtomTaxonomicStatus = Atom<NomenclaturalActAtomTaxonomicStatusType, TaxonomicStatus>;
 type NomenclaturalActAtomDateTime = Atom<NomenclaturalActAtomDateTimeType, UtcDateTime>;
+type NomenclaturalActAtomStatus = Atom<NomenclaturalActAtomStatusType, NomenclaturalActStatus>;
 type SpecimenAtomText = Atom<SpecimenAtomTextType, String>;
 type SpecimenAtomNumber = Atom<SpecimenAtomNumberType, f64>;
 
@@ -53,6 +59,16 @@ pub enum NomenclaturalActAtomTextType {
     NomenclaturalAct,
     SourceUrl,
     Publication,
+
+    Genus,
+    SpecificEpithet,
+    BaseAuthorityName,
+    BaseAuthorityYear,
+    AuthorityName,
+    AuthorityYear,
+
+    Status,
+    Rank,
 }
 
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -66,11 +82,17 @@ pub enum NomenclaturalActAtomDateTimeType {
     UpdatedAt,
 }
 
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum NomenclaturalActAtomStatusType {
+    NomenclaturalActStatus,
+}
+
 #[derive(Union)]
 pub enum NomenclaturalActAtom {
     Text(NomenclaturalActAtomText),
     TaxonomicStatus(NomenclaturalActAtomTaxonomicStatus),
     DateTime(NomenclaturalActAtomDateTime),
+    NomenclaturalActStatus(NomenclaturalActAtomStatus),
 }
 
 impl NomenclaturalActAtom {
@@ -87,6 +109,13 @@ impl NomenclaturalActAtom {
 
     pub fn datetime(r#type: NomenclaturalActAtomDateTimeType, value: DateTime<Utc>) -> NomenclaturalActAtom {
         NomenclaturalActAtom::DateTime(NomenclaturalActAtomDateTime { r#type, value })
+    }
+
+    pub fn nomenclatural_act_status(
+        r#type: NomenclaturalActAtomStatusType,
+        value: NomenclaturalActAtomStatus,
+    ) -> NomenclaturalActAtom {
+        NomenclaturalActAtom::NomenclaturalActStatus(NomenclaturalActAtomStatus { r#type, value })
     }
 }
 
@@ -230,6 +259,15 @@ impl From<models::NomenclaturalActAtom> for NomenclaturalActAtom {
             Publication(value) => Atom::text(Text::Publication, value),
             CreatedAt(value) => Atom::datetime(DateTime::CreatedAt, value),
             UpdatedAt(value) => Atom::datetime(DateTime::UpdatedAt, value),
+
+            Genus(value) => Atom::text(Text::Genus, value),
+            SpecificEpithet(value) => Atom::text(Text::SpecificEpithet, value),
+            BaseAuthorityName(value) => Atom::text(Text::BaseAuthorityName, value),
+            BaseAuthorityYear(value) => Atom::text(Text::BaseAuthorityYear, value),
+            AuthorityName(value) => Atom::text(Text::AuthorityName, value),
+            AuthorityYear(value) => Atom::text(Text::AuthorityYear, value),
+            Status(value) => Atom::text(Text::Status, value),
+            Rank(value) => Atom::text(Text::Rank, value),
         }
     }
 }

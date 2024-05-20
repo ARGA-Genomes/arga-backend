@@ -3,9 +3,7 @@ use std::path::PathBuf;
 
 use arga_core::crdt::lww::Map;
 use arga_core::crdt::{Frame, Version};
-use arga_core::models::{
-    Action, DatasetVersion, NomenclaturalActAtom, NomenclaturalActOperation, TaxonomicStatus,
-};
+use arga_core::models::{Action, DatasetVersion, NomenclaturalActAtom, NomenclaturalActOperation, TaxonomicStatus};
 use arga_core::schema;
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
@@ -15,8 +13,7 @@ use uuid::Uuid;
 use xxhash_rust::xxh3::Xxh3;
 
 use crate::data::oplogger::get_pool;
-use crate::data::Error;
-use crate::data::ParseError;
+use crate::data::{Error, ParseError};
 
 fn parse_date_time(value: &str) -> Result<DateTime<Utc>, ParseError> {
     if let Ok(datetime) = DateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S%#z") {
@@ -93,6 +90,8 @@ impl From<Map<NomenclaturalActAtom>> for OriginalDescription {
                 Publication(value) => desc.publication = Some(value),
                 CreatedAt(value) => desc.created_at = value,
                 UpdatedAt(value) => desc.updated_at = value,
+
+                _ => {}
             }
         }
 
@@ -107,11 +106,7 @@ pub struct NomenclaturalActFrame {
 }
 
 impl NomenclaturalActFrame {
-    pub fn create(
-        dataset_version_id: Uuid,
-        entity_id: String,
-        last_version: Version,
-    ) -> NomenclaturalActFrame {
+    pub fn create(dataset_version_id: Uuid, entity_id: String, last_version: Version) -> NomenclaturalActFrame {
         let mut frame = Frame::new(last_version);
 
         frame.push(NomenclaturalActOperation {
@@ -181,15 +176,12 @@ impl NomenclaturalActs {
             hasher.update(record.scientific_name.as_bytes());
             let hash = hasher.digest();
 
-            let mut frame = NomenclaturalActFrame::create(
-                self.dataset_version_id,
-                hash.to_string(),
-                last_version,
-            );
+            let mut frame = NomenclaturalActFrame::create(self.dataset_version_id, hash.to_string(), last_version);
 
             if record.acted_on == record.scientific_name {
                 frame.push(ActedOn("Biota".to_string()));
-            } else {
+            }
+            else {
                 frame.push(ActedOn(record.acted_on));
             }
 
@@ -260,25 +252,17 @@ fn merge_operations(
 
     let mut grouped_ops: HashMap<String, Vec<NomenclaturalActOperation>> = HashMap::new();
     for op in operations.into_iter() {
-        grouped_ops
-            .entry(op.entity_id.clone())
-            .or_default()
-            .push(op)
+        grouped_ops.entry(op.entity_id.clone()).or_default().push(op)
     }
 
     for op in records.into_iter() {
-        grouped_ops
-            .entry(op.entity_id.clone())
-            .or_default()
-            .push(op)
+        grouped_ops.entry(op.entity_id.clone()).or_default().push(op)
     }
 
     Ok(grouped_ops)
 }
 
-fn reduce_operations(
-    records: Vec<NomenclaturalActOperation>,
-) -> Result<Vec<NomenclaturalActOperation>, Error> {
+fn reduce_operations(records: Vec<NomenclaturalActOperation>) -> Result<Vec<NomenclaturalActOperation>, Error> {
     let entities = merge_operations(records)?;
     let mut merged_ops = Vec::new();
 
@@ -388,9 +372,7 @@ fn str_to_taxonomic_status(value: &str) -> Result<TaxonomicStatus, ParseError> {
         "doubtful misapplied" => Ok(TaxonomicStatus::DoubtfulMisapplied),
         "doubtful taxonomic synonym" => Ok(TaxonomicStatus::DoubtfulTaxonomicSynonym),
         "doubtful pro parte misapplied" => Ok(TaxonomicStatus::DoubtfulProParteMisapplied),
-        "doubtful pro parte taxonomic synonym" => {
-            Ok(TaxonomicStatus::DoubtfulProParteTaxonomicSynonym)
-        }
+        "doubtful pro parte taxonomic synonym" => Ok(TaxonomicStatus::DoubtfulProParteTaxonomicSynonym),
 
         val => Err(ParseError::InvalidValue(val.to_string())),
     }

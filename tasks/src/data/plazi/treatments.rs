@@ -2,6 +2,15 @@ use std::io::BufRead;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use arga_core::models::{
+    self,
+    NomenclaturalActAtom,
+    NomenclaturalActOperation,
+    NomenclaturalActStatus,
+    NomenclaturalActStatusError,
+};
+use arga_core::schema;
+use diesel::*;
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::name::QName;
 use quick_xml::Reader;
@@ -27,6 +36,7 @@ use super::formatting::{
     Uri,
     Uuid,
 };
+use crate::data::oplogger::get_pool;
 use crate::data::plazi::formatting::{Span, SpanStack};
 use crate::data::{Error, ParseError};
 
@@ -375,7 +385,13 @@ pub fn import(input_dir: PathBuf) -> Result<(), Error> {
         println!("{}", file.as_os_str().to_string_lossy());
 
         let treatments = read_file(&file)?;
-        println!("{treatments:#?}");
+        let atoms = treatments
+            .into_iter()
+            .map(|t| Vec::<NomenclaturalActAtom>::from(t))
+            .flatten()
+            .collect();
+        // println!("{treatments:#?}");
+        import_treatments(atoms)?;
     }
 
     info!("Importing {} XML files", files.len());
@@ -2753,5 +2769,170 @@ impl<T: BufRead> ParseFormat<T> for FormattedValue {
         }
 
         Ok((FormattedValue, stack.commit_and_pop_all()))
+    }
+}
+
+
+fn import_treatments(atoms: Vec<NomenclaturalActAtom>) -> Result<(), Error> {
+    use schema::nomenclatural_act_logs::dsl::*;
+
+    println!("{atoms:#?}");
+
+    // let pool = get_pool()?;
+    // let mut conn = pool.get()?;
+
+    // for chunk in treatments.chunks(1000) {
+    //     diesel::insert_into(nomenclatural_act_logs)
+    //         .values(chunk)
+    //         .execute(&mut conn)?;
+    // }
+
+    Ok(())
+}
+
+
+impl From<Treatment> for Vec<NomenclaturalActAtom> {
+    fn from(treatment: Treatment) -> Self {
+        let mut operations = Vec::new();
+
+        for section in treatment.sections {
+            match section {
+                Section::Nomenclature(nomenclature) => {
+                    if let Some(taxon) = nomenclature.taxon {
+                        let atoms: Vec<NomenclaturalActAtom> = taxon.into();
+                        operations.extend(atoms);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        operations
+    }
+}
+
+
+impl From<TaxonomicName> for Vec<NomenclaturalActAtom> {
+    fn from(value: TaxonomicName) -> Self {
+        use NomenclaturalActAtom::*;
+
+        let mut operations = Vec::new();
+
+        match SpeciesName::try_from(value) {
+            Ok(name) => {
+                match name.status {
+                    NomenclaturalActStatus::SpeciesNova => operations.push(ActedOn(name.genus.clone())),
+                    NomenclaturalActStatus::CombinatioNova => operations.push(ActedOn(name.full_name())),
+                    NomenclaturalActStatus::RevivedStatus => operations.push(ActedOn(name.full_name())),
+                    NomenclaturalActStatus::GenusSpeciesNova => operations.push(ActedOn(name.full_name())),
+                    NomenclaturalActStatus::SubspeciesNova => operations.push(ActedOn(name.full_name())),
+                };
+
+                operations.push(ScientificName(name.full_name()));
+                operations.push(Genus(name.genus));
+                operations.push(SpecificEpithet(name.specific_epithet));
+                operations.push(AuthorityName(name.authority.name));
+                operations.push(AuthorityYear(name.authority.year));
+                operations.push(Status(name.status));
+                operations.push(Rank(name.rank));
+
+                if let Some(authority) = name.base_authority {
+                    operations.push(BaseAuthorityName(authority.name));
+                    operations.push(BaseAuthorityYear(authority.year));
+                }
+            }
+            Err(err) => println!("{err:#?}"),
+        }
+
+        operations
+    }
+}
+
+impl TryFrom<TaxonomicName> for SpeciesName {
+    type Error = SpeciesNameError;
+
+    fn try_from(value: TaxonomicName) -> Result<Self, Self::Error> {
+        let genus = value.genus.ok_or(SpeciesNameError::MissingGenus)?;
+        let specific_epithet = value.species.ok_or(SpeciesNameError::MissingSpecificEpithet)?;
+
+        let authority = match (value.authority_name, value.authority_year) {
+            (Some(name), Some(year)) => Ok(AuthorityName {
+                name,
+                year: year.to_string(),
+            }),
+            (None, None) => Err(SpeciesNameError::MissingAuthority),
+            _ => Err(SpeciesNameError::InvalidAuthority),
+        }?;
+
+        let base_authority = match (value.base_authority_name, value.base_authority_year) {
+            (Some(name), Some(year)) => Some(AuthorityName { name, year }),
+            _ => None,
+        };
+
+        let status = value.status.ok_or(SpeciesNameError::MissingStatus)?;
+        let status = NomenclaturalActStatus::try_from(status.as_str())?;
+        let rank = value.rank.ok_or(SpeciesNameError::MissingRank)?;
+
+        Ok(SpeciesName {
+            genus,
+            specific_epithet,
+            base_authority,
+            authority,
+            status,
+            rank,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub enum SpeciesNameError {
+    MissingGenus,
+    MissingSpecificEpithet,
+    MissingAuthority,
+    InvalidAuthority,
+    MissingStatus,
+    InvalidStatus(NomenclaturalActStatusError),
+    MissingRank,
+}
+
+impl From<NomenclaturalActStatusError> for SpeciesNameError {
+    fn from(value: NomenclaturalActStatusError) -> Self {
+        SpeciesNameError::InvalidStatus(value)
+    }
+}
+
+
+#[derive(Debug)]
+pub struct AuthorityName {
+    pub name: String,
+    pub year: String,
+}
+
+impl std::fmt::Display for AuthorityName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{} {}", self.name, self.year))
+    }
+}
+
+#[derive(Debug)]
+pub struct SpeciesName {
+    pub genus: String,
+    pub specific_epithet: String,
+    pub base_authority: Option<AuthorityName>,
+    pub authority: AuthorityName,
+    pub status: NomenclaturalActStatus,
+    pub rank: String,
+}
+
+impl SpeciesName {
+    pub fn full_name(&self) -> String {
+        let mut name = format!("{} {}", self.genus, self.specific_epithet);
+
+        if let Some(authority) = &self.base_authority {
+            name = format!("{name} ({authority})");
+        };
+
+        name = format!("{name} {}", self.authority);
+        name
     }
 }
