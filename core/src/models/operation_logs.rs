@@ -63,6 +63,7 @@ pub enum NomenclaturalActAtom {
     NomenclaturalAct(String),
     SourceUrl(String),
     Publication(String),
+    PublicationDate(String),
     CreatedAt(DateTime<Utc>),
     UpdatedAt(DateTime<Utc>),
 
@@ -102,6 +103,7 @@ impl ToString for NomenclaturalActAtom {
             NomenclaturalAct(_) => "NomenclaturalAct",
             SourceUrl(_) => "SourceUrl",
             Publication(_) => "Publication",
+            PublicationDate(_) => "PublicationDate",
             CreatedAt(_) => "CreatedAt",
             UpdatedAt(_) => "UpdatedAt",
 

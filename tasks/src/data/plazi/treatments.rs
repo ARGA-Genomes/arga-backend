@@ -80,13 +80,15 @@ pub enum Identifiers {
 pub struct Document {
     pub treatment_id: String,
     pub title: String,
-    pub authors: Vec<Author>,
+    pub authors: String,
+    // pub authors: Vec<Author>,
     pub date_issued: String,
     pub publisher: String,
-    pub place: String,
-    pub extent: Extent,
-    pub classification: Classification,
-    pub identifiers: Vec<Identifiers>,
+    // pub place: String,
+    // pub extent: Extent,
+    // pub classification: Classification,
+    // pub identifiers: Vec<Identifiers>,
+    pub treatments: Vec<Treatment>,
 }
 
 #[derive(Debug)]
@@ -98,6 +100,7 @@ pub struct Author {
 #[derive(Debug)]
 pub struct Treatment {
     pub lsid: String,
+    pub http_uri: String,
     pub sections: Vec<Section>,
 }
 
@@ -384,13 +387,13 @@ pub fn import(input_dir: PathBuf) -> Result<(), Error> {
         info!("Reading file {idx}: {file:?}");
         println!("{}", file.as_os_str().to_string_lossy());
 
-        let treatments = read_file(&file)?;
-        let atoms = treatments
+        let documents = read_file(&file)?;
+        let atoms = documents
             .into_iter()
-            .map(|t| Vec::<NomenclaturalActAtom>::from(t))
+            .map(|d| Vec::<NomenclaturalActAtom>::from(d))
             .flatten()
             .collect();
-        // println!("{treatments:#?}");
+
         import_treatments(atoms)?;
     }
 
@@ -398,35 +401,26 @@ pub fn import(input_dir: PathBuf) -> Result<(), Error> {
     Ok(())
 }
 
-fn read_file(path: &PathBuf) -> Result<Vec<Treatment>, Error> {
-    let mut treatments = Vec::new();
+fn read_file(path: &PathBuf) -> Result<Vec<Document>, Error> {
+    let mut documents = Vec::new();
 
     let mut reader = Reader::from_file(path)?;
     reader.trim_text(true);
 
     let mut buf = Vec::new();
-    let mut state = State::Root;
 
     loop {
-        state = match (state, reader.read_event_into(&mut buf)?) {
-            (State::Root, Event::Start(e)) if start_eq(&e, "document") => State::Document,
-            (State::Document, Event::End(e)) if end_eq(&e, "document") => break,
-
-            (State::Document, Event::Start(e)) if start_eq(&e, "mods:mods") => parse_mods(&mut reader)?,
-            (State::Document, Event::Start(e)) if start_eq(&e, "treatment") => {
-                treatments.push(Treatment::parse(&mut reader, &e)?);
-                State::Document
-            }
-
-            // (state, event) => panic!("Unknown element. current_state: {state:?}, event: {event:#?}"),
-            (state, _) => state,
+        match reader.read_event_into(&mut buf)? {
+            Event::Start(e) if start_eq(&e, "document") => documents.push(Document::parse(&mut reader, &e)?),
+            Event::Eof => break,
+            _ => {}
         };
     }
 
-    Ok(treatments)
+    Ok(documents)
 }
 
-fn parse_mods<T: BufRead>(reader: &mut Reader<T>) -> Result<State, Error> {
+fn parse_mods<T: BufRead>(reader: &mut Reader<T>) -> Result<(), Error> {
     let mut buf = Vec::new();
 
     // skip mods
@@ -437,7 +431,37 @@ fn parse_mods<T: BufRead>(reader: &mut Reader<T>) -> Result<State, Error> {
         }
     }
 
-    Ok(State::Document)
+    Ok(())
+}
+
+
+impl<T: BufRead> ParseSection<T> for Document {
+    fn parse(reader: &mut Reader<T>, event: &BytesStart) -> Result<Self, Error> {
+        let mut treatments = Vec::new();
+
+        let mut buf = Vec::new();
+
+        loop {
+            match reader.read_event_into(&mut buf)? {
+                Event::End(e) if end_eq(&e, "document") => break,
+
+                Event::Start(e) if start_eq(&e, "mods:mods") => parse_mods(reader)?,
+                Event::Start(e) if start_eq(&e, "treatment") => treatments.push(Treatment::parse(reader, &e)?),
+
+                // (state, event) => panic!("Unknown element. current_state: {state:?}, event: {event:#?}"),
+                _ => {}
+            }
+        }
+
+        Ok(Document {
+            treatments,
+            treatment_id: parse_attribute(reader, event, "docId")?,
+            title: parse_attribute(reader, event, "masterDocTitle")?,
+            authors: parse_attribute(reader, event, "docAuthor")?,
+            date_issued: parse_attribute(reader, event, "docDate")?,
+            publisher: parse_attribute(reader, event, "docOrigin")?,
+        })
+    }
 }
 
 
@@ -674,6 +698,7 @@ impl<T: BufRead> ParseSection<T> for Treatment {
 
         Ok(Treatment {
             lsid: parse_attribute(reader, event, "LSID")?,
+            http_uri: parse_attribute(reader, event, "httpUri")?,
             sections,
         })
     }
@@ -2791,6 +2816,35 @@ fn import_treatments(atoms: Vec<NomenclaturalActAtom>) -> Result<(), Error> {
 }
 
 
+impl From<Document> for Vec<NomenclaturalActAtom> {
+    fn from(document: Document) -> Self {
+        use NomenclaturalActAtom::*;
+
+        let mut operations = Vec::new();
+
+        for treatment in document.treatments {
+            for section in treatment.sections {
+                match section {
+                    Section::Nomenclature(nomenclature) => {
+                        if let Some(taxon) = nomenclature.taxon {
+                            let atoms: Vec<NomenclaturalActAtom> = taxon.into();
+                            operations.extend(atoms);
+                            operations.push(Publication(document.title.clone()));
+                            operations.push(PublicationDate(document.date_issued.clone()));
+                            operations.push(SourceUrl(treatment.http_uri.clone()));
+                            operations.push(NomenclaturalAct("original description".to_string()));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        operations
+    }
+}
+
+
 impl From<Treatment> for Vec<NomenclaturalActAtom> {
     fn from(treatment: Treatment) -> Self {
         let mut operations = Vec::new();
@@ -2822,9 +2876,9 @@ impl From<TaxonomicName> for Vec<NomenclaturalActAtom> {
             Ok(name) => {
                 match name.status {
                     NomenclaturalActStatus::SpeciesNova => operations.push(ActedOn(name.genus.clone())),
-                    NomenclaturalActStatus::CombinatioNova => operations.push(ActedOn(name.full_name())),
+                    NomenclaturalActStatus::CombinatioNova => operations.push(ActedOn(name.genus.clone())),
                     NomenclaturalActStatus::RevivedStatus => operations.push(ActedOn(name.full_name())),
-                    NomenclaturalActStatus::GenusSpeciesNova => operations.push(ActedOn(name.full_name())),
+                    NomenclaturalActStatus::GenusSpeciesNova => operations.push(ActedOn(name.genus.clone())),
                     NomenclaturalActStatus::SubspeciesNova => operations.push(ActedOn(name.full_name())),
                 };
 
