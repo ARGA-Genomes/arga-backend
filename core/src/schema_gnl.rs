@@ -134,8 +134,30 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    taxa_tree_stats (taxon_id, id) {
+        taxon_id -> Uuid,
+        id -> Uuid,
+        loci -> BigInt,
+        genomes -> BigInt,
+        specimens -> BigInt,
+        other -> BigInt,
+        total_genomic -> BigInt,
+    }
+}
 
-use super::schema::{datasets, names, taxa, specimens, accession_events, name_attributes, taxon_names};
+diesel::table! {
+    taxa_tree (id, path_id, id) {
+        taxon_id -> Uuid,
+        path_id -> Uuid,
+        id -> Uuid,
+        parent_id -> Uuid,
+        depth -> BigInt,
+    }
+}
+
+
+use super::schema::{accession_events, datasets, name_attributes, names, specimens, taxa, taxon_names};
 
 diesel::joinable!(species -> taxa (id));
 diesel::joinable!(whole_genomes -> datasets (dataset_id));
@@ -154,69 +176,25 @@ diesel::allow_tables_to_appear_in_same_query!(
     markers,
     name_data_summaries,
     taxa_dag,
+    taxa_tree,
+    taxa_tree_stats
 );
 
-diesel::allow_tables_to_appear_in_same_query!(
-    datasets,
-    whole_genomes,
-);
+diesel::allow_tables_to_appear_in_same_query!(datasets, whole_genomes);
+diesel::allow_tables_to_appear_in_same_query!(datasets, markers);
+diesel::allow_tables_to_appear_in_same_query!(datasets, species);
+diesel::allow_tables_to_appear_in_same_query!(datasets, specimen_stats);
 
-diesel::allow_tables_to_appear_in_same_query!(
-    datasets,
-    markers,
-);
+diesel::allow_tables_to_appear_in_same_query!(species, taxon_names);
+diesel::allow_tables_to_appear_in_same_query!(specimen_stats, specimens);
+diesel::allow_tables_to_appear_in_same_query!(specimen_stats, accession_events);
 
-diesel::allow_tables_to_appear_in_same_query!(
-    taxa,
-    markers,
-);
+diesel::allow_tables_to_appear_in_same_query!(name_attributes, species);
 
-diesel::allow_tables_to_appear_in_same_query!(
-    species,
-    taxa,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    species,
-    taxon_names,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    name_data_summaries,
-    taxa,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    whole_genomes,
-    taxa,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    taxa_dag,
-    taxa,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    specimen_stats,
-    specimens,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    specimen_stats,
-    datasets,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    specimen_stats,
-    accession_events,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    name_attributes,
-    species,
-);
-
-diesel::allow_tables_to_appear_in_same_query!(
-    datasets,
-    species,
-);
+diesel::allow_tables_to_appear_in_same_query!(taxa, taxa_dag);
+diesel::allow_tables_to_appear_in_same_query!(taxa, taxa_tree);
+diesel::allow_tables_to_appear_in_same_query!(taxa, taxa_tree_stats);
+diesel::allow_tables_to_appear_in_same_query!(taxa, species);
+diesel::allow_tables_to_appear_in_same_query!(taxa, markers);
+diesel::allow_tables_to_appear_in_same_query!(taxa, whole_genomes);
+diesel::allow_tables_to_appear_in_same_query!(taxa, name_data_summaries);
