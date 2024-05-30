@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+- New endpoint for taxon data statistics
 - Taxon history importer (synonyms and nomenclatural acts)
 - Name publication importer
 - Nomenclatural act importer via operation logger tasks

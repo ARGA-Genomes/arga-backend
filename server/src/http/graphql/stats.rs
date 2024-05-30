@@ -1,12 +1,10 @@
 use async_graphql::*;
-
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
+use super::common::taxonomy::TaxonomicRank;
 use crate::database::stats::BreakdownItem;
-use crate::http::Error;
-use crate::http::Context as State;
+use crate::http::{Context as State, Error};
 
 
 pub struct Statistics;
@@ -40,6 +38,12 @@ impl Statistics {
         // }
 
         Ok(stats)
+    }
+
+    async fn rank_breakdown(&self, ctx: &Context<'_>, rank: TaxonomicRank) -> Result<RankStatistics, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let tree = state.database.stats.taxon_tree(rank.into()).await?;
+        Ok(RankStatistics::default())
     }
 
     #[instrument(skip(self, ctx))]
@@ -83,4 +87,20 @@ pub struct DatasetStatistics {
 
     /// A breakdown of species and the amount of data for it
     pub breakdown: Vec<BreakdownItem>,
+}
+
+
+#[derive(Clone, Debug, Default, SimpleObject, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RankStatistics {
+    /// The total amount of genomic data
+    pub total: usize,
+    /// The total amount of whole genomes available
+    pub whole_genomes: usize,
+    /// The total amount of partial genomes available
+    pub partial_genomes: usize,
+    /// The total amount of organelles available
+    pub organelles: usize,
+    /// The total amount of barcodes available
+    pub barcodes: usize,
 }

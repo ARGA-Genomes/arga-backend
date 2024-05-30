@@ -138,11 +138,11 @@ diesel::table! {
     taxa_tree_stats (taxon_id, id) {
         taxon_id -> Uuid,
         id -> Uuid,
-        loci -> BigInt,
-        genomes -> BigInt,
-        specimens -> BigInt,
-        other -> BigInt,
-        total_genomic -> BigInt,
+        loci -> Nullable<Numeric>,
+        genomes -> Nullable<Numeric>,
+        specimens -> Nullable<Numeric>,
+        other -> Nullable<Numeric>,
+        total_genomic -> Nullable<Numeric>,
     }
 }
 
@@ -168,6 +168,7 @@ diesel::joinable!(markers -> taxa (name_id));
 diesel::joinable!(specimen_stats -> specimens (id));
 diesel::joinable!(name_data_summaries -> names (name_id));
 diesel::joinable!(taxon_names -> species (taxon_id));
+diesel::joinable!(taxa_tree_stats -> taxa (taxon_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     names,
