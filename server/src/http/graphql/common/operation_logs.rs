@@ -1,12 +1,11 @@
 use arga_core::crdt::hlc::HybridTimestamp;
-use arga_core::models::NomenclaturalActStatus;
 use async_graphql::*;
 use bigdecimal::ToPrimitive;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::datasets::{DatasetDetails, DatasetVersion};
-use super::taxonomy::TaxonomicStatus;
+use super::taxonomy::{NomenclaturalActStatus, TaxonomicStatus};
 use crate::database::{models, Database};
 use crate::http::Error;
 
@@ -26,7 +25,7 @@ type UtcDateTime = DateTime<Utc>;
 ))]
 #[graphql(concrete(
     name = "NomenclaturalActAtomStatus",
-    params(NomenclaturalActAtomStatusType, TaxonomicStatus)
+    params(NomenclaturalActAtomStatusType, NomenclaturalActStatus)
 ))]
 #[graphql(concrete(name = "SpecimenAtomText", params(SpecimenAtomTextType, String)))]
 #[graphql(concrete(name = "SpecimenAtomNumber", params(SpecimenAtomNumberType, f64)))]
@@ -59,6 +58,7 @@ pub enum NomenclaturalActAtomTextType {
     NomenclaturalAct,
     SourceUrl,
     Publication,
+    PublicationDate,
 
     Genus,
     SpecificEpithet,
@@ -113,7 +113,7 @@ impl NomenclaturalActAtom {
 
     pub fn nomenclatural_act_status(
         r#type: NomenclaturalActAtomStatusType,
-        value: NomenclaturalActAtomStatus,
+        value: NomenclaturalActStatus,
     ) -> NomenclaturalActAtom {
         NomenclaturalActAtom::NomenclaturalActStatus(NomenclaturalActAtomStatus { r#type, value })
     }
@@ -257,6 +257,7 @@ impl From<models::NomenclaturalActAtom> for NomenclaturalActAtom {
             NomenclaturalAct(value) => Atom::text(Text::NomenclaturalAct, value),
             SourceUrl(value) => Atom::text(Text::SourceUrl, value),
             Publication(value) => Atom::text(Text::Publication, value),
+            PublicationDate(value) => Atom::text(Text::PublicationDate, value),
             CreatedAt(value) => Atom::datetime(DateTime::CreatedAt, value),
             UpdatedAt(value) => Atom::datetime(DateTime::UpdatedAt, value),
 
@@ -266,7 +267,9 @@ impl From<models::NomenclaturalActAtom> for NomenclaturalActAtom {
             BaseAuthorityYear(value) => Atom::text(Text::BaseAuthorityYear, value),
             AuthorityName(value) => Atom::text(Text::AuthorityName, value),
             AuthorityYear(value) => Atom::text(Text::AuthorityYear, value),
-            Status(value) => Atom::text(Text::Status, value),
+            Status(value) => {
+                Atom::nomenclatural_act_status(NomenclaturalActAtomStatusType::NomenclaturalActStatus, value.into())
+            }
             Rank(value) => Atom::text(Text::Rank, value),
         }
     }

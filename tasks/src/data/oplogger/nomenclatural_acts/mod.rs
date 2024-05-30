@@ -330,7 +330,7 @@ fn reduce_acts() -> Result<(), Error> {
 // }
 
 // based on https://rs.gbif.org/vocabulary/gbif/taxonomic_status.xml
-fn str_to_taxonomic_status(value: &str) -> Result<TaxonomicStatus, ParseError> {
+pub fn str_to_taxonomic_status(value: &str) -> Result<TaxonomicStatus, ParseError> {
     match value.to_lowercase().as_str() {
         "valid" => Ok(TaxonomicStatus::Accepted),
         "valid name" => Ok(TaxonomicStatus::Accepted),

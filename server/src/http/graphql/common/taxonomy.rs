@@ -1,5 +1,5 @@
-use async_graphql::{SimpleObject, Enum};
-use serde::{Serialize, Deserialize};
+use async_graphql::{Enum, SimpleObject};
+use serde::{Deserialize, Serialize};
 
 use crate::database::models;
 
@@ -126,7 +126,20 @@ pub enum TaxonomicStatus {
 }
 
 impl Default for TaxonomicStatus {
-    fn default() -> Self { TaxonomicStatus::Unaccepted }
+    fn default() -> Self {
+        TaxonomicStatus::Unaccepted
+    }
+}
+
+
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "models::NomenclaturalActStatus")]
+pub enum NomenclaturalActStatus {
+    SpeciesNova,
+    CombinatioNova,
+    RevivedStatus,
+    GenusSpeciesNova,
+    SubspeciesNova,
 }
 
 
@@ -225,5 +238,7 @@ pub enum TaxonomicRank {
 }
 
 impl Default for TaxonomicRank {
-    fn default() -> Self { TaxonomicRank::Unranked }
+    fn default() -> Self {
+        TaxonomicRank::Unranked
+    }
 }
