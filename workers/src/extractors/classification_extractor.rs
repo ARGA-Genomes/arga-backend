@@ -1,16 +1,16 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use arga_core::models::{Taxon, TaxonomicRank, TaxonomicStatus};
+use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::*;
-use diesel::r2d2::{Pool, ConnectionManager};
 use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::models::{TaxonomicStatus, TaxonomicRank, Taxon};
 use crate::error::{Error, ParseError};
-use crate::matchers::classification_matcher::{classification_map, ClassificationMap};
-use crate::matchers::dataset_matcher::{DatasetRecord, match_records, dataset_map, DatasetMatch};
+use crate::matchers::classification_matcher::{classification_map, classification_map_scoped, ClassificationMap};
+use crate::matchers::dataset_matcher::{dataset_map, match_records, DatasetMatch, DatasetRecord};
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -60,7 +60,13 @@ pub fn extract(path: &PathBuf, pool: &mut PgPool) -> Result<Vec<Taxon>, Error> {
     }
 
     let datasets = dataset_map(pool)?;
-    let classifications = classification_map(pool)?;
+    let mut dataset_ids = records
+        .iter()
+        .map(|r| datasets.get(&r.dataset_id).map(|d| d.id).unwrap_or_default())
+        .collect::<Vec<Uuid>>();
+    dataset_ids.dedup();
+
+    let classifications = classification_map_scoped(pool, &dataset_ids)?;
     let taxa = reference_map(&records, &classifications)?;
 
     let records = match_records(records, &datasets);
@@ -106,11 +112,13 @@ fn reference_map(records: &Vec<Record>, classifications: &ClassificationMap) -> 
 
 
 fn extract_classifications(records: MatchedRecords, taxa: &HashMap<String, Uuid>) -> Result<Vec<Taxon>, Error> {
-    info!(total=records.len(), "Extracting classifications");
+    info!(total = records.len(), "Extracting classifications");
 
     let mut rows = Vec::new();
     for (dataset, record) in records {
-        let id = taxa.get(&record.scientific_name).ok_or_else(|| ParseError::NotFound(record.scientific_name.clone()))?;
+        let id = taxa
+            .get(&record.scientific_name)
+            .ok_or_else(|| ParseError::NotFound(record.scientific_name.clone()))?;
 
         // the classification map can be used with the scientific_name, canonical_name, or the
         // taxon_id (parent_taxon in our case). this allows us to link to the parent taxon
@@ -119,7 +127,7 @@ fn extract_classifications(records: MatchedRecords, taxa: &HashMap<String, Uuid>
             Some(parent) => {
                 let parent_id = taxa.get(&parent).ok_or_else(|| ParseError::NotFound(parent))?;
                 Some(parent_id.clone())
-            },
+            }
             None => None,
         };
 
@@ -147,7 +155,7 @@ fn extract_classifications(records: MatchedRecords, taxa: &HashMap<String, Uuid>
         })
     }
 
-    info!(rows=rows.len(), "Extracting classifications finished");
+    info!(rows = rows.len(), "Extracting classifications finished");
     Ok(rows)
 }
 
@@ -158,16 +166,27 @@ fn str_to_taxonomic_rank(value: &str) -> Result<TaxonomicRank, Error> {
         "superkingdom" => Ok(TaxonomicRank::Superkingdom),
         "kingdom" => Ok(TaxonomicRank::Kingdom),
         "subkingdom" => Ok(TaxonomicRank::Subkingdom),
+        "infrakingdom" => Ok(TaxonomicRank::Infrakingdom),
+        "superphylum" => Ok(TaxonomicRank::Superphylum),
         "phylum" => Ok(TaxonomicRank::Phylum),
         "subphylum" => Ok(TaxonomicRank::Subphylum),
+        "infraphylum" => Ok(TaxonomicRank::Infraphylum),
+        "parvphylum" => Ok(TaxonomicRank::Parvphylum),
+        "gigaclass" => Ok(TaxonomicRank::Gigaclass),
+        "megaclass" => Ok(TaxonomicRank::Megaclass),
         "superclass" => Ok(TaxonomicRank::Superclass),
         "class" => Ok(TaxonomicRank::Class),
         "subclass" => Ok(TaxonomicRank::Subclass),
+        "infraclass" => Ok(TaxonomicRank::Infraclass),
+        "subterclass" => Ok(TaxonomicRank::Subterclass),
         "superorder" => Ok(TaxonomicRank::Superorder),
         "order" => Ok(TaxonomicRank::Order),
-        "suborder" => Ok(TaxonomicRank::Suborder),
         "hyporder" => Ok(TaxonomicRank::Hyporder),
         "minorder" => Ok(TaxonomicRank::Minorder),
+        "suborder" => Ok(TaxonomicRank::Suborder),
+        "infraorder" => Ok(TaxonomicRank::Infraorder),
+        "parvorder" => Ok(TaxonomicRank::Parvorder),
+        "epifamily" => Ok(TaxonomicRank::Epifamily),
         "superfamily" => Ok(TaxonomicRank::Superfamily),
         "family" => Ok(TaxonomicRank::Family),
         "subfamily" => Ok(TaxonomicRank::Subfamily),
@@ -178,6 +197,10 @@ fn str_to_taxonomic_rank(value: &str) -> Result<TaxonomicRank, Error> {
         "subgenus" => Ok(TaxonomicRank::Subgenus),
         "species" => Ok(TaxonomicRank::Species),
         "subspecies" => Ok(TaxonomicRank::Subspecies),
+        "variety" => Ok(TaxonomicRank::Variety),
+        "subvariety" => Ok(TaxonomicRank::Subvariety),
+        "natio" => Ok(TaxonomicRank::Natio),
+        "mutatio" => Ok(TaxonomicRank::Mutatio),
         "unranked" => Ok(TaxonomicRank::Unranked),
         "higher taxon" => Ok(TaxonomicRank::HigherTaxon),
         "aggregate genera" => Ok(TaxonomicRank::AggregateGenera),
@@ -185,12 +208,13 @@ fn str_to_taxonomic_rank(value: &str) -> Result<TaxonomicRank, Error> {
         "cohort" => Ok(TaxonomicRank::Cohort),
         "subcohort" => Ok(TaxonomicRank::Subcohort),
         "division" => Ok(TaxonomicRank::Division),
+        "phylum (division)" => Ok(TaxonomicRank::Division),
         "incertae sedis" => Ok(TaxonomicRank::IncertaeSedis),
-        "infraclass" => Ok(TaxonomicRank::Infraclass),
-        "infraorder" => Ok(TaxonomicRank::Infraorder),
         "infragenus" => Ok(TaxonomicRank::Infragenus),
         "section" => Ok(TaxonomicRank::Section),
+        "subsection" => Ok(TaxonomicRank::Subsection),
         "subdivision" => Ok(TaxonomicRank::Subdivision),
+        "subphylum (subdivision)" => Ok(TaxonomicRank::Subdivision),
 
         "regnum" => Ok(TaxonomicRank::Regnum),
         "familia" => Ok(TaxonomicRank::Familia),
@@ -214,6 +238,8 @@ fn str_to_taxonomic_rank(value: &str) -> Result<TaxonomicRank, Error> {
         "regio" => Ok(TaxonomicRank::Regio),
         "special form" => Ok(TaxonomicRank::SpecialForm),
 
+        "" => Ok(TaxonomicRank::Unranked),
+
         val => Err(Error::Parsing(ParseError::InvalidValue(val.to_string()))),
     }
 }
@@ -228,33 +254,51 @@ fn str_to_taxonomic_status(value: &str) -> Result<TaxonomicStatus, Error> {
 
         "undescribed" => Ok(TaxonomicStatus::Undescribed),
         "species inquirenda" => Ok(TaxonomicStatus::SpeciesInquirenda),
+        "taxon inquirendum" => Ok(TaxonomicStatus::TaxonInquirendum),
         "manuscript name" => Ok(TaxonomicStatus::ManuscriptName),
         "hybrid" => Ok(TaxonomicStatus::Hybrid),
 
+        "unassessed" => Ok(TaxonomicStatus::Unassessed),
+        "unavailable name" => Ok(TaxonomicStatus::Unavailable),
+        "uncertain" => Ok(TaxonomicStatus::Uncertain),
+        "unjustified emendation" => Ok(TaxonomicStatus::UnjustifiedEmendation),
+
         "synonym" => Ok(TaxonomicStatus::Synonym),
         "junior synonym" => Ok(TaxonomicStatus::Synonym),
+        "junior objective synonym" => Ok(TaxonomicStatus::Synonym),
+        "junior subjective synonym" => Ok(TaxonomicStatus::Synonym),
         "later synonym" => Ok(TaxonomicStatus::Synonym),
+
+        "homonym" => Ok(TaxonomicStatus::Homonym),
+        "junior homonym" => Ok(TaxonomicStatus::Homonym),
+        "unreplaced junior homonym" => Ok(TaxonomicStatus::Homonym),
 
         "invalid" => Ok(TaxonomicStatus::Unaccepted),
         "invalid name" => Ok(TaxonomicStatus::Unaccepted),
         "unaccepted" => Ok(TaxonomicStatus::Unaccepted),
         "unaccepted name" => Ok(TaxonomicStatus::Unaccepted),
         // "excluded" => Ok(TaxonomicStatus::Unaccepted),
-
         "informal" => Ok(TaxonomicStatus::Informal),
         "informal name" => Ok(TaxonomicStatus::Informal),
 
         "placeholder" => Ok(TaxonomicStatus::Placeholder),
+        "temporary name" => Ok(TaxonomicStatus::Placeholder),
 
         "basionym" => Ok(TaxonomicStatus::Basionym),
         "nomenclatural synonym" => Ok(TaxonomicStatus::NomenclaturalSynonym),
         "taxonomic synonym" => Ok(TaxonomicStatus::TaxonomicSynonym),
         "replaced synonym" => Ok(TaxonomicStatus::ReplacedSynonym),
 
+        "incorrect original spelling" => Ok(TaxonomicStatus::Misspelled),
+        "misspelling" => Ok(TaxonomicStatus::Misspelled),
+
         "orthographic variant" => Ok(TaxonomicStatus::OrthographicVariant),
-        "misapplied" => Ok(TaxonomicStatus::Misapplied),
         "excluded" => Ok(TaxonomicStatus::Excluded),
+
+        "misapplied" => Ok(TaxonomicStatus::Misapplied),
+        "misapplication" => Ok(TaxonomicStatus::Misapplied),
         "alternative name" => Ok(TaxonomicStatus::AlternativeName),
+        "alternative representation" => Ok(TaxonomicStatus::AlternativeName),
 
         "pro parte misapplied" => Ok(TaxonomicStatus::ProParteMisapplied),
         "pro parte taxonomic synonym" => Ok(TaxonomicStatus::ProParteTaxonomicSynonym),
@@ -263,6 +307,17 @@ fn str_to_taxonomic_status(value: &str) -> Result<TaxonomicStatus, Error> {
         "doubtful taxonomic synonym" => Ok(TaxonomicStatus::DoubtfulTaxonomicSynonym),
         "doubtful pro parte misapplied" => Ok(TaxonomicStatus::DoubtfulProParteMisapplied),
         "doubtful pro parte taxonomic synonym" => Ok(TaxonomicStatus::DoubtfulProParteTaxonomicSynonym),
+
+        "nomen dubium" => Ok(TaxonomicStatus::NomenDubium),
+        "nomen nudum" => Ok(TaxonomicStatus::NomenNudum),
+        "nomen oblitum" => Ok(TaxonomicStatus::NomenOblitum),
+
+        "interim unpublished" => Ok(TaxonomicStatus::InterimUnpublished),
+        "superseded combination" => Ok(TaxonomicStatus::SupersededCombination),
+        "superseded rank" => Ok(TaxonomicStatus::SupersededRank),
+        "incorrect grammatical agreement of specific epithet" => {
+            Ok(TaxonomicStatus::IncorrectGrammaticalAgreementOfSpecificEpithet)
+        }
 
         val => Err(Error::Parsing(ParseError::InvalidValue(val.to_string()))),
     }
