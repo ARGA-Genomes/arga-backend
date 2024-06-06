@@ -667,6 +667,20 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    taxa_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
     taxon_history (id) {
         id -> Uuid,
         acted_on -> Uuid,
@@ -804,6 +818,7 @@ diesel::joinable!(subsamples -> datasets (dataset_id));
 diesel::joinable!(subsamples -> names (name_id));
 diesel::joinable!(subsamples -> specimens (specimen_id));
 diesel::joinable!(taxa -> datasets (dataset_id));
+diesel::joinable!(taxa_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(taxon_history -> datasets (dataset_id));
 diesel::joinable!(taxon_history -> name_publications (publication_id));
 diesel::joinable!(taxon_history -> nomenclatural_acts (act_id));
@@ -851,6 +866,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     subsample_events,
     subsamples,
     taxa,
+    taxa_logs,
     taxon_history,
     taxon_names,
     taxon_photos,
