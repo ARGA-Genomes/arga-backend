@@ -99,9 +99,11 @@ pub enum TaxonomicStatus {
     Accepted,
     Undescribed,
     SpeciesInquirenda,
+    TaxonInquirendum,
     ManuscriptName,
     Hybrid,
     Synonym,
+    Homonym,
     Unaccepted,
     Informal,
     Placeholder,
@@ -111,6 +113,7 @@ pub enum TaxonomicStatus {
     TaxonomicSynonym,
     ReplacedSynonym,
 
+    Misspelled,
     OrthographicVariant,
     Misapplied,
     Excluded,
@@ -123,6 +126,20 @@ pub enum TaxonomicStatus {
     DoubtfulTaxonomicSynonym,
     DoubtfulProParteMisapplied,
     DoubtfulProParteTaxonomicSynonym,
+
+    Unassessed,
+    Unavailable,
+    Uncertain,
+    UnjustifiedEmendation,
+
+    NomenDubium,
+    NomenNudum,
+    NomenOblitum,
+
+    InterimUnpublished,
+    IncorrectGrammaticalAgreementOfSpecificEpithet,
+    SupersededCombination,
+    SupersededRank,
 }
 
 impl Default for TaxonomicStatus {
@@ -175,29 +192,53 @@ pub enum TaxonomicVernacularGroup {
 #[graphql(remote = "models::TaxonomicRank")]
 pub enum TaxonomicRank {
     Domain,
+
     Superkingdom,
     Kingdom,
     Subkingdom,
+    Infrakingdom,
+
+    Superphylum,
     Phylum,
     Subphylum,
+    Infraphylum,
+    Parvphylum,
+
+    Gigaclass,
+    Megaclass,
     Superclass,
     Class,
     Subclass,
+    Infraclass,
+    Subterclass,
+
     Superorder,
     Order,
-    Suborder,
     Hyporder,
     Minorder,
+    Suborder,
+    Infraorder,
+    Parvorder,
+
+    Epifamily,
     Superfamily,
     Family,
     Subfamily,
+
     Supertribe,
     Tribe,
     Subtribe,
     Genus,
     Subgenus,
+    Infragenus,
     Species,
     Subspecies,
+
+    Variety,
+    Subvariety,
+
+    Natio,
+    Mutatio,
 
     Unranked,
     HigherTaxon,
@@ -208,10 +249,8 @@ pub enum TaxonomicRank {
     Subcohort,
     Division,
     IncertaeSedis,
-    Infraclass,
-    Infraorder,
-    Infragenus,
     Section,
+    Subsection,
     Subdivision,
 
     Regnum,
