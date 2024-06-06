@@ -1,5 +1,6 @@
 pub mod nomenclatural_acts;
 pub mod specimens;
+pub mod taxa;
 
 use std::path::PathBuf;
 
@@ -27,6 +28,14 @@ pub enum Command {
 
 #[derive(clap::Subcommand)]
 pub enum ImportCommand {
+    /// Extract taxa from a CSV dataset
+    Taxa {
+        dataset_id: String,
+        version: String,
+        created_at: String,
+        path: PathBuf,
+    },
+
     /// Extract nomenclatural acts from a CSV dataset
     NomenclaturalActs {
         dataset_id: String,
@@ -46,6 +55,7 @@ pub enum ImportCommand {
 
 #[derive(clap::Subcommand)]
 pub enum ReduceCommand {
+    Taxa,
     NomenclaturalActs,
     Specimens,
     CollectionEvents,
@@ -54,6 +64,12 @@ pub enum ReduceCommand {
 pub fn process_command(cmd: &Command) {
     match cmd {
         Command::Import(cmd) => match cmd {
+            ImportCommand::Taxa {
+                dataset_id,
+                version,
+                created_at,
+                path,
+            } => taxa::process(path.clone(), create_dataset_version(dataset_id, version, created_at).unwrap()).unwrap(),
             ImportCommand::NomenclaturalActs {
                 dataset_id,
                 version,
@@ -73,6 +89,7 @@ pub fn process_command(cmd: &Command) {
                 .unwrap(),
         },
         Command::Reduce(cmd) => match cmd {
+            ReduceCommand::Taxa => taxa::reduce().unwrap(),
             ReduceCommand::NomenclaturalActs => nomenclatural_acts::reduce().unwrap(),
             ReduceCommand::Specimens => specimens::reduce_specimens().unwrap(),
             ReduceCommand::CollectionEvents => specimens::reduce_collections().unwrap(),

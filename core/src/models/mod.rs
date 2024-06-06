@@ -120,33 +120,51 @@ impl Default for TaxonomicStatus {
     }
 }
 
+// TODO: this would be better as a derive macro so that we dont miss string
+// to enum conversions, or use serde enum deserialization
 impl From<String> for TaxonomicStatus {
     fn from(value: String) -> Self {
+        use TaxonomicStatus::*;
+
         match value.as_str() {
-            "Accepted" => TaxonomicStatus::Accepted,
-            "Undescribed" => TaxonomicStatus::Undescribed,
-            "SpeciesInquirenda" => TaxonomicStatus::SpeciesInquirenda,
-            "ManuscriptName" => TaxonomicStatus::ManuscriptName,
-            "Hybrid" => TaxonomicStatus::Hybrid,
-            "Synonym" => TaxonomicStatus::Synonym,
-            "Unaccepted" => TaxonomicStatus::Unaccepted,
-            "Informal" => TaxonomicStatus::Informal,
-            "Placeholder" => TaxonomicStatus::Placeholder,
-            "Basionym" => TaxonomicStatus::Basionym,
-            "NomenclaturalSynonym" => TaxonomicStatus::NomenclaturalSynonym,
-            "TaxonomicSynonym" => TaxonomicStatus::TaxonomicSynonym,
-            "ReplacedSynonym" => TaxonomicStatus::ReplacedSynonym,
-            "OrthographicVariant" => TaxonomicStatus::OrthographicVariant,
-            "Misapplied" => TaxonomicStatus::Misapplied,
-            "Excluded" => TaxonomicStatus::Excluded,
-            "AlternativeName" => TaxonomicStatus::AlternativeName,
-            "ProParteMisapplied" => TaxonomicStatus::ProParteMisapplied,
-            "ProParteTaxonomicSynonym" => TaxonomicStatus::ProParteTaxonomicSynonym,
-            "DoubtfulMisapplied" => TaxonomicStatus::DoubtfulMisapplied,
-            "DoubtfulTaxonomicSynonym" => TaxonomicStatus::DoubtfulTaxonomicSynonym,
-            "DoubtfulProParteMisapplied" => TaxonomicStatus::DoubtfulProParteMisapplied,
-            "DoubtfulProParteTaxonomicSynonym" => TaxonomicStatus::DoubtfulProParteTaxonomicSynonym,
-            _ => TaxonomicStatus::Unaccepted,
+            "Accepted" => Accepted,
+            "Undescribed" => Undescribed,
+            "SpeciesInquirenda" => SpeciesInquirenda,
+            "TaxonInquirendum" => TaxonInquirendum,
+            "ManuscriptName" => ManuscriptName,
+            "Hybrid" => Hybrid,
+            "Synonym" => Synonym,
+            "Homonym" => Homonym,
+            "Unaccepted" => Unaccepted,
+            "Informal" => Informal,
+            "Placeholder" => Placeholder,
+            "Basionym" => Basionym,
+            "NomenclaturalSynonym" => NomenclaturalSynonym,
+            "TaxonomicSynonym" => TaxonomicSynonym,
+            "ReplacedSynonym" => ReplacedSynonym,
+            "Misspelled" => Misspelled,
+            "OrthographicVariant" => OrthographicVariant,
+            "Misapplied" => Misapplied,
+            "Excluded" => Excluded,
+            "AlternativeName" => AlternativeName,
+            "ProParteMisapplied" => ProParteMisapplied,
+            "ProParteTaxonomicSynonym" => ProParteTaxonomicSynonym,
+            "DoubtfulMisapplied" => DoubtfulMisapplied,
+            "DoubtfulTaxonomicSynonym" => DoubtfulTaxonomicSynonym,
+            "DoubtfulProParteMisapplied" => DoubtfulProParteMisapplied,
+            "DoubtfulProParteTaxonomicSynonym" => DoubtfulProParteTaxonomicSynonym,
+            "Unassessed" => Unassessed,
+            "Unavailable" => Unavailable,
+            "Uncertain" => Uncertain,
+            "UnjustifiedEmendation" => UnjustifiedEmendation,
+            "NomenDubium" => NomenDubium,
+            "NomenNudum" => NomenNudum,
+            "NomenOblitum" => NomenOblitum,
+            "InterimUnpublished" => InterimUnpublished,
+            "IncorrectGrammaticalAgreementOfSpecificEpithet" => IncorrectGrammaticalAgreementOfSpecificEpithet,
+            "SupersededCombination" => SupersededCombination,
+            "SupersededRank" => SupersededRank,
+            _ => Unaccepted,
         }
     }
 }
@@ -263,6 +281,12 @@ pub enum TaxonomicRank {
     Subordo,
     Regio,
     SpecialForm,
+}
+
+impl Default for TaxonomicRank {
+    fn default() -> Self {
+        Self::Unranked
+    }
 }
 
 impl std::fmt::Display for TaxonomicRank {
@@ -384,6 +408,7 @@ pub struct Taxon {
 
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Identifiable, Insertable, Selectable, Queryable, Associations, Debug, Clone)]

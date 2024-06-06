@@ -663,6 +663,7 @@ diesel::table! {
         remarks -> Nullable<Text>,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        entity_id -> Nullable<Varchar>,
     }
 }
 

@@ -9,13 +9,86 @@ use diesel::{AsExpression, Associations, FromSqlRow, Insertable, Queryable, Sele
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::{schema, DatasetVersion, TaxonomicStatus};
+use super::{schema, DatasetVersion, TaxonomicRank, TaxonomicStatus};
 
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::OperationAction"]
 pub enum Action {
     Create,
     Update,
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq)]
+#[diesel(sql_type = diesel::sql_types::Jsonb)]
+pub enum TaxonAtom {
+    Empty,
+    TaxonId(String),
+    AcceptedNameUsageId(String),
+    ParentNameUsageId(String),
+    ParentTaxon(String),
+
+    ScientificName(String),
+    Authorship(String),
+    CanonicalName(String),
+    AcceptedNameUsage(String),
+    ParentNameUsage(String),
+
+    TaxonomicRank(TaxonomicRank),
+    TaxonomicStatus(TaxonomicStatus),
+    NomenclaturalCode(String),
+    NomenclaturalStatus(String),
+
+    NamePublishedIn(String),
+    NamePublishedInYear(String),
+    NamePublishedInUrl(String),
+
+    Citation(String),
+    References(String),
+    LastUpdated(String),
+}
+
+impl FromSql<Jsonb, Pg> for TaxonAtom {
+    fn from_sql(value: <Pg as Backend>::RawValue<'_>) -> deserialize::Result<Self> {
+        serde_json::from_value(FromSql::<Jsonb, Pg>::from_sql(value)?).map_err(|e| e.into())
+    }
+}
+
+impl ToSql<Jsonb, Pg> for TaxonAtom {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        let json = serde_json::to_value(self)?;
+        <serde_json::Value as ToSql<Jsonb, Pg>>::to_sql(&json, &mut out.reborrow())
+    }
+}
+
+impl ToString for TaxonAtom {
+    fn to_string(&self) -> String {
+        use TaxonAtom::*;
+
+        match self {
+            Empty => "Empty",
+            TaxonId(_) => "TaxonId",
+            AcceptedNameUsageId(_) => "AcceptedNameUsageId",
+            ParentNameUsageId(_) => "ParentNameUsageId",
+            ParentTaxon(_) => "ParentTaxon",
+            ScientificName(_) => "ScientificName",
+            CanonicalName(_) => "CanonicalName",
+            AcceptedNameUsage(_) => "AcceptedNameUsage",
+            ParentNameUsage(_) => "ParentNameUsage",
+            Authorship(_) => "Authorship",
+            TaxonomicRank(_) => "TaxonomicRank",
+            TaxonomicStatus(_) => "TaxonomicStatus",
+            NomenclaturalCode(_) => "NomenclaturalCode",
+            NomenclaturalStatus(_) => "NomenclaturalStatus",
+            NamePublishedIn(_) => "NamePublishedIn",
+            NamePublishedInYear(_) => "NamePublishedInYear",
+            NamePublishedInUrl(_) => "NamePublishedInUrl",
+            Citation(_) => "Citation",
+            References(_) => "References",
+            LastUpdated(_) => "LastUpdated",
+        }
+        .to_string()
+    }
 }
 
 
@@ -307,6 +380,34 @@ pub trait LogOperation<T> {
     fn id(&self) -> &String;
     fn action(&self) -> &Action;
     fn atom(&self) -> &T;
+}
+
+
+#[derive(Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]
+#[diesel(belongs_to(DatasetVersion))]
+#[diesel(table_name = schema::taxa_logs)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct TaxonOperation {
+    pub operation_id: BigDecimal,
+    pub parent_id: BigDecimal,
+    pub entity_id: String,
+    pub dataset_version_id: Uuid,
+    pub action: Action,
+    pub atom: TaxonAtom,
+}
+
+impl LogOperation<TaxonAtom> for TaxonOperation {
+    fn id(&self) -> &String {
+        &self.entity_id
+    }
+
+    fn action(&self) -> &Action {
+        &self.action
+    }
+
+    fn atom(&self) -> &TaxonAtom {
+        &self.atom
+    }
 }
 
 #[derive(Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]

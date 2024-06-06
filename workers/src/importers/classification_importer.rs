@@ -25,7 +25,8 @@ pub fn import(path: PathBuf, pool: &mut PgPool) -> Result<(), Error> {
 }
 
 pub fn import_classifications(records: &Vec<Taxon>, pool: &mut PgPool) -> Result<(), Error> {
-    use schema::taxa;
+    use diesel::upsert::excluded;
+    use schema::taxa::dsl::*;
 
     info!(total = records.len(), "Importing classifications");
     let imported: Vec<Result<usize, Error>> = records
@@ -39,9 +40,26 @@ pub fn import_classifications(records: &Vec<Taxon>, pool: &mut PgPool) -> Result
             }
 
             let mut conn = pool.get()?;
-            let inserted_rows = diesel::insert_into(taxa::table)
+            let inserted_rows = diesel::insert_into(taxa)
                 .values(node_chunk)
-                .on_conflict_do_nothing()
+                .on_conflict((scientific_name, dataset_id))
+                .do_update()
+                .set((
+                    dataset_id.eq(excluded(dataset_id)),
+                    entity_id.eq(excluded(entity_id)),
+                    status.eq(excluded(status)),
+                    rank.eq(excluded(rank)),
+                    scientific_name.eq(excluded(scientific_name)),
+                    canonical_name.eq(excluded(canonical_name)),
+                    authorship.eq(excluded(authorship)),
+                    nomenclatural_code.eq(excluded(nomenclatural_code)),
+                    citation.eq(excluded(citation)),
+                    vernacular_names.eq(excluded(vernacular_names)),
+                    description.eq(excluded(description)),
+                    remarks.eq(excluded(remarks)),
+                    created_at.eq(excluded(created_at)),
+                    updated_at.eq(excluded(updated_at)),
+                ))
                 .execute(&mut conn)?;
             Ok(inserted_rows)
         })
