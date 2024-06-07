@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+- Imported taxonomy from WoRMS (2024-04-01)
+- Taxonomic synonym history from the WoRMS dataset
+- Taxonomic ranks and statuses from the WoRMS dataset
+- Change tracking of taxonomy via CmRDTs and operation logs
 - Taxon history importer (synonyms and nomenclatural acts)
 - Name publication importer
 - Nomenclatural act importer via operation logger tasks
