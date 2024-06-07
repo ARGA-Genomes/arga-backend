@@ -348,8 +348,6 @@ fn into_classification(rank: TaxonRank, value: String) -> Classification {
         TaxonRank::Subcohort => Classification::Subcohort(value),
         TaxonRank::Division => Classification::Division(value),
         TaxonRank::IncertaeSedis => Classification::IncertaeSedis(value),
-        TaxonRank::Infraclass => Classification::Infraclass(value),
-        TaxonRank::Infraorder => Classification::Infraorder(value),
         TaxonRank::Infragenus => Classification::Infragenus(value),
         TaxonRank::Section => Classification::Section(value),
         TaxonRank::Subsection => Classification::Subsection(value),

@@ -11,7 +11,7 @@ use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use super::utils::date_time_from_str;
+use super::utils::date_time_from_str_opt;
 use crate::error::Error;
 use crate::matchers::taxon_matcher::{self, TaxonMatch};
 
@@ -24,10 +24,10 @@ struct Record {
     taxonomic_status: String,
     publication: Option<String>,
     source_url: Option<String>,
-    #[serde(deserialize_with = "date_time_from_str")]
-    created_at: DateTime<Utc>,
-    #[serde(deserialize_with = "date_time_from_str")]
-    updated_at: DateTime<Utc>,
+    #[serde(deserialize_with = "date_time_from_str_opt")]
+    created_at: Option<DateTime<Utc>>,
+    #[serde(deserialize_with = "date_time_from_str_opt")]
+    updated_at: Option<DateTime<Utc>>,
     entity_id: Option<String>,
 }
 
@@ -75,8 +75,10 @@ fn extract_history(
                     publication_id,
                     source_url: row.source_url.clone(),
                     dataset_id: dataset.id.clone(),
-                    created_at: row.created_at,
-                    updated_at: row.updated_at,
+                    // TODO: default to current timestamp since the schema defaults to that
+                    // anyway. we probably want to have separate record timestamp columns
+                    created_at: row.created_at.unwrap_or_else(|| Utc::now()),
+                    updated_at: row.updated_at.unwrap_or_else(|| Utc::now()),
                     entity_id: row.entity_id.clone(),
                 }),
                 _ => None,
