@@ -8,13 +8,17 @@ use arga_core::models::{
     NomenclaturalActOperation,
     NomenclaturalActStatus,
     NomenclaturalActStatusError,
+    TaxonomicRank,
+    TaxonomicStatus,
 };
 use arga_core::schema;
+use chrono::Utc;
 use diesel::*;
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::name::QName;
 use quick_xml::Reader;
 use tracing::info;
+use xxhash_rust::xxh3::Xxh3;
 
 use super::formatting::{
     BibCitation,
@@ -37,6 +41,7 @@ use super::formatting::{
     Uuid,
 };
 use crate::data::oplogger::get_pool;
+use crate::data::oplogger::nomenclatural_acts::{str_to_taxonomic_status, OriginalDescription};
 use crate::data::plazi::formatting::{Span, SpanStack};
 use crate::data::{Error, ParseError};
 
@@ -380,24 +385,28 @@ enum State {
 
 
 pub fn import(input_dir: PathBuf) -> Result<(), Error> {
-    info!("Enumerating files in '{input_dir:?}'");
+    // info!("Enumerating files in '{input_dir:?}'");
+    let mut treatments = Vec::new();
     let files = xml_files(input_dir)?;
 
     for (idx, file) in files.iter().enumerate() {
-        info!("Reading file {idx}: {file:?}");
-        println!("{}", file.as_os_str().to_string_lossy());
+        // info!("Reading file {idx}: {file:?}");
+        // println!("{}", file.as_os_str().to_string_lossy());
 
         let documents = read_file(&file)?;
-        let atoms = documents
+        let descriptions: Vec<OriginalDescription> = documents
             .into_iter()
-            .map(|d| Vec::<NomenclaturalActAtom>::from(d))
+            .map(|d| Vec::<OriginalDescription>::from(d))
+            // .map(|d| Vec::<NomenclaturalActAtom>::from(d))
             .flatten()
             .collect();
 
-        import_treatments(atoms)?;
+        // println!("{descriptions:#?}");
+        treatments.extend(descriptions);
     }
 
-    info!("Importing {} XML files", files.len());
+    import_treatments(treatments)?;
+    // info!("Importing {} XML files", files.len());
     Ok(())
 }
 
@@ -2798,10 +2807,14 @@ impl<T: BufRead> ParseFormat<T> for FormattedValue {
 }
 
 
-fn import_treatments(atoms: Vec<NomenclaturalActAtom>) -> Result<(), Error> {
-    use schema::nomenclatural_act_logs::dsl::*;
+fn import_treatments(treatments: Vec<OriginalDescription>) -> Result<(), Error> {
+    let mut writer = csv::Writer::from_writer(std::io::stdout());
 
-    println!("{atoms:#?}");
+    for treatment in treatments {
+        writer.serialize(treatment)?;
+    }
+
+    // use schema::nomenclatural_act_logs::dsl::*;
 
     // let pool = get_pool()?;
     // let mut conn = pool.get()?;
@@ -2815,6 +2828,63 @@ fn import_treatments(atoms: Vec<NomenclaturalActAtom>) -> Result<(), Error> {
     Ok(())
 }
 
+impl From<Document> for Vec<OriginalDescription> {
+    fn from(document: Document) -> Self {
+        let mut acts = Vec::new();
+
+        for treatment in document.treatments {
+            for section in treatment.sections {
+                match section {
+                    Section::Nomenclature(nomenclature) => {
+                        if let Some(taxon) = nomenclature.taxon {
+                            let mut acted_on = taxon.base_authority_name.clone().unwrap_or("Biota".to_string());
+                            let mut act = "unknown".to_string();
+                            let mut scientific_name = taxon.name.to_string();
+                            let status = taxon.status.clone().unwrap_or("undescribed".to_string());
+
+                            if let Ok(name) = SpeciesName::try_from(taxon) {
+                                acted_on = match name.status {
+                                    NomenclaturalActStatus::SpeciesNova => name.genus.clone(),
+                                    NomenclaturalActStatus::CombinatioNova => name.genus.clone(),
+                                    NomenclaturalActStatus::RevivedStatus => name.full_name(),
+                                    NomenclaturalActStatus::GenusSpeciesNova => name.genus.clone(),
+                                    NomenclaturalActStatus::SubspeciesNova => name.full_name(),
+                                };
+
+                                if let Ok(name_act) = NomenclaturalActStatus::try_from(status.as_str()) {
+                                    act = serde_json::to_string(&name_act).unwrap_or("unknown".to_string());
+                                }
+
+                                scientific_name = name.full_name();
+                            }
+
+                            let mut hasher = Xxh3::new();
+                            hasher.update(acted_on.as_bytes());
+                            hasher.update(scientific_name.as_bytes());
+                            let hash = hasher.digest();
+
+                            acts.push(OriginalDescription {
+                                acted_on,
+                                scientific_name,
+                                taxonomic_status: str_to_taxonomic_status(&status)
+                                    .unwrap_or(TaxonomicStatus::Undescribed),
+                                nomenclatural_act: act,
+                                source_url: None,
+                                publication: Some(document.title.clone()),
+                                created_at: Utc::now(),
+                                updated_at: Utc::now(),
+                                entity_id: hash.to_string(),
+                            });
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        acts
+    }
+}
 
 impl From<Document> for Vec<NomenclaturalActAtom> {
     fn from(document: Document) -> Self {
@@ -2964,7 +3034,7 @@ pub struct AuthorityName {
 
 impl std::fmt::Display for AuthorityName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{} {}", self.name, self.year))
+        f.write_fmt(format_args!("{}, {}", self.name, self.year))
     }
 }
 
@@ -2987,6 +3057,31 @@ impl SpeciesName {
         };
 
         name = format!("{name} {}", self.authority);
+        name
+    }
+}
+
+
+impl TaxonomicName {
+    pub fn full_name(&self) -> String {
+        let mut name = match self.rank.as_ref().map(|s| s.as_str()) {
+            Some("genus") => format!("{}", self.genus.clone().unwrap()),
+            Some("species") => {
+                format!("{} {}", self.genus.clone().unwrap(), self.species.clone().unwrap_or("".to_string()))
+                    .trim()
+                    .to_string()
+            }
+            _ => self.name.to_string(),
+        };
+
+        if let Some(auth) = &self.base_authority_name {
+            let basionym_year = self.base_authority_year.clone().unwrap_or("".to_string());
+            let basionym_auth = format!("{auth} {}", basionym_year).trim().to_string();
+            name = format!("{name} ({basionym_auth})");
+        };
+
+        let authority = self.authority.clone().unwrap_or("".to_string());
+        name = format!("{name} {}", authority).trim().to_string();
         name
     }
 }

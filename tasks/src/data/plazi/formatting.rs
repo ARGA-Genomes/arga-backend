@@ -461,6 +461,75 @@ impl Span {
 }
 
 
+impl ToString for Span {
+    fn to_string(&self) -> String {
+        use Span::*;
+
+        match self {
+            Text(text) => text.clone(),
+            Uuid(text) => text.clone(),
+            NormalizedToken(text) => text.clone(),
+            PageStartToken(text) => text.clone(),
+            Authority(text) => text.clone(),
+            Quantity(text) => text.clone(),
+            Date(text) => text.clone(),
+            CollectingRegion(text) => text.clone(),
+
+            Root(children) => flatten_span(children),
+            SubSection(children) => flatten_span(children),
+            Paragraph(children) => flatten_span(children),
+            Heading(children) => flatten_span(children),
+            Title(children) => flatten_span(children),
+            Emphasis(children) => flatten_span(children),
+            SmallCaps(children) => flatten_span(children),
+            Superscript(children) => flatten_span(children),
+            Subscript(children) => flatten_span(children),
+            TaxonomicName(children) => flatten_span(children),
+            TaxonNameAuthority(children) => flatten_span(children),
+            TreatmentCitationGroup(children) => flatten_span(children),
+            TreatmentCitation(children) => flatten_span(children),
+            FigureCitation(children) => flatten_span(children),
+            Uri(children) => flatten_span(children),
+            BibRef(children) => flatten_span(children),
+            KeyLead(children) => flatten_span(children),
+            KeyStep(children) => flatten_span(children),
+            DeterminerName(children) => flatten_span(children),
+            JournalOrPublisher(children) => flatten_span(children),
+            Year(children) => flatten_span(children),
+            Part(children) => flatten_span(children),
+            Pagination(children) => flatten_span(children),
+            AccessionNumber(children) => flatten_span(children),
+            Number(children) => flatten_span(children),
+            Author(children) => flatten_span(children),
+            Table(children) => flatten_span(children),
+            Tr(children) => flatten_span(children),
+            Th(children) => flatten_span(children),
+            Td(children) => flatten_span(children),
+            MaterialsCitation(children) => flatten_span(children),
+            SpecimenCode(code) => flatten_span(&code.children),
+
+            PageBreakToken { children, .. } => flatten_span(children),
+            BibRefCitation { children, .. } => flatten_span(children),
+            BibCitation { children, .. } => flatten_span(children),
+            CollectingCountry { children, .. } => flatten_span(children),
+            CollectionCode { children, .. } => flatten_span(children),
+            TypeStatus { children, .. } => flatten_span(children),
+        }
+    }
+}
+
+
+fn flatten_span(children: &Vec<Span>) -> String {
+    children
+        .iter()
+        .map(|child| child.to_string().trim().to_string())
+        .collect::<Vec<String>>()
+        .join(" ")
+        .trim()
+        .to_string()
+}
+
+
 #[derive(Debug)]
 pub struct SpanStack {
     stack: Vec<Span>,
