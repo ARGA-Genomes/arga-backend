@@ -3,7 +3,14 @@ use std::path::PathBuf;
 
 use arga_core::crdt::lww::Map;
 use arga_core::crdt::{Frame, Version};
-use arga_core::models::{Action, DatasetVersion, NomenclaturalActAtom, NomenclaturalActOperation, TaxonomicStatus};
+use arga_core::models::{
+    Action,
+    DatasetVersion,
+    NomenclaturalActAtom,
+    NomenclaturalActOperation,
+    NomenclaturalActType,
+    TaxonomicStatus,
+};
 use arga_core::schema;
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
@@ -45,11 +52,10 @@ where
 struct Record {
     acted_on: String,
     scientific_name: String,
-    #[serde(deserialize_with = "taxonomic_status_from_str")]
-    taxonomic_status: TaxonomicStatus,
-    nomenclatural_act: String,
+    act: NomenclaturalActType,
     source_url: Option<String>,
     publication: Option<String>,
+    publication_date: Option<String>,
 
     #[serde(deserialize_with = "date_time_from_str")]
     created_at: DateTime<Utc>,
@@ -58,23 +64,21 @@ struct Record {
 }
 
 #[derive(Debug, Default, Serialize)]
-pub struct OriginalDescription {
-    pub acted_on: String,
-    pub scientific_name: String,
-    pub taxonomic_status: TaxonomicStatus,
-    pub nomenclatural_act: String,
-    pub source_url: Option<String>,
-    pub publication: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+pub struct NomenclaturalAct {
     pub entity_id: String,
+    pub publication: String,
+    pub publication_date: String,
+    pub scientific_name: String,
+    pub acted_on: String,
+    pub act: Option<NomenclaturalActType>,
+    pub source_url: Option<String>,
 }
 
-impl From<Map<NomenclaturalActAtom>> for OriginalDescription {
+impl From<Map<NomenclaturalActAtom>> for NomenclaturalAct {
     fn from(value: Map<NomenclaturalActAtom>) -> Self {
         use NomenclaturalActAtom::*;
 
-        let mut desc = OriginalDescription {
+        let mut act = NomenclaturalAct {
             entity_id: value.entity_id,
             ..Default::default()
         };
@@ -82,20 +86,17 @@ impl From<Map<NomenclaturalActAtom>> for OriginalDescription {
         for val in value.atoms.into_values() {
             match val {
                 Empty => {}
-                ScientificName(value) => desc.scientific_name = value,
-                ActedOn(value) => desc.acted_on = value,
-                TaxonomicStatus(status) => desc.taxonomic_status = status,
-                NomenclaturalAct(value) => desc.nomenclatural_act = value,
-                SourceUrl(value) => desc.source_url = Some(value),
-                Publication(value) => desc.publication = Some(value),
-                CreatedAt(value) => desc.created_at = value,
-                UpdatedAt(value) => desc.updated_at = value,
-
+                Publication(value) => act.publication = value,
+                PublicationDate(value) => act.publication_date = value,
+                ScientificName(value) => act.scientific_name = value,
+                ActedOn(value) => act.acted_on = value,
+                Act(value) => act.act = Some(value),
+                SourceUrl(value) => act.source_url = Some(value),
                 _ => {}
             }
         }
 
-        desc
+        act
     }
 }
 
@@ -186,10 +187,7 @@ impl NomenclaturalActs {
             }
 
             frame.push(ScientificName(record.scientific_name));
-            frame.push(TaxonomicStatus(record.taxonomic_status));
-            frame.push(NomenclaturalAct(record.nomenclatural_act));
-            frame.push(CreatedAt(record.created_at));
-            frame.push(UpdatedAt(record.updated_at));
+            frame.push(Act(record.act));
 
             if let Some(source_url) = record.source_url {
                 frame.push(SourceUrl(source_url));
@@ -197,6 +195,10 @@ impl NomenclaturalActs {
 
             if let Some(publication) = record.publication {
                 frame.push(Publication(publication));
+            }
+
+            if let Some(publication_date) = record.publication_date {
+                frame.push(PublicationDate(publication_date));
             }
 
             last_version = frame.frame.current;
@@ -282,7 +284,7 @@ fn reduce_acts() -> Result<(), Error> {
     for (key, ops) in entities.into_iter() {
         let mut map = Map::new(key);
         map.reduce(&ops);
-        acts.push(OriginalDescription::from(map));
+        acts.push(NomenclaturalAct::from(map));
     }
 
     let mut writer = csv::Writer::from_writer(std::io::stdout());

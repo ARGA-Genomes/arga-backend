@@ -18,6 +18,10 @@ pub mod sql_types {
     pub struct JobStatus;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "nomenclatural_act_type"))]
+    pub struct NomenclaturalActType;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "operation_action"))]
     pub struct OperationAction;
 
@@ -464,12 +468,19 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::NomenclaturalActType;
+
     nomenclatural_acts (id) {
         id -> Uuid,
-        name -> Varchar,
-        source_url -> Nullable<Varchar>,
-        citation -> Nullable<Varchar>,
-        example -> Nullable<Varchar>,
+        entity_id -> Varchar,
+        publication_id -> Uuid,
+        name_id -> Uuid,
+        acted_on_id -> Uuid,
+        act -> NomenclaturalActType,
+        source_url -> Varchar,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -689,7 +700,6 @@ diesel::table! {
         dataset_id -> Uuid,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
-        act_id -> Uuid,
         publication_id -> Nullable<Uuid>,
         source_url -> Nullable<Varchar>,
         entity_id -> Nullable<Varchar>,
@@ -801,6 +811,7 @@ diesel::joinable!(name_attributes -> datasets (dataset_id));
 diesel::joinable!(name_attributes -> names (name_id));
 diesel::joinable!(name_publications -> datasets (dataset_id));
 diesel::joinable!(nomenclatural_act_logs -> dataset_versions (dataset_version_id));
+diesel::joinable!(nomenclatural_acts -> name_publications (publication_id));
 diesel::joinable!(organisms -> names (name_id));
 diesel::joinable!(regions -> datasets (dataset_id));
 diesel::joinable!(regions -> names (name_id));
@@ -822,7 +833,6 @@ diesel::joinable!(taxa -> datasets (dataset_id));
 diesel::joinable!(taxa_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(taxon_history -> datasets (dataset_id));
 diesel::joinable!(taxon_history -> name_publications (publication_id));
-diesel::joinable!(taxon_history -> nomenclatural_acts (act_id));
 diesel::joinable!(taxon_names -> names (name_id));
 diesel::joinable!(taxon_names -> taxa (taxon_id));
 diesel::joinable!(taxon_photos -> taxa (taxon_id));

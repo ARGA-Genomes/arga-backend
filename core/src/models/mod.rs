@@ -586,7 +586,6 @@ pub struct TaxonHistory {
     pub dataset_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub act_id: Uuid,
     pub publication_id: Option<Uuid>,
     pub source_url: Option<String>,
     pub entity_id: Option<String>,
@@ -605,14 +604,31 @@ pub struct NamePublication {
     pub record_updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Queryable, Selectable, Insertable, Debug, Default, Serialize, Deserialize)]
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::NomenclaturalActType"]
+pub enum NomenclaturalActType {
+    SpeciesNova,
+    SubspeciesNova,
+    GenusSpeciesNova,
+    CombinatioNova,
+    RevivedStatus,
+}
+
+#[derive(Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::nomenclatural_acts)]
 pub struct NomenclaturalAct {
     pub id: Uuid,
-    pub name: String,
-    pub source_url: Option<String>,
-    pub citation: Option<String>,
-    pub example: Option<String>,
+    pub entity_id: String,
+    pub publication_id: Uuid,
+    pub name_id: Uuid,
+    pub acted_on_id: Uuid,
+
+    pub act: NomenclaturalActType,
+    pub source_url: String,
+
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Queryable, Debug, Default, Serialize, Deserialize)]
@@ -653,7 +669,7 @@ pub struct Job {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Clone, Identifiable, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Identifiable, Queryable, Insertable, Selectable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::names)]
 pub struct Name {
     pub id: Uuid,

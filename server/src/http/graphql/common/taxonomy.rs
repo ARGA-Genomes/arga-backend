@@ -31,6 +31,23 @@ impl From<models::Taxon> for TaxonDetails {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject, Default)]
+pub struct Name {
+    pub scientific_name: String,
+    pub canonical_name: String,
+    pub authorship: Option<String>,
+}
+
+impl From<models::Name> for Name {
+    fn from(value: models::Name) -> Self {
+        Self {
+            scientific_name: value.scientific_name,
+            canonical_name: value.canonical_name,
+            authorship: value.authorship,
+        }
+    }
+}
+
 
 /// Taxonomic information of a species.
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject, Default)]
@@ -150,8 +167,8 @@ impl Default for TaxonomicStatus {
 
 
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-#[graphql(remote = "models::NomenclaturalActStatus")]
-pub enum NomenclaturalActStatus {
+#[graphql(remote = "models::NomenclaturalActType")]
+pub enum NomenclaturalActType {
     SpeciesNova,
     CombinatioNova,
     RevivedStatus,

@@ -4,7 +4,7 @@ use bigdecimal::ToPrimitive;
 use serde::{Deserialize, Serialize};
 
 use super::common::datasets::DatasetDetails;
-use super::common::taxonomy::{TaxonDetails, TaxonomicRank, TaxonomicStatus};
+use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::{taxa, Database};
 use crate::http::{Context as State, Error};
@@ -167,6 +167,13 @@ impl TaxonQuery {
         let history = history.into_iter().map(|r| r.into()).collect();
         Ok(history)
     }
+
+    async fn nomenclatural_acts(&self, ctx: &Context<'_>) -> Result<Vec<NomenclaturalAct>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let acts = state.database.taxa.nomenclatural_acts(&self.taxon.id).await?;
+        let acts = acts.into_iter().map(|r| r.into()).collect();
+        Ok(acts)
+    }
 }
 
 #[derive(SimpleObject)]
@@ -191,7 +198,6 @@ impl From<models::NamePublication> for NamePublication {
 #[derive(SimpleObject)]
 pub struct HistoryItem {
     pub dataset: DatasetDetails,
-    pub nomenclatural_act: String,
     pub status: TaxonomicStatus,
     pub rank: TaxonomicRank,
     pub scientific_name: String,
@@ -207,7 +213,6 @@ impl From<taxa::HistoryItem> for HistoryItem {
     fn from(value: taxa::HistoryItem) -> Self {
         Self {
             dataset: value.dataset.into(),
-            nomenclatural_act: value.act.name,
             status: value.taxon.status.into(),
             rank: value.taxon.rank.into(),
             scientific_name: value.taxon.scientific_name,
@@ -220,6 +225,30 @@ impl From<taxa::HistoryItem> for HistoryItem {
         }
     }
 }
+
+#[derive(SimpleObject)]
+pub struct NomenclaturalAct {
+    pub entity_id: String,
+    pub act: NomenclaturalActType,
+    pub source_url: String,
+    pub publication: NamePublication,
+    pub name: super::common::Name,
+    pub acted_on: super::common::Name,
+}
+
+impl From<taxa::NomenclaturalAct> for NomenclaturalAct {
+    fn from(value: taxa::NomenclaturalAct) -> Self {
+        Self {
+            entity_id: value.entity_id,
+            act: value.act.into(),
+            source_url: value.source_url,
+            publication: value.publication.into(),
+            name: value.name.into(),
+            acted_on: value.acted_on.into(),
+        }
+    }
+}
+
 
 #[derive(SimpleObject)]
 pub struct TaxonNode {

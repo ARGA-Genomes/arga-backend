@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::{schema, DatasetVersion, TaxonomicRank, TaxonomicStatus};
+use crate::models::NomenclaturalActType;
 
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::OperationAction"]
@@ -91,26 +92,16 @@ impl ToString for TaxonAtom {
     }
 }
 
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum NomenclaturalActStatus {
-    SpeciesNova,
-    CombinatioNova,
-    RevivedStatus,
-    GenusSpeciesNova,
-    SubspeciesNova,
-}
-
 #[derive(Debug)]
-pub enum NomenclaturalActStatusError {
-    InvalidTaxonStatus(String),
+pub enum NomenclaturalActTypeError {
+    InvalidNomenclaturalActType(String),
 }
 
-impl TryFrom<&str> for NomenclaturalActStatus {
-    type Error = NomenclaturalActStatusError;
+impl TryFrom<&str> for NomenclaturalActType {
+    type Error = NomenclaturalActTypeError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        use NomenclaturalActStatus::*;
+        use NomenclaturalActType::*;
 
         match value {
             "sp. nov." => Ok(SpeciesNova),
@@ -120,7 +111,7 @@ impl TryFrom<&str> for NomenclaturalActStatus {
             "stat. rev." => Ok(RevivedStatus),
             "gen. et sp. nov." => Ok(GenusSpeciesNova),
             "subsp. nov." => Ok(SubspeciesNova),
-            val => Err(NomenclaturalActStatusError::InvalidTaxonStatus(val.to_string())),
+            val => Err(NomenclaturalActTypeError::InvalidNomenclaturalActType(val.to_string())),
         }
     }
 }
@@ -130,25 +121,12 @@ impl TryFrom<&str> for NomenclaturalActStatus {
 #[diesel(sql_type = diesel::sql_types::Jsonb)]
 pub enum NomenclaturalActAtom {
     Empty,
-    ScientificName(String),
-    ActedOn(String),
-    TaxonomicStatus(TaxonomicStatus),
-    NomenclaturalAct(String),
-    SourceUrl(String),
     Publication(String),
     PublicationDate(String),
-    CreatedAt(DateTime<Utc>),
-    UpdatedAt(DateTime<Utc>),
-
-    // species name components
-    Genus(String),
-    SpecificEpithet(String),
-    BaseAuthorityName(String),
-    BaseAuthorityYear(String),
-    AuthorityName(String),
-    AuthorityYear(String),
-    Status(NomenclaturalActStatus),
-    Rank(String),
+    ScientificName(String),
+    ActedOn(String),
+    Act(NomenclaturalActType),
+    SourceUrl(String),
 }
 
 impl FromSql<Jsonb, Pg> for NomenclaturalActAtom {
@@ -170,24 +148,12 @@ impl ToString for NomenclaturalActAtom {
 
         match self {
             Empty => "Empty",
-            ScientificName(_) => "ScientificName",
-            ActedOn(_) => "ActedOn",
-            TaxonomicStatus(_) => "TaxonomicStatus",
-            NomenclaturalAct(_) => "NomenclaturalAct",
-            SourceUrl(_) => "SourceUrl",
             Publication(_) => "Publication",
             PublicationDate(_) => "PublicationDate",
-            CreatedAt(_) => "CreatedAt",
-            UpdatedAt(_) => "UpdatedAt",
-
-            Genus(_) => "Genus",
-            SpecificEpithet(_) => "SpecificEpithet",
-            BaseAuthorityName(_) => "BaseAuthorityName",
-            BaseAuthorityYear(_) => "BaseAuthorityYear",
-            AuthorityName(_) => "AuthorityName",
-            AuthorityYear(_) => "AuthorityYear",
-            Status(_) => "Status",
-            Rank(_) => "Rank",
+            ScientificName(_) => "ScientificName",
+            ActedOn(_) => "ActedOn",
+            Act(_) => "Act",
+            SourceUrl(_) => "SourceUrl",
         }
         .to_string()
     }

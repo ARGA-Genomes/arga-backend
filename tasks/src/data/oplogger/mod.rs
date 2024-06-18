@@ -15,6 +15,7 @@ use super::Error;
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
+
 #[derive(clap::Subcommand)]
 pub enum Command {
     /// Process and import a csv as operation logs

@@ -2,16 +2,18 @@ use std::io::BufRead;
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use arga_core::crdt::{Frame, Version};
 use arga_core::models::{
-    self,
+    Action,
+    DatasetVersion,
     NomenclaturalActAtom,
     NomenclaturalActOperation,
-    NomenclaturalActStatus,
-    NomenclaturalActStatusError,
-    TaxonomicRank,
+    NomenclaturalActType,
+    NomenclaturalActTypeError,
     TaxonomicStatus,
 };
 use arga_core::schema;
+use bigdecimal::BigDecimal;
 use chrono::Utc;
 use diesel::*;
 use quick_xml::events::{BytesEnd, BytesStart, Event};
@@ -24,7 +26,6 @@ use super::formatting::{
     BibCitation,
     BibRef,
     Citation,
-    Classification,
     CollectingCountry,
     CollectingRegion,
     CollectionCode,
@@ -41,7 +42,7 @@ use super::formatting::{
     Uuid,
 };
 use crate::data::oplogger::get_pool;
-use crate::data::oplogger::nomenclatural_acts::{str_to_taxonomic_status, OriginalDescription};
+use crate::data::oplogger::nomenclatural_acts::NomenclaturalAct as OriginalDescription;
 use crate::data::plazi::formatting::{Span, SpanStack};
 use crate::data::{Error, ParseError};
 
@@ -377,36 +378,36 @@ pub struct MaterialsCitation;
 pub struct Footnote;
 
 
-#[derive(Debug)]
-enum State {
-    Root,
-    Document,
-}
-
-
-pub fn import(input_dir: PathBuf) -> Result<(), Error> {
-    // info!("Enumerating files in '{input_dir:?}'");
-    let mut treatments = Vec::new();
+pub fn import(input_dir: PathBuf, dataset_version: DatasetVersion) -> Result<(), Error> {
+    info!("Enumerating files in '{input_dir:?}'");
     let files = xml_files(input_dir)?;
 
+    let mut last_version = Version::new();
+    let mut operations: Vec<NomenclaturalActOperation> = Vec::new();
+
     for (idx, file) in files.iter().enumerate() {
-        // info!("Reading file {idx}: {file:?}");
-        // println!("{}", file.as_os_str().to_string_lossy());
+        info!("Reading file {idx}: {file:?}");
+        println!("{}", file.as_os_str().to_string_lossy());
 
-        let documents = read_file(&file)?;
-        let descriptions: Vec<OriginalDescription> = documents
-            .into_iter()
-            .map(|d| Vec::<OriginalDescription>::from(d))
-            // .map(|d| Vec::<NomenclaturalActAtom>::from(d))
-            .flatten()
-            .collect();
+        for document in read_file(&file)? {
+            let mut hasher = Xxh3::new();
+            hasher.update(document.title.as_bytes());
+            let hash = hasher.digest();
 
-        // println!("{descriptions:#?}");
-        treatments.extend(descriptions);
+            let mut frame = NomenclaturalActFrame::create(dataset_version.id, hash.to_string(), last_version);
+
+            for atom in Vec::<NomenclaturalActAtom>::from(document) {
+                frame.push(atom);
+            }
+
+            last_version = frame.frame.current;
+            operations.extend(frame.frame.operations);
+        }
     }
 
-    import_treatments(treatments)?;
-    // info!("Importing {} XML files", files.len());
+    import_operations(operations)?;
+
+    info!("Importing {} XML files", files.len());
     Ok(())
 }
 
@@ -2807,17 +2808,19 @@ impl<T: BufRead> ParseFormat<T> for FormattedValue {
 }
 
 
-fn import_treatments(treatments: Vec<OriginalDescription>) -> Result<(), Error> {
+fn import_treatments(treatments: Vec<NomenclaturalActAtom>) -> Result<(), Error> {
     let mut writer = csv::Writer::from_writer(std::io::stdout());
 
-    for treatment in treatments {
-        writer.serialize(treatment)?;
-    }
+    // for treatment in treatments {
+    //     writer.serialize(treatment)?;
+    // }
 
-    // use schema::nomenclatural_act_logs::dsl::*;
+    use schema::nomenclatural_act_logs::dsl::*;
 
-    // let pool = get_pool()?;
-    // let mut conn = pool.get()?;
+    let pool = get_pool()?;
+    let mut conn = pool.get()?;
+
+    println!("{treatments:#?}");
 
     // for chunk in treatments.chunks(1000) {
     //     diesel::insert_into(nomenclatural_act_logs)
@@ -2827,6 +2830,22 @@ fn import_treatments(treatments: Vec<OriginalDescription>) -> Result<(), Error> 
 
     Ok(())
 }
+
+fn import_operations(operations: Vec<NomenclaturalActOperation>) -> Result<(), Error> {
+    use schema::nomenclatural_act_logs::dsl::*;
+
+    let pool = get_pool()?;
+    let mut conn = pool.get()?;
+
+    for chunk in operations.chunks(1000) {
+        diesel::insert_into(nomenclatural_act_logs)
+            .values(chunk)
+            .execute(&mut conn)?;
+    }
+
+    Ok(())
+}
+
 
 impl From<Document> for Vec<OriginalDescription> {
     fn from(document: Document) -> Self {
@@ -2843,15 +2862,15 @@ impl From<Document> for Vec<OriginalDescription> {
                             let status = taxon.status.clone().unwrap_or("undescribed".to_string());
 
                             if let Ok(name) = SpeciesName::try_from(taxon) {
-                                acted_on = match name.status {
-                                    NomenclaturalActStatus::SpeciesNova => name.genus.clone(),
-                                    NomenclaturalActStatus::CombinatioNova => name.genus.clone(),
-                                    NomenclaturalActStatus::RevivedStatus => name.full_name(),
-                                    NomenclaturalActStatus::GenusSpeciesNova => name.genus.clone(),
-                                    NomenclaturalActStatus::SubspeciesNova => name.full_name(),
+                                acted_on = match name.act {
+                                    NomenclaturalActType::SpeciesNova => name.genus.clone(),
+                                    NomenclaturalActType::CombinatioNova => name.genus.clone(),
+                                    NomenclaturalActType::RevivedStatus => name.full_name(),
+                                    NomenclaturalActType::GenusSpeciesNova => name.genus.clone(),
+                                    NomenclaturalActType::SubspeciesNova => name.full_name(),
                                 };
 
-                                if let Ok(name_act) = NomenclaturalActStatus::try_from(status.as_str()) {
+                                if let Ok(name_act) = NomenclaturalActType::try_from(status.as_str()) {
                                     act = serde_json::to_string(&name_act).unwrap_or("unknown".to_string());
                                 }
 
@@ -2862,19 +2881,6 @@ impl From<Document> for Vec<OriginalDescription> {
                             hasher.update(acted_on.as_bytes());
                             hasher.update(scientific_name.as_bytes());
                             let hash = hasher.digest();
-
-                            acts.push(OriginalDescription {
-                                acted_on,
-                                scientific_name,
-                                taxonomic_status: str_to_taxonomic_status(&status)
-                                    .unwrap_or(TaxonomicStatus::Undescribed),
-                                nomenclatural_act: act,
-                                source_url: None,
-                                publication: Some(document.title.clone()),
-                                created_at: Utc::now(),
-                                updated_at: Utc::now(),
-                                entity_id: hash.to_string(),
-                            });
                         }
                     }
                     _ => {}
@@ -2902,7 +2908,6 @@ impl From<Document> for Vec<NomenclaturalActAtom> {
                             operations.push(Publication(document.title.clone()));
                             operations.push(PublicationDate(document.date_issued.clone()));
                             operations.push(SourceUrl(treatment.http_uri.clone()));
-                            operations.push(NomenclaturalAct("original description".to_string()));
                         }
                     }
                     _ => {}
@@ -2944,26 +2949,27 @@ impl From<TaxonomicName> for Vec<NomenclaturalActAtom> {
 
         match SpeciesName::try_from(value) {
             Ok(name) => {
-                match name.status {
-                    NomenclaturalActStatus::SpeciesNova => operations.push(ActedOn(name.genus.clone())),
-                    NomenclaturalActStatus::CombinatioNova => operations.push(ActedOn(name.genus.clone())),
-                    NomenclaturalActStatus::RevivedStatus => operations.push(ActedOn(name.full_name())),
-                    NomenclaturalActStatus::GenusSpeciesNova => operations.push(ActedOn(name.genus.clone())),
-                    NomenclaturalActStatus::SubspeciesNova => operations.push(ActedOn(name.full_name())),
+                match name.act {
+                    NomenclaturalActType::SpeciesNova => operations.push(ActedOn(name.genus.clone())),
+                    NomenclaturalActType::CombinatioNova => operations.push(ActedOn(name.genus.clone())),
+                    NomenclaturalActType::RevivedStatus => operations.push(ActedOn(name.full_name())),
+                    NomenclaturalActType::GenusSpeciesNova => operations.push(ActedOn(name.genus.clone())),
+                    NomenclaturalActType::SubspeciesNova => operations.push(ActedOn(name.full_name())),
                 };
 
                 operations.push(ScientificName(name.full_name()));
-                operations.push(Genus(name.genus));
-                operations.push(SpecificEpithet(name.specific_epithet));
-                operations.push(AuthorityName(name.authority.name));
-                operations.push(AuthorityYear(name.authority.year));
-                operations.push(Status(name.status));
-                operations.push(Rank(name.rank));
+                operations.push(Act(name.act));
 
-                if let Some(authority) = name.base_authority {
-                    operations.push(BaseAuthorityName(authority.name));
-                    operations.push(BaseAuthorityYear(authority.year));
-                }
+                // operations.push(Genus(name.genus));
+                // operations.push(SpecificEpithet(name.specific_epithet));
+                // operations.push(AuthorityName(name.authority.name));
+                // operations.push(AuthorityYear(name.authority.year));
+                // operations.push(Rank(name.rank));
+
+                // if let Some(authority) = name.base_authority {
+                //     operations.push(BaseAuthorityName(authority.name));
+                //     operations.push(BaseAuthorityYear(authority.year));
+                // }
             }
             Err(err) => println!("{err:#?}"),
         }
@@ -2994,7 +3000,7 @@ impl TryFrom<TaxonomicName> for SpeciesName {
         };
 
         let status = value.status.ok_or(SpeciesNameError::MissingStatus)?;
-        let status = NomenclaturalActStatus::try_from(status.as_str())?;
+        let act = NomenclaturalActType::try_from(status.as_str())?;
         let rank = value.rank.ok_or(SpeciesNameError::MissingRank)?;
 
         Ok(SpeciesName {
@@ -3002,7 +3008,7 @@ impl TryFrom<TaxonomicName> for SpeciesName {
             specific_epithet,
             base_authority,
             authority,
-            status,
+            act,
             rank,
         })
     }
@@ -3015,12 +3021,12 @@ pub enum SpeciesNameError {
     MissingAuthority,
     InvalidAuthority,
     MissingStatus,
-    InvalidStatus(NomenclaturalActStatusError),
+    InvalidStatus(NomenclaturalActTypeError),
     MissingRank,
 }
 
-impl From<NomenclaturalActStatusError> for SpeciesNameError {
-    fn from(value: NomenclaturalActStatusError) -> Self {
+impl From<NomenclaturalActTypeError> for SpeciesNameError {
+    fn from(value: NomenclaturalActTypeError) -> Self {
         SpeciesNameError::InvalidStatus(value)
     }
 }
@@ -3044,7 +3050,7 @@ pub struct SpeciesName {
     pub specific_epithet: String,
     pub base_authority: Option<AuthorityName>,
     pub authority: AuthorityName,
-    pub status: NomenclaturalActStatus,
+    pub act: NomenclaturalActType,
     pub rank: String,
 }
 
@@ -3083,5 +3089,58 @@ impl TaxonomicName {
         let authority = self.authority.clone().unwrap_or("".to_string());
         name = format!("{name} {}", authority).trim().to_string();
         name
+    }
+}
+
+
+pub struct NomenclaturalActFrame {
+    dataset_version_id: uuid::Uuid,
+    entity_id: String,
+    frame: Frame<NomenclaturalActOperation>,
+}
+
+impl NomenclaturalActFrame {
+    pub fn create(dataset_version_id: uuid::Uuid, entity_id: String, last_version: Version) -> NomenclaturalActFrame {
+        let mut frame = Frame::new(last_version);
+
+        frame.push(NomenclaturalActOperation {
+            operation_id: frame.next.into(),
+            parent_id: frame.current.into(),
+            dataset_version_id,
+            entity_id: entity_id.clone(),
+            action: Action::Create,
+            atom: NomenclaturalActAtom::Empty,
+        });
+
+        NomenclaturalActFrame {
+            dataset_version_id,
+            entity_id,
+            frame,
+        }
+    }
+
+    pub fn push(&mut self, atom: NomenclaturalActAtom) {
+        let operation_id: BigDecimal = self.frame.next.into();
+        let parent_id = self
+            .frame
+            .operations
+            .last()
+            .map(|op| op.operation_id.clone())
+            .unwrap_or(operation_id.clone());
+
+        let op = NomenclaturalActOperation {
+            operation_id,
+            parent_id,
+            dataset_version_id: self.dataset_version_id,
+            entity_id: self.entity_id.clone(),
+            action: Action::Update,
+            atom,
+        };
+
+        self.frame.push(op);
+    }
+
+    pub fn operations(&self) -> &Vec<NomenclaturalActOperation> {
+        &self.frame.operations
     }
 }
