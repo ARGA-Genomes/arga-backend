@@ -123,10 +123,16 @@ pub enum NomenclaturalActAtom {
     Empty,
     Publication(String),
     PublicationDate(String),
-    ScientificName(String),
     ActedOn(String),
     Act(NomenclaturalActType),
     SourceUrl(String),
+
+    ScientificName(String),
+    CanonicalName(String),
+    AuthorityName(String),
+    AuthorityYear(String),
+    BasionymAuthorityName(String),
+    BasionymAuthorityYear(String),
 }
 
 impl FromSql<Jsonb, Pg> for NomenclaturalActAtom {
@@ -150,10 +156,16 @@ impl ToString for NomenclaturalActAtom {
             Empty => "Empty",
             Publication(_) => "Publication",
             PublicationDate(_) => "PublicationDate",
-            ScientificName(_) => "ScientificName",
             ActedOn(_) => "ActedOn",
             Act(_) => "Act",
             SourceUrl(_) => "SourceUrl",
+
+            ScientificName(_) => "ScientificName",
+            CanonicalName(_) => "CanonicalName",
+            AuthorityName(_) => "AuthorityName",
+            AuthorityYear(_) => "AuthorityYear",
+            BasionymAuthorityName(_) => "BasionymAuthorityName",
+            BasionymAuthorityYear(_) => "BasionymAuthorityYear",
         }
         .to_string()
     }

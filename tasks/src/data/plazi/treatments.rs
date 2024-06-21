@@ -10,11 +10,9 @@ use arga_core::models::{
     NomenclaturalActOperation,
     NomenclaturalActType,
     NomenclaturalActTypeError,
-    TaxonomicStatus,
 };
 use arga_core::schema;
 use bigdecimal::BigDecimal;
-use chrono::Utc;
 use diesel::*;
 use quick_xml::events::{BytesEnd, BytesStart, Event};
 use quick_xml::name::QName;
@@ -42,7 +40,6 @@ use super::formatting::{
     Uuid,
 };
 use crate::data::oplogger::get_pool;
-use crate::data::oplogger::nomenclatural_acts::NomenclaturalAct as OriginalDescription;
 use crate::data::plazi::formatting::{Span, SpanStack};
 use crate::data::{Error, ParseError};
 
@@ -335,7 +332,9 @@ pub struct TaxonomicName {
     pub family: Option<String>,
     pub order: Option<String>,
     pub genus: Option<String>,
+    pub subgenus: Option<String>,
     pub species: Option<String>,
+    pub subspecies: Option<String>,
 
     // pub canonical_name: String,
     pub name: Span,
@@ -1520,7 +1519,9 @@ impl<T: BufRead> ParseSection<T> for TaxonomicName {
             family: parse_attribute_opt(reader, event, "family")?,
             order: parse_attribute_opt(reader, event, "order")?,
             genus: parse_attribute_opt(reader, event, "genus")?,
+            subgenus: parse_attribute_opt(reader, event, "subGenus")?,
             species: parse_attribute_opt(reader, event, "species")?,
+            subspecies: parse_attribute_opt(reader, event, "subSpecies")?,
             name: unwrap_element(stack.pop(), "text")?,
             taxon_label,
         })
@@ -2808,29 +2809,6 @@ impl<T: BufRead> ParseFormat<T> for FormattedValue {
 }
 
 
-fn import_treatments(treatments: Vec<NomenclaturalActAtom>) -> Result<(), Error> {
-    let mut writer = csv::Writer::from_writer(std::io::stdout());
-
-    // for treatment in treatments {
-    //     writer.serialize(treatment)?;
-    // }
-
-    use schema::nomenclatural_act_logs::dsl::*;
-
-    let pool = get_pool()?;
-    let mut conn = pool.get()?;
-
-    println!("{treatments:#?}");
-
-    // for chunk in treatments.chunks(1000) {
-    //     diesel::insert_into(nomenclatural_act_logs)
-    //         .values(chunk)
-    //         .execute(&mut conn)?;
-    // }
-
-    Ok(())
-}
-
 fn import_operations(operations: Vec<NomenclaturalActOperation>) -> Result<(), Error> {
     use schema::nomenclatural_act_logs::dsl::*;
 
@@ -2846,51 +2824,6 @@ fn import_operations(operations: Vec<NomenclaturalActOperation>) -> Result<(), E
     Ok(())
 }
 
-
-impl From<Document> for Vec<OriginalDescription> {
-    fn from(document: Document) -> Self {
-        let mut acts = Vec::new();
-
-        for treatment in document.treatments {
-            for section in treatment.sections {
-                match section {
-                    Section::Nomenclature(nomenclature) => {
-                        if let Some(taxon) = nomenclature.taxon {
-                            let mut acted_on = taxon.base_authority_name.clone().unwrap_or("Biota".to_string());
-                            let mut act = "unknown".to_string();
-                            let mut scientific_name = taxon.name.to_string();
-                            let status = taxon.status.clone().unwrap_or("undescribed".to_string());
-
-                            if let Ok(name) = SpeciesName::try_from(taxon) {
-                                acted_on = match name.act {
-                                    NomenclaturalActType::SpeciesNova => name.genus.clone(),
-                                    NomenclaturalActType::CombinatioNova => name.genus.clone(),
-                                    NomenclaturalActType::RevivedStatus => name.full_name(),
-                                    NomenclaturalActType::GenusSpeciesNova => name.genus.clone(),
-                                    NomenclaturalActType::SubspeciesNova => name.full_name(),
-                                };
-
-                                if let Ok(name_act) = NomenclaturalActType::try_from(status.as_str()) {
-                                    act = serde_json::to_string(&name_act).unwrap_or("unknown".to_string());
-                                }
-
-                                scientific_name = name.full_name();
-                            }
-
-                            let mut hasher = Xxh3::new();
-                            hasher.update(acted_on.as_bytes());
-                            hasher.update(scientific_name.as_bytes());
-                            let hash = hasher.digest();
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
-
-        acts
-    }
-}
 
 impl From<Document> for Vec<NomenclaturalActAtom> {
     fn from(document: Document) -> Self {
@@ -2949,121 +2882,39 @@ impl From<TaxonomicName> for Vec<NomenclaturalActAtom> {
 
         match SpeciesName::try_from(value) {
             Ok(name) => {
-                match name.act {
-                    NomenclaturalActType::SpeciesNova => operations.push(ActedOn(name.genus.clone())),
-                    NomenclaturalActType::CombinatioNova => operations.push(ActedOn(name.genus.clone())),
-                    NomenclaturalActType::RevivedStatus => operations.push(ActedOn(name.full_name())),
-                    NomenclaturalActType::GenusSpeciesNova => operations.push(ActedOn(name.genus.clone())),
-                    NomenclaturalActType::SubspeciesNova => operations.push(ActedOn(name.full_name())),
-                };
+                // match name.act {
+                //     Some(NomenclaturalActType::SpeciesNova) => operations.push(ActedOn("Biota".to_string())),
+                //     Some(NomenclaturalActType::CombinatioNova) => operations.push(ActedOn(name.genus.clone())),
+                //     Some(NomenclaturalActType::RevivedStatus) => operations.push(ActedOn(name.full_name())),
+                //     Some(NomenclaturalActType::GenusSpeciesNova) => operations.push(ActedOn(name.genus.clone())),
+                //     Some(NomenclaturalActType::SubspeciesNova) => operations.push(ActedOn(name.full_name())),
+                //     None => {}
+                // };
 
-                operations.push(ScientificName(name.full_name()));
-                operations.push(Act(name.act));
+                if let Some(act) = name.act {
+                    operations.push(Act(act));
+                }
+                // operations.push(Rank(name.rank));
 
                 // operations.push(Genus(name.genus));
                 // operations.push(SpecificEpithet(name.specific_epithet));
-                // operations.push(AuthorityName(name.authority.name));
-                // operations.push(AuthorityYear(name.authority.year));
-                // operations.push(Rank(name.rank));
+                operations.push(ScientificName(name.scientific_name));
+                operations.push(CanonicalName(name.canonical_name));
 
-                // if let Some(authority) = name.base_authority {
-                //     operations.push(BaseAuthorityName(authority.name));
-                //     operations.push(BaseAuthorityYear(authority.year));
-                // }
+                if let Some(authority) = name.authority {
+                    operations.push(AuthorityName(authority.name));
+                    operations.push(AuthorityYear(authority.year));
+                }
+
+                if let Some(authority) = name.basionym_authority {
+                    operations.push(BasionymAuthorityName(authority.name));
+                    operations.push(BasionymAuthorityYear(authority.year));
+                }
             }
             Err(err) => println!("{err:#?}"),
         }
 
         operations
-    }
-}
-
-impl TryFrom<TaxonomicName> for SpeciesName {
-    type Error = SpeciesNameError;
-
-    fn try_from(value: TaxonomicName) -> Result<Self, Self::Error> {
-        let genus = value.genus.ok_or(SpeciesNameError::MissingGenus)?;
-        let specific_epithet = value.species.ok_or(SpeciesNameError::MissingSpecificEpithet)?;
-
-        let authority = match (value.authority_name, value.authority_year) {
-            (Some(name), Some(year)) => Ok(AuthorityName {
-                name,
-                year: year.to_string(),
-            }),
-            (None, None) => Err(SpeciesNameError::MissingAuthority),
-            _ => Err(SpeciesNameError::InvalidAuthority),
-        }?;
-
-        let base_authority = match (value.base_authority_name, value.base_authority_year) {
-            (Some(name), Some(year)) => Some(AuthorityName { name, year }),
-            _ => None,
-        };
-
-        let status = value.status.ok_or(SpeciesNameError::MissingStatus)?;
-        let act = NomenclaturalActType::try_from(status.as_str())?;
-        let rank = value.rank.ok_or(SpeciesNameError::MissingRank)?;
-
-        Ok(SpeciesName {
-            genus,
-            specific_epithet,
-            base_authority,
-            authority,
-            act,
-            rank,
-        })
-    }
-}
-
-#[derive(Debug)]
-pub enum SpeciesNameError {
-    MissingGenus,
-    MissingSpecificEpithet,
-    MissingAuthority,
-    InvalidAuthority,
-    MissingStatus,
-    InvalidStatus(NomenclaturalActTypeError),
-    MissingRank,
-}
-
-impl From<NomenclaturalActTypeError> for SpeciesNameError {
-    fn from(value: NomenclaturalActTypeError) -> Self {
-        SpeciesNameError::InvalidStatus(value)
-    }
-}
-
-
-#[derive(Debug)]
-pub struct AuthorityName {
-    pub name: String,
-    pub year: String,
-}
-
-impl std::fmt::Display for AuthorityName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}, {}", self.name, self.year))
-    }
-}
-
-#[derive(Debug)]
-pub struct SpeciesName {
-    pub genus: String,
-    pub specific_epithet: String,
-    pub base_authority: Option<AuthorityName>,
-    pub authority: AuthorityName,
-    pub act: NomenclaturalActType,
-    pub rank: String,
-}
-
-impl SpeciesName {
-    pub fn full_name(&self) -> String {
-        let mut name = format!("{} {}", self.genus, self.specific_epithet);
-
-        if let Some(authority) = &self.base_authority {
-            name = format!("{name} ({authority})");
-        };
-
-        name = format!("{name} {}", self.authority);
-        name
     }
 }
 
@@ -3089,6 +2940,101 @@ impl TaxonomicName {
         let authority = self.authority.clone().unwrap_or("".to_string());
         name = format!("{name} {}", authority).trim().to_string();
         name
+    }
+}
+
+
+#[derive(Debug)]
+pub struct AuthorityName {
+    pub name: String,
+    pub year: String,
+}
+
+impl std::fmt::Display for AuthorityName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}, {}", self.name, self.year))
+    }
+}
+
+#[derive(Debug)]
+pub struct SpeciesName {
+    pub act: Option<NomenclaturalActType>,
+    pub rank: String,
+
+    pub scientific_name: String,
+    pub canonical_name: String,
+    pub authority: Option<AuthorityName>,
+    pub basionym_authority: Option<AuthorityName>,
+}
+
+
+impl TryFrom<TaxonomicName> for SpeciesName {
+    type Error = SpeciesNameError;
+
+    fn try_from(value: TaxonomicName) -> Result<Self, Self::Error> {
+        // construct canonical name from parsed name, matched to a taxon
+        let genus = value.genus.ok_or(SpeciesNameError::MissingGenus)?;
+        let specific_epithet = value.species.ok_or(SpeciesNameError::MissingSpecificEpithet)?;
+
+        let canonical_name = match value.subgenus {
+            Some(subgenus) => format!("{} {subgenus} {}", genus, specific_epithet),
+            None => format!("{} {}", genus, specific_epithet),
+        };
+
+        let authority = match (value.authority_name, value.authority_year) {
+            (Some(name), Some(year)) => Some(AuthorityName {
+                name,
+                year: year.to_string(),
+            }),
+            _ => None,
+        };
+
+        let basionym_authority = match (value.base_authority_name, value.base_authority_year) {
+            (Some(name), Some(year)) => Some(AuthorityName { name, year }),
+            _ => None,
+        };
+
+        let act = match value.status {
+            Some(status) => NomenclaturalActType::try_from(status.as_str()).ok(),
+            None => None,
+        };
+        // let status = value.status.ok_or(SpeciesNameError::MissingStatus)?;
+        // let act = NomenclaturalActType::try_from(status.as_str())?;
+        let rank = value.rank.ok_or(SpeciesNameError::MissingRank)?;
+
+        // construct scientific name
+        let scientific_name = match (&authority, &basionym_authority) {
+            (Some(auth), Some(base)) => format!("{canonical_name} ({base}) {auth}"),
+            (Some(auth), None) => format!("{canonical_name} {auth}"),
+            (None, Some(base)) => format!("{canonical_name} ({base})"),
+            (None, None) => canonical_name.clone(),
+        };
+
+        Ok(SpeciesName {
+            act,
+            rank,
+            scientific_name,
+            canonical_name,
+            authority,
+            basionym_authority,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub enum SpeciesNameError {
+    MissingGenus,
+    MissingSpecificEpithet,
+    MissingAuthority,
+    InvalidAuthority,
+    MissingStatus,
+    InvalidStatus(NomenclaturalActTypeError),
+    MissingRank,
+}
+
+impl From<NomenclaturalActTypeError> for SpeciesNameError {
+    fn from(value: NomenclaturalActTypeError) -> Self {
+        SpeciesNameError::InvalidStatus(value)
     }
 }
 

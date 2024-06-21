@@ -174,6 +174,7 @@ pub enum NomenclaturalActType {
     RevivedStatus,
     GenusSpeciesNova,
     SubspeciesNova,
+    NameUsage,
 }
 
 

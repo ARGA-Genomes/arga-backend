@@ -20,9 +20,11 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
     entity_id: String,
-    acted_on: String,
+    acted_on: Option<String>,
     scientific_name: String,
-    act: NomenclaturalActType,
+
+    #[serde(deserialize_with = "nomenclatural_act_opt")]
+    act: Option<NomenclaturalActType>,
     source_url: String,
     publication: String,
     publication_date: Option<String>,
@@ -51,7 +53,8 @@ fn extract_acts(
     let acts = records
         .par_iter()
         .map(|row| {
-            let acted_on = names.get(&row.acted_on);
+            let acted_on = row.acted_on.clone().unwrap_or("Biota".to_string());
+            let acted_on = names.get(&acted_on);
             let name = names.get(&row.scientific_name);
             let publication = publications.get(&row.publication);
 
@@ -62,7 +65,7 @@ fn extract_acts(
                     name_id: name.id,
                     acted_on_id: acted_on.id,
                     publication_id: publication.clone(),
-                    act: row.act.clone(),
+                    act: row.act.clone().unwrap_or(NomenclaturalActType::NameUsage),
                     source_url: row.source_url.clone(),
                     created_at: Utc::now(),
                     updated_at: Utc::now(),
@@ -96,4 +99,28 @@ fn publications_map(pool: &mut PgPool) -> Result<PublicationMap, Error> {
     }
 
     Ok(map)
+}
+
+
+pub fn nomenclatural_act_opt<'de, D>(deserializer: D) -> Result<Option<NomenclaturalActType>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use NomenclaturalActType::*;
+
+    let s: Option<String> = Deserialize::deserialize(deserializer)?;
+
+    Ok(match s {
+        None => None,
+        Some(s) => match s.as_str() {
+            "SpeciesNova" => Some(SpeciesNova),
+            "SubspeciesNova" => Some(SubspeciesNova),
+            "GenusSpeciesNova" => Some(GenusSpeciesNova),
+            "CombinatioNova" => Some(CombinatioNova),
+            "RevivedStatus" => Some(RevivedStatus),
+            "NameUsage" => Some(NameUsage),
+            "" => None,
+            _ => None,
+        },
+    })
 }

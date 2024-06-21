@@ -7,7 +7,8 @@ CREATE TYPE nomenclatural_act_type AS ENUM (
   'subspecies_nova',
   'genus_species_nova',
   'combinatio_nova',
-  'revived_status'
+  'revived_status',
+  'name_usage'
 );
 
 

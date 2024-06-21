@@ -75,20 +75,21 @@ pub enum TaxonAtomTextType {
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum NomenclaturalActAtomTextType {
     Empty,
-    ScientificName,
     ActedOn,
     Act,
     SourceUrl,
     Publication,
     PublicationDate,
 
-    Genus,
-    SpecificEpithet,
-    BaseAuthorityName,
-    BaseAuthorityYear,
+    ScientificName,
+    CanonicalName,
     AuthorityName,
     AuthorityYear,
+    BasionymAuthorityName,
+    BasionymAuthorityYear,
 
+    Genus,
+    SpecificEpithet,
     Rank,
 }
 
@@ -254,10 +255,15 @@ impl From<models::NomenclaturalActAtom> for NomenclaturalActAtom {
             Empty => Atom::text(Text::Empty, "".to_string()),
             Publication(value) => Atom::text(Text::Publication, value),
             PublicationDate(value) => Atom::text(Text::PublicationDate, value),
-            ScientificName(value) => Atom::text(Text::ScientificName, value),
             ActedOn(value) => Atom::text(Text::ActedOn, value),
             Act(value) => Atom::act(NomenclaturalActAtomActType::NomenclaturalActType, value.into()),
             SourceUrl(value) => Atom::text(Text::SourceUrl, value),
+            ScientificName(value) => Atom::text(Text::ScientificName, value),
+            CanonicalName(value) => Atom::text(Text::CanonicalName, value),
+            AuthorityName(value) => Atom::text(Text::AuthorityName, value),
+            AuthorityYear(value) => Atom::text(Text::AuthorityYear, value),
+            BasionymAuthorityName(value) => Atom::text(Text::BasionymAuthorityName, value),
+            BasionymAuthorityYear(value) => Atom::text(Text::BasionymAuthorityYear, value),
         }
     }
 }
