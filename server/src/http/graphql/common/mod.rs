@@ -22,7 +22,7 @@ pub use filters::{
     WholeGenomeFilterType,
 };
 pub use species::{SpeciesCard, SpeciesDataSummary, SpeciesPhoto};
-pub use taxonomy::{Name, Taxonomy};
+pub use taxonomy::{NameDetails, Taxonomy};
 
 use super::markers::SpeciesMarker;
 use super::species::{GenomicComponent, SpecimenSummary, WholeGenome};

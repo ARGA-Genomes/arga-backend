@@ -24,3 +24,4 @@ pub mod subsample_extractor;
 pub mod classification_extractor;
 pub mod name_publication_extractor;
 pub mod nomenclatural_act_extractor;
+pub mod taxonomic_act_extractor;

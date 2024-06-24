@@ -26,6 +26,7 @@ use super::importers::{
     name_attribute_importer,
     name_importer,
     name_publication_importer,
+    nomenclatural_act_importer,
     region_importer,
     sequence_importer,
     source_importer,
@@ -33,9 +34,9 @@ use super::importers::{
     // taxon_importer,
     taxon_history_importer,
     taxon_photo_importer,
+    taxonomic_act_importer,
     vernacular_importer,
 };
-use crate::importers::nomenclatural_act_importer;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -138,6 +139,7 @@ impl ThreadedJob {
             "import_classification" => classification_importer::import(path, pool)?,
             "import_name_publication" => name_publication_importer::import(path, &dataset?, pool)?,
             "import_nomenclatural_act" => nomenclatural_act_importer::import(path, pool)?,
+            "import_taxonomic_act" => taxonomic_act_importer::import(path, pool)?,
             _ => panic!("Unknown job worker: {}", worker),
         }
 

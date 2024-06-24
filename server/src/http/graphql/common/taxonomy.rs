@@ -32,13 +32,13 @@ impl From<models::Taxon> for TaxonDetails {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject, Default)]
-pub struct Name {
+pub struct NameDetails {
     pub scientific_name: String,
     pub canonical_name: String,
     pub authorship: Option<String>,
 }
 
-impl From<models::Name> for Name {
+impl From<models::Name> for NameDetails {
     fn from(value: models::Name) -> Self {
         Self {
             scientific_name: value.scientific_name,

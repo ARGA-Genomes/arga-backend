@@ -632,6 +632,32 @@ pub struct NomenclaturalAct {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::TaxonomicActType"]
+pub enum TaxonomicActType {
+    Unaccepted,
+    Synonym,
+    Homonym,
+    NomenclaturalSynonym,
+    TaxonomicSynonym,
+    ReplacedSynonym,
+}
+
+#[derive(Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::taxonomic_acts)]
+pub struct TaxonomicAct {
+    pub id: Uuid,
+    pub entity_id: String,
+    pub taxon_id: Uuid,
+    pub accepted_taxon_id: Option<Uuid>,
+
+    pub act: TaxonomicActType,
+    pub source_url: Option<String>,
+
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Queryable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema_gnl::undescribed_species)]
 pub struct UndescribedSpecies {

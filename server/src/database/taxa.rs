@@ -367,7 +367,13 @@ impl TaxaProvider {
     }
 
     pub async fn nomenclatural_acts(&self, taxon_id: &Uuid) -> Result<Vec<NomenclaturalAct>, Error> {
-        use schema::{name_publications as publications, names, nomenclatural_acts as acts, taxon_names};
+        use schema::{
+            name_publications as publications,
+            names,
+            nomenclatural_acts as acts,
+            taxon_names,
+            taxonomic_acts,
+        };
         let mut conn = self.pool.get().await?;
 
         let name_ids = taxon_names::table
@@ -376,14 +382,24 @@ impl TaxaProvider {
             .into_boxed();
 
         let taxon_ids = taxon_names::table
+            .left_join(taxonomic_acts::table.on(taxon_names::taxon_id.eq(taxonomic_acts::taxon_id)))
             .select(taxon_names::taxon_id)
             .filter(taxon_names::name_id.eq_any(name_ids))
+            .or_filter(taxonomic_acts::accepted_taxon_id.eq(taxon_id))
+            .load::<Uuid>(&mut conn)
+            .await?;
+
+        let synonym_taxon_ids = taxonomic_acts::table
+            .select(taxonomic_acts::taxon_id)
+            .filter(taxonomic_acts::taxon_id.eq_any(&taxon_ids))
+            .or_filter(taxonomic_acts::accepted_taxon_id.eq_any(&taxon_ids))
             .load::<Uuid>(&mut conn)
             .await?;
 
         let name_ids = taxon_names::table
             .select(taxon_names::name_id)
             .filter(taxon_names::taxon_id.eq_any(taxon_ids))
+            .or_filter(taxon_names::taxon_id.eq_any(synonym_taxon_ids))
             .into_boxed();
 
         let acted_on = diesel::alias!(names as acted_on);

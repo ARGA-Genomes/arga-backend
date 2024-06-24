@@ -30,6 +30,10 @@ pub mod sql_types {
     pub struct RegionType;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "taxonomic_act_type"))]
+    pub struct TaxonomicActType;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "taxonomic_rank"))]
     pub struct TaxonomicRank;
 
@@ -727,6 +731,36 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    taxonomic_act_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::TaxonomicActType;
+
+    taxonomic_acts (id) {
+        id -> Uuid,
+        entity_id -> Varchar,
+        taxon_id -> Uuid,
+        accepted_taxon_id -> Nullable<Uuid>,
+        act -> TaxonomicActType,
+        source_url -> Nullable<Varchar>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     trace_files (id) {
         id -> Uuid,
         name_id -> Uuid,
@@ -836,6 +870,7 @@ diesel::joinable!(taxon_history -> name_publications (publication_id));
 diesel::joinable!(taxon_names -> names (name_id));
 diesel::joinable!(taxon_names -> taxa (taxon_id));
 diesel::joinable!(taxon_photos -> taxa (taxon_id));
+diesel::joinable!(taxonomic_act_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(trace_files -> names (name_id));
 diesel::joinable!(vernacular_names -> datasets (dataset_id));
 diesel::joinable!(vernacular_names -> names (name_id));
@@ -881,6 +916,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     taxon_history,
     taxon_names,
     taxon_photos,
+    taxonomic_act_logs,
+    taxonomic_acts,
     trace_files,
     users,
     vernacular_names,

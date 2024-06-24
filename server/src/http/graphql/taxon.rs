@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use super::common::datasets::DatasetDetails;
 use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
+use super::common::NameDetails;
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::{taxa, Database};
 use crate::http::{Context as State, Error};
@@ -232,8 +233,8 @@ pub struct NomenclaturalAct {
     pub act: NomenclaturalActType,
     pub source_url: String,
     pub publication: NamePublication,
-    pub name: super::common::Name,
-    pub acted_on: super::common::Name,
+    pub name: super::names::Name,
+    pub acted_on: NameDetails,
 }
 
 impl From<taxa::NomenclaturalAct> for NomenclaturalAct {
@@ -243,7 +244,7 @@ impl From<taxa::NomenclaturalAct> for NomenclaturalAct {
             act: value.act.into(),
             source_url: value.source_url,
             publication: value.publication.into(),
-            name: value.name.into(),
+            name: super::names::Name::new(value.name),
             acted_on: value.acted_on.into(),
         }
     }

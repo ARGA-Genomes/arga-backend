@@ -3,11 +3,22 @@ use std::path::PathBuf;
 
 use arga_core::crdt::lww::Map;
 use arga_core::crdt::{Frame, Version};
-use arga_core::models::{Action, DatasetVersion, TaxonAtom, TaxonOperation, TaxonomicRank, TaxonomicStatus};
+use arga_core::models::{
+    Action,
+    DatasetVersion,
+    TaxonAtom,
+    TaxonOperation,
+    TaxonomicActAtom,
+    TaxonomicActOperation,
+    TaxonomicActType,
+    TaxonomicRank,
+    TaxonomicStatus,
+};
 use arga_core::schema;
 use bigdecimal::BigDecimal;
 use diesel::*;
 use serde::{Deserialize, Serialize};
+use tracing::info;
 use uuid::Uuid;
 use xxhash_rust::xxh3::Xxh3;
 
@@ -42,6 +53,7 @@ struct Record {
     scientific_name: String,
     scientific_name_authorship: Option<String>,
     canonical_name: String,
+    accepted_usage_taxon: Option<String>,
     // accepted_name_usage: Option<String>,
     // parent_name_usage: Option<String>,
     #[serde(deserialize_with = "taxonomic_rank_from_str")]
@@ -50,9 +62,8 @@ struct Record {
     taxonomic_status: TaxonomicStatus,
     nomenclatural_code: String,
     // nomenclatural_status: Option<String>,
-
-    // name_published_in: Option<String>,
-    // name_published_in_year: Option<String>,
+    name_published_in: Option<String>,
+    name_published_in_year: Option<String>,
     // name_published_in_url: Option<String>,
     citation: Option<String>,
     references: Option<String>,
@@ -120,58 +131,42 @@ impl From<Map<TaxonAtom>> for Taxon {
     }
 }
 
-
-pub struct TaxonFrame {
-    dataset_version_id: Uuid,
+#[derive(Clone, Debug, Default, Serialize)]
+pub struct TaxonomicAct {
     entity_id: String,
-    frame: Frame<TaxonOperation>,
+    taxon: String,
+    accepted_taxon: Option<String>,
+    act: Option<TaxonomicActType>,
+    publication: Option<String>,
+    publication_date: Option<String>,
+    source_url: Option<String>,
 }
 
-impl TaxonFrame {
-    pub fn create(dataset_version_id: Uuid, entity_id: String, last_version: Version) -> TaxonFrame {
-        let mut frame = Frame::new(last_version);
+impl From<Map<TaxonomicActAtom>> for TaxonomicAct {
+    fn from(value: Map<TaxonomicActAtom>) -> Self {
+        use TaxonomicActAtom::*;
 
-        frame.push(TaxonOperation {
-            operation_id: frame.next.into(),
-            parent_id: frame.current.into(),
-            dataset_version_id,
-            entity_id: entity_id.clone(),
-            action: Action::Create,
-            atom: TaxonAtom::Empty,
-        });
-
-        TaxonFrame {
-            dataset_version_id,
-            entity_id,
-            frame,
-        }
-    }
-
-    pub fn push(&mut self, atom: TaxonAtom) {
-        let operation_id: BigDecimal = self.frame.next.into();
-        let parent_id = self
-            .frame
-            .operations
-            .last()
-            .map(|op| op.operation_id.clone())
-            .unwrap_or(operation_id.clone());
-
-        let op = TaxonOperation {
-            operation_id,
-            parent_id,
-            dataset_version_id: self.dataset_version_id,
-            entity_id: self.entity_id.clone(),
-            action: Action::Update,
-            atom,
+        let mut act = TaxonomicAct {
+            entity_id: value.entity_id,
+            ..Default::default()
         };
 
-        self.frame.push(op);
-    }
+        for val in value.atoms.into_values() {
+            match val {
+                Empty => {}
+                Publication(value) => act.publication = Some(value),
+                PublicationDate(value) => act.publication_date = Some(value),
+                Taxon(value) => act.taxon = value,
+                AcceptedTaxon(value) => act.accepted_taxon = Some(value),
+                Act(value) => act.act = Some(value),
+                SourceUrl(value) => act.source_url = Some(value),
+            }
+        }
 
-    pub fn operations(&self) -> &Vec<TaxonOperation> {
-        &self.frame.operations
+        act
     }
 }
+
 
 pub struct Taxa {
     pub path: PathBuf,
@@ -253,11 +248,72 @@ impl Taxa {
 
         Ok(operations)
     }
+
+    pub fn acts(&self) -> Result<Vec<TaxonomicActOperation>, Error> {
+        use TaxonomicActAtom::*;
+
+        let mut records: Vec<Record> = Vec::new();
+        for row in csv::Reader::from_path(&self.path)?.deserialize() {
+            records.push(row?);
+        }
+
+        let mut last_version = Version::new();
+        let mut operations: Vec<TaxonomicActOperation> = Vec::new();
+
+        for record in records.into_iter() {
+            let act = match record.taxonomic_status {
+                TaxonomicStatus::Synonym => Some(TaxonomicActType::Synonym),
+                TaxonomicStatus::Homonym => Some(TaxonomicActType::Homonym),
+                TaxonomicStatus::Unaccepted => Some(TaxonomicActType::Unaccepted),
+                TaxonomicStatus::NomenclaturalSynonym => Some(TaxonomicActType::NomenclaturalSynonym),
+                TaxonomicStatus::TaxonomicSynonym => Some(TaxonomicActType::TaxonomicSynonym),
+                TaxonomicStatus::ReplacedSynonym => Some(TaxonomicActType::ReplacedSynonym),
+                _ => None,
+            };
+
+            // skip anything that isn't a synonym
+            if act.is_none() {
+                continue;
+            }
+
+            // because arga supports multiple taxonomic systems we use the taxon_id
+            // from the system as the unique entity id. if we used the scientific name
+            // instead then we would combine and reduce changes from all systems which
+            // is not desireable for our purposes
+            let mut hasher = Xxh3::new();
+            hasher.update(record.taxon_id.as_bytes());
+            let hash = hasher.digest();
+
+            let mut frame = TaxonomicActFrame::create(self.dataset_version_id, hash.to_string(), last_version);
+            frame.push(Taxon(record.scientific_name));
+
+            if let Some(value) = act {
+                frame.push(Act(value));
+            }
+            if let Some(value) = record.accepted_usage_taxon {
+                frame.push(AcceptedTaxon(value));
+            }
+            // if let Some(value) = record.name_published_in {
+            //     frame.push(Publication(value));
+            // }
+            // if let Some(value) = record.name_published_in_year {
+            //     frame.push(PublicationDate(value));
+            // }
+            if let Some(value) = record.references {
+                frame.push(SourceUrl(value));
+            }
+
+            last_version = frame.frame.current;
+            operations.extend(frame.frame.operations);
+        }
+
+        Ok(operations)
+    }
 }
 
 
 pub fn process(path: PathBuf, dataset_version: DatasetVersion) -> Result<(), Error> {
-    use schema::taxa_logs;
+    use schema::{taxa_logs, taxonomic_act_logs};
 
     let taxa = Taxa {
         path: path.clone(),
@@ -267,13 +323,29 @@ pub fn process(path: PathBuf, dataset_version: DatasetVersion) -> Result<(), Err
     let pool = get_pool()?;
     let mut conn = pool.get()?;
 
+    info!("Loading taxon operations");
     let taxon_ops = taxa_logs::table
         .order(taxa_logs::operation_id.asc())
         .load::<TaxonOperation>(&mut conn)?;
 
+    info!("Reducing taxon operations");
     let records = taxa.taxa()?;
     let reduced = reduce_operations(taxon_ops, records)?;
+
+    info!("Importing taxon operations");
     import_taxa(reduced)?;
+
+    info!("Loading taxonomic act operations");
+    let taxon_act_ops = taxonomic_act_logs::table
+        .order(taxonomic_act_logs::operation_id.asc())
+        .load::<TaxonomicActOperation>(&mut conn)?;
+
+    info!("Reducing taxonomic act operations");
+    let records = taxa.acts()?;
+    let reduced = reduce_operations(taxon_act_ops, records)?;
+
+    info!("Importing taxonomic act operations");
+    import_acts(reduced)?;
 
     Ok(())
 }
@@ -286,6 +358,22 @@ fn import_taxa(records: Vec<TaxonOperation>) -> Result<(), Error> {
 
     for chunk in records.chunks(1000) {
         diesel::insert_into(taxa_logs)
+            .values(chunk)
+            .on_conflict_do_nothing()
+            .execute(&mut conn)?;
+    }
+
+    Ok(())
+}
+
+fn import_acts(records: Vec<TaxonomicActOperation>) -> Result<(), Error> {
+    use schema::taxonomic_act_logs::dsl::*;
+
+    let pool = get_pool()?;
+    let mut conn = pool.get()?;
+
+    for chunk in records.chunks(1000) {
+        diesel::insert_into(taxonomic_act_logs)
             .values(chunk)
             .on_conflict_do_nothing()
             .execute(&mut conn)?;
@@ -344,6 +432,34 @@ pub fn reduce() -> Result<(), Error> {
         let mut map = Map::new(key);
         map.reduce(&ops);
         taxa.push(Taxon::from(map));
+    }
+
+    let mut writer = csv::Writer::from_writer(std::io::stdout());
+
+    for taxon in taxa {
+        writer.serialize(taxon)?;
+    }
+
+    Ok(())
+}
+
+pub fn reduce_acts() -> Result<(), Error> {
+    use schema::taxonomic_act_logs::dsl::*;
+
+    let pool = get_pool()?;
+    let mut conn = pool.get()?;
+
+    let ops = taxonomic_act_logs
+        .order(operation_id.asc())
+        .load::<TaxonomicActOperation>(&mut conn)?;
+
+    let entities = merge_ops(ops, vec![])?;
+    let mut taxa = Vec::new();
+
+    for (key, ops) in entities.into_iter() {
+        let mut map = Map::new(key);
+        map.reduce(&ops);
+        taxa.push(TaxonomicAct::from(map));
     }
 
     let mut writer = csv::Writer::from_writer(std::io::stdout());
@@ -518,5 +634,110 @@ pub fn str_to_taxonomic_status(value: &str) -> Result<TaxonomicStatus, ParseErro
         "incorrect grammatical agreement of specific epithet" => Ok(IncorrectGrammaticalAgreementOfSpecificEpithet),
 
         val => Err(ParseError::InvalidValue(val.to_string())),
+    }
+}
+
+
+pub struct TaxonFrame {
+    dataset_version_id: Uuid,
+    entity_id: String,
+    frame: Frame<TaxonOperation>,
+}
+
+impl TaxonFrame {
+    pub fn create(dataset_version_id: Uuid, entity_id: String, last_version: Version) -> TaxonFrame {
+        let mut frame = Frame::new(last_version);
+
+        frame.push(TaxonOperation {
+            operation_id: frame.next.into(),
+            parent_id: frame.current.into(),
+            dataset_version_id,
+            entity_id: entity_id.clone(),
+            action: Action::Create,
+            atom: TaxonAtom::Empty,
+        });
+
+        TaxonFrame {
+            dataset_version_id,
+            entity_id,
+            frame,
+        }
+    }
+
+    pub fn push(&mut self, atom: TaxonAtom) {
+        let operation_id: BigDecimal = self.frame.next.into();
+        let parent_id = self
+            .frame
+            .operations
+            .last()
+            .map(|op| op.operation_id.clone())
+            .unwrap_or(operation_id.clone());
+
+        let op = TaxonOperation {
+            operation_id,
+            parent_id,
+            dataset_version_id: self.dataset_version_id,
+            entity_id: self.entity_id.clone(),
+            action: Action::Update,
+            atom,
+        };
+
+        self.frame.push(op);
+    }
+
+    pub fn operations(&self) -> &Vec<TaxonOperation> {
+        &self.frame.operations
+    }
+}
+
+pub struct TaxonomicActFrame {
+    dataset_version_id: Uuid,
+    entity_id: String,
+    frame: Frame<TaxonomicActOperation>,
+}
+
+impl TaxonomicActFrame {
+    pub fn create(dataset_version_id: Uuid, entity_id: String, last_version: Version) -> TaxonomicActFrame {
+        let mut frame = Frame::new(last_version);
+
+        frame.push(TaxonomicActOperation {
+            operation_id: frame.next.into(),
+            parent_id: frame.current.into(),
+            dataset_version_id,
+            entity_id: entity_id.clone(),
+            action: Action::Create,
+            atom: TaxonomicActAtom::Empty,
+        });
+
+        TaxonomicActFrame {
+            dataset_version_id,
+            entity_id,
+            frame,
+        }
+    }
+
+    pub fn push(&mut self, atom: TaxonomicActAtom) {
+        let operation_id: BigDecimal = self.frame.next.into();
+        let parent_id = self
+            .frame
+            .operations
+            .last()
+            .map(|op| op.operation_id.clone())
+            .unwrap_or(operation_id.clone());
+
+        let op = TaxonomicActOperation {
+            operation_id,
+            parent_id,
+            dataset_version_id: self.dataset_version_id,
+            entity_id: self.entity_id.clone(),
+            action: Action::Update,
+            atom,
+        };
+
+        self.frame.push(op);
+    }
+
+    pub fn operations(&self) -> &Vec<TaxonomicActOperation> {
+        &self.frame.operations
     }
 }

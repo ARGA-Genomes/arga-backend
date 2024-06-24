@@ -1,5 +1,4 @@
 use bigdecimal::BigDecimal;
-use chrono::{DateTime, Utc};
 use diesel::backend::Backend;
 use diesel::deserialize::{self, FromSql};
 use diesel::pg::Pg;
@@ -9,7 +8,7 @@ use diesel::{AsExpression, Associations, FromSqlRow, Insertable, Queryable, Sele
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::{schema, DatasetVersion, TaxonomicRank, TaxonomicStatus};
+use super::{schema, DatasetVersion, TaxonomicActType, TaxonomicRank, TaxonomicStatus};
 use crate::models::NomenclaturalActType;
 
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
@@ -170,6 +169,50 @@ impl ToString for NomenclaturalActAtom {
         .to_string()
     }
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq)]
+#[diesel(sql_type = diesel::sql_types::Jsonb)]
+pub enum TaxonomicActAtom {
+    Empty,
+    Publication(String),
+    PublicationDate(String),
+    Taxon(String),
+    AcceptedTaxon(String),
+    Act(TaxonomicActType),
+    SourceUrl(String),
+}
+
+impl FromSql<Jsonb, Pg> for TaxonomicActAtom {
+    fn from_sql(value: <Pg as Backend>::RawValue<'_>) -> deserialize::Result<Self> {
+        serde_json::from_value(FromSql::<Jsonb, Pg>::from_sql(value)?).map_err(|e| e.into())
+    }
+}
+
+impl ToSql<Jsonb, Pg> for TaxonomicActAtom {
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        let json = serde_json::to_value(self)?;
+        <serde_json::Value as ToSql<Jsonb, Pg>>::to_sql(&json, &mut out.reborrow())
+    }
+}
+
+impl ToString for TaxonomicActAtom {
+    fn to_string(&self) -> String {
+        use TaxonomicActAtom::*;
+
+        match self {
+            Empty => "Empty",
+            Publication(_) => "Publication",
+            PublicationDate(_) => "PublicationDate",
+            Taxon(_) => "Taxon",
+            AcceptedTaxon(_) => "AcceptedTaxon",
+            Act(_) => "Act",
+            SourceUrl(_) => "SourceUrl",
+        }
+        .to_string()
+    }
+}
+
 
 #[derive(Debug, Clone, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq)]
 #[diesel(sql_type = diesel::sql_types::Jsonb)]
@@ -387,6 +430,34 @@ impl LogOperation<TaxonAtom> for TaxonOperation {
         &self.atom
     }
 }
+
+#[derive(Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]
+#[diesel(belongs_to(DatasetVersion))]
+#[diesel(table_name = schema::taxonomic_act_logs)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct TaxonomicActOperation {
+    pub operation_id: BigDecimal,
+    pub parent_id: BigDecimal,
+    pub entity_id: String,
+    pub dataset_version_id: Uuid,
+    pub action: Action,
+    pub atom: TaxonomicActAtom,
+}
+
+impl LogOperation<TaxonomicActAtom> for TaxonomicActOperation {
+    fn id(&self) -> &String {
+        &self.entity_id
+    }
+
+    fn action(&self) -> &Action {
+        &self.action
+    }
+
+    fn atom(&self) -> &TaxonomicActAtom {
+        &self.atom
+    }
+}
+
 
 #[derive(Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]
 #[diesel(belongs_to(DatasetVersion))]
