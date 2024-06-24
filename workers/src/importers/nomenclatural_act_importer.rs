@@ -32,17 +32,18 @@ fn import_nomenclatural_acts(acts: &Vec<NomenclaturalAct>, pool: &mut PgPool) ->
             let inserted_rows = diesel::insert_into(nomenclatural_acts)
                 .values(chunk)
                 .on_conflict(name_id)
-                .do_update()
-                .set((
-                    entity_id.eq(excluded(entity_id)),
-                    publication_id.eq(excluded(publication_id)),
-                    name_id.eq(excluded(name_id)),
-                    acted_on_id.eq(excluded(acted_on_id)),
-                    act.eq(excluded(act)),
-                    source_url.eq(excluded(source_url)),
-                    created_at.eq(excluded(created_at)),
-                    updated_at.eq(excluded(updated_at)),
-                ))
+                .do_nothing()
+                // .do_update()
+                // .set((
+                //     entity_id.eq(excluded(entity_id)),
+                //     publication_id.eq(excluded(publication_id)),
+                //     name_id.eq(excluded(name_id)),
+                //     acted_on_id.eq(excluded(acted_on_id)),
+                //     act.eq(excluded(act)),
+                //     source_url.eq(excluded(source_url)),
+                //     created_at.eq(excluded(created_at)),
+                //     updated_at.eq(excluded(updated_at)),
+                // ))
                 .execute(&mut conn)?;
             Ok(inserted_rows)
         })
