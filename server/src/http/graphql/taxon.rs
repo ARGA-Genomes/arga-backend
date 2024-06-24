@@ -4,7 +4,8 @@ use bigdecimal::ToPrimitive;
 use serde::{Deserialize, Serialize};
 
 use super::common::datasets::DatasetDetails;
-use super::common::taxonomy::{TaxonDetails, TaxonomicRank, TaxonomicStatus};
+use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
+use super::common::NameDetails;
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::{taxa, Database};
 use crate::http::{Context as State, Error};
@@ -13,29 +14,53 @@ use crate::http::{Context as State, Error};
 #[graphql(remote = "models::TaxonomicRank")]
 pub enum TaxonRank {
     Domain,
+
     Superkingdom,
     Kingdom,
     Subkingdom,
+    Infrakingdom,
+
+    Superphylum,
     Phylum,
     Subphylum,
+    Infraphylum,
+    Parvphylum,
+
+    Gigaclass,
+    Megaclass,
     Superclass,
     Class,
     Subclass,
+    Infraclass,
+    Subterclass,
+
     Superorder,
     Order,
-    Suborder,
     Hyporder,
     Minorder,
+    Suborder,
+    Infraorder,
+    Parvorder,
+
+    Epifamily,
     Superfamily,
     Family,
     Subfamily,
+
     Supertribe,
     Tribe,
     Subtribe,
     Genus,
     Subgenus,
+    Infragenus,
     Species,
     Subspecies,
+
+    Variety,
+    Subvariety,
+
+    Natio,
+    Mutatio,
 
     Unranked,
     HigherTaxon,
@@ -46,10 +71,8 @@ pub enum TaxonRank {
     Subcohort,
     Division,
     IncertaeSedis,
-    Infraclass,
-    Infraorder,
-    Infragenus,
     Section,
+    Subsection,
     Subdivision,
 
     Regnum,
@@ -145,6 +168,13 @@ impl TaxonQuery {
         let history = history.into_iter().map(|r| r.into()).collect();
         Ok(history)
     }
+
+    async fn nomenclatural_acts(&self, ctx: &Context<'_>) -> Result<Vec<NomenclaturalAct>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let acts = state.database.taxa.nomenclatural_acts(&self.taxon.id).await?;
+        let acts = acts.into_iter().map(|r| r.into()).collect();
+        Ok(acts)
+    }
 }
 
 #[derive(SimpleObject)]
@@ -169,7 +199,6 @@ impl From<models::NamePublication> for NamePublication {
 #[derive(SimpleObject)]
 pub struct HistoryItem {
     pub dataset: DatasetDetails,
-    pub nomenclatural_act: String,
     pub status: TaxonomicStatus,
     pub rank: TaxonomicRank,
     pub scientific_name: String,
@@ -185,7 +214,6 @@ impl From<taxa::HistoryItem> for HistoryItem {
     fn from(value: taxa::HistoryItem) -> Self {
         Self {
             dataset: value.dataset.into(),
-            nomenclatural_act: value.act.name,
             status: value.taxon.status.into(),
             rank: value.taxon.rank.into(),
             scientific_name: value.taxon.scientific_name,
@@ -198,6 +226,30 @@ impl From<taxa::HistoryItem> for HistoryItem {
         }
     }
 }
+
+#[derive(SimpleObject)]
+pub struct NomenclaturalAct {
+    pub entity_id: String,
+    pub act: NomenclaturalActType,
+    pub source_url: String,
+    pub publication: NamePublication,
+    pub name: super::names::Name,
+    pub acted_on: NameDetails,
+}
+
+impl From<taxa::NomenclaturalAct> for NomenclaturalAct {
+    fn from(value: taxa::NomenclaturalAct) -> Self {
+        Self {
+            entity_id: value.entity_id,
+            act: value.act.into(),
+            source_url: value.source_url,
+            publication: value.publication.into(),
+            name: super::names::Name::new(value.name),
+            acted_on: value.acted_on.into(),
+        }
+    }
+}
+
 
 #[derive(SimpleObject)]
 pub struct TaxonNode {
@@ -283,16 +335,27 @@ fn into_classification(rank: TaxonRank, value: String) -> Classification {
         TaxonRank::Superkingdom => Classification::Superkingdom(value),
         TaxonRank::Kingdom => Classification::Kingdom(value),
         TaxonRank::Subkingdom => Classification::Subkingdom(value),
+        TaxonRank::Infrakingdom => Classification::Infrakingdom(value),
+        TaxonRank::Superphylum => Classification::Superphylum(value),
         TaxonRank::Phylum => Classification::Phylum(value),
         TaxonRank::Subphylum => Classification::Subphylum(value),
+        TaxonRank::Infraphylum => Classification::Infraphylum(value),
+        TaxonRank::Parvphylum => Classification::Parvphylum(value),
+        TaxonRank::Gigaclass => Classification::Gigaclass(value),
+        TaxonRank::Megaclass => Classification::Megaclass(value),
         TaxonRank::Superclass => Classification::Superclass(value),
         TaxonRank::Class => Classification::Class(value),
         TaxonRank::Subclass => Classification::Subclass(value),
+        TaxonRank::Infraclass => Classification::Infraclass(value),
+        TaxonRank::Subterclass => Classification::Subterclass(value),
         TaxonRank::Superorder => Classification::Superorder(value),
         TaxonRank::Order => Classification::Order(value),
-        TaxonRank::Suborder => Classification::Suborder(value),
         TaxonRank::Hyporder => Classification::Hyporder(value),
         TaxonRank::Minorder => Classification::Minorder(value),
+        TaxonRank::Suborder => Classification::Suborder(value),
+        TaxonRank::Infraorder => Classification::Infraorder(value),
+        TaxonRank::Parvorder => Classification::Parvorder(value),
+        TaxonRank::Epifamily => Classification::Epifamily(value),
         TaxonRank::Superfamily => Classification::Superfamily(value),
         TaxonRank::Family => Classification::Family(value),
         TaxonRank::Subfamily => Classification::Subfamily(value),
@@ -303,6 +366,10 @@ fn into_classification(rank: TaxonRank, value: String) -> Classification {
         TaxonRank::Subgenus => Classification::Subgenus(value),
         TaxonRank::Species => Classification::Species(value),
         TaxonRank::Subspecies => Classification::Subspecies(value),
+        TaxonRank::Variety => Classification::Variety(value),
+        TaxonRank::Subvariety => Classification::Subvariety(value),
+        TaxonRank::Natio => Classification::Natio(value),
+        TaxonRank::Mutatio => Classification::Mutatio(value),
         TaxonRank::Unranked => Classification::Unranked(value),
         TaxonRank::HigherTaxon => Classification::HigherTaxon(value),
         TaxonRank::AggregateGenera => Classification::AggregateGenera(value),
@@ -311,10 +378,9 @@ fn into_classification(rank: TaxonRank, value: String) -> Classification {
         TaxonRank::Subcohort => Classification::Subcohort(value),
         TaxonRank::Division => Classification::Division(value),
         TaxonRank::IncertaeSedis => Classification::IncertaeSedis(value),
-        TaxonRank::Infraclass => Classification::Infraclass(value),
-        TaxonRank::Infraorder => Classification::Infraorder(value),
         TaxonRank::Infragenus => Classification::Infragenus(value),
         TaxonRank::Section => Classification::Section(value),
+        TaxonRank::Subsection => Classification::Subsection(value),
         TaxonRank::Subdivision => Classification::Subdivision(value),
         TaxonRank::Regnum => Classification::Regnum(value),
         TaxonRank::Familia => Classification::Familia(value),

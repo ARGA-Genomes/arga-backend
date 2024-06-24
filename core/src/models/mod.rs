@@ -73,9 +73,11 @@ pub enum TaxonomicStatus {
     Accepted,
     Undescribed,
     SpeciesInquirenda,
+    TaxonInquirendum,
     ManuscriptName,
     Hybrid,
     Synonym,
+    Homonym,
     Unaccepted,
     Informal,
     Placeholder,
@@ -85,6 +87,7 @@ pub enum TaxonomicStatus {
     TaxonomicSynonym,
     ReplacedSynonym,
 
+    Misspelled,
     OrthographicVariant,
     Misapplied,
     Excluded,
@@ -97,6 +100,20 @@ pub enum TaxonomicStatus {
     DoubtfulTaxonomicSynonym,
     DoubtfulProParteMisapplied,
     DoubtfulProParteTaxonomicSynonym,
+
+    Unassessed,
+    Unavailable,
+    Uncertain,
+    UnjustifiedEmendation,
+
+    NomenDubium,
+    NomenNudum,
+    NomenOblitum,
+
+    InterimUnpublished,
+    IncorrectGrammaticalAgreementOfSpecificEpithet,
+    SupersededCombination,
+    SupersededRank,
 }
 
 impl Default for TaxonomicStatus {
@@ -105,33 +122,51 @@ impl Default for TaxonomicStatus {
     }
 }
 
+// TODO: this would be better as a derive macro so that we dont miss string
+// to enum conversions, or use serde enum deserialization
 impl From<String> for TaxonomicStatus {
     fn from(value: String) -> Self {
+        use TaxonomicStatus::*;
+
         match value.as_str() {
-            "Accepted" => TaxonomicStatus::Accepted,
-            "Undescribed" => TaxonomicStatus::Undescribed,
-            "SpeciesInquirenda" => TaxonomicStatus::SpeciesInquirenda,
-            "ManuscriptName" => TaxonomicStatus::ManuscriptName,
-            "Hybrid" => TaxonomicStatus::Hybrid,
-            "Synonym" => TaxonomicStatus::Synonym,
-            "Unaccepted" => TaxonomicStatus::Unaccepted,
-            "Informal" => TaxonomicStatus::Informal,
-            "Placeholder" => TaxonomicStatus::Placeholder,
-            "Basionym" => TaxonomicStatus::Basionym,
-            "NomenclaturalSynonym" => TaxonomicStatus::NomenclaturalSynonym,
-            "TaxonomicSynonym" => TaxonomicStatus::TaxonomicSynonym,
-            "ReplacedSynonym" => TaxonomicStatus::ReplacedSynonym,
-            "OrthographicVariant" => TaxonomicStatus::OrthographicVariant,
-            "Misapplied" => TaxonomicStatus::Misapplied,
-            "Excluded" => TaxonomicStatus::Excluded,
-            "AlternativeName" => TaxonomicStatus::AlternativeName,
-            "ProParteMisapplied" => TaxonomicStatus::ProParteMisapplied,
-            "ProParteTaxonomicSynonym" => TaxonomicStatus::ProParteTaxonomicSynonym,
-            "DoubtfulMisapplied" => TaxonomicStatus::DoubtfulMisapplied,
-            "DoubtfulTaxonomicSynonym" => TaxonomicStatus::DoubtfulTaxonomicSynonym,
-            "DoubtfulProParteMisapplied" => TaxonomicStatus::DoubtfulProParteMisapplied,
-            "DoubtfulProParteTaxonomicSynonym" => TaxonomicStatus::DoubtfulProParteTaxonomicSynonym,
-            _ => TaxonomicStatus::Unaccepted,
+            "Accepted" => Accepted,
+            "Undescribed" => Undescribed,
+            "SpeciesInquirenda" => SpeciesInquirenda,
+            "TaxonInquirendum" => TaxonInquirendum,
+            "ManuscriptName" => ManuscriptName,
+            "Hybrid" => Hybrid,
+            "Synonym" => Synonym,
+            "Homonym" => Homonym,
+            "Unaccepted" => Unaccepted,
+            "Informal" => Informal,
+            "Placeholder" => Placeholder,
+            "Basionym" => Basionym,
+            "NomenclaturalSynonym" => NomenclaturalSynonym,
+            "TaxonomicSynonym" => TaxonomicSynonym,
+            "ReplacedSynonym" => ReplacedSynonym,
+            "Misspelled" => Misspelled,
+            "OrthographicVariant" => OrthographicVariant,
+            "Misapplied" => Misapplied,
+            "Excluded" => Excluded,
+            "AlternativeName" => AlternativeName,
+            "ProParteMisapplied" => ProParteMisapplied,
+            "ProParteTaxonomicSynonym" => ProParteTaxonomicSynonym,
+            "DoubtfulMisapplied" => DoubtfulMisapplied,
+            "DoubtfulTaxonomicSynonym" => DoubtfulTaxonomicSynonym,
+            "DoubtfulProParteMisapplied" => DoubtfulProParteMisapplied,
+            "DoubtfulProParteTaxonomicSynonym" => DoubtfulProParteTaxonomicSynonym,
+            "Unassessed" => Unassessed,
+            "Unavailable" => Unavailable,
+            "Uncertain" => Uncertain,
+            "UnjustifiedEmendation" => UnjustifiedEmendation,
+            "NomenDubium" => NomenDubium,
+            "NomenNudum" => NomenNudum,
+            "NomenOblitum" => NomenOblitum,
+            "InterimUnpublished" => InterimUnpublished,
+            "IncorrectGrammaticalAgreementOfSpecificEpithet" => IncorrectGrammaticalAgreementOfSpecificEpithet,
+            "SupersededCombination" => SupersededCombination,
+            "SupersededRank" => SupersededRank,
+            _ => Unaccepted,
         }
     }
 }
@@ -175,23 +210,39 @@ pub enum TaxonomicVernacularGroup {
 #[ExistingTypePath = "schema::sql_types::TaxonomicRank"]
 pub enum TaxonomicRank {
     Domain,
+
     Superkingdom,
     Kingdom,
     Subkingdom,
+    Infrakingdom,
+
+    Superphylum,
     Phylum,
     Subphylum,
+    Infraphylum,
+    Parvphylum,
+
+    Gigaclass,
+    Megaclass,
     Superclass,
     Class,
     Subclass,
+    Infraclass,
+    Subterclass,
+
     Superorder,
     Order,
     Hyporder,
     Minorder,
     Suborder,
     Infraorder,
+    Parvorder,
+
+    Epifamily,
     Superfamily,
     Family,
     Subfamily,
+
     Supertribe,
     Tribe,
     Subtribe,
@@ -200,6 +251,12 @@ pub enum TaxonomicRank {
     Infragenus,
     Species,
     Subspecies,
+
+    Variety,
+    Subvariety,
+
+    Natio,
+    Mutatio,
 
     Unranked,
     HigherTaxon,
@@ -210,8 +267,8 @@ pub enum TaxonomicRank {
     Subcohort,
     Division,
     IncertaeSedis,
-    Infraclass,
     Section,
+    Subsection,
     Subdivision,
 
     Regnum,
@@ -237,6 +294,12 @@ pub enum TaxonomicRank {
     SpecialForm,
 }
 
+impl Default for TaxonomicRank {
+    fn default() -> Self {
+        Self::Unranked
+    }
+}
+
 impl std::fmt::Display for TaxonomicRank {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
@@ -244,16 +307,27 @@ impl std::fmt::Display for TaxonomicRank {
             TaxonomicRank::Superkingdom => "Superkingdom",
             TaxonomicRank::Kingdom => "Kingdom",
             TaxonomicRank::Subkingdom => "Subkingdom",
+            TaxonomicRank::Infrakingdom => "Infrakingdom",
+            TaxonomicRank::Superphylum => "Superphylum",
             TaxonomicRank::Phylum => "Phylum",
             TaxonomicRank::Subphylum => "Subphylum",
+            TaxonomicRank::Infraphylum => "Infraphylum",
+            TaxonomicRank::Parvphylum => "Parvphylum",
+            TaxonomicRank::Gigaclass => "Gigaclass",
+            TaxonomicRank::Megaclass => "Megaclass",
             TaxonomicRank::Superclass => "Superclass",
             TaxonomicRank::Class => "Class",
             TaxonomicRank::Subclass => "Subclass",
+            TaxonomicRank::Infraclass => "Infraclass",
+            TaxonomicRank::Subterclass => "Subterclass",
             TaxonomicRank::Superorder => "Superorder",
             TaxonomicRank::Order => "Order",
-            TaxonomicRank::Suborder => "Suborder",
             TaxonomicRank::Hyporder => "Hyporder",
             TaxonomicRank::Minorder => "Minorder",
+            TaxonomicRank::Suborder => "Suborder",
+            TaxonomicRank::Infraorder => "Infraorder",
+            TaxonomicRank::Parvorder => "Parvorder",
+            TaxonomicRank::Epifamily => "Epifamily",
             TaxonomicRank::Superfamily => "Superfamily",
             TaxonomicRank::Family => "Family",
             TaxonomicRank::Subfamily => "Subfamily",
@@ -264,6 +338,10 @@ impl std::fmt::Display for TaxonomicRank {
             TaxonomicRank::Subgenus => "Subgenus",
             TaxonomicRank::Species => "Species",
             TaxonomicRank::Subspecies => "Subspecies",
+            TaxonomicRank::Variety => "Variety",
+            TaxonomicRank::Subvariety => "Subvariety",
+            TaxonomicRank::Natio => "Natio",
+            TaxonomicRank::Mutatio => "Mutatio",
             TaxonomicRank::Unranked => "Unranked",
             TaxonomicRank::HigherTaxon => "Higher Taxon",
             TaxonomicRank::AggregateGenera => "Aggregate Genera",
@@ -272,10 +350,9 @@ impl std::fmt::Display for TaxonomicRank {
             TaxonomicRank::Subcohort => "Subcohort",
             TaxonomicRank::Division => "Division",
             TaxonomicRank::IncertaeSedis => "Incertae Sedis",
-            TaxonomicRank::Infraclass => "Infraclass",
-            TaxonomicRank::Infraorder => "Infraorder",
             TaxonomicRank::Infragenus => "Infragenus",
             TaxonomicRank::Section => "Section",
+            TaxonomicRank::Subsection => "Subsection",
             TaxonomicRank::Subdivision => "Subdivision",
             TaxonomicRank::Regnum => "Regnum",
             TaxonomicRank::Familia => "Familia",
@@ -342,6 +419,7 @@ pub struct Taxon {
 
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub entity_id: Option<String>,
 }
 
 #[derive(Identifiable, Insertable, Selectable, Queryable, Associations, Debug, Clone)]
@@ -543,7 +621,6 @@ pub struct TaxonHistory {
     pub dataset_id: Uuid,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub act_id: Uuid,
     pub publication_id: Option<Uuid>,
     pub source_url: Option<String>,
     pub entity_id: Option<String>,
@@ -562,14 +639,58 @@ pub struct NamePublication {
     pub record_updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Queryable, Selectable, Insertable, Debug, Default, Serialize, Deserialize)]
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::NomenclaturalActType"]
+pub enum NomenclaturalActType {
+    SpeciesNova,
+    SubspeciesNova,
+    GenusSpeciesNova,
+    CombinatioNova,
+    RevivedStatus,
+    NameUsage,
+}
+
+#[derive(Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::nomenclatural_acts)]
 pub struct NomenclaturalAct {
     pub id: Uuid,
-    pub name: String,
+    pub entity_id: String,
+    pub publication_id: Uuid,
+    pub name_id: Uuid,
+    pub acted_on_id: Uuid,
+
+    pub act: NomenclaturalActType,
+    pub source_url: String,
+
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::TaxonomicActType"]
+pub enum TaxonomicActType {
+    Unaccepted,
+    Synonym,
+    Homonym,
+    NomenclaturalSynonym,
+    TaxonomicSynonym,
+    ReplacedSynonym,
+}
+
+#[derive(Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::taxonomic_acts)]
+pub struct TaxonomicAct {
+    pub id: Uuid,
+    pub entity_id: String,
+    pub taxon_id: Uuid,
+    pub accepted_taxon_id: Option<Uuid>,
+
+    pub act: TaxonomicActType,
     pub source_url: Option<String>,
-    pub citation: Option<String>,
-    pub example: Option<String>,
+
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Queryable, Debug, Default, Serialize, Deserialize)]
@@ -610,7 +731,7 @@ pub struct Job {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Clone, Identifiable, Queryable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Identifiable, Queryable, Insertable, Selectable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::names)]
 pub struct Name {
     pub id: Uuid,

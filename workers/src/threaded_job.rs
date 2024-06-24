@@ -1,40 +1,41 @@
 use std::path::Path;
 
+use arga_core::models::{Dataset, Job};
 use arga_core::schema;
+use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::*;
 use serde::Deserialize;
 use stakker::*;
-use diesel::*;
-use diesel::r2d2::{Pool, ConnectionManager};
-use tracing::{info, error};
-
-use arga_core::models::{Job, Dataset};
+use tracing::{error, info};
 
 use super::error::Error;
 use super::importers::{
-    source_importer,
-    dataset_importer,
-    collection_importer,
     accession_importer,
-    subsample_importer,
-    dna_extraction_importer,
-    sequence_importer,
-    assembly_importer,
+    admin_media_importer,
+
     annotation_importer,
+    assembly_importer,
+    classification_importer,
+    collection_importer,
+    dataset_importer,
     deposition_importer,
-    name_importer,
-    // taxon_importer,
-    taxon_history_importer,
-    taxon_photo_importer,
-    vernacular_importer,
-    region_importer,
+    dna_extraction_importer,
     ecology_importer,
     // conservation_status_importer,
     indigenous_knowledge_importer,
     name_attribute_importer,
-    admin_media_importer,
-
-    classification_importer,
+    name_importer,
     name_publication_importer,
+    nomenclatural_act_importer,
+    region_importer,
+    sequence_importer,
+    source_importer,
+    subsample_importer,
+    // taxon_importer,
+    taxon_history_importer,
+    taxon_photo_importer,
+    taxonomic_act_importer,
+    vernacular_importer,
 };
 
 
@@ -62,21 +63,17 @@ impl ThreadedJob {
                 while let Some(job) = link.recv() {
                     Self::process(job);
                 }
-            }
+            },
         );
 
-        Some(Self {
-            thread,
-        })
+        Some(Self { thread })
     }
 
     pub fn run(&mut self, _cx: CX![], job: Job) {
         self.thread.send(job);
     }
 
-    fn recv(&mut self, _cx: CX![], _job: Job) {
-
-    }
+    fn recv(&mut self, _cx: CX![], _job: Job) {}
 
     fn term(&self, cx: CX![], panic: Option<String>) {
         if let Some(msg) = panic {
@@ -141,6 +138,8 @@ impl ThreadedJob {
 
             "import_classification" => classification_importer::import(path, pool)?,
             "import_name_publication" => name_publication_importer::import(path, &dataset?, pool)?,
+            "import_nomenclatural_act" => nomenclatural_act_importer::import(path, pool)?,
+            "import_taxonomic_act" => taxonomic_act_importer::import(path, pool)?,
             _ => panic!("Unknown job worker: {}", worker),
         }
 

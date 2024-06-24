@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::datasets::{DatasetDetails, DatasetVersion};
-use super::taxonomy::TaxonomicStatus;
+use super::taxonomy::{NomenclaturalActType, TaxonomicStatus};
 use crate::database::{models, Database};
 use crate::http::Error;
 
@@ -16,12 +16,12 @@ type UtcDateTime = DateTime<Utc>;
 #[derive(SimpleObject)]
 #[graphql(concrete(name = "NomenclaturalActAtomText", params(NomenclaturalActAtomTextType, String)))]
 #[graphql(concrete(
-    name = "NomenclaturalActAtomTaxonomicStatus",
-    params(NomenclaturalActAtomTaxonomicStatusType, TaxonomicStatus)
-))]
-#[graphql(concrete(
     name = "NomenclaturalActAtomDateTime",
     params(NomenclaturalActAtomDateTimeType, UtcDateTime)
+))]
+#[graphql(concrete(
+    name = "NomenclaturalActAtomType",
+    params(NomenclaturalActAtomActType, NomenclaturalActType)
 ))]
 #[graphql(concrete(name = "SpecimenAtomText", params(SpecimenAtomTextType, String)))]
 #[graphql(concrete(name = "SpecimenAtomNumber", params(SpecimenAtomNumberType, f64)))]
@@ -32,8 +32,8 @@ pub struct Atom<A: OutputType, T: OutputType> {
 
 
 type NomenclaturalActAtomText = Atom<NomenclaturalActAtomTextType, String>;
-type NomenclaturalActAtomTaxonomicStatus = Atom<NomenclaturalActAtomTaxonomicStatusType, TaxonomicStatus>;
 type NomenclaturalActAtomDateTime = Atom<NomenclaturalActAtomDateTimeType, UtcDateTime>;
+type NomenclaturalActAtomAct = Atom<NomenclaturalActAtomActType, NomenclaturalActType>;
 type SpecimenAtomText = Atom<SpecimenAtomTextType, String>;
 type SpecimenAtomNumber = Atom<SpecimenAtomNumberType, f64>;
 
@@ -46,19 +46,53 @@ pub enum Action {
 }
 
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub enum NomenclaturalActAtomTextType {
+pub enum TaxonAtomTextType {
     Empty,
-    ScientificName,
-    ActedOn,
-    NomenclaturalAct,
-    SourceUrl,
-    Publication,
+    TaxonId,
+    AcceptedNameUsageId,
+    ParentNameUsageId,
+
+    CanonicalName,
+    AcceptedNameUsage,
+    ParentNameUsage,
+    ScientificNameAuthorship,
+
+    TaxonRank,
+    TaxonomicStatus,
+    NomenclaturalCode,
+    NomenclaturalStatus,
+
+    NamePublishedIn,
+    NamePublishedInYear,
+    NamePublishedInUrl,
+
+    Citation,
+    References,
+    LastUpdated,
 }
 
+
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub enum NomenclaturalActAtomTaxonomicStatusType {
-    TaxonomicStatus,
+pub enum NomenclaturalActAtomTextType {
+    Empty,
+    ActedOn,
+    Act,
+    SourceUrl,
+    Publication,
+    PublicationDate,
+
+    ScientificName,
+    CanonicalName,
+    AuthorityName,
+    AuthorityYear,
+    BasionymAuthorityName,
+    BasionymAuthorityYear,
+
+    Genus,
+    SpecificEpithet,
+    Rank,
 }
+
 
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum NomenclaturalActAtomDateTimeType {
@@ -66,10 +100,15 @@ pub enum NomenclaturalActAtomDateTimeType {
     UpdatedAt,
 }
 
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum NomenclaturalActAtomActType {
+    NomenclaturalActType,
+}
+
 #[derive(Union)]
 pub enum NomenclaturalActAtom {
     Text(NomenclaturalActAtomText),
-    TaxonomicStatus(NomenclaturalActAtomTaxonomicStatus),
+    Act(NomenclaturalActAtomAct),
     DateTime(NomenclaturalActAtomDateTime),
 }
 
@@ -78,15 +117,12 @@ impl NomenclaturalActAtom {
         NomenclaturalActAtom::Text(NomenclaturalActAtomText { r#type, value })
     }
 
-    pub fn taxonomic_status(
-        r#type: NomenclaturalActAtomTaxonomicStatusType,
-        value: TaxonomicStatus,
-    ) -> NomenclaturalActAtom {
-        NomenclaturalActAtom::TaxonomicStatus(NomenclaturalActAtomTaxonomicStatus { r#type, value })
-    }
-
     pub fn datetime(r#type: NomenclaturalActAtomDateTimeType, value: DateTime<Utc>) -> NomenclaturalActAtom {
         NomenclaturalActAtom::DateTime(NomenclaturalActAtomDateTime { r#type, value })
+    }
+
+    pub fn act(r#type: NomenclaturalActAtomActType, value: NomenclaturalActType) -> NomenclaturalActAtom {
+        NomenclaturalActAtom::Act(NomenclaturalActAtomAct { r#type, value })
     }
 }
 
@@ -213,23 +249,21 @@ impl TryFrom<models::NomenclaturalActOperation> for NomenclaturalActOperation {
 impl From<models::NomenclaturalActAtom> for NomenclaturalActAtom {
     fn from(value: models::NomenclaturalActAtom) -> Self {
         use models::NomenclaturalActAtom::*;
-        use {
-            NomenclaturalActAtom as Atom,
-            NomenclaturalActAtomDateTimeType as DateTime,
-            NomenclaturalActAtomTaxonomicStatusType as Status,
-            NomenclaturalActAtomTextType as Text,
-        };
+        use {NomenclaturalActAtom as Atom, NomenclaturalActAtomTextType as Text};
 
         match value {
             Empty => Atom::text(Text::Empty, "".to_string()),
-            ScientificName(value) => Atom::text(Text::ScientificName, value),
-            ActedOn(value) => Atom::text(Text::ActedOn, value),
-            TaxonomicStatus(value) => Atom::taxonomic_status(Status::TaxonomicStatus, value.into()),
-            NomenclaturalAct(value) => Atom::text(Text::NomenclaturalAct, value),
-            SourceUrl(value) => Atom::text(Text::SourceUrl, value),
             Publication(value) => Atom::text(Text::Publication, value),
-            CreatedAt(value) => Atom::datetime(DateTime::CreatedAt, value),
-            UpdatedAt(value) => Atom::datetime(DateTime::UpdatedAt, value),
+            PublicationDate(value) => Atom::text(Text::PublicationDate, value),
+            ActedOn(value) => Atom::text(Text::ActedOn, value),
+            Act(value) => Atom::act(NomenclaturalActAtomActType::NomenclaturalActType, value.into()),
+            SourceUrl(value) => Atom::text(Text::SourceUrl, value),
+            ScientificName(value) => Atom::text(Text::ScientificName, value),
+            CanonicalName(value) => Atom::text(Text::CanonicalName, value),
+            AuthorityName(value) => Atom::text(Text::AuthorityName, value),
+            AuthorityYear(value) => Atom::text(Text::AuthorityYear, value),
+            BasionymAuthorityName(value) => Atom::text(Text::BasionymAuthorityName, value),
+            BasionymAuthorityYear(value) => Atom::text(Text::BasionymAuthorityYear, value),
         }
     }
 }

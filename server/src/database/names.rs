@@ -1,13 +1,12 @@
+use arga_core::models::{Name, Taxon};
 use diesel::prelude::*;
 use diesel::sql_types::Text;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use arga_core::models::Name;
+use super::PgPool;
 use crate::database::schema;
 use crate::http::Error;
-
-use super::PgPool;
 
 
 sql_function!(fn lower(x: Text) -> Text);
@@ -56,5 +55,19 @@ impl NameProvider {
             .await?;
 
         Ok(name)
+    }
+
+    pub async fn taxa(&self, name_id: &Uuid) -> Result<Vec<Taxon>, Error> {
+        use schema::{taxa, taxon_names};
+        let mut conn = self.pool.get().await?;
+
+        let taxa = taxa::table
+            .inner_join(taxon_names::table)
+            .filter(taxon_names::name_id.eq(name_id))
+            .select(Taxon::as_select())
+            .load::<Taxon>(&mut conn)
+            .await?;
+
+        Ok(taxa)
     }
 }

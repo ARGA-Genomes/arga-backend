@@ -1,8 +1,7 @@
+use arga_core::models::TaxonomicRank;
+use arga_core::schema::taxa;
 use diesel::pg::Pg;
 use diesel::prelude::*;
-
-use arga_core::schema::taxa;
-use arga_core::models::TaxonomicRank;
 use diesel::sql_types::Bool;
 
 
@@ -20,16 +19,27 @@ pub enum Classification {
     Superkingdom(String),
     Kingdom(String),
     Subkingdom(String),
+    Infrakingdom(String),
+    Superphylum(String),
     Phylum(String),
     Subphylum(String),
+    Infraphylum(String),
+    Parvphylum(String),
+    Gigaclass(String),
+    Megaclass(String),
     Superclass(String),
     Class(String),
     Subclass(String),
+    Infraclass(String),
+    Subterclass(String),
     Superorder(String),
     Order(String),
-    Suborder(String),
     Hyporder(String),
     Minorder(String),
+    Suborder(String),
+    Infraorder(String),
+    Parvorder(String),
+    Epifamily(String),
     Superfamily(String),
     Family(String),
     Subfamily(String),
@@ -40,6 +50,10 @@ pub enum Classification {
     Subgenus(String),
     Species(String),
     Subspecies(String),
+    Variety(String),
+    Subvariety(String),
+    Natio(String),
+    Mutatio(String),
     Unranked(String),
     HigherTaxon(String),
     AggregateGenera(String),
@@ -48,10 +62,9 @@ pub enum Classification {
     Subcohort(String),
     Division(String),
     IncertaeSedis(String),
-    Infraclass(String),
-    Infraorder(String),
     Infragenus(String),
     Section(String),
+    Subsection(String),
     Subdivision(String),
     Regnum(String),
     Familia(String),
@@ -96,10 +109,10 @@ pub fn with_filter(filter: &Filter) -> BoxedExpression {
     match filter {
         Filter::Include(kind) => match kind {
             FilterKind::Classification(value) => with_classification(value),
-        }
+        },
         Filter::Exclude(kind) => match kind {
             FilterKind::Classification(value) => without_classification(value),
-        }
+        },
     }
 }
 
@@ -126,16 +139,27 @@ pub fn decompose_classification(classification: &Classification) -> (TaxonomicRa
         Classification::Superkingdom(value) => (TaxonomicRank::Superkingdom, value.clone()),
         Classification::Kingdom(value) => (TaxonomicRank::Kingdom, value.clone()),
         Classification::Subkingdom(value) => (TaxonomicRank::Subkingdom, value.clone()),
+        Classification::Infrakingdom(value) => (TaxonomicRank::Infrakingdom, value.clone()),
+        Classification::Superphylum(value) => (TaxonomicRank::Superphylum, value.clone()),
         Classification::Phylum(value) => (TaxonomicRank::Phylum, value.clone()),
         Classification::Subphylum(value) => (TaxonomicRank::Subphylum, value.clone()),
+        Classification::Infraphylum(value) => (TaxonomicRank::Infraphylum, value.clone()),
+        Classification::Parvphylum(value) => (TaxonomicRank::Parvphylum, value.clone()),
+        Classification::Gigaclass(value) => (TaxonomicRank::Gigaclass, value.clone()),
+        Classification::Megaclass(value) => (TaxonomicRank::Megaclass, value.clone()),
         Classification::Superclass(value) => (TaxonomicRank::Superclass, value.clone()),
         Classification::Class(value) => (TaxonomicRank::Class, value.clone()),
         Classification::Subclass(value) => (TaxonomicRank::Subclass, value.clone()),
+        Classification::Infraclass(value) => (TaxonomicRank::Infraclass, value.clone()),
+        Classification::Subterclass(value) => (TaxonomicRank::Subterclass, value.clone()),
         Classification::Superorder(value) => (TaxonomicRank::Superorder, value.clone()),
         Classification::Order(value) => (TaxonomicRank::Order, value.clone()),
-        Classification::Suborder(value) => (TaxonomicRank::Suborder, value.clone()),
         Classification::Hyporder(value) => (TaxonomicRank::Hyporder, value.clone()),
         Classification::Minorder(value) => (TaxonomicRank::Minorder, value.clone()),
+        Classification::Suborder(value) => (TaxonomicRank::Suborder, value.clone()),
+        Classification::Infraorder(value) => (TaxonomicRank::Infraorder, value.clone()),
+        Classification::Parvorder(value) => (TaxonomicRank::Parvorder, value.clone()),
+        Classification::Epifamily(value) => (TaxonomicRank::Epifamily, value.clone()),
         Classification::Superfamily(value) => (TaxonomicRank::Superfamily, value.clone()),
         Classification::Family(value) => (TaxonomicRank::Family, value.clone()),
         Classification::Subfamily(value) => (TaxonomicRank::Subfamily, value.clone()),
@@ -146,6 +170,10 @@ pub fn decompose_classification(classification: &Classification) -> (TaxonomicRa
         Classification::Subgenus(value) => (TaxonomicRank::Subgenus, value.clone()),
         Classification::Species(value) => (TaxonomicRank::Species, value.clone()),
         Classification::Subspecies(value) => (TaxonomicRank::Subspecies, value.clone()),
+        Classification::Variety(value) => (TaxonomicRank::Variety, value.clone()),
+        Classification::Subvariety(value) => (TaxonomicRank::Subvariety, value.clone()),
+        Classification::Natio(value) => (TaxonomicRank::Natio, value.clone()),
+        Classification::Mutatio(value) => (TaxonomicRank::Mutatio, value.clone()),
         Classification::Unranked(value) => (TaxonomicRank::Unranked, value.clone()),
         Classification::HigherTaxon(value) => (TaxonomicRank::HigherTaxon, value.clone()),
         Classification::AggregateGenera(value) => (TaxonomicRank::AggregateGenera, value.clone()),
@@ -154,10 +182,9 @@ pub fn decompose_classification(classification: &Classification) -> (TaxonomicRa
         Classification::Subcohort(value) => (TaxonomicRank::Subcohort, value.clone()),
         Classification::Division(value) => (TaxonomicRank::Division, value.clone()),
         Classification::IncertaeSedis(value) => (TaxonomicRank::IncertaeSedis, value.clone()),
-        Classification::Infraclass(value) => (TaxonomicRank::Infraclass, value.clone()),
-        Classification::Infraorder(value) => (TaxonomicRank::Infraorder, value.clone()),
         Classification::Infragenus(value) => (TaxonomicRank::Infragenus, value.clone()),
         Classification::Section(value) => (TaxonomicRank::Section, value.clone()),
+        Classification::Subsection(value) => (TaxonomicRank::Subsection, value.clone()),
         Classification::Subdivision(value) => (TaxonomicRank::Subdivision, value.clone()),
         Classification::Regnum(value) => (TaxonomicRank::Regnum, value.clone()),
         Classification::Familia(value) => (TaxonomicRank::Familia, value.clone()),

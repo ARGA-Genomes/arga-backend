@@ -131,19 +131,32 @@ where
     })
 }
 
+pub fn try_i32_opt<'de, D>(deserializer: D) -> Result<Option<i32>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: Option<String> = Deserialize::deserialize(deserializer)?;
+
+    Ok(match s {
+        None => None,
+        Some(s) => match str::parse::<i32>(&s) {
+            Ok(num) => Some(num),
+            Err(_) => None,
+        },
+    })
+}
+
+
 pub fn extract_authority(name: &Option<String>, full_name: &Option<String>) -> Option<String> {
     match (name, full_name) {
-        (Some(name), Some(full_name)) => {
-            Some(full_name.trim_start_matches(name).trim().to_string())
-        }
+        (Some(name), Some(full_name)) => Some(full_name.trim_start_matches(name).trim().to_string()),
         _ => None,
     }
 }
 
 pub fn decompose_scientific_name(scientific_name: &str) -> Option<ScientificNameComponents> {
     // TODO: bubble regex creation failures
-    static RE: Lazy<Regex> =
-        Lazy::new(|| Regex::new(SCIENTIFIC_NAME_REGEX).expect("Couldn't compile regex"));
+    static RE: Lazy<Regex> = Lazy::new(|| Regex::new(SCIENTIFIC_NAME_REGEX).expect("Couldn't compile regex"));
 
     if let Some(groups) = RE.captures(scientific_name) {
         let genus = groups.name("genus");
@@ -155,8 +168,7 @@ pub fn decompose_scientific_name(scientific_name: &str) -> Option<ScientificName
         // decompose the regex match into a struct
         match (genus, epithet, authority) {
             (Some(genus), Some(epithet), Some(authority)) => {
-                let mut subspecific_epithet: Option<String> =
-                    subepithet.map(|v| v.as_str().trim().into());
+                let mut subspecific_epithet: Option<String> = subepithet.map(|v| v.as_str().trim().into());
                 let mut authority = authority.as_str().trim().into();
 
                 // some authorities have a name like `van de Poll` which will be picked
@@ -190,15 +202,14 @@ pub fn decompose_scientific_name(scientific_name: &str) -> Option<ScientificName
             }
             _ => None,
         }
-    } else {
+    }
+    else {
         None
     }
 }
 
 /// Read and deserialize the next million records
-pub fn read_chunk<T>(
-    reader: &mut csv::DeserializeRecordsIntoIter<std::fs::File, T>,
-) -> Result<Vec<T>, Error>
+pub fn read_chunk<T>(reader: &mut csv::DeserializeRecordsIntoIter<std::fs::File, T>) -> Result<Vec<T>, Error>
 where
     T: serde::de::DeserializeOwned,
 {
@@ -242,8 +253,7 @@ mod tests {
 
     #[test]
     fn it_decomposes_scientific_names_with_subgenus() {
-        let result =
-            decompose_scientific_name("Stigmodera (Castiarina) chamelauci Barker, 1987").unwrap();
+        let result = decompose_scientific_name("Stigmodera (Castiarina) chamelauci Barker, 1987").unwrap();
         assert_eq!(result.genus, "Stigmodera");
         assert_eq!(result.subgenus, Some("Castiarina".to_string()));
         assert_eq!(result.specific_epithet, "chamelauci");
@@ -253,17 +263,14 @@ mod tests {
 
     #[test]
     fn it_decomposes_scientific_names_with_multiple_authors() {
-        let result =
-            decompose_scientific_name("Rhombus grandisquama Temminck & Schlegel, 1846").unwrap();
+        let result = decompose_scientific_name("Rhombus grandisquama Temminck & Schlegel, 1846").unwrap();
         assert_eq!(result.genus, "Rhombus");
         assert_eq!(result.subgenus, None);
         assert_eq!(result.specific_epithet, "grandisquama");
         assert_eq!(result.subspecific_epithet, None);
         assert_eq!(result.authority, "Temminck & Schlegel, 1846");
 
-        let result =
-            decompose_scientific_name("Ozimops kitcheneri McKenzie, Reardon & Adams, 2014")
-                .unwrap();
+        let result = decompose_scientific_name("Ozimops kitcheneri McKenzie, Reardon & Adams, 2014").unwrap();
         assert_eq!(result.genus, "Ozimops");
         assert_eq!(result.subgenus, None);
         assert_eq!(result.specific_epithet, "kitcheneri");
@@ -273,8 +280,7 @@ mod tests {
 
     #[test]
     fn it_decomposes_scientific_names_with_moved_genus() {
-        let result =
-            decompose_scientific_name("Phascolarctos cinereus cinereus (Goldfuss, 1817)").unwrap();
+        let result = decompose_scientific_name("Phascolarctos cinereus cinereus (Goldfuss, 1817)").unwrap();
         assert_eq!(result.genus, "Phascolarctos");
         assert_eq!(result.subgenus, None);
         assert_eq!(result.specific_epithet, "cinereus");
@@ -294,8 +300,7 @@ mod tests {
 
     #[test]
     fn it_decomposes_scientific_names_with_subgenus_and_subspecies() {
-        let result =
-            decompose_scientific_name("Clivina (Clivina) gemina gemina Baehr, 2017").unwrap();
+        let result = decompose_scientific_name("Clivina (Clivina) gemina gemina Baehr, 2017").unwrap();
         assert_eq!(result.genus, "Clivina");
         assert_eq!(result.subgenus, Some("Clivina".to_string()));
         assert_eq!(result.specific_epithet, "gemina");
@@ -319,16 +324,14 @@ mod tests {
         assert_eq!(result.subspecific_epithet, None);
         assert_eq!(result.authority, "von Lendenfeld, 1882");
 
-        let result =
-            decompose_scientific_name("Metapenaeopsis mannarensis de Bruin, 1965").unwrap();
+        let result = decompose_scientific_name("Metapenaeopsis mannarensis de Bruin, 1965").unwrap();
         assert_eq!(result.genus, "Metapenaeopsis");
         assert_eq!(result.subgenus, None);
         assert_eq!(result.specific_epithet, "mannarensis");
         assert_eq!(result.subspecific_epithet, None);
         assert_eq!(result.authority, "de Bruin, 1965");
 
-        let result =
-            decompose_scientific_name("Pterygotrigla robertsi del Cerro & Lloris, 1997").unwrap();
+        let result = decompose_scientific_name("Pterygotrigla robertsi del Cerro & Lloris, 1997").unwrap();
         assert_eq!(result.genus, "Pterygotrigla");
         assert_eq!(result.subgenus, None);
         assert_eq!(result.specific_epithet, "robertsi");

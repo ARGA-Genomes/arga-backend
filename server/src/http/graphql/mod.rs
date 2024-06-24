@@ -16,6 +16,7 @@ pub mod dna_extract;
 pub mod extensions;
 pub mod marker;
 pub mod markers;
+pub mod names;
 pub mod provenance;
 pub mod sequence;
 pub mod specimen;

@@ -1,0 +1,14 @@
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'taxon_inquirendum';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'homonym';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'misspelled';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'unassessed';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'unavailable';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'uncertain';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'unjustified_emendation';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'nomen_dubium';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'nomen_nudum';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'nomen_oblitum';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'interim_unpublished';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'incorrect_grammatical_agreement_of_specific_epithet';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'superseded_combination';
+ALTER TYPE taxonomic_status ADD VALUE IF NOT EXISTS 'superseded_rank';

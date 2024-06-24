@@ -1,5 +1,5 @@
-use async_graphql::{SimpleObject, Enum};
-use serde::{Serialize, Deserialize};
+use async_graphql::{Enum, SimpleObject};
+use serde::{Deserialize, Serialize};
 
 use crate::database::models;
 
@@ -27,6 +27,23 @@ impl From<models::Taxon> for TaxonDetails {
             citation: value.citation,
             source: None,
             source_url: None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, SimpleObject, Default)]
+pub struct NameDetails {
+    pub scientific_name: String,
+    pub canonical_name: String,
+    pub authorship: Option<String>,
+}
+
+impl From<models::Name> for NameDetails {
+    fn from(value: models::Name) -> Self {
+        Self {
+            scientific_name: value.scientific_name,
+            canonical_name: value.canonical_name,
+            authorship: value.authorship,
         }
     }
 }
@@ -99,9 +116,11 @@ pub enum TaxonomicStatus {
     Accepted,
     Undescribed,
     SpeciesInquirenda,
+    TaxonInquirendum,
     ManuscriptName,
     Hybrid,
     Synonym,
+    Homonym,
     Unaccepted,
     Informal,
     Placeholder,
@@ -111,6 +130,7 @@ pub enum TaxonomicStatus {
     TaxonomicSynonym,
     ReplacedSynonym,
 
+    Misspelled,
     OrthographicVariant,
     Misapplied,
     Excluded,
@@ -123,10 +143,38 @@ pub enum TaxonomicStatus {
     DoubtfulTaxonomicSynonym,
     DoubtfulProParteMisapplied,
     DoubtfulProParteTaxonomicSynonym,
+
+    Unassessed,
+    Unavailable,
+    Uncertain,
+    UnjustifiedEmendation,
+
+    NomenDubium,
+    NomenNudum,
+    NomenOblitum,
+
+    InterimUnpublished,
+    IncorrectGrammaticalAgreementOfSpecificEpithet,
+    SupersededCombination,
+    SupersededRank,
 }
 
 impl Default for TaxonomicStatus {
-    fn default() -> Self { TaxonomicStatus::Unaccepted }
+    fn default() -> Self {
+        TaxonomicStatus::Unaccepted
+    }
+}
+
+
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "models::NomenclaturalActType")]
+pub enum NomenclaturalActType {
+    SpeciesNova,
+    CombinatioNova,
+    RevivedStatus,
+    GenusSpeciesNova,
+    SubspeciesNova,
+    NameUsage,
 }
 
 
@@ -171,29 +219,53 @@ pub enum TaxonomicVernacularGroup {
 #[graphql(remote = "models::TaxonomicRank")]
 pub enum TaxonomicRank {
     Domain,
+
     Superkingdom,
     Kingdom,
     Subkingdom,
+    Infrakingdom,
+
+    Superphylum,
     Phylum,
     Subphylum,
+    Infraphylum,
+    Parvphylum,
+
+    Gigaclass,
+    Megaclass,
     Superclass,
     Class,
     Subclass,
+    Infraclass,
+    Subterclass,
+
     Superorder,
     Order,
-    Suborder,
     Hyporder,
     Minorder,
+    Suborder,
+    Infraorder,
+    Parvorder,
+
+    Epifamily,
     Superfamily,
     Family,
     Subfamily,
+
     Supertribe,
     Tribe,
     Subtribe,
     Genus,
     Subgenus,
+    Infragenus,
     Species,
     Subspecies,
+
+    Variety,
+    Subvariety,
+
+    Natio,
+    Mutatio,
 
     Unranked,
     HigherTaxon,
@@ -204,10 +276,8 @@ pub enum TaxonomicRank {
     Subcohort,
     Division,
     IncertaeSedis,
-    Infraclass,
-    Infraorder,
-    Infragenus,
     Section,
+    Subsection,
     Subdivision,
 
     Regnum,
@@ -234,5 +304,7 @@ pub enum TaxonomicRank {
 }
 
 impl Default for TaxonomicRank {
-    fn default() -> Self { TaxonomicRank::Unranked }
+    fn default() -> Self {
+        TaxonomicRank::Unranked
+    }
 }
