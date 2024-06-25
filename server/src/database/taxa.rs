@@ -1,7 +1,8 @@
 use arga_core::models::{
     Dataset,
+    Name,
     NamePublication,
-    NomenclaturalAct,
+    NomenclaturalActType,
     Taxon,
     TaxonHistory,
     TaxonTreeNode,
@@ -9,8 +10,8 @@ use arga_core::models::{
     ACCEPTED_NAMES,
     SPECIES_RANKS,
 };
-use arga_core::schema::nomenclatural_acts;
 use bigdecimal::BigDecimal;
+use diesel::helper_types::AsSelect;
 use diesel::prelude::*;
 use diesel::sql_types::{Array, Nullable, Text, Varchar};
 use diesel_async::RunQueryDsl;
@@ -77,10 +78,24 @@ pub struct HistoryItem {
     #[diesel(embed)]
     pub taxon: Taxon,
     #[diesel(embed)]
-    pub act: NomenclaturalAct,
-    #[diesel(embed)]
     pub publication: Option<NamePublication>,
 }
+
+// because acted_on is an aliased table we don't implement
+// Selectable as it will use the `name` table rather than the
+// joined aliased table
+#[derive(Debug, Queryable)]
+#[diesel(table_name = schema::nomenclatural_acts)]
+pub struct NomenclaturalAct {
+    pub entity_id: String,
+    pub act: NomenclaturalActType,
+    pub source_url: String,
+
+    pub publication: NamePublication,
+    pub name: Name,
+    pub acted_on: Name,
+}
+
 
 #[derive(Clone)]
 pub struct TaxaProvider {
@@ -317,25 +332,93 @@ impl TaxaProvider {
     }
 
     pub async fn history(&self, taxon_id: &Uuid) -> Result<Vec<HistoryItem>, Error> {
-        use schema::{datasets, name_publications as publications, taxa, taxon_history as history};
+        use schema::{datasets, name_publications as publications, taxa, taxon_history as history, taxon_names};
         let mut conn = self.pool.get().await?;
 
+        let name_ids = taxon_names::table
+            .select(taxon_names::name_id)
+            .filter(taxon_names::taxon_id.eq(taxon_id))
+            .into_boxed();
+
+        let taxon_ids = taxon_names::table
+            .select(taxon_names::taxon_id)
+            .filter(taxon_names::name_id.eq_any(name_ids))
+            .load::<Uuid>(&mut conn)
+            .await?;
+
         let synonym_original_descriptions = history::table
-            .filter(history::acted_on.eq(taxon_id))
+            .filter(history::acted_on.eq_any(taxon_ids.clone()))
             .select(history::taxon_id)
             .into_boxed();
 
         let items = history::table
             .inner_join(datasets::table)
-            .inner_join(taxa::table.on(taxa::id.eq(history::taxon_id)))
-            .inner_join(nomenclatural_acts::table)
+            .inner_join(taxa::table.on(taxa::id.eq(history::acted_on)))
             .left_join(publications::table)
             .filter(history::taxon_id.eq(taxon_id))
-            .or_filter(history::acted_on.eq(taxon_id))
+            .or_filter(history::acted_on.eq_any(taxon_ids))
             .or_filter(history::taxon_id.eq_any(synonym_original_descriptions))
             .select(HistoryItem::as_select())
             .order((publications::published_year.asc(), taxa::scientific_name.asc()))
             .load::<HistoryItem>(&mut conn)
+            .await?;
+
+        Ok(items)
+    }
+
+    pub async fn nomenclatural_acts(&self, taxon_id: &Uuid) -> Result<Vec<NomenclaturalAct>, Error> {
+        use schema::{
+            name_publications as publications,
+            names,
+            nomenclatural_acts as acts,
+            taxon_names,
+            taxonomic_acts,
+        };
+        let mut conn = self.pool.get().await?;
+
+        let name_ids = taxon_names::table
+            .select(taxon_names::name_id)
+            .filter(taxon_names::taxon_id.eq(taxon_id))
+            .into_boxed();
+
+        let taxon_ids = taxon_names::table
+            .left_join(taxonomic_acts::table.on(taxon_names::taxon_id.eq(taxonomic_acts::taxon_id)))
+            .select(taxon_names::taxon_id)
+            .filter(taxon_names::name_id.eq_any(name_ids))
+            .or_filter(taxonomic_acts::accepted_taxon_id.eq(taxon_id))
+            .load::<Uuid>(&mut conn)
+            .await?;
+
+        let synonym_taxon_ids = taxonomic_acts::table
+            .select(taxonomic_acts::taxon_id)
+            .filter(taxonomic_acts::taxon_id.eq_any(&taxon_ids))
+            .or_filter(taxonomic_acts::accepted_taxon_id.eq_any(&taxon_ids))
+            .load::<Uuid>(&mut conn)
+            .await?;
+
+        let name_ids = taxon_names::table
+            .select(taxon_names::name_id)
+            .filter(taxon_names::taxon_id.eq_any(taxon_ids))
+            .or_filter(taxon_names::taxon_id.eq_any(synonym_taxon_ids))
+            .into_boxed();
+
+        let acted_on = diesel::alias!(names as acted_on);
+
+        let items = acts::table
+            .inner_join(publications::table)
+            .inner_join(names::table.on(names::id.eq(acts::name_id)))
+            .inner_join(acted_on.on(acted_on.field(names::id).eq(acts::acted_on_id)))
+            .filter(acts::name_id.eq_any(name_ids))
+            .select((
+                acts::entity_id,
+                acts::act,
+                acts::source_url,
+                NamePublication::as_select(),
+                Name::as_select(),
+                acted_on.fields(<Name as Selectable<diesel::pg::Pg>>::construct_selection()),
+            ))
+            .order((publications::published_year.asc(), names::scientific_name.asc()))
+            .load::<NomenclaturalAct>(&mut conn)
             .await?;
 
         Ok(items)

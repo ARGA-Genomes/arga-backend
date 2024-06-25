@@ -1,0 +1,14 @@
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'infrakingdom';
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'superphylum';
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'infraphylum';
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'parvphylum';
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'gigaclass';
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'megaclass';
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'subterclass';
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'parvorder';
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'epifamily';
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'variety';
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'subvariety';
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'natio';
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'mutatio';
+ALTER TYPE taxonomic_rank ADD VALUE IF NOT EXISTS 'subsection';

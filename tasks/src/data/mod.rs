@@ -2,6 +2,7 @@ pub mod bpa;
 pub mod ncbi;
 // pub mod bold;
 pub mod oplogger;
+pub mod plazi;
 
 #[derive(clap::Subcommand)]
 pub enum Command {
@@ -15,6 +16,9 @@ pub enum Command {
     // #[command(subcommand)]
     // Bold(bold::Command),
     #[command(subcommand)]
+    Plazi(plazi::Command),
+
+    #[command(subcommand)]
     Oplog(oplogger::Command),
 }
 
@@ -25,6 +29,7 @@ pub fn process_command(command: &Command) {
         Command::Ncbi(cmd) => ncbi::process_command(cmd),
         Command::Bpa(cmd) => bpa::process_command(cmd),
         // Command::Bold(cmd) => bold::process_command(cmd),
+        Command::Plazi(cmd) => plazi::process_command(cmd),
         Command::Oplog(cmd) => oplogger::process_command(cmd),
     }
 }
@@ -82,6 +87,9 @@ pub enum ParseError {
 
     #[error("value not found: {0}")]
     NotFound(String),
+
+    #[error("invalid structure: {0}")]
+    InvalidStructure(String),
 }
 
 // impl From<ureq::Error> for Error {
