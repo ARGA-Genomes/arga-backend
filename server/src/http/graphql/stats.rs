@@ -1,9 +1,12 @@
+use std::collections::HashMap;
+
 use async_graphql::*;
+use bigdecimal::{BigDecimal, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use super::common::taxonomy::TaxonomicRank;
-use crate::database::stats::BreakdownItem;
+use crate::database::stats::{BreakdownItem, TaxonStatNode};
 use crate::http::{Context as State, Error};
 
 
@@ -40,10 +43,15 @@ impl Statistics {
         Ok(stats)
     }
 
-    async fn rank_breakdown(&self, ctx: &Context<'_>, rank: TaxonomicRank) -> Result<RankStatistics, Error> {
+    async fn taxon_breakdown(
+        &self,
+        ctx: &Context<'_>,
+        rank: TaxonomicRank,
+    ) -> Result<Vec<TaxonTreeNodeStatistics>, Error> {
         let state = ctx.data::<State>().unwrap();
         let tree = state.database.stats.taxon_tree(rank.into()).await?;
-        Ok(RankStatistics::default())
+        let stats = tree.into_iter().map(|i| i.into()).collect();
+        Ok(stats)
     }
 
     #[instrument(skip(self, ctx))]
@@ -92,15 +100,41 @@ pub struct DatasetStatistics {
 
 #[derive(Clone, Debug, Default, SimpleObject, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct RankStatistics {
+pub struct TaxonTreeNodeStatistics {
+    /// The scientific name of the taxon
+    pub scientific_name: String,
+    /// The canonical name of the taxon
+    pub canonical_name: String,
+    /// The taxonomic rank
+    pub rank: TaxonomicRank,
+
+    /// The total amount of loci available
+    pub loci: Option<u64>,
+    /// The total amount of genomes available
+    pub genomes: Option<u64>,
+    /// The total amount of specimens available
+    pub specimens: Option<u64>,
+    /// The total amount of data related to the taxon
+    pub other: Option<u64>,
     /// The total amount of genomic data
-    pub total: usize,
-    /// The total amount of whole genomes available
-    pub whole_genomes: usize,
-    /// The total amount of partial genomes available
-    pub partial_genomes: usize,
-    /// The total amount of organelles available
-    pub organelles: usize,
-    /// The total amount of barcodes available
-    pub barcodes: usize,
+    pub total_genomic: Option<u64>,
+
+    /// The taxa that fall below this taxon rank
+    pub children: Vec<TaxonTreeNodeStatistics>,
+}
+
+impl From<TaxonStatNode> for TaxonTreeNodeStatistics {
+    fn from(value: TaxonStatNode) -> Self {
+        Self {
+            scientific_name: value.scientific_name,
+            canonical_name: value.canonical_name,
+            rank: value.rank.into(),
+            loci: value.loci.map(|v| v.to_u64().unwrap_or_default()),
+            genomes: value.genomes.map(|v| v.to_u64().unwrap_or_default()),
+            specimens: value.specimens.map(|v| v.to_u64().unwrap_or_default()),
+            other: value.other.map(|v| v.to_u64().unwrap_or_default()),
+            total_genomic: value.total_genomic.map(|v| v.to_u64().unwrap_or_default()),
+            children: value.children.into_values().map(|i| i.into()).collect(),
+        }
+    }
 }
