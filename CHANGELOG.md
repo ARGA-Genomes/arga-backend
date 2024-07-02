@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+- New endpoint for taxon data statistics
 - Taxonomic act importer via operation logger tasks
 - Change tracking of taxonomic acts via CmRDTs and operation logs
 - Imported taxonomy from WoRMS (2024-04-01)
