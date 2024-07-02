@@ -8,7 +8,9 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 
+use super::extensions::classification_filters::Classification;
 use super::{schema, Error, PgPool};
+use crate::database::extensions::classification_filters::with_classification;
 
 
 #[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
@@ -100,10 +102,15 @@ impl StatsProvider {
         Ok(DatasetBreakdown { species })
     }
 
-    /// Get taxon stats for a specific rank.
-    /// This will return the stats for all taxons within a rank, as well as a specified
-    /// amount of depth based on the taxons of interest.
-    pub async fn taxon_tree(&self, rank: TaxonomicRank) -> Result<Vec<TaxonStatNode>, Error> {
+    /// Get stats for a specific taxon and it's decendents.
+    /// This will traverse the tree from the specified root taxon and stop once it reaches
+    /// the last rank in the include_ranks parameter. By only including descendents in the specified
+    /// ranks the overall payload is reduced and a 'tree depth' is set.
+    pub async fn taxon_tree(
+        &self,
+        taxon: Classification,
+        include_ranks: Vec<TaxonomicRank>,
+    ) -> Result<Vec<TaxonStatNode>, Error> {
         use schema::taxa;
         use schema_gnl::{taxa_tree, taxa_tree_stats};
 
@@ -111,13 +118,12 @@ impl StatsProvider {
 
         let root_id = taxa::table
             .select(taxa::id)
-            .filter(taxa::canonical_name.eq("Animalia"))
+            .filter(with_classification(&taxon))
             .get_result::<uuid::Uuid>(&mut conn)
             .await?;
 
         let path = diesel::alias!(taxa as path);
-        let ranks = [TaxonomicRank::Phylum, TaxonomicRank::Class, TaxonomicRank::Order];
-        let last_rank = TaxonomicRank::Order;
+        let last_rank = include_ranks.last().unwrap_or(&TaxonomicRank::Domain);
 
         // this query joins the taxa tree with the taxa tree stats views in order
         // to get the stats for each taxon and build a tree out of it. we do this
@@ -150,7 +156,7 @@ impl StatsProvider {
             .filter(taxa_tree::taxon_id.eq(root_id))
             .filter(taxa_tree_stats::taxon_id.eq(root_id))
             .filter(path.field(taxa::rank).eq(&last_rank))
-            .filter(taxa::rank.eq_any(&ranks))
+            .filter(taxa::rank.eq_any(&include_ranks))
             // this will ensure that we iterate through the tree going down from the root node
             .order((taxa_tree::path_id, taxa_tree::depth.desc()))
             .load::<TaxonStat>(&mut conn)

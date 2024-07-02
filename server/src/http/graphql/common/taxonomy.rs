@@ -1,6 +1,7 @@
 use async_graphql::{Enum, SimpleObject};
 use serde::{Deserialize, Serialize};
 
+use crate::database::extensions::classification_filters::Classification;
 use crate::database::models;
 
 
@@ -306,5 +307,85 @@ pub enum TaxonomicRank {
 impl Default for TaxonomicRank {
     fn default() -> Self {
         TaxonomicRank::Unranked
+    }
+}
+
+
+impl TaxonomicRank {
+    pub fn to_classification(&self, name: String) -> Classification {
+        match self {
+            TaxonomicRank::Domain => Classification::Domain(name),
+            TaxonomicRank::Superkingdom => Classification::Superkingdom(name),
+            TaxonomicRank::Kingdom => Classification::Kingdom(name),
+            TaxonomicRank::Subkingdom => Classification::Subkingdom(name),
+            TaxonomicRank::Infrakingdom => Classification::Infrakingdom(name),
+            TaxonomicRank::Superphylum => Classification::Superphylum(name),
+            TaxonomicRank::Phylum => Classification::Phylum(name),
+            TaxonomicRank::Subphylum => Classification::Subphylum(name),
+            TaxonomicRank::Infraphylum => Classification::Infraphylum(name),
+            TaxonomicRank::Parvphylum => Classification::Parvphylum(name),
+            TaxonomicRank::Gigaclass => Classification::Gigaclass(name),
+            TaxonomicRank::Megaclass => Classification::Megaclass(name),
+            TaxonomicRank::Superclass => Classification::Superclass(name),
+            TaxonomicRank::Class => Classification::Class(name),
+            TaxonomicRank::Subclass => Classification::Subclass(name),
+            TaxonomicRank::Infraclass => Classification::Infraclass(name),
+            TaxonomicRank::Subterclass => Classification::Subterclass(name),
+            TaxonomicRank::Superorder => Classification::Superorder(name),
+            TaxonomicRank::Order => Classification::Order(name),
+            TaxonomicRank::Hyporder => Classification::Hyporder(name),
+            TaxonomicRank::Minorder => Classification::Minorder(name),
+            TaxonomicRank::Suborder => Classification::Suborder(name),
+            TaxonomicRank::Infraorder => Classification::Infraorder(name),
+            TaxonomicRank::Parvorder => Classification::Parvorder(name),
+            TaxonomicRank::Epifamily => Classification::Epifamily(name),
+            TaxonomicRank::Superfamily => Classification::Superfamily(name),
+            TaxonomicRank::Family => Classification::Family(name),
+            TaxonomicRank::Subfamily => Classification::Subfamily(name),
+            TaxonomicRank::Supertribe => Classification::Supertribe(name),
+            TaxonomicRank::Tribe => Classification::Tribe(name),
+            TaxonomicRank::Subtribe => Classification::Subtribe(name),
+            TaxonomicRank::Genus => Classification::Genus(name),
+            TaxonomicRank::Subgenus => Classification::Subgenus(name),
+            TaxonomicRank::Infragenus => Classification::Infragenus(name),
+            TaxonomicRank::Species => Classification::Species(name),
+            TaxonomicRank::Subspecies => Classification::Subspecies(name),
+            TaxonomicRank::Variety => Classification::Variety(name),
+            TaxonomicRank::Subvariety => Classification::Subvariety(name),
+            TaxonomicRank::Natio => Classification::Natio(name),
+            TaxonomicRank::Mutatio => Classification::Mutatio(name),
+            TaxonomicRank::Unranked => Classification::Unranked(name),
+            TaxonomicRank::HigherTaxon => Classification::HigherTaxon(name),
+            TaxonomicRank::AggregateGenera => Classification::AggregateGenera(name),
+            TaxonomicRank::AggregateSpecies => Classification::AggregateSpecies(name),
+            TaxonomicRank::Cohort => Classification::Cohort(name),
+            TaxonomicRank::Subcohort => Classification::Subcohort(name),
+            TaxonomicRank::Division => Classification::Division(name),
+            TaxonomicRank::IncertaeSedis => Classification::IncertaeSedis(name),
+            TaxonomicRank::Section => Classification::Section(name),
+            TaxonomicRank::Subsection => Classification::Subsection(name),
+            TaxonomicRank::Subdivision => Classification::Subdivision(name),
+            TaxonomicRank::Regnum => Classification::Regnum(name),
+            TaxonomicRank::Familia => Classification::Familia(name),
+            TaxonomicRank::Classis => Classification::Classis(name),
+            TaxonomicRank::Ordo => Classification::Ordo(name),
+            TaxonomicRank::Varietas => Classification::Varietas(name),
+            TaxonomicRank::Forma => Classification::Forma(name),
+            TaxonomicRank::Subforma => Classification::Subforma(name),
+            TaxonomicRank::Subclassis => Classification::Subclassis(name),
+            TaxonomicRank::Superordo => Classification::Superordo(name),
+            TaxonomicRank::Sectio => Classification::Sectio(name),
+            TaxonomicRank::Subsectio => Classification::Subsectio(name),
+            TaxonomicRank::Nothovarietas => Classification::Nothovarietas(name),
+            TaxonomicRank::Subvarietas => Classification::Subvarietas(name),
+            TaxonomicRank::Series => Classification::Series(name),
+            TaxonomicRank::Subseries => Classification::Subseries(name),
+            TaxonomicRank::Superspecies => Classification::Superspecies(name),
+            TaxonomicRank::Infraspecies => Classification::Infraspecies(name),
+            TaxonomicRank::Subfamilia => Classification::Subfamilia(name),
+            TaxonomicRank::Subordo => Classification::Subordo(name),
+            TaxonomicRank::Regio => Classification::Regio(name),
+            TaxonomicRank::SpecialForm => Classification::SpecialForm(name),
+        }
     }
 }

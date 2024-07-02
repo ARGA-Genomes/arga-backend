@@ -46,10 +46,15 @@ impl Statistics {
     async fn taxon_breakdown(
         &self,
         ctx: &Context<'_>,
-        rank: TaxonomicRank,
+        taxon_rank: TaxonomicRank,
+        taxon_canonical_name: String,
+        include_ranks: Vec<TaxonomicRank>,
     ) -> Result<Vec<TaxonTreeNodeStatistics>, Error> {
         let state = ctx.data::<State>().unwrap();
-        let tree = state.database.stats.taxon_tree(rank.into()).await?;
+        let classification = taxon_rank.to_classification(taxon_canonical_name);
+        let include_ranks = include_ranks.into_iter().map(|i| i.into()).collect();
+
+        let tree = state.database.stats.taxon_tree(classification, include_ranks).await?;
         let stats = tree.into_iter().map(|i| i.into()).collect();
         Ok(stats)
     }
