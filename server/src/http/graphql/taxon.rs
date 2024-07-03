@@ -329,7 +329,7 @@ impl From<taxa::SpeciesSummary> for DataBreakdown {
     }
 }
 
-fn into_classification(rank: TaxonRank, value: String) -> Classification {
+pub fn into_classification(rank: TaxonRank, value: String) -> Classification {
     match rank {
         TaxonRank::Domain => Classification::Domain(value),
         TaxonRank::Superkingdom => Classification::Superkingdom(value),
