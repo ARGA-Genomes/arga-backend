@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use uuid::Uuid;
 
+use super::common::taxonomy::TaxonomicRank;
 use super::common::{
     convert_whole_genome_filters,
     DatasetDetails,
@@ -17,6 +18,7 @@ use super::common::{
     WholeGenomeFilterItem,
 };
 use super::markers::SpeciesMarker;
+use super::taxon::{into_classification, TaxonNode, TaxonRank};
 use crate::database::models::{Name as ArgaName, Name};
 use crate::database::{schema, species, Database};
 use crate::http::{Context as State, Error};
@@ -116,6 +118,14 @@ impl Species {
         }
 
         Ok(details)
+    }
+
+    async fn hierarchy(&self, ctx: &Context<'_>) -> Result<Vec<TaxonNode>, Error> {
+        let classification = into_classification(TaxonRank::Species, self.canonical_name.clone());
+        let state = ctx.data::<State>().unwrap();
+        let hierarchy = state.database.taxa.hierarchy(&classification).await?;
+        let hierarchy = hierarchy.into_iter().map(TaxonNode::from).collect();
+        Ok(hierarchy)
     }
 
     async fn vernacular_names(&self, ctx: &Context<'_>) -> Result<Vec<VernacularName>, Error> {
