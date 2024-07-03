@@ -1,12 +1,13 @@
-use async_graphql::*;
+use std::collections::HashMap;
 
-use serde::Deserialize;
-use serde::Serialize;
+use async_graphql::*;
+use bigdecimal::{BigDecimal, ToPrimitive};
+use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-use crate::database::stats::BreakdownItem;
-use crate::http::Error;
-use crate::http::Context as State;
+use super::common::taxonomy::TaxonomicRank;
+use crate::database::stats::{BreakdownItem, TaxonStatNode};
+use crate::http::{Context as State, Error};
 
 
 pub struct Statistics;
@@ -39,6 +40,22 @@ impl Statistics {
         //     stats.barcodes += stat.barcodes as usize;
         // }
 
+        Ok(stats)
+    }
+
+    async fn taxon_breakdown(
+        &self,
+        ctx: &Context<'_>,
+        taxon_rank: TaxonomicRank,
+        taxon_canonical_name: String,
+        include_ranks: Vec<TaxonomicRank>,
+    ) -> Result<Vec<TaxonTreeNodeStatistics>, Error> {
+        let state = ctx.data::<State>().unwrap();
+        let classification = taxon_rank.to_classification(taxon_canonical_name);
+        let include_ranks = include_ranks.into_iter().map(|i| i.into()).collect();
+
+        let tree = state.database.stats.taxon_tree(classification, include_ranks).await?;
+        let stats = tree.into_iter().map(|i| i.into()).collect();
         Ok(stats)
     }
 
@@ -83,4 +100,46 @@ pub struct DatasetStatistics {
 
     /// A breakdown of species and the amount of data for it
     pub breakdown: Vec<BreakdownItem>,
+}
+
+
+#[derive(Clone, Debug, Default, SimpleObject, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaxonTreeNodeStatistics {
+    /// The scientific name of the taxon
+    pub scientific_name: String,
+    /// The canonical name of the taxon
+    pub canonical_name: String,
+    /// The taxonomic rank
+    pub rank: TaxonomicRank,
+
+    /// The total amount of loci available
+    pub loci: Option<u64>,
+    /// The total amount of genomes available
+    pub genomes: Option<u64>,
+    /// The total amount of specimens available
+    pub specimens: Option<u64>,
+    /// The total amount of data related to the taxon
+    pub other: Option<u64>,
+    /// The total amount of genomic data
+    pub total_genomic: Option<u64>,
+
+    /// The taxa that fall below this taxon rank
+    pub children: Vec<TaxonTreeNodeStatistics>,
+}
+
+impl From<TaxonStatNode> for TaxonTreeNodeStatistics {
+    fn from(value: TaxonStatNode) -> Self {
+        Self {
+            scientific_name: value.scientific_name,
+            canonical_name: value.canonical_name,
+            rank: value.rank.into(),
+            loci: value.loci.map(|v| v.to_u64().unwrap_or_default()),
+            genomes: value.genomes.map(|v| v.to_u64().unwrap_or_default()),
+            specimens: value.specimens.map(|v| v.to_u64().unwrap_or_default()),
+            other: value.other.map(|v| v.to_u64().unwrap_or_default()),
+            total_genomic: value.total_genomic.map(|v| v.to_u64().unwrap_or_default()),
+            children: value.children.into_values().map(|i| i.into()).collect(),
+        }
+    }
 }
