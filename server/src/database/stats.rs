@@ -41,6 +41,7 @@ struct TaxonStat {
     pub specimens: Option<BigDecimal>,
     pub other: Option<BigDecimal>,
     pub total_genomic: Option<BigDecimal>,
+    pub species: Option<i64>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Queryable, Default)]
@@ -54,6 +55,7 @@ pub struct TaxonStatNode {
     pub specimens: Option<BigDecimal>,
     pub other: Option<BigDecimal>,
     pub total_genomic: Option<BigDecimal>,
+    pub species: Option<i64>,
 
     pub children: HashMap<String, TaxonStatNode>,
 }
@@ -146,6 +148,7 @@ impl StatsProvider {
                 taxa_tree_stats::specimens,
                 taxa_tree_stats::other,
                 taxa_tree_stats::total_genomic,
+                taxa_tree_stats::species,
             ))
             // we only wants paths generated from a specific root node otherwise
             // we'd get the same taxon from paths with different roots since the taxa
@@ -216,6 +219,7 @@ impl From<TaxonStat> for TaxonStatNode {
             specimens: value.specimens,
             other: value.other,
             total_genomic: value.total_genomic,
+            species: value.species,
             children: HashMap::new(),
         }
     }

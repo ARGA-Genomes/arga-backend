@@ -143,6 +143,7 @@ diesel::table! {
         specimens -> Nullable<Numeric>,
         other -> Nullable<Numeric>,
         total_genomic -> Nullable<Numeric>,
+        species -> Nullable<BigInt>,
     }
 }
 

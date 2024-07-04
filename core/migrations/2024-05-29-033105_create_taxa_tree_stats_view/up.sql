@@ -1,16 +1,18 @@
 CREATE MATERIALIZED VIEW taxa_tree_stats AS
 SELECT
     taxon_id,
-    id,
+    taxon_stats.id,
     SUM(loci) AS loci,
     SUM(genomes) AS genomes,
     SUM(specimens) AS specimens,
     SUM(other) AS other,
-    SUM(total_genomic) AS total_genomic
+    SUM(total_genomic) AS total_genomic,
+    SUM(CASE WHEN taxa.rank='species' THEN 1 ELSE 0 END) AS species
 FROM (
     SELECT
         taxa_tree.taxon_id,
         id,
+        path_id,
         FIRST_VALUE(loci) OVER tree_paths AS loci,
         FIRST_VALUE(genomes) OVER tree_paths AS genomes,
         FIRST_VALUE(specimens) OVER tree_paths AS specimens,
@@ -34,7 +36,8 @@ FROM (
     WINDOW tree_paths AS (partition by path_id order by depth)
     ORDER BY path_id, depth
 ) taxon_stats
-GROUP BY taxon_id, id;
+JOIN taxa ON taxon_stats.path_id = taxa.id
+GROUP BY taxon_id, taxon_stats.id;
 
 CREATE INDEX taxa_tree_stats_taxon_id ON taxa_tree_stats (taxon_id);
 CREATE INDEX taxa_tree_stats_id ON taxa_tree_stats (id);

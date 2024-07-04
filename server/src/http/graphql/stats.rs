@@ -55,7 +55,10 @@ impl Statistics {
         let include_ranks = include_ranks.into_iter().map(|i| i.into()).collect();
 
         let tree = state.database.stats.taxon_tree(classification, include_ranks).await?;
-        let stats = tree.into_iter().map(|i| i.into()).collect();
+
+        let mut stats: Vec<TaxonTreeNodeStatistics> = tree.into_iter().map(|i| i.into()).collect();
+        stats.sort();
+
         Ok(stats)
     }
 
@@ -103,7 +106,7 @@ pub struct DatasetStatistics {
 }
 
 
-#[derive(Clone, Debug, Default, SimpleObject, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, SimpleObject, Serialize, Deserialize, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct TaxonTreeNodeStatistics {
     /// The scientific name of the taxon
@@ -123,13 +126,36 @@ pub struct TaxonTreeNodeStatistics {
     pub other: Option<u64>,
     /// The total amount of genomic data
     pub total_genomic: Option<u64>,
+    /// The total amount of species belonging to the taxon
+    pub species: Option<u64>,
 
     /// The taxa that fall below this taxon rank
     pub children: Vec<TaxonTreeNodeStatistics>,
 }
 
+impl PartialOrd for TaxonTreeNodeStatistics {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.scientific_name.partial_cmp(&other.scientific_name)
+    }
+}
+
+impl Ord for TaxonTreeNodeStatistics {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.scientific_name.cmp(&other.scientific_name)
+    }
+}
+
+impl PartialEq for TaxonTreeNodeStatistics {
+    fn eq(&self, other: &Self) -> bool {
+        self.scientific_name == other.scientific_name
+    }
+}
+
 impl From<TaxonStatNode> for TaxonTreeNodeStatistics {
     fn from(value: TaxonStatNode) -> Self {
+        let mut children: Vec<TaxonTreeNodeStatistics> = value.children.into_values().map(|i| i.into()).collect();
+        children.sort();
+
         Self {
             scientific_name: value.scientific_name,
             canonical_name: value.canonical_name,
@@ -139,7 +165,8 @@ impl From<TaxonStatNode> for TaxonTreeNodeStatistics {
             specimens: value.specimens.map(|v| v.to_u64().unwrap_or_default()),
             other: value.other.map(|v| v.to_u64().unwrap_or_default()),
             total_genomic: value.total_genomic.map(|v| v.to_u64().unwrap_or_default()),
-            children: value.children.into_values().map(|i| i.into()).collect(),
+            species: value.species.map(|v| v as u64),
+            children,
         }
     }
 }
