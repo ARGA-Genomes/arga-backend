@@ -113,7 +113,7 @@ impl StatsProvider {
         taxon: Classification,
         include_ranks: Vec<TaxonomicRank>,
     ) -> Result<Vec<TaxonStatNode>, Error> {
-        use schema::taxa;
+        use schema::{datasets, taxa};
         use schema_gnl::{taxa_tree, taxa_tree_stats};
 
         let mut conn = self.pool.get().await?;
@@ -121,7 +121,10 @@ impl StatsProvider {
         let root_id = taxa::table
             .select(taxa::id)
             .filter(with_classification(&taxon))
-            .get_result::<uuid::Uuid>(&mut conn)
+            .into_boxed()
+            .inner_join(datasets::table.on(taxa::dataset_id.eq(datasets::id)))
+            .order(datasets::global_id.asc())
+            .first::<uuid::Uuid>(&mut conn)
             .await?;
 
         let path = diesel::alias!(taxa as path);
