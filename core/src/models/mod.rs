@@ -873,19 +873,6 @@ pub struct Sequence {
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::organisms)]
-pub struct Organism {
-    pub id: Uuid,
-    pub name_id: Uuid,
-    pub organism_id: Option<String>,
-    pub organism_name: Option<String>,
-    pub organism_scope: Option<String>,
-    pub associated_organisms: Option<String>,
-    pub previous_identifications: Option<String>,
-    pub remarks: Option<String>,
-}
-
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::collection_events)]
 pub struct CollectionEvent {
     pub id: Uuid,

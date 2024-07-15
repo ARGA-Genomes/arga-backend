@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use uuid::Uuid;
 
-use super::common::taxonomy::TaxonomicRank;
 use super::common::{
     convert_whole_genome_filters,
     DatasetDetails,
@@ -22,7 +21,6 @@ use super::taxon::{into_classification, TaxonNode, TaxonRank};
 use crate::database::models::{Name as ArgaName, Name};
 use crate::database::{schema, species, Database};
 use crate::http::{Context as State, Error};
-use crate::index::species::{ConservationStatus, GetConservationStatus, GetTraceFiles, TraceFile};
 
 
 pub struct Species {
@@ -173,19 +171,6 @@ impl Species {
     }
 
     #[instrument(skip(self, ctx))]
-    async fn conservation(&self, ctx: &Context<'_>) -> Result<Vec<ConservationStatus>> {
-        let state = ctx.data::<State>().unwrap();
-
-        let mut statuses = Vec::new();
-        for name in &self.names {
-            let records = state.database.conservation_status(name).await?;
-            statuses.extend(records);
-        }
-
-        Ok(statuses)
-    }
-
-    #[instrument(skip(self, ctx))]
     async fn whole_genomes(
         &self,
         ctx: &Context<'_>,
@@ -205,13 +190,6 @@ impl Species {
             records: sequences,
             total: page.total,
         })
-    }
-
-    #[instrument(skip(self, ctx))]
-    async fn trace_files(&self, ctx: &Context<'_>) -> Result<Vec<TraceFile>, Error> {
-        let state = ctx.data::<State>().unwrap();
-        let records = state.database.trace_files(&self.names).await?;
-        Ok(records)
     }
 
     async fn markers(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpeciesMarker>, Error> {

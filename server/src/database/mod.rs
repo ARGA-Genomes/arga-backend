@@ -7,27 +7,22 @@ pub mod markers;
 pub mod names;
 pub mod overview;
 pub mod provenance;
-pub mod search;
 pub mod sequences;
 pub mod sources;
 pub mod species;
-pub mod specimen;
 pub mod specimens;
 pub mod stats;
 pub mod subsamples;
 pub mod taxa;
 
 pub use arga_core::{get_database_url, models, schema, schema_gnl};
-
-use thiserror::Error;
-
 use diesel_async::pooled_connection::bb8::Pool;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::AsyncPgConnection;
-
-use crate::http::Error as HttpError;
+use thiserror::Error;
 
 use self::extensions::pagination::Page;
+use crate::http::Error as HttpError;
 
 pub type PgPool = Pool<AsyncPgConnection>;
 

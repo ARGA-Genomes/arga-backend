@@ -36,6 +36,9 @@ pub enum Error {
 
     #[error(transparent)]
     GraphQL(#[from] async_graphql::DeserializerError),
+
+    #[error(transparent)]
+    GeoJSON(#[from] geojson::Error),
 }
 
 impl From<crate::database::Error> for Error {
@@ -62,6 +65,7 @@ impl Error {
             Error::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::SearchIndex(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::GeoJSON(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Timeout => StatusCode::REQUEST_TIMEOUT,
             Error::GatewayTimeout => StatusCode::GATEWAY_TIMEOUT,
         }
@@ -95,7 +99,10 @@ impl IntoResponse for Error {
                 error!("Gateway timeout");
             }
             Error::GraphQL(err) => {
-                error!(?err, "Deserializer error")
+                error!(?err, "Deserializer error");
+            }
+            Error::GeoJSON(err) => {
+                error!(?err, "GeoJSON error");
             }
 
             _ => {}
