@@ -1,25 +1,21 @@
 pub mod common;
 pub mod helpers;
 
-pub mod maps;
-pub mod overview;
-pub mod search;
-pub mod species;
-pub mod stats;
-// pub mod lists;
 pub mod dataset;
-pub mod source;
-pub mod traces;
-// pub mod assembly;
-// pub mod assemblies;
 pub mod dna_extract;
 pub mod extensions;
+pub mod maps;
 pub mod marker;
 pub mod markers;
 pub mod names;
+pub mod overview;
 pub mod provenance;
+pub mod search;
 pub mod sequence;
+pub mod source;
+pub mod species;
 pub mod specimen;
+pub mod stats;
 pub mod subsample;
 pub mod taxa;
 pub mod taxon;
@@ -34,8 +30,6 @@ use axum::{Extension, Router};
 
 use self::common::{FilterItem, SearchFilterItem};
 use self::dataset::Dataset;
-// use self::assembly::Assembly;
-// use self::assemblies::Assemblies;
 use self::dna_extract::DnaExtract;
 use self::extensions::ErrorLogging;
 use self::maps::Maps;
@@ -52,7 +46,6 @@ use self::stats::Statistics;
 use self::subsample::Subsample;
 use self::taxa::Taxa;
 use self::taxon::Taxon;
-use self::traces::Traces;
 use super::error::Error;
 use crate::http::Context as State;
 
@@ -105,20 +98,6 @@ impl Query {
         let state = ctx.data::<State>().unwrap();
         Dataset::new(&state.database, &by).await
     }
-
-    async fn traces(&self, uuid: String) -> Traces {
-        let uuid = uuid::Uuid::parse_str(&uuid).unwrap();
-        Traces { uuid }
-    }
-
-    // async fn assembly(&self, ctx: &Context<'_>, accession: String) -> Result<Assembly, Error> {
-    //     let state = ctx.data::<State>().unwrap();
-    //     Assembly::new(&state.database, &accession).await
-    // }
-
-    // async fn assemblies(&self) -> Assemblies {
-    //     Assemblies {}
-    // }
 
     async fn specimen(&self, ctx: &Context<'_>, by: specimen::SpecimenBy) -> Result<Specimen, Error> {
         let state = ctx.data::<State>().unwrap();

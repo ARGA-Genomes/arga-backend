@@ -1,14 +1,12 @@
 use std::collections::HashMap;
 
+use arga_core::search::{SearchFilter, SearchItem};
 use async_graphql::*;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use arga_core::search::{SearchItem, SearchFilter};
-use crate::http::Error;
-use crate::http::Context as State;
-
-use super::common::{SearchFilterItem, convert_search_filters};
+use super::common::{convert_search_filters, SearchFilterItem};
+use crate::http::{Context as State, Error};
 
 
 #[derive(Debug, Enum, Eq, PartialEq, Copy, Clone)]
@@ -38,8 +36,7 @@ impl Search {
         query: String,
         page: usize,
         per_page: usize,
-    ) -> Result<FullTextSearchResult, Error>
-    {
+    ) -> Result<FullTextSearchResult, Error> {
         let state = ctx.data::<State>().unwrap();
 
         let (search_results, total) = state.search.filtered(&query, page, per_page, &self.filters)?;
@@ -56,31 +53,34 @@ impl Search {
                     // NOTE: actually a taxa id. refactor the search indexing
                     // to make the difference clear
                     name_ids.push(item.name_id.clone());
-                    taxa.insert(item.name_id, TaxonItem {
-                        r#type: FullTextType::Taxon,
-                        score: item.score,
-                        status: serde_json::to_string(&item.status).unwrap(),
+                    taxa.insert(
+                        item.name_id,
+                        TaxonItem {
+                            r#type: FullTextType::Taxon,
+                            score: item.score,
+                            status: serde_json::to_string(&item.status).unwrap(),
 
-                        canonical_name: item.canonical_name,
-                        subspecies: item.subspecies,
-                        synonyms: item.synonyms,
-                        common_names: item.common_names,
-                        data_summary: DataSummary::default(),
-                        classification: Classification {
-                            kingdom: item.kingdom,
-                            phylum: item.phylum,
-                            class: item.class,
-                            order: item.order,
-                            family: item.family,
-                            genus: item.genus,
-                            regnum: item.regnum,
-                            division: item.division,
-                            classis: item.classis,
-                            ordo: item.ordo,
-                            familia: item.familia,
+                            canonical_name: item.canonical_name,
+                            subspecies: item.subspecies,
+                            synonyms: item.synonyms,
+                            common_names: item.common_names,
+                            data_summary: DataSummary::default(),
+                            classification: Classification {
+                                kingdom: item.kingdom,
+                                phylum: item.phylum,
+                                class: item.class,
+                                order: item.order,
+                                family: item.family,
+                                genus: item.genus,
+                                regnum: item.regnum,
+                                division: item.division,
+                                classis: item.classis,
+                                ordo: item.ordo,
+                                familia: item.familia,
+                            },
                         },
-                    });
-                },
+                    );
+                }
                 SearchItem::Genome(item) => {
                     genomes.push(GenomeItem {
                         r#type: FullTextType::Genome,
@@ -96,7 +96,7 @@ impl Search {
                         reference_genome: item.reference_genome,
                         release_date: item.release_date.map(|d| d.format("%d/%m/%Y").to_string()),
                     });
-                },
+                }
                 SearchItem::Locus(item) => {
                     loci.push(LocusItem {
                         r#type: FullTextType::Locus,
@@ -111,7 +111,7 @@ impl Search {
                         event_date: item.event_date.map(|d| d.format("%d/%m/%Y").to_string()),
                         event_location: item.event_location,
                     });
-                },
+                }
                 SearchItem::Specimen(item) => {
                     specimens.push(SpecimenItem {
                         r#type: FullTextType::Specimen,
@@ -128,14 +128,12 @@ impl Search {
                         event_date: item.event_date.map(|d| d.format("%d/%m/%Y").to_string()),
                         event_location: item.event_location,
                     });
-                },
+                }
             }
         }
 
         // get statistics for all the matched names
         let summaries = state.database.species.summary(&name_ids).await?;
-        // let marker_summaries = state.database.species.marker_summary(&name_ids).await?;
-
         for stat in summaries {
             taxa.entry(stat.id).and_modify(|item| {
                 item.data_summary.genomes = stat.genomes;
@@ -146,18 +144,12 @@ impl Search {
             });
         }
 
-        // for stat in marker_summaries {
-        //     taxa.entry(stat.name_id).and_modify(|item| {
-        //         item.data_summary.barcodes += stat.barcodes;
-        //     });
-        // }
-
-
         // collect results
         let taxa: Vec<FullTextSearchItem> = taxa.into_values().map(|v| FullTextSearchItem::Taxon(v)).collect();
         let genomes: Vec<FullTextSearchItem> = genomes.into_iter().map(|v| FullTextSearchItem::Genome(v)).collect();
         let loci: Vec<FullTextSearchItem> = loci.into_iter().map(|v| FullTextSearchItem::Locus(v)).collect();
-        let specimens: Vec<FullTextSearchItem> = specimens.into_iter().map(|v| FullTextSearchItem::Specimen(v)).collect();
+        let specimens: Vec<FullTextSearchItem> =
+            specimens.into_iter().map(|v| FullTextSearchItem::Specimen(v)).collect();
 
         let mut records = Vec::with_capacity(taxa.len() + genomes.len() + loci.len());
         records.extend(taxa);
@@ -273,7 +265,7 @@ pub struct SpecimenItem {
 #[serde(rename_all = "camelCase")]
 pub struct FullTextSearchResult {
     pub records: Vec<FullTextSearchItem>,
-    pub total: usize
+    pub total: usize,
 }
 
 #[derive(Debug, Union, Deserialize)]
