@@ -158,7 +158,7 @@ impl Query {
         Taxon::new(&state.database, rank, canonical_name).await
     }
 
-    async fn provenance(&self, ctx: &Context<'_>) -> Provenance {
+    async fn provenance(&self) -> Provenance {
         Provenance {}
     }
 }

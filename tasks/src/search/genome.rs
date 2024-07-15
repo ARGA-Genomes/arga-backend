@@ -1,15 +1,9 @@
-use serde::Deserialize;
-use serde::Serialize;
-
-use diesel::*;
-use diesel::RunQueryDsl;
-use diesel::r2d2::{ConnectionManager, Pool};
-
-use uuid::Uuid;
 use anyhow::Error;
-
-use arga_core::models::TaxonomicStatus;
 use arga_core::{schema, schema_gnl};
+use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::{RunQueryDsl, *};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -30,8 +24,9 @@ pub struct GenomeDoc {
 }
 
 pub fn get_genomes(pool: &PgPool) -> Result<Vec<GenomeDoc>, Error> {
+    // TODO: determine if we need to bring taxonomic info back again
+    use schema::names;
     use schema_gnl::whole_genomes;
-    use schema::{names, taxa};
     let mut conn = pool.get()?;
 
     let docs = whole_genomes::table

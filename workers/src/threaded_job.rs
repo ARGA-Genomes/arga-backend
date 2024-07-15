@@ -116,7 +116,7 @@ impl ThreadedJob {
         match worker {
             "import_source" => source_importer::import(path, pool)?,
             "import_dataset" => dataset_importer::import(path, pool)?,
-            "import_name" => name_importer::import(path, &dataset?, pool)?,
+            "import_name" => name_importer::import(path, pool)?,
             // "import_taxon" => taxon_importer::import(path, &dataset?, pool)?,
             "import_taxon_history" => taxon_history_importer::import(path, &dataset?, pool)?,
             "import_taxon_photo" => taxon_photo_importer::import(path, pool)?,

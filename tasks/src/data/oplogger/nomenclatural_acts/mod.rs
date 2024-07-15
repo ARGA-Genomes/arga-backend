@@ -13,7 +13,7 @@ use arga_core::models::{
 };
 use arga_core::schema;
 use bigdecimal::BigDecimal;
-use chrono::{DateTime, Utc};
+// use chrono::{DateTime, Utc};
 use diesel::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -22,31 +22,31 @@ use xxhash_rust::xxh3::Xxh3;
 use crate::data::oplogger::get_pool;
 use crate::data::{Error, ParseError};
 
-fn parse_date_time(value: &str) -> Result<DateTime<Utc>, ParseError> {
-    if let Ok(datetime) = DateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S%#z") {
-        return Ok(datetime.into());
-    }
-    if let Ok(datetime) = DateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S%.3f%#z") {
-        return Ok(datetime.into());
-    }
-    Ok(DateTime::parse_from_rfc3339(value)?.into())
-}
+// fn parse_date_time(value: &str) -> Result<DateTime<Utc>, ParseError> {
+//     if let Ok(datetime) = DateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S%#z") {
+//         return Ok(datetime.into());
+//     }
+//     if let Ok(datetime) = DateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S%.3f%#z") {
+//         return Ok(datetime.into());
+//     }
+//     Ok(DateTime::parse_from_rfc3339(value)?.into())
+// }
 
-fn date_time_from_str<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    parse_date_time(&s).map_err(serde::de::Error::custom)
-}
+// fn date_time_from_str<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+// where
+//     D: serde::Deserializer<'de>,
+// {
+//     let s: String = Deserialize::deserialize(deserializer)?;
+//     parse_date_time(&s).map_err(serde::de::Error::custom)
+// }
 
-fn taxonomic_status_from_str<'de, D>(deserializer: D) -> Result<TaxonomicStatus, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    str_to_taxonomic_status(&s).map_err(serde::de::Error::custom)
-}
+// fn taxonomic_status_from_str<'de, D>(deserializer: D) -> Result<TaxonomicStatus, D::Error>
+// where
+//     D: serde::Deserializer<'de>,
+// {
+//     let s: String = Deserialize::deserialize(deserializer)?;
+//     str_to_taxonomic_status(&s).map_err(serde::de::Error::custom)
+// }
 
 #[derive(Debug, Clone, Deserialize)]
 struct Record {
@@ -56,11 +56,10 @@ struct Record {
     source_url: Option<String>,
     publication: Option<String>,
     publication_date: Option<String>,
-
-    #[serde(deserialize_with = "date_time_from_str")]
-    created_at: DateTime<Utc>,
-    #[serde(deserialize_with = "date_time_from_str")]
-    updated_at: DateTime<Utc>,
+    // #[serde(deserialize_with = "date_time_from_str")]
+    // created_at: DateTime<Utc>,
+    // #[serde(deserialize_with = "date_time_from_str")]
+    // updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Default, Serialize)]

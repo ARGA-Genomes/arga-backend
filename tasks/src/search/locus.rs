@@ -1,16 +1,9 @@
-use arga_core::schema_gnl;
-use serde::Deserialize;
-use serde::Serialize;
-
-use diesel::*;
-use diesel::RunQueryDsl;
-use diesel::r2d2::{ConnectionManager, Pool};
-
-use uuid::Uuid;
 use anyhow::Error;
-
-use arga_core::models::TaxonomicStatus;
-use arga_core::schema;
+use arga_core::{schema, schema_gnl};
+use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::{RunQueryDsl, *};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -29,7 +22,7 @@ pub struct LocusDoc {
 }
 
 pub fn get_loci(pool: &PgPool) -> Result<Vec<LocusDoc>, Error> {
-    use schema::{names, taxa};
+    use schema::names;
     use schema_gnl::markers;
     let mut conn = pool.get()?;
 

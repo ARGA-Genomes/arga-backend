@@ -134,7 +134,7 @@ impl Species {
         Ok(vernacular_names)
     }
 
-    async fn synonyms(&self, ctx: &Context<'_>) -> Result<Vec<Synonym>, Error> {
+    async fn synonyms(&self, _ctx: &Context<'_>) -> Result<Vec<Synonym>, Error> {
         let mut synonyms = Vec::new();
         for name in &self.names {
             if name.canonical_name != self.canonical_name {

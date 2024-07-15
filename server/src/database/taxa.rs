@@ -4,14 +4,12 @@ use arga_core::models::{
     NamePublication,
     NomenclaturalActType,
     Taxon,
-    TaxonHistory,
     TaxonTreeNode,
     TaxonomicRank,
     ACCEPTED_NAMES,
     SPECIES_RANKS,
 };
 use bigdecimal::BigDecimal;
-use diesel::helper_types::AsSelect;
 use diesel::prelude::*;
 use diesel::sql_types::{Array, Nullable, Text, Varchar};
 use diesel_async::RunQueryDsl;
@@ -24,12 +22,10 @@ use crate::database::extensions::classification_filters::{
     with_classification,
     Classification as ClassificationFilter,
 };
-use crate::database::extensions::filters::{filter_taxa, with_filters, Filter};
+use crate::database::extensions::filters::{with_filters, Filter};
 use crate::database::extensions::species_filters::{
     // with_parent_classification,
     with_classification as with_species_classification,
-    with_filters as with_species_filters,
-    Filter as SpeciesFilter,
 };
 use crate::database::extensions::sum_if;
 
@@ -135,7 +131,7 @@ impl TaxaProvider {
         Ok(records.into())
     }
 
-    pub async fn ecology_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
+    pub async fn ecology_options(&self, _filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
         // FIXME: reimplement
         Ok(vec![])
         // use schema_gnl::taxa_filter;
@@ -151,7 +147,7 @@ impl TaxaProvider {
         // Ok(options)
     }
 
-    pub async fn ibra_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
+    pub async fn ibra_options(&self, _filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
         // FIXME: reimplement
         Ok(vec![])
         // use schema_gnl::taxa_filter;
@@ -167,7 +163,7 @@ impl TaxaProvider {
         // Ok(options)
     }
 
-    pub async fn imcra_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
+    pub async fn imcra_options(&self, _filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
         // FIXME: reimplement
         Ok(vec![])
         // use schema_gnl::taxa_filter;
@@ -183,7 +179,7 @@ impl TaxaProvider {
         // Ok(options)
     }
 
-    pub async fn state_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
+    pub async fn state_options(&self, _filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
         // FIXME: reimplement
         Ok(vec![])
         // use schema_gnl::taxa_filter;
@@ -199,7 +195,7 @@ impl TaxaProvider {
         // Ok(options)
     }
 
-    pub async fn drainage_basin_options(&self, filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
+    pub async fn drainage_basin_options(&self, _filters: &Vec<Filter>) -> Result<Vec<String>, Error> {
         // FIXME: reimplement
         Ok(vec![])
         // use schema_gnl::taxa_filter;

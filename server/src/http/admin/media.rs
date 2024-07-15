@@ -2,40 +2,39 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use axum::body::Bytes;
-use axum::extract::{State, Query, Multipart};
-use axum::{Json, BoxError, Router};
+use axum::extract::{Multipart, Query, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post};
-
+use axum::{BoxError, Json, Router};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use futures::{Stream, TryStreamExt};
 use serde::Deserialize;
+use tokio::fs::File;
+use tokio::io::BufWriter;
+use tokio_util::io::StreamReader;
 use uuid::Uuid;
 
-use futures::{Stream, TryStreamExt};
-use tokio::{fs::File, io::BufWriter};
-use tokio_util::io::StreamReader;
-
+use super::common::{parse_int_param, PageResult};
 use crate::database::extensions::Paginate;
-use crate::http::Context;
-use crate::http::error::{InternalError, Error};
+use crate::database::models::{AdminMedia, Taxon, TaxonPhoto};
 use crate::database::{schema, Database};
-use crate::database::models::{Taxon, TaxonPhoto, AdminMedia};
-
-use super::common::{PageResult, parse_int_param};
+use crate::http::error::{Error, InternalError};
+use crate::http::Context;
 
 
 async fn media(
     Query(params): Query<HashMap<String, String>>,
     State(database): State<Database>,
-) -> PageResult<AdminMedia>
-{
-    use schema::{names, admin_media};
+) -> PageResult<AdminMedia> {
+    use schema::{admin_media, names};
     let mut conn = database.pool.get().await?;
 
     let page = parse_int_param(&params, "page", 1);
     let per_page = parse_int_param(&params, "page_size", 20);
-    let name = params.get("scientific_name").expect("must provide a scientific name parameter");
+    let name = params
+        .get("scientific_name")
+        .expect("must provide a scientific name parameter");
 
     let page = admin_media::table
         .inner_join(names::table)
@@ -54,11 +53,12 @@ async fn media(
 async fn main_media(
     Query(params): Query<HashMap<String, String>>,
     State(db_provider): State<Database>,
-) -> Result<Json<TaxonPhoto>, InternalError>
-{
+) -> Result<Json<TaxonPhoto>, InternalError> {
     let mut conn = db_provider.pool.get().await?;
 
-    let name = params.get("scientific_name").expect("must provide a scientific name parameter");
+    let name = params
+        .get("scientific_name")
+        .expect("must provide a scientific name parameter");
 
     use schema::{taxa, taxon_photos};
     let photo = taxon_photos::table
@@ -85,8 +85,7 @@ struct SetMainMedia {
 async fn upsert_main_media(
     State(db_provider): State<Database>,
     Json(form): Json<SetMainMedia>,
-) -> Result<(), InternalError>
-{
+) -> Result<(), InternalError> {
     // link the main photo as an attribute against the taxa
     use schema::{taxa, taxon_photos};
     let mut conn = db_provider.pool.get().await?;
@@ -136,8 +135,7 @@ struct UploadMainImage {
 async fn upload_main_image(
     State(db_provider): State<Database>,
     Json(form): Json<UploadMainImage>,
-) -> Result<(), InternalError>
-{
+) -> Result<(), InternalError> {
     // link the main photo as an attribute against the taxa
     use schema::{taxa, taxon_photos};
     let mut conn = db_provider.pool.get().await?;
@@ -184,7 +182,7 @@ async fn upload_main_image(
 #[tracing::instrument]
 async fn accept_image(mut multipart: Multipart) -> Result<String, Error> {
     while let Some(field) = multipart.next_field().await.unwrap() {
-        if let Some(file_name) = field.file_name() {
+        if let Some(_file_name) = field.file_name() {
             let uuid = uuid::Uuid::new_v4();
             let tmp_name = format!("arga_admin_{}", uuid.to_string());
             stream_to_file(&tmp_name, field).await.unwrap();

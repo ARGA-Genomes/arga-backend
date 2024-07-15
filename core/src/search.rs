@@ -1,8 +1,8 @@
-use chrono::{NaiveDateTime, NaiveDate};
+use chrono::{NaiveDate, NaiveDateTime};
 use tantivy::collector::{Count, TopDocs};
 use tantivy::query::QueryParser;
-use tantivy::{Index, IndexReader, ReloadPolicy, TantivyError, Document};
-use tantivy::schema::{Schema, TEXT, STORED, Field, SchemaBuilder, STRING};
+use tantivy::schema::{Field, Schema, SchemaBuilder, STORED, STRING, TEXT};
+use tantivy::{Document, Index, IndexReader, ReloadPolicy, TantivyError};
 use tracing::error;
 use uuid::Uuid;
 
@@ -27,7 +27,7 @@ pub enum Error {
 
 #[derive(Debug, Clone)]
 pub enum SearchFilter {
-    DataType(DataType)
+    DataType(DataType),
 }
 
 #[derive(Debug, Clone)]
@@ -224,7 +224,10 @@ impl SearchIndex {
     pub fn open() -> Result<SearchIndex, Error> {
         let schema = SearchIndex::schema()?;
         let index = Index::open_in_dir(".index")?;
-        let reader = index.reader_builder().reload_policy(ReloadPolicy::OnCommit).try_into()?;
+        let reader = index
+            .reader_builder()
+            .reload_policy(ReloadPolicy::OnCommit)
+            .try_into()?;
 
         let common = CommonFields {
             data_type: get_field(&schema, "data_type")?,
@@ -352,7 +355,6 @@ impl SearchIndex {
         schema_builder.add_text_field("identified_by", TEXT | STORED);
     }
 
-
     pub fn taxonomy(&self, query: &str, page: usize, per_page: usize) -> SearchResult {
         let query = format!("data_type:{} {query}", DataType::Taxon);
         self.all(&query, page, per_page)
@@ -397,35 +399,38 @@ impl SearchIndex {
         let offset = per_page * page.checked_sub(1).unwrap_or(0);
 
         // set the fields that the query should search on
-        let mut query_parser = QueryParser::for_index(&self.index, vec![
-            self.common.canonical_name,
-            self.taxon.subspecies,
-            self.taxon.synonyms,
-            self.taxon.common_names,
-            self.genome.accession,
-            self.genome.level,
-            self.genome.assembly_type,
-            self.genome.data_source,
-            self.locus.accession,
-            self.locus.locus_type,
-            self.locus.data_source,
-            self.specimen.accession,
-            self.specimen.data_source,
-            self.specimen.institution_code,
-            self.specimen.collection_code,
-            self.specimen.recorded_by,
-            self.taxon.kingdom,
-            self.taxon.phylum,
-            self.taxon.class,
-            self.taxon.order,
-            self.taxon.family,
-            self.taxon.genus,
-            self.taxon.regnum,
-            self.taxon.division,
-            self.taxon.classis,
-            self.taxon.ordo,
-            self.taxon.familia,
-        ]);
+        let mut query_parser = QueryParser::for_index(
+            &self.index,
+            vec![
+                self.common.canonical_name,
+                self.taxon.subspecies,
+                self.taxon.synonyms,
+                self.taxon.common_names,
+                self.genome.accession,
+                self.genome.level,
+                self.genome.assembly_type,
+                self.genome.data_source,
+                self.locus.accession,
+                self.locus.locus_type,
+                self.locus.data_source,
+                self.specimen.accession,
+                self.specimen.data_source,
+                self.specimen.institution_code,
+                self.specimen.collection_code,
+                self.specimen.recorded_by,
+                self.taxon.kingdom,
+                self.taxon.phylum,
+                self.taxon.class,
+                self.taxon.order,
+                self.taxon.family,
+                self.taxon.genus,
+                self.taxon.regnum,
+                self.taxon.division,
+                self.taxon.classis,
+                self.taxon.ordo,
+                self.taxon.familia,
+            ],
+        );
 
         let query = format!(
             "(data_type:{}^100.0 OR data_type:{}^50.0 OR data_type:{}^10.0 OR data_type:{}) {query}",
@@ -529,7 +534,9 @@ impl SearchIndex {
 
 
 fn get_field(schema: &Schema, name: &str) -> Result<Field, Error> {
-    let field = schema.get_field(name).ok_or(TantivyError::FieldNotFound(name.to_string()))?;
+    let field = schema
+        .get_field(name)
+        .ok_or(TantivyError::FieldNotFound(name.to_string()))?;
     Ok(field)
 }
 
@@ -542,10 +549,10 @@ fn get_data_type(doc: &Document, field: Field) -> Option<DataType> {
                 Err(err) => {
                     error!(?err, "Failed to read data_type");
                     None
-                },
+                }
             },
             None => None,
-        }
+        },
     }
 }
 
@@ -557,7 +564,7 @@ fn get_uuid(doc: &Document, field: Field) -> Option<Uuid> {
             Err(err) => {
                 error!(?err, ?value, "failed to parse name_id");
                 None
-            },
+            }
         },
     }
 }
@@ -589,7 +596,7 @@ fn get_bool(doc: &Document, field: Field) -> Option<bool> {
 fn get_date(doc: &Document, field: Field) -> Option<NaiveDate> {
     match doc.get_first(field) {
         Some(value) => match value.as_date() {
-            Some(dt) => NaiveDateTime::from_timestamp_opt(dt.into_timestamp_secs(), 0).map(|dt| dt.date()),
+            Some(dt) => chrono::DateTime::from_timestamp(dt.into_timestamp_secs(), 0).map(|dt| dt.date_naive()),
             None => None,
         },
         None => None,
@@ -599,7 +606,7 @@ fn get_date(doc: &Document, field: Field) -> Option<NaiveDate> {
 fn get_datetime(doc: &Document, field: Field) -> Option<NaiveDateTime> {
     match doc.get_first(field) {
         Some(value) => match value.as_date() {
-            Some(dt) => NaiveDateTime::from_timestamp_opt(dt.into_timestamp_secs(), 0),
+            Some(dt) => chrono::DateTime::from_timestamp(dt.into_timestamp_secs(), 0).map(|dt| dt.naive_utc()),
             None => None,
         },
         None => None,

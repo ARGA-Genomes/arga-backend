@@ -1,7 +1,5 @@
-use std::collections::HashMap;
-
 use async_graphql::*;
-use bigdecimal::{BigDecimal, ToPrimitive};
+use bigdecimal::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -29,7 +27,7 @@ impl Statistics {
         // let marker_summaries = state.database.species.marker_summary(&names).await?;
 
         // combine the stats for all species matching the canonical name
-        let mut stats = SpeciesStatistics::default();
+        let stats = SpeciesStatistics::default();
         // for stat in assembly_summaries {
         //     stats.total += (stat.whole_genomes + stat.reference_genomes + stat.partial_genomes) as usize;
         //     stats.whole_genomes += stat.whole_genomes as usize;

@@ -106,11 +106,11 @@ impl SpeciesProvider {
         Ok(names)
     }
 
-    pub async fn synonyms(&self, name_id: &Uuid) -> Result<Vec<Taxon>, Error> {
-        use schema::{taxa, taxon_history};
-        let mut conn = self.pool.get().await?;
+    pub async fn synonyms(&self, _name_id: &Uuid) -> Result<Vec<Taxon>, Error> {
+        // use schema::{taxa, taxon_history};
+        // let mut conn = self.pool.get().await?;
 
-        let (old_taxa, new_taxa) = diesel::alias!(taxa as old_taxa, taxa as new_taxa);
+        // let (old_taxa, new_taxa) = diesel::alias!(taxa as old_taxa, taxa as new_taxa);
 
         // FIXME: determine synonyms based on a taxonomic system and taxon_names
         let synonyms = vec![];
@@ -388,14 +388,14 @@ impl SpeciesProvider {
 }
 
 
-#[derive(Queryable, Debug)]
-struct Distribution {
-    pub locality: Option<String>,
-    pub country: Option<String>,
-    pub country_code: Option<String>,
-    pub threat_status: Option<String>,
-    pub source: Option<String>,
-}
+// #[derive(Queryable, Debug)]
+// struct Distribution {
+//     pub locality: Option<String>,
+//     pub country: Option<String>,
+//     pub country_code: Option<String>,
+//     pub threat_status: Option<String>,
+//     pub source: Option<String>,
+// }
 
 // impl From<Distribution> for species::Distribution {
 //     fn from(source: Distribution) -> Self {

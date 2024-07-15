@@ -21,7 +21,8 @@ pub fn import(path: PathBuf, pool: &mut PgPool) -> Result<(), Error> {
 }
 
 fn import_nomenclatural_acts(acts: &Vec<NomenclaturalAct>, pool: &mut PgPool) -> Result<(), Error> {
-    use diesel::upsert::excluded;
+    // FIXME: make this an upsert. some reason it deadlocks in postgres
+    // use diesel::upsert::excluded;
     use schema::nomenclatural_acts::dsl::*;
 
     info!(total = acts.len(), "Importing nomenclatural acts");

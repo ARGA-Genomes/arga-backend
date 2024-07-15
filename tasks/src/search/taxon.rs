@@ -1,18 +1,11 @@
-use arga_core::models::ACCEPTED_NAMES;
-use diesel::sql_types::Nullable;
-use diesel::sql_types::Varchar;
-use serde::Deserialize;
-use serde::Serialize;
-
-use diesel::*;
-use diesel::RunQueryDsl;
-use diesel::r2d2::{ConnectionManager, Pool};
-
-use uuid::Uuid;
 use anyhow::Error;
-
-use arga_core::models::TaxonomicStatus;
-use arga_core::{schema, schema_gnl};
+use arga_core::models::{TaxonomicStatus, ACCEPTED_NAMES};
+use arga_core::schema_gnl;
+use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::sql_types::{Nullable, Varchar};
+use diesel::{RunQueryDsl, *};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -53,19 +46,16 @@ pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
         .select((
             species::id,
             species::status,
-
             species::canonical_name,
             // species::subspecies,
             // synonyms::names.nullable(),
             species::vernacular_names,
-
             sql::<Nullable<Varchar>>("classification->>'kingdom'"),
             sql::<Nullable<Varchar>>("classification->>'phylum'"),
             sql::<Nullable<Varchar>>("classification->>'class'"),
             sql::<Nullable<Varchar>>("classification->>'order'"),
             sql::<Nullable<Varchar>>("classification->>'family'"),
             sql::<Nullable<Varchar>>("classification->>'genus'"),
-
             sql::<Nullable<Varchar>>("classification->>'regnum'"),
             sql::<Nullable<Varchar>>("classification->>'division'"),
             sql::<Nullable<Varchar>>("classification->>'classis'"),
@@ -77,7 +67,6 @@ pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
 
     Ok(docs)
 }
-
 
 
 // #[derive(Debug, Queryable, Serialize, Deserialize)]

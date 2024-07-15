@@ -1,19 +1,16 @@
-mod taxon;
 mod genome;
 mod locus;
 mod specimen;
-
-use chrono::NaiveTime;
-use diesel::*;
-use diesel::r2d2::{ConnectionManager, Pool};
-
-use tantivy::schema::{Schema, Field};
-use tracing::info;
-
-use tantivy::{doc, Index, DateTime};
+mod taxon;
 
 use anyhow::Error;
-use arga_core::search::{SearchIndex, DataType};
+use arga_core::search::{DataType, SearchIndex};
+use chrono::NaiveTime;
+use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::*;
+use tantivy::schema::{Field, Schema};
+use tantivy::{doc, DateTime, Index};
+use tracing::info;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -77,8 +74,8 @@ fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
     let status = get_field(schema, "status")?;
     let canonical_name = get_field(schema, "canonical_name")?;
 
-    let subspecies = get_field(schema, "subspecies")?;
-    let synonyms = get_field(schema, "synonyms")?;
+    // let subspecies = get_field(schema, "subspecies")?;
+    // let synonyms = get_field(schema, "synonyms")?;
     let common_names = get_field(schema, "common_names")?;
 
     let kingdom = get_field(schema, "kingdom")?;
@@ -95,12 +92,12 @@ fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
     let familia = get_field(schema, "familia")?;
 
     info!("Loading species from database");
-    let mut species = taxon::get_species(&pool)?;
+    let species = taxon::get_species(&pool)?;
 
     // info!("Loading undescribed species from database");
     // let undescribed = taxon::get_undescribed_species(&pool)?;
     // species.extend(undescribed);
-    info!(total=species.len(), "Loaded");
+    info!(total = species.len(), "Loaded");
 
     for chunk in species.chunks(1_000_000) {
         for species in chunk {
@@ -127,18 +124,40 @@ fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
                 }
             }
 
-            if let Some(value) = &species.kingdom { doc.add_text(kingdom, value); }
-            if let Some(value) = &species.phylum { doc.add_text(phylum, value); }
-            if let Some(value) = &species.class { doc.add_text(class, value); }
-            if let Some(value) = &species.order { doc.add_text(order, value); }
-            if let Some(value) = &species.family { doc.add_text(family, value); }
-            if let Some(value) = &species.genus { doc.add_text(genus, value); }
+            if let Some(value) = &species.kingdom {
+                doc.add_text(kingdom, value);
+            }
+            if let Some(value) = &species.phylum {
+                doc.add_text(phylum, value);
+            }
+            if let Some(value) = &species.class {
+                doc.add_text(class, value);
+            }
+            if let Some(value) = &species.order {
+                doc.add_text(order, value);
+            }
+            if let Some(value) = &species.family {
+                doc.add_text(family, value);
+            }
+            if let Some(value) = &species.genus {
+                doc.add_text(genus, value);
+            }
 
-            if let Some(value) = &species.regnum { doc.add_text(regnum, value); }
-            if let Some(value) = &species.division { doc.add_text(division, value); }
-            if let Some(value) = &species.classis { doc.add_text(classis, value); }
-            if let Some(value) = &species.ordo { doc.add_text(ordo, value); }
-            if let Some(value) = &species.familia { doc.add_text(familia, value); }
+            if let Some(value) = &species.regnum {
+                doc.add_text(regnum, value);
+            }
+            if let Some(value) = &species.division {
+                doc.add_text(division, value);
+            }
+            if let Some(value) = &species.classis {
+                doc.add_text(classis, value);
+            }
+            if let Some(value) = &species.ordo {
+                doc.add_text(ordo, value);
+            }
+            if let Some(value) = &species.familia {
+                doc.add_text(familia, value);
+            }
 
             index_writer.add_document(doc)?;
         }
@@ -156,7 +175,7 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
 
     let data_type = get_field(schema, "data_type")?;
     let name_id = get_field(schema, "name_id")?;
-    let status = get_field(schema, "status")?;
+    // let status = get_field(schema, "status")?;
     let canonical_name = get_field(schema, "canonical_name")?;
 
     let accession = get_field(schema, "accession")?;
@@ -168,7 +187,7 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
 
     info!("Loading assemblies from database");
     let records = genome::get_genomes(&pool)?;
-    info!(total=records.len(), "Loaded");
+    info!(total = records.len(), "Loaded");
 
     for chunk in records.chunks(1_000_000) {
         for genome in chunk {
@@ -180,13 +199,22 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
                 data_source => genome.data_source.clone(),
             );
 
-            if let Some(value) = &genome.accession { doc.add_text(accession, value); }
-            if let Some(value) = &genome.genome_rep { doc.add_text(genome_rep, value); }
-            if let Some(value) = &genome.level { doc.add_text(level, value); }
-            if let Some(value) = &genome.assembly_type { doc.add_text(assembly_type, value); }
+            if let Some(value) = &genome.accession {
+                doc.add_text(accession, value);
+            }
+            if let Some(value) = &genome.genome_rep {
+                doc.add_text(genome_rep, value);
+            }
+            if let Some(value) = &genome.level {
+                doc.add_text(level, value);
+            }
+            if let Some(value) = &genome.assembly_type {
+                doc.add_text(assembly_type, value);
+            }
             if let Some(value) = &genome.release_date {
                 if let Ok(date) = chrono::NaiveDate::parse_from_str(value, "%Y/%m/%d") {
-                    let timestamp = DateTime::from_timestamp_secs(date.and_time(NaiveTime::default()).timestamp());
+                    let timestamp =
+                        DateTime::from_timestamp_secs(date.and_time(NaiveTime::default()).and_utc().timestamp());
                     doc.add_date(release_date, timestamp);
                 }
             }
@@ -208,7 +236,7 @@ fn index_loci(schema: &Schema, index: &Index) -> Result<(), Error> {
 
     let data_type = get_field(schema, "data_type")?;
     let name_id = get_field(schema, "name_id")?;
-    let status = get_field(schema, "status")?;
+    // let status = get_field(schema, "status")?;
     let canonical_name = get_field(schema, "canonical_name")?;
 
     let accession = get_field(schema, "accession")?;
@@ -218,7 +246,7 @@ fn index_loci(schema: &Schema, index: &Index) -> Result<(), Error> {
 
     info!("Loading loci from database");
     let records = locus::get_loci(&pool)?;
-    info!(total=records.len(), "Loaded");
+    info!(total = records.len(), "Loaded");
 
     for chunk in records.chunks(1_000_000) {
         for locus in chunk {
@@ -232,7 +260,9 @@ fn index_loci(schema: &Schema, index: &Index) -> Result<(), Error> {
                 locus_type => locus.locus_type.clone(),
             );
 
-            if let Some(value) = &locus.event_date { doc.add_text(event_date, value); }
+            if let Some(value) = &locus.event_date {
+                doc.add_text(event_date, value);
+            }
 
             index_writer.add_document(doc)?;
         }
@@ -251,7 +281,7 @@ fn index_specimens(schema: &Schema, index: &Index) -> Result<(), Error> {
 
     let data_type = get_field(schema, "data_type")?;
     let name_id = get_field(schema, "name_id")?;
-    let status = get_field(schema, "status")?;
+    // let status = get_field(schema, "status")?;
     let canonical_name = get_field(schema, "canonical_name")?;
 
     let accession = get_field(schema, "accession")?;
@@ -264,7 +294,7 @@ fn index_specimens(schema: &Schema, index: &Index) -> Result<(), Error> {
 
     info!("Loading specimens from database");
     let records = specimen::get_specimens(&pool)?;
-    info!(total=records.len(), "Loaded");
+    info!(total = records.len(), "Loaded");
 
     for chunk in records.chunks(1_000_000) {
         for specimen in chunk {
@@ -277,11 +307,21 @@ fn index_specimens(schema: &Schema, index: &Index) -> Result<(), Error> {
                 data_source => specimen.data_source.clone(),
             );
 
-            if let Some(value) = &specimen.institution_code { doc.add_text(institution_code, value); }
-            if let Some(value) = &specimen.collection_code { doc.add_text(collection_code, value); }
-            if let Some(value) = &specimen.recorded_by { doc.add_text(recorded_by, value); }
-            if let Some(value) = &specimen.identified_by { doc.add_text(identified_by, value); }
-            if let Some(value) = &specimen.event_date { doc.add_text(event_date, value); }
+            if let Some(value) = &specimen.institution_code {
+                doc.add_text(institution_code, value);
+            }
+            if let Some(value) = &specimen.collection_code {
+                doc.add_text(collection_code, value);
+            }
+            if let Some(value) = &specimen.recorded_by {
+                doc.add_text(recorded_by, value);
+            }
+            if let Some(value) = &specimen.identified_by {
+                doc.add_text(identified_by, value);
+            }
+            if let Some(value) = &specimen.event_date {
+                doc.add_text(event_date, value);
+            }
 
             index_writer.add_document(doc)?;
         }
@@ -293,7 +333,9 @@ fn index_specimens(schema: &Schema, index: &Index) -> Result<(), Error> {
 
 
 fn get_field(schema: &Schema, name: &str) -> Result<Field, Error> {
-    let field = schema.get_field(name).ok_or(tantivy::TantivyError::FieldNotFound(name.to_string()))?;
+    let field = schema
+        .get_field(name)
+        .ok_or(tantivy::TantivyError::FieldNotFound(name.to_string()))?;
     Ok(field)
 }
 

@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 
+use arga_core::schema;
+use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::*;
-use diesel::r2d2::{Pool, ConnectionManager};
-use rayon::prelude::*;
 use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use arga_core::schema;
 use crate::error::Error;
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -45,61 +44,14 @@ pub fn dna_extract_map(datasets: &Vec<Uuid>, pool: &mut PgPool) -> Result<DnaExt
         map.insert(dna_extract_match.record_id.clone(), dna_extract_match);
     }
 
-    info!(total=map.len(), "Creating dna extract map finished");
+    info!(total = map.len(), "Creating dna extract map finished");
     Ok(map)
-}
-
-pub fn match_dna_extracts(records: &Vec<DnaExtractRecord>, dataset: &Uuid, pool: &mut PgPool) -> HashMap<String, DnaExtractMatch> {
-    use schema::dna_extracts::dsl::*;
-    info!(total=records.len(), "Matching dna extracts");
-
-    // get 50,000 possible matches in parallel. this can speed up the matching significantly
-    // since our main limit here is the parameter limit in postgres
-    let matched: Vec<Result<Vec<DnaExtractMatch>, Error>> = records.par_chunks(50_000).map(|chunk| {
-        let mut conn = pool.get()?;
-        let record_ids: Vec<&String> = chunk.iter().map(|row| &row.record_id).collect();
-
-        let results = dna_extracts
-            .select((id, dataset_id, name_id, record_id))
-            .filter(dataset_id.eq(&dataset))
-            .filter(record_id.eq_any(&record_ids))
-            .load::<DnaExtractMatch>(&mut conn)?;
-
-        Ok::<Vec<DnaExtractMatch>, Error>(results)
-    }).collect();
-
-    let mut map: HashMap<String, DnaExtractMatch> = HashMap::new();
-
-    for chunk in matched {
-        if let Ok(records) = chunk {
-            for record in records {
-                map.insert(record.record_id.clone(), record);
-            }
-        }
-    }
-
-    info!(total=records.len(), matched=map.len(), "Matching dna extracts finished");
-    map
-}
-
-
-pub fn match_records<T>(records: Vec<T>, dataset_id: &Uuid, pool: &mut PgPool) -> Vec<(DnaExtractMatch, T)>
-where T: Clone + Into<DnaExtractRecord>
-{
-    // convert the records into dna extract records for matching
-    let mut dna_extract_records: Vec<DnaExtractRecord> = Vec::with_capacity(records.len());
-    for record in &records {
-        dna_extract_records.push(record.clone().into());
-    }
-
-    // get the match for each record from the database
-    let extracts = match_dna_extracts(&dna_extract_records, dataset_id, pool);
-    match_records_mapped(records, &extracts)
 }
 
 
 pub fn match_records_mapped<T>(records: Vec<T>, subsamples: &DnaExtractMap) -> Vec<(DnaExtractMatch, T)>
-where T: Clone + Into<DnaExtractRecord>
+where
+    T: Clone + Into<DnaExtractRecord>,
 {
     // associate the records with the matched name
     let mut matched: Vec<(DnaExtractMatch, T)> = Vec::with_capacity(records.len());

@@ -1,12 +1,11 @@
-use diesel::pg::Pg;
-use diesel::prelude::*;
-
+use arga_core::models::{TaxonomicStatus, TaxonomicVernacularGroup};
 // use arga_core::schema::{taxa, ecology, names};
 use arga_core::schema_gnl::species;
-use arga_core::models::{TaxonomicStatus, TaxonomicVernacularGroup, BushfireRecoveryTrait};
-use diesel::sql_types::{Bool, Nullable, Varchar};
+use diesel::pg::Pg;
+use diesel::prelude::*;
+use diesel::sql_types::Bool;
 
-use super::classification_filters::{Classification, decompose_classification};
+use super::classification_filters::{decompose_classification, Classification};
 
 
 #[derive(Clone)]
@@ -44,7 +43,11 @@ pub enum Filter {
 pub fn filter_taxa(filters: &Vec<Filter>) -> species::BoxedQuery<Pg> {
     species::table
         .select(species::all_columns)
-        .filter(species::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
+        .filter(species::status.eq_any(&[
+            TaxonomicStatus::Accepted,
+            TaxonomicStatus::Undescribed,
+            TaxonomicStatus::Hybrid,
+        ]))
         .filter(with_filters(&filters).unwrap())
         .into_boxed()
 }
@@ -69,7 +72,7 @@ pub fn with_filter(filter: &Filter) -> BoxedExpression {
             // FilterKind::State(state) => with_state(state),
             // FilterKind::DrainageBasin(drainage_basin) => with_drainage_basin(drainage_basin),
             // FilterKind::BushfireRecovery(traits) => with_bushfire_recovery_trait(traits),
-        }
+        },
         Filter::Exclude(kind) => match kind {
             FilterKind::Classification(classification) => without_classification(classification),
             FilterKind::VernacularGroup(group) => without_vernacular_group(group),
@@ -80,7 +83,7 @@ pub fn with_filter(filter: &Filter) -> BoxedExpression {
             // FilterKind::State(state) => without_state(state),
             // FilterKind::DrainageBasin(drainage_basin) => without_drainage_basin(drainage_basin),
             // FilterKind::BushfireRecovery(traits) => without_bushfire_recovery_trait(traits),
-        }
+        },
     }
 }
 
@@ -160,11 +163,17 @@ pub fn with_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpressio
         Group::CoralsAndJellyfishes => Box::new(species::classification.retrieve_as_text("phylum").eq("Cnidaria")),
         Group::Cyanobacteria => Box::new(species::classification.retrieve_as_text("division").eq("Cyanobacteria")),
         Group::Molluscs => Box::new(species::classification.retrieve_as_text("phylum").eq("Mollusca")),
-        Group::SharksAndRays => Box::new(species::classification.retrieve_as_text("subclass").eq("Elasmobranchii")),
+        Group::SharksAndRays => Box::new(
+            species::classification
+                .retrieve_as_text("subclass")
+                .eq("Elasmobranchii"),
+        ),
         Group::Insects => Box::new(species::classification.retrieve_as_text("class").eq("Insecta")),
         Group::Fungi => Box::new(species::classification.retrieve_as_text("regnum").eq("Fungi")),
         Group::Bacteria => Box::new(species::classification.retrieve_as_text("kingdom").eq("Bacteria")),
-        Group::ProtistsAndOtherUnicellularOrganisms => Box::new(species::classification.retrieve_as_text("superkingdom").eq("Protista")),
+        Group::ProtistsAndOtherUnicellularOrganisms => {
+            Box::new(species::classification.retrieve_as_text("superkingdom").eq("Protista"))
+        }
         Group::FrogsAndOtherAmphibians => Box::new(species::classification.retrieve_as_text("class").eq("Amphibia")),
         Group::Birds => Box::new(species::classification.retrieve_as_text("class").eq("Aves")),
         Group::Mammals => Box::new(species::classification.retrieve_as_text("class").eq("Mammalia")),
@@ -173,12 +182,32 @@ pub fn with_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpressio
         Group::Reptiles => Box::new(species::classification.retrieve_as_text("class").eq("Reptilia")),
         Group::Mosses => Box::new(species::classification.retrieve_as_text("classis").eq("Bryopsida")),
         Group::Sponges => Box::new(species::classification.retrieve_as_text("phylum").eq("Porifera")),
-        Group::Liverworts => Box::new(species::classification.retrieve_as_text("division").eq("Marchantiophyta")),
-        Group::Hornworts => Box::new(species::classification.retrieve_as_text("division").eq("Anthocerotophyta")),
-        Group::Diatoms => Box::new(species::classification.retrieve_as_text("division").eq("Bacillariophyta")),
+        Group::Liverworts => Box::new(
+            species::classification
+                .retrieve_as_text("division")
+                .eq("Marchantiophyta"),
+        ),
+        Group::Hornworts => Box::new(
+            species::classification
+                .retrieve_as_text("division")
+                .eq("Anthocerotophyta"),
+        ),
+        Group::Diatoms => Box::new(
+            species::classification
+                .retrieve_as_text("division")
+                .eq("Bacillariophyta"),
+        ),
         Group::Chromists => Box::new(species::classification.retrieve_as_text("regnum").eq("Chromista")),
-        Group::ConifersAndCycads => Box::new(species::classification.retrieve_as_text("ordo").eq_any(vec!["Pinales", "Cycadales"])),
-        Group::Ferns => Box::new(species::classification.retrieve_as_text("subclassis").eq("Polypodiidae")),
+        Group::ConifersAndCycads => Box::new(
+            species::classification
+                .retrieve_as_text("ordo")
+                .eq_any(vec!["Pinales", "Cycadales"]),
+        ),
+        Group::Ferns => Box::new(
+            species::classification
+                .retrieve_as_text("subclassis")
+                .eq("Polypodiidae"),
+        ),
     }
 }
 
@@ -197,11 +226,17 @@ pub fn without_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpres
         Group::CoralsAndJellyfishes => Box::new(species::classification.retrieve_as_text("phylum").ne("Cnidaria")),
         Group::Cyanobacteria => Box::new(species::classification.retrieve_as_text("division").ne("Cyanobacteria")),
         Group::Molluscs => Box::new(species::classification.retrieve_as_text("phylum").ne("Mollusca")),
-        Group::SharksAndRays => Box::new(species::classification.retrieve_as_text("subclass").ne("Elasmobranchii")),
+        Group::SharksAndRays => Box::new(
+            species::classification
+                .retrieve_as_text("subclass")
+                .ne("Elasmobranchii"),
+        ),
         Group::Insects => Box::new(species::classification.retrieve_as_text("class").ne("Insecta")),
         Group::Fungi => Box::new(species::classification.retrieve_as_text("regnum").ne("Fungi")),
         Group::Bacteria => Box::new(species::classification.retrieve_as_text("kingdom").ne("Bacteria")),
-        Group::ProtistsAndOtherUnicellularOrganisms => Box::new(species::classification.retrieve_as_text("superkingdom").ne("Protista")),
+        Group::ProtistsAndOtherUnicellularOrganisms => {
+            Box::new(species::classification.retrieve_as_text("superkingdom").ne("Protista"))
+        }
         Group::FrogsAndOtherAmphibians => Box::new(species::classification.retrieve_as_text("class").ne("Amphibia")),
         Group::Birds => Box::new(species::classification.retrieve_as_text("class").ne("Aves")),
         Group::Mammals => Box::new(species::classification.retrieve_as_text("class").ne("Mammalia")),
@@ -210,12 +245,33 @@ pub fn without_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpres
         Group::Reptiles => Box::new(species::classification.retrieve_as_text("class").ne("Reptilia")),
         Group::Mosses => Box::new(species::classification.retrieve_as_text("classis").ne("Bryopsida")),
         Group::Sponges => Box::new(species::classification.retrieve_as_text("phylum").ne("Porifera")),
-        Group::Liverworts => Box::new(species::classification.retrieve_as_text("division").ne("Marchantiophyta")),
-        Group::Hornworts => Box::new(species::classification.retrieve_as_text("division").ne("Anthocerotophyta")),
-        Group::Diatoms => Box::new(species::classification.retrieve_as_text("division").ne("Bacillariophyta")),
+        Group::Liverworts => Box::new(
+            species::classification
+                .retrieve_as_text("division")
+                .ne("Marchantiophyta"),
+        ),
+        Group::Hornworts => Box::new(
+            species::classification
+                .retrieve_as_text("division")
+                .ne("Anthocerotophyta"),
+        ),
+        Group::Diatoms => Box::new(
+            species::classification
+                .retrieve_as_text("division")
+                .ne("Bacillariophyta"),
+        ),
         Group::Chromists => Box::new(species::classification.retrieve_as_text("regnum").ne("Chromista")),
-        Group::ConifersAndCycads => Box::new(species::classification.retrieve_as_text("ordo").ne("Pinales").and(species::classification.retrieve_as_text("ordo").ne("Cycadales"))),
-        Group::Ferns => Box::new(species::classification.retrieve_as_text("subclassis").ne("Polypodiidae")),
+        Group::ConifersAndCycads => Box::new(
+            species::classification
+                .retrieve_as_text("ordo")
+                .ne("Pinales")
+                .and(species::classification.retrieve_as_text("ordo").ne("Cycadales")),
+        ),
+        Group::Ferns => Box::new(
+            species::classification
+                .retrieve_as_text("subclassis")
+                .ne("Polypodiidae"),
+        ),
     }
 }
 
@@ -233,6 +289,7 @@ pub fn without_classification(classification: &Classification) -> BoxedExpressio
     Box::new(species::classification.retrieve_as_text(taxon_rank).ne(value))
 }
 
+// TODO: re-enable curated dataset filtering
 // /// Filter the taxa table with a particular trait attribute
 // pub fn with_bushfire_recovery_trait(attr: &BushfireRecoveryTrait) -> BoxedTaxaExpression {
 //     use BushfireRecoveryTrait as Trait;

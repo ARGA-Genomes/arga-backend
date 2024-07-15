@@ -1,17 +1,15 @@
 use arga_core::models::Dataset;
 use axum::extract::State;
+use axum::routing::{delete, get, post, put};
 use axum::{Json, Router};
-use axum::routing::{get, post, put, delete};
-
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use crate::http::Context;
-use crate::http::error::InternalError;
 use crate::database::{schema, Database};
-use crate::database::models::Source;
+use crate::http::error::InternalError;
+use crate::http::Context;
 
 
 #[derive(Deserialize, Debug)]
@@ -46,10 +44,7 @@ async fn datasets(State(database): State<Database>) -> Result<Json<Vec<Dataset>>
     use schema::datasets::dsl::*;
     let mut conn = database.pool.get().await?;
 
-    let records = datasets
-        .order_by(global_id)
-        .load::<Dataset>(&mut conn)
-        .await?;
+    let records = datasets.order_by(global_id).load::<Dataset>(&mut conn).await?;
 
     Ok(Json(records))
 }
@@ -57,8 +52,7 @@ async fn datasets(State(database): State<Database>) -> Result<Json<Vec<Dataset>>
 async fn create_datasets(
     State(database): State<Database>,
     Json(form): Json<Vec<NewDataset>>,
-) -> Result<Json<Vec<Dataset>>, InternalError>
-{
+) -> Result<Json<Vec<Dataset>>, InternalError> {
     use schema::datasets::dsl::*;
 
     let mut conn = database.pool.get().await?;
@@ -93,8 +87,7 @@ async fn create_datasets(
 async fn update_datasets(
     State(database): State<Database>,
     Json(form): Json<Vec<UpdateDataset>>,
-) -> Result<Json<Vec<Dataset>>, InternalError>
-{
+) -> Result<Json<Vec<Dataset>>, InternalError> {
     use schema::datasets::dsl::*;
 
     let mut conn = database.pool.get().await?;
@@ -123,11 +116,12 @@ async fn update_datasets(
 async fn delete_datasets(
     State(database): State<Database>,
     Json(form): Json<Vec<Uuid>>,
-) -> Result<Json<Vec<Dataset>>, InternalError>
-{
+) -> Result<Json<Vec<Dataset>>, InternalError> {
     use schema::datasets::dsl::*;
     let mut conn = database.pool.get().await?;
-    diesel::delete(datasets.filter(id.eq_any(form))).execute(&mut conn).await?;
+    diesel::delete(datasets.filter(id.eq_any(form)))
+        .execute(&mut conn)
+        .await?;
     Ok(Json(vec![]))
 }
 
