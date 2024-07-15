@@ -34,11 +34,20 @@ pub enum Error {
     #[error("upstream request timeout")]
     GatewayTimeout,
 
+    #[error("graphql error: {0:?}")]
+    GraphQL(async_graphql::Error),
+
     #[error(transparent)]
-    GraphQL(#[from] async_graphql::DeserializerError),
+    GraphQLRequest(#[from] async_graphql::DeserializerError),
 
     #[error(transparent)]
     GeoJSON(#[from] geojson::Error),
+}
+
+impl From<async_graphql::Error> for Error {
+    fn from(err: async_graphql::Error) -> Self {
+        Self::GraphQL(err)
+    }
 }
 
 impl From<crate::database::Error> for Error {
@@ -52,13 +61,15 @@ impl From<crate::database::Error> for Error {
     }
 }
 
+
 impl Error {
     fn status_code(&self) -> StatusCode {
         match self {
             Error::MissingParam(_) => StatusCode::BAD_REQUEST,
-            Error::GraphQL(_) => StatusCode::BAD_REQUEST,
+            Error::GraphQLRequest(_) => StatusCode::BAD_REQUEST,
             Error::NotFound(_) => StatusCode::NOT_FOUND,
             Error::InvalidData(_, _, _) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::GraphQL(_) => StatusCode::INTERNAL_SERVER_ERROR,
 
             Error::Configuration(_, _) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Authentication => StatusCode::INTERNAL_SERVER_ERROR,

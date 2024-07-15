@@ -9,7 +9,7 @@ pub struct Provenance;
 #[Object]
 impl Provenance {
     pub async fn specimen(&self, ctx: &Context<'_>, by: OperationBy) -> Result<Vec<SpecimenOperation>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         SpecimenOperation::new(&state.database, by).await
     }
 
@@ -18,7 +18,7 @@ impl Provenance {
         ctx: &Context<'_>,
         by: OperationBy,
     ) -> Result<Vec<NomenclaturalActOperation>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         NomenclaturalActOperation::new(&state.database, by).await
     }
 }

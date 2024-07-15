@@ -67,7 +67,7 @@ impl Query {
     }
 
     async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<Species, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Species::new(&state.database, canonical_name).await
     }
 
@@ -80,7 +80,7 @@ impl Query {
     }
 
     async fn sources(&self, ctx: &Context<'_>) -> Result<Vec<Source>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Source::all(&state.database).await
     }
 
@@ -90,22 +90,22 @@ impl Query {
         by: source::SourceBy,
         filters: Option<Vec<FilterItem>>,
     ) -> Result<Source, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Source::new(&state.database, &by, filters.unwrap_or_default()).await
     }
 
     async fn dataset(&self, ctx: &Context<'_>, by: dataset::DatasetBy) -> Result<Dataset, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Dataset::new(&state.database, &by).await
     }
 
     async fn specimen(&self, ctx: &Context<'_>, by: specimen::SpecimenBy) -> Result<Specimen, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Specimen::new(&state.database, &by).await
     }
 
     async fn marker(&self, ctx: &Context<'_>, accession: String) -> Result<Marker, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Marker::new(&state.database, &accession).await
     }
 
@@ -118,22 +118,22 @@ impl Query {
     }
 
     async fn subsample(&self, ctx: &Context<'_>, by: subsample::SubsampleBy) -> Result<Option<Subsample>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Subsample::new(&state.database, &by).await
     }
 
     async fn dna_extract(&self, ctx: &Context<'_>, by: dna_extract::DnaExtractBy) -> Result<Option<DnaExtract>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         DnaExtract::new(&state.database, &by).await
     }
 
     async fn sequence(&self, ctx: &Context<'_>, by: sequence::SequenceBy) -> Result<Vec<Sequence>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Sequence::new(&state.database, &by).await
     }
 
     async fn taxon(&self, ctx: &Context<'_>, rank: taxon::TaxonRank, canonical_name: String) -> Result<Taxon, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Taxon::new(&state.database, rank, canonical_name).await
     }
 

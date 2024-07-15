@@ -125,20 +125,20 @@ pub struct TaxonQuery {
 #[Object]
 impl TaxonQuery {
     async fn hierarchy(&self, ctx: &Context<'_>) -> Result<Vec<TaxonNode>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let hierarchy = state.database.taxa.hierarchy(&self.classification).await?;
         let hierarchy = hierarchy.into_iter().map(TaxonNode::from).collect();
         Ok(hierarchy)
     }
 
     async fn summary(&self, ctx: &Context<'_>) -> Result<TaxonSummary, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let summary = state.database.taxa.taxon_summary(&self.classification).await?;
         Ok(summary.into())
     }
 
     async fn descendants(&self, ctx: &Context<'_>, rank: TaxonomicRank) -> Result<Vec<TaxonSummary>> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let summaries = state
             .database
             .taxa
@@ -149,28 +149,28 @@ impl TaxonQuery {
     }
 
     async fn species_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let summaries = state.database.taxa.species_summary(&self.classification).await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
 
     async fn species_genome_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let summaries = state.database.taxa.species_genome_summary(&self.classification).await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
 
     async fn history(&self, ctx: &Context<'_>) -> Result<Vec<HistoryItem>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let history = state.database.taxa.history(&self.taxon.id).await?;
         let history = history.into_iter().map(|r| r.into()).collect();
         Ok(history)
     }
 
     async fn nomenclatural_acts(&self, ctx: &Context<'_>) -> Result<Vec<NomenclaturalAct>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let acts = state.database.taxa.nomenclatural_acts(&self.taxon.id).await?;
         let acts = acts.into_iter().map(|r| r.into()).collect();
         Ok(acts)

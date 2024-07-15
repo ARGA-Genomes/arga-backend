@@ -14,7 +14,7 @@ pub struct Statistics;
 impl Statistics {
     #[instrument(skip(self, ctx))]
     async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<SpeciesStatistics, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let names = state.database.names.find_by_canonical_name(&canonical_name).await?;
 
         if names.is_empty() {
@@ -48,7 +48,7 @@ impl Statistics {
         taxon_canonical_name: String,
         include_ranks: Vec<TaxonomicRank>,
     ) -> Result<Vec<TaxonTreeNodeStatistics>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let classification = taxon_rank.to_classification(taxon_canonical_name);
         let include_ranks = include_ranks.into_iter().map(|i| i.into()).collect();
 
@@ -62,7 +62,7 @@ impl Statistics {
 
     #[instrument(skip(self, ctx))]
     async fn dataset(&self, ctx: &Context<'_>, name: String) -> Result<DatasetStatistics, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let stats = state.database.stats.dataset(&name).await?;
         let breakdown = state.database.stats.dataset_breakdown(&name).await?;
 

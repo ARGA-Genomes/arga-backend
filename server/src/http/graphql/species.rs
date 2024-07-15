@@ -103,7 +103,7 @@ impl Species {
 
     #[instrument(skip(self, ctx))]
     async fn taxonomy(&self, ctx: &Context<'_>) -> Result<Vec<Taxonomy>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let taxa = state.database.species.taxonomy(&self.names).await?;
 
         let mut details = Vec::new();
@@ -120,14 +120,14 @@ impl Species {
 
     async fn hierarchy(&self, ctx: &Context<'_>) -> Result<Vec<TaxonNode>, Error> {
         let classification = into_classification(TaxonRank::Species, self.canonical_name.clone());
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let hierarchy = state.database.taxa.hierarchy(&classification).await?;
         let hierarchy = hierarchy.into_iter().map(TaxonNode::from).collect();
         Ok(hierarchy)
     }
 
     async fn vernacular_names(&self, ctx: &Context<'_>) -> Result<Vec<VernacularName>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let name_ids = self.names.iter().map(|n| n.id.clone()).collect();
         let vernacular_names = state.database.species.vernacular_names(&name_ids).await?;
         let vernacular_names = vernacular_names.into_iter().map(|n| n.into()).collect();
@@ -153,7 +153,7 @@ impl Species {
 
     #[instrument(skip(self, ctx))]
     async fn photos(&self, ctx: &Context<'_>) -> Result<Vec<SpeciesPhoto>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let photos = state.database.species.photos(&self.names).await?;
         let photos = photos.into_iter().map(|p| p.into()).collect();
         Ok(photos)
@@ -161,7 +161,7 @@ impl Species {
 
     #[instrument(skip(self, ctx))]
     async fn specimens(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpecimenSummary>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let page = state.database.species.specimens(&self.names, page, page_size).await?;
         let specimens = page.records.into_iter().map(|r| r.into()).collect();
         Ok(Page {
@@ -178,7 +178,7 @@ impl Species {
         page_size: i64,
         filters: Option<Vec<WholeGenomeFilterItem>>,
     ) -> Result<Page<WholeGenome>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let filters = convert_whole_genome_filters(filters.unwrap_or_default())?;
         let page = state
             .database
@@ -193,7 +193,7 @@ impl Species {
     }
 
     async fn markers(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpeciesMarker>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let page = state.database.species.loci(&self.names, page, page_size).await?;
         let markers = page.records.into_iter().map(|m| m.into()).collect();
         Ok(Page {
@@ -208,7 +208,7 @@ impl Species {
         page: i64,
         page_size: i64,
     ) -> Result<Page<GenomicComponent>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let page = state
             .database
             .species
@@ -222,7 +222,7 @@ impl Species {
     }
 
     async fn reference_genome(&self, ctx: &Context<'_>) -> Result<Option<WholeGenome>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let genome = state.database.species.reference_genome(&self.names).await?;
         let genome = genome.map(|g| g.into());
         Ok(genome)
@@ -232,7 +232,7 @@ impl Species {
         &self,
         ctx: &Context<'_>,
     ) -> Result<Vec<IndigenousEcologicalTrait>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let name_ids: Vec<Uuid> = self.names.iter().map(|name| name.id.clone()).collect();
         let records = state.database.species.indigenous_knowledge(&name_ids).await?;
         let traits = records.into_iter().map(|r| r.into()).collect();
@@ -240,14 +240,14 @@ impl Species {
     }
 
     async fn attributes(&self, ctx: &Context<'_>) -> Result<Vec<NameAttribute>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let records = state.database.species.attributes(&self.names).await?;
         let attributes = records.into_iter().map(|r| r.into()).collect();
         Ok(attributes)
     }
 
     async fn data_summary(&self, ctx: &Context<'_>) -> Result<SpeciesGenomicDataSummary, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let name_ids: Vec<Uuid> = self.names.iter().map(|name| name.id.clone()).collect();
         let summary = state.database.species.data_summary(&name_ids).await?;
         Ok(summary.into())
@@ -289,14 +289,14 @@ pub struct Regions {
 #[Object]
 impl Regions {
     async fn ibra(&self, ctx: &Context<'_>) -> Result<Vec<RegionDistribution>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let regions = state.database.species.regions_ibra(&self.names).await?;
         let regions = regions.into_iter().map(RegionDistribution::new).collect();
         Ok(regions)
     }
 
     async fn imcra(&self, ctx: &Context<'_>) -> Result<Vec<RegionDistribution>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let regions = state.database.species.regions_imcra(&self.names).await?;
         let regions = regions.into_iter().map(RegionDistribution::new).collect();
         Ok(regions)
@@ -332,7 +332,7 @@ pub struct RegionQuery {
 #[Object]
 impl RegionQuery {
     pub async fn dataset(&self, ctx: &Context<'_>) -> Result<DatasetDetails, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let dataset = state.database.datasets.find_by_id(&self.regions.dataset_id).await?;
         Ok(dataset.into())
     }

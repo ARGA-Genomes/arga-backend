@@ -37,7 +37,7 @@ impl Search {
         page: usize,
         per_page: usize,
     ) -> Result<FullTextSearchResult, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
 
         let (search_results, total) = state.search.filtered(&query, page, per_page, &self.filters)?;
 

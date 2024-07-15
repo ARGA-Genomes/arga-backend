@@ -59,14 +59,14 @@ pub struct SourceQuery {
 #[Object]
 impl SourceQuery {
     async fn datasets(&self, ctx: &Context<'_>) -> Result<Vec<DatasetDetails>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let records = state.database.sources.datasets(&self.source).await?;
         let datasets = records.into_iter().map(|dataset| dataset.into()).collect();
         Ok(datasets)
     }
 
     async fn species(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpeciesCard>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let helper = SpeciesHelper::new(&state.database);
 
         let page = state

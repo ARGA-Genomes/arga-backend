@@ -39,14 +39,14 @@ struct SpecimenQuery {
 #[Object]
 impl SpecimenQuery {
     async fn canonical_name(&self, ctx: &Context<'_>) -> Result<String, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let name = state.database.names.find_by_name_id(&self.specimen.name_id).await?;
         Ok(name.canonical_name)
     }
 
     #[instrument(skip(self, ctx))]
     async fn events(&self, ctx: &Context<'_>) -> Result<SpecimenEvents, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let collections = state.database.specimens.collection_events(&self.specimen.id).await?;
         let accessions = state.database.specimens.accession_events(&self.specimen.id).await?;
 

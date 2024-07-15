@@ -12,7 +12,7 @@ pub struct Maps {
 impl Maps {
     #[instrument(skip(self, ctx))]
     async fn ibra(&self, ctx: &Context<'_>, regions: Vec<String>) -> Result<String, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let features = state.database.maps.ibra(&regions, &self.tolerance).await?;
         let geojson = geojson::ser::to_feature_collection_string(&features)?;
         Ok(geojson)
@@ -20,7 +20,7 @@ impl Maps {
 
     #[instrument(skip(self, ctx))]
     async fn imcra_provincial(&self, ctx: &Context<'_>, regions: Vec<String>) -> Result<String, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let features = state.database.maps.imcra_provincial(&regions, &self.tolerance).await?;
         let geojson = geojson::ser::to_feature_collection_string(&features)?;
         Ok(geojson)
@@ -28,7 +28,7 @@ impl Maps {
 
     #[instrument(skip(self, ctx))]
     async fn imcra_mesoscale(&self, ctx: &Context<'_>, regions: Vec<String>) -> Result<String, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let features = state.database.maps.imcra_mesoscale(&regions, &self.tolerance).await?;
         let geojson = geojson::ser::to_feature_collection_string(&features)?;
         Ok(geojson)
