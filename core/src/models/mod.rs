@@ -56,7 +56,7 @@ pub struct Dataset {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Queryable, Selectable, Identifiable, Insertable, Associations)]
+#[derive(Debug, Clone, Queryable, Selectable, Identifiable, Insertable, Associations, Deserialize)]
 #[diesel(belongs_to(Dataset))]
 #[diesel(table_name = schema::dataset_versions)]
 pub struct DatasetVersion {
