@@ -108,14 +108,6 @@ where
     })
 }
 
-pub fn date_time_from_str<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    parse_date_time(&s).map_err(serde::de::Error::custom)
-}
-
 pub fn date_time_from_str_opt<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -146,13 +138,6 @@ where
     })
 }
 
-
-pub fn extract_authority(name: &Option<String>, full_name: &Option<String>) -> Option<String> {
-    match (name, full_name) {
-        (Some(name), Some(full_name)) => Some(full_name.trim_start_matches(name).trim().to_string()),
-        _ => None,
-    }
-}
 
 pub fn decompose_scientific_name(scientific_name: &str) -> Option<ScientificNameComponents> {
     // TODO: bubble regex creation failures

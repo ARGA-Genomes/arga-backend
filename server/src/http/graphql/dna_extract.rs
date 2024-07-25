@@ -1,11 +1,8 @@
 use async_graphql::*;
 use uuid::Uuid;
 
-use crate::database::Database;
-use crate::http::Error;
-use crate::http::Context as State;
-
-use crate::database::models;
+use crate::database::{models, Database};
+use crate::http::{Context as State, Error};
 
 
 #[derive(OneofObject)]
@@ -45,8 +42,12 @@ struct DnaExtractQuery {
 #[Object]
 impl DnaExtractQuery {
     async fn events(&self, ctx: &Context<'_>) -> Result<DnaExtractEvents, Error> {
-        let state = ctx.data::<State>().unwrap();
-        let extracts = state.database.dna_extracts.dna_extraction_events(&self.dna_extract.id).await?;
+        let state = ctx.data::<State>()?;
+        let extracts = state
+            .database
+            .dna_extracts
+            .dna_extraction_events(&self.dna_extract.id)
+            .await?;
 
         Ok(DnaExtractEvents {
             dna_extracts: extracts.into_iter().map(|r| r.into()).collect(),

@@ -26,8 +26,7 @@ use crate::data::Error;
 struct Record {
     record_id: String,
     scientific_name: Option<String>,
-    canonical_name: Option<String>,
-
+    // canonical_name: Option<String>,
     type_status: Option<String>,
     institution_name: Option<String>,
     institution_code: Option<String>,
@@ -51,7 +50,7 @@ struct Record {
     municipality: Option<String>,
     latitude: Option<f64>,
     longitude: Option<f64>,
-    verbatim_lat_long: Option<String>,
+    // verbatim_lat_long: Option<String>,
     elevation: Option<f64>,
     depth: Option<f64>,
     elevation_accuracy: Option<f64>,
@@ -476,10 +475,6 @@ impl CollectionEventFrame {
         };
 
         self.frame.push(op);
-    }
-
-    pub fn operations(&self) -> &Vec<CollectionEventOperation> {
-        &self.frame.operations
     }
 }
 

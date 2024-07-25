@@ -1,13 +1,9 @@
 use async_graphql::*;
-use chrono::NaiveDate;
-use chrono::NaiveDateTime;
+use chrono::{NaiveDate, NaiveDateTime};
 use uuid::Uuid;
 
-use crate::database::Database;
-use crate::http::Error;
-use crate::http::Context as State;
-
-use crate::database::models;
+use crate::database::{models, Database};
+use crate::http::{Context as State, Error};
 
 
 #[derive(OneofObject)]
@@ -49,22 +45,33 @@ struct SequenceQuery {
 #[Object]
 impl SequenceQuery {
     async fn dataset_name(&self, ctx: &Context<'_>) -> Result<String, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let dataset = state.database.datasets.find_by_id(&self.sequence.dataset_id).await?;
         Ok(dataset.name)
     }
 
     async fn events(&self, ctx: &Context<'_>) -> Result<SequenceEvents, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let sequencing = state.database.sequences.sequencing_events(&self.sequence.id).await?;
-        let sequencing_runs = state.database.sequences.sequencing_run_events(&self.sequence.id).await?;
+        let sequencing_runs = state
+            .database
+            .sequences
+            .sequencing_run_events(&self.sequence.id)
+            .await?;
         let assemblies = state.database.sequences.assembly_events(&self.sequence.id).await?;
         let annotations = state.database.sequences.annotation_events(&self.sequence.id).await?;
-        let depositions = state.database.sequences.data_deposition_events(&self.sequence.id).await?;
+        let depositions = state
+            .database
+            .sequences
+            .data_deposition_events(&self.sequence.id)
+            .await?;
 
         Ok(SequenceEvents {
             sequencing: sequencing.into_iter().map(|r| r.into()).collect(),
-            sequencing_runs: sequencing_runs.into_iter().map(|r| SequencingRunEvent(r.clone().into(), SequencingRunEventQuery{ event: r })).collect(),
+            sequencing_runs: sequencing_runs
+                .into_iter()
+                .map(|r| SequencingRunEvent(r.clone().into(), SequencingRunEventQuery { event: r }))
+                .collect(),
             assemblies: assemblies.into_iter().map(|r| r.into()).collect(),
             annotations: annotations.into_iter().map(|r| r.into()).collect(),
             data_depositions: depositions.into_iter().map(|r| r.into()).collect(),
@@ -141,16 +148,12 @@ impl From<models::SequencingEvent> for SequencingEvent {
 }
 
 
-
 #[derive(MergedObject)]
 pub struct SequencingRunEvent(SequencingRunEventDetails, SequencingRunEventQuery);
 
 impl SequencingRunEvent {
     pub fn new(event: models::SequencingRunEvent) -> SequencingRunEvent {
-        SequencingRunEvent(
-            SequencingRunEventDetails::from(event.clone()),
-            SequencingRunEventQuery { event }
-        )
+        SequencingRunEvent(SequencingRunEventDetails::from(event.clone()), SequencingRunEventQuery { event })
     }
 }
 
@@ -216,7 +219,7 @@ pub struct SequencingRunEventQuery {
 #[Object]
 impl SequencingRunEventQuery {
     async fn trace(&self, ctx: &Context<'_>) -> Result<TraceData, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let trace = state.database.sequences.trace_data(&self.event.id).await?;
 
         Ok(TraceData {
@@ -227,7 +230,6 @@ impl SequencingRunEventQuery {
         })
     }
 }
-
 
 
 #[derive(Clone, Debug, SimpleObject)]
@@ -314,7 +316,6 @@ pub struct DataDepositionEvent {
     pub access_rights: Option<String>,
     pub reference: Option<String>,
     pub last_updated: Option<NaiveDate>,
-
 }
 
 impl From<models::DepositionEvent> for DataDepositionEvent {

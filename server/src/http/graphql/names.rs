@@ -24,7 +24,7 @@ pub struct NameQuery {
 #[Object]
 impl NameQuery {
     async fn taxa(&self, ctx: &Context<'_>) -> Result<Vec<TaxonDetails>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let taxa = state.database.names.taxa(&self.name_id).await?;
         let taxa = taxa.into_iter().map(|t| t.into()).collect();
         Ok(taxa)

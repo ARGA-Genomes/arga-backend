@@ -21,7 +21,7 @@ type PgPool = Pool<ConnectionManager<PgConnection>>;
 struct Record {
     acted_on: String,
     scientific_name: String,
-    taxonomic_status: String,
+    // taxonomic_status: String,
     publication: Option<String>,
     source_url: Option<String>,
     #[serde(deserialize_with = "date_time_from_str_opt")]

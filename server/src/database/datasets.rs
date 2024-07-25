@@ -2,11 +2,9 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
+use super::models::{Dataset, Taxon};
+use super::{schema, PageResult, PgPool};
 use crate::database::Error;
-
-use super::extensions::Paginate;
-use super::{schema, PgPool, PageResult};
-use super::models::{Dataset, Taxon, TaxonomicStatus};
 
 
 #[derive(Clone)]
@@ -47,9 +45,9 @@ impl DatasetProvider {
         Ok(dataset?)
     }
 
-    pub async fn species(&self, dataset: &Dataset, page: i64) -> PageResult<Taxon> {
-        use schema::{taxa, indigenous_knowledge as iek};
-        let mut conn = self.pool.get().await?;
+    pub async fn species(&self, _dataset: &Dataset, _page: i64) -> PageResult<Taxon> {
+        // use schema::{indigenous_knowledge as iek, taxa};
+        // let mut conn = self.pool.get().await?;
 
         // join the taxa table with all dataset tables to filter get taxonomy
         // of species that appear in a dataset.

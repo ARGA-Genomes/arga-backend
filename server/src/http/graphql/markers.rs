@@ -3,8 +3,7 @@ use tracing::instrument;
 use uuid::Uuid;
 
 use crate::database::models;
-use crate::http::Error;
-use crate::http::Context as State;
+use crate::http::{Context as State, Error};
 
 
 pub struct Markers;
@@ -47,7 +46,7 @@ impl From<models::Marker> for SpeciesMarker {
 impl Markers {
     #[instrument(skip(self, ctx))]
     async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<Vec<SpeciesMarker>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let markers = state.database.markers.species(&canonical_name).await?;
         let markers = markers.into_iter().map(|m| m.into()).collect();
         Ok(markers)

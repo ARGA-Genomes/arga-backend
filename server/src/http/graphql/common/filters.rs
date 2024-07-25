@@ -1,20 +1,18 @@
-use async_graphql::{Enum, InputObject, from_value, Value};
-use serde::{Serialize, Deserialize};
-
 use arga_core::search::SearchFilter;
+use async_graphql::{from_value, Enum, InputObject, Value};
+use serde::{Deserialize, Serialize};
 
-use crate::http::Error;
-use crate::database::extensions::filters::{Filter, FilterKind};
+use super::search::SearchDataType;
+use super::species::DataType;
+use super::taxonomy::TaxonomicVernacularGroup;
+use super::whole_genomes::{AssemblyLevel, GenomeRepresentation, ReleaseType};
 use crate::database::extensions::classification_filters::Classification;
+use crate::database::extensions::filters::{Filter, FilterKind};
 use crate::database::extensions::whole_genome_filters::{
     Filter as WholeGenomeFilter,
     FilterKind as WholeGenomeFilterKind,
 };
-use super::attributes::BushfireRecoveryTrait;
-use super::species::DataType;
-use super::search::SearchDataType;
-use super::taxonomy::TaxonomicVernacularGroup;
-use super::whole_genomes::{AssemblyLevel, GenomeRepresentation, ReleaseType};
+use crate::http::Error;
 
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -90,13 +88,11 @@ impl TryFrom<FilterItem> for Filter {
 
     fn try_from(source: FilterItem) -> Result<Self, Self::Error> {
         let kind = match source.filter {
-            FilterType::VernacularGroup => FilterKind::VernacularGroup(
-                from_value::<TaxonomicVernacularGroup>(Value::String(source.value))?.into()
-            ),
+            FilterType::VernacularGroup => {
+                FilterKind::VernacularGroup(from_value::<TaxonomicVernacularGroup>(Value::String(source.value))?.into())
+            }
 
-            FilterType::HasData => FilterKind::HasData(
-                from_value::<DataType>(Value::String(source.value))?.into()
-            ),
+            FilterType::HasData => FilterKind::HasData(from_value::<DataType>(Value::String(source.value))?.into()),
 
             // FilterType::Ecology => FilterKind::Ecology(source.value),
             // FilterType::Ibra => FilterKind::Ibra(source.value),
@@ -107,7 +103,6 @@ impl TryFrom<FilterItem> for Filter {
             // FilterType::BushfireRecovery => FilterKind::BushfireRecovery(
             //     from_value::<BushfireRecoveryTrait>(Value::String(source.value))?.into()
             // ),
-
             FilterType::Domain => FilterKind::Classification(Classification::Domain(source.value)),
             FilterType::Superkingdom => FilterKind::Classification(Classification::Superkingdom(source.value)),
             FilterType::Kingdom => FilterKind::Classification(Classification::Kingdom(source.value)),
@@ -185,19 +180,16 @@ impl TryFrom<WholeGenomeFilterItem> for WholeGenomeFilter {
     type Error = Error;
 
     fn try_from(source: WholeGenomeFilterItem) -> Result<Self, Self::Error> {
-        use WholeGenomeFilterType as Type;
-        use WholeGenomeFilterKind as Kind;
+        use {WholeGenomeFilterKind as Kind, WholeGenomeFilterType as Type};
 
         let kind = match source.filter {
-            Type::AssemblyLevel => Kind::AssemblyLevel(
-                from_value::<AssemblyLevel>(Value::String(source.value))?.into()
-            ),
-            Type::GenomeRepresentation => Kind::GenomeRepresentation(
-                from_value::<GenomeRepresentation>(Value::String(source.value))?.into()
-            ),
-            Type::ReleaseType => Kind::ReleaseType(
-                from_value::<ReleaseType>(Value::String(source.value))?.into()
-            ),
+            Type::AssemblyLevel => {
+                Kind::AssemblyLevel(from_value::<AssemblyLevel>(Value::String(source.value))?.into())
+            }
+            Type::GenomeRepresentation => {
+                Kind::GenomeRepresentation(from_value::<GenomeRepresentation>(Value::String(source.value))?.into())
+            }
+            Type::ReleaseType => Kind::ReleaseType(from_value::<ReleaseType>(Value::String(source.value))?.into()),
         };
 
         Ok(match source.action {
@@ -238,9 +230,7 @@ impl TryFrom<SearchFilterItem> for SearchFilter {
         use SearchFilterType as Type;
 
         let kind = match source.filter {
-            Type::DataType => SearchFilter::DataType(
-                from_value::<SearchDataType>(Value::String(source.value))?.into()
-            ),
+            Type::DataType => SearchFilter::DataType(from_value::<SearchDataType>(Value::String(source.value))?.into()),
         };
 
         Ok(kind)

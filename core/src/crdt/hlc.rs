@@ -13,6 +13,9 @@
 //     16bits = fractional second
 // logical = 16 bits
 
+use chrono::{DateTime, Datelike, NaiveDate, Timelike, Utc};
+
+
 #[derive(Clone, Copy, Debug, Eq, Hash)]
 pub struct HybridTimestamp(u64);
 
@@ -62,20 +65,18 @@ impl HybridTimestamp {
     }
 }
 
-use chrono::{DateTime, Datelike, TimeZone, Timelike, Utc};
 
+// change this to a fallable conversion since the chrono api has deprecated to non-fallable ones
 impl From<HybridTimestamp> for DateTime<Utc> {
     fn from(ts: HybridTimestamp) -> Self {
         let years = 2020 + (ts.months() / 12);
         let months = ts.months() % 12;
 
-        Utc.ymd(years as i32, months as u32, ts.days() as u32)
-            .and_hms_milli(
-                ts.hours() as u32,
-                ts.minutes() as u32,
-                ts.seconds() as u32,
-                ts.milliseconds() as u32,
-            )
+        NaiveDate::from_ymd_opt(years.into(), months.into(), ts.days().into())
+            .unwrap()
+            .and_hms_milli_opt(ts.hours().into(), ts.minutes().into(), ts.seconds().into(), ts.milliseconds().into())
+            .unwrap()
+            .and_utc()
     }
 }
 

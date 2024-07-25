@@ -38,7 +38,7 @@ pub struct DatasetQuery {
 impl DatasetQuery {
     #[instrument(skip(self, ctx))]
     async fn species(&self, ctx: &Context<'_>, page: i64) -> Result<Page<SpeciesCard>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let helper = SpeciesHelper::new(&state.database);
 
         let page = state.database.datasets.species(&self.dataset, page).await?;

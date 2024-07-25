@@ -1,11 +1,8 @@
 use async_graphql::*;
 use uuid::Uuid;
 
-use crate::database::Database;
-use crate::http::Error;
-use crate::http::Context as State;
-
-use crate::database::models;
+use crate::database::{models, Database};
+use crate::http::{Context as State, Error};
 
 
 #[derive(OneofObject)]
@@ -34,7 +31,6 @@ impl Subsample {
                 Ok(Some(Subsample(details, query)))
             }
         }
-
     }
 }
 
@@ -46,7 +42,7 @@ struct SubsampleQuery {
 #[Object]
 impl SubsampleQuery {
     async fn events(&self, ctx: &Context<'_>) -> Result<SubsampleEvents, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         let subsamples = state.database.subsamples.subsample_events(&self.subsample.id).await?;
 
         Ok(SubsampleEvents {

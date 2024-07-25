@@ -1,10 +1,9 @@
-use diesel::{pg::Pg, sql_types::Nullable};
-use diesel::prelude::*;
-
+use diesel::pg::Pg;
 use arga_core::schema_gnl::species;
+use diesel::prelude::*;
 use diesel::sql_types::{Bool, Varchar};
 
-use super::classification_filters::{Classification, decompose_classification};
+use super::classification_filters::{decompose_classification, Classification};
 
 
 type BoxedExpression<'a> = Box<dyn BoxableExpression<species::table, Pg, SqlType = Bool> + 'a>;
@@ -29,11 +28,11 @@ pub fn with_filter(filter: &Filter) -> BoxedExpression {
         Filter::Include(kind) => match kind {
             FilterKind::Classification(value) => with_classification(value),
             // FilterKind::ParentClassification(value) => with_parent_classification(value),
-        }
+        },
         Filter::Exclude(kind) => match kind {
             FilterKind::Classification(value) => without_classification(value),
             // FilterKind::ParentClassification(value) => without_parent_classification(value),
-        }
+        },
     }
 }
 

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use arga_core::models::{NomenclaturalAct, NomenclaturalActType};
 use arga_core::schema;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::*;
 use rayon::prelude::*;
@@ -11,7 +11,6 @@ use serde::Deserialize;
 use tracing::info;
 use uuid::Uuid;
 
-use super::utils::date_time_from_str_opt;
 use crate::error::Error;
 use crate::matchers::name_matcher;
 
@@ -27,7 +26,7 @@ struct Record {
     act: Option<NomenclaturalActType>,
     source_url: String,
     publication: String,
-    publication_date: Option<String>,
+    // publication_date: Option<String>,
 }
 
 /// Extract nomenclatural acts from a CSV file

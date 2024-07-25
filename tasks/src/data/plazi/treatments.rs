@@ -2656,7 +2656,7 @@ impl<T: BufRead> ParseFormat<T> for FormattedValue {
                 }
 
                 Event::Start(e) if start_eq(&e, "taxonomicName") => {
-                    let attrs = TaxonomicName::parse(reader, &e)?;
+                    let _attrs = TaxonomicName::parse(reader, &e)?;
                 }
 
                 Event::Start(e) if start_eq(&e, "taxonomicNameLabel") => {

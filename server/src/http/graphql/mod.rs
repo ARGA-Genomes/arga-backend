@@ -1,25 +1,21 @@
 pub mod common;
 pub mod helpers;
 
-pub mod maps;
-pub mod overview;
-pub mod search;
-pub mod species;
-pub mod stats;
-// pub mod lists;
 pub mod dataset;
-pub mod source;
-pub mod traces;
-// pub mod assembly;
-// pub mod assemblies;
 pub mod dna_extract;
 pub mod extensions;
+pub mod maps;
 pub mod marker;
 pub mod markers;
 pub mod names;
+pub mod overview;
 pub mod provenance;
+pub mod search;
 pub mod sequence;
+pub mod source;
+pub mod species;
 pub mod specimen;
+pub mod stats;
 pub mod subsample;
 pub mod taxa;
 pub mod taxon;
@@ -34,8 +30,6 @@ use axum::{Extension, Router};
 
 use self::common::{FilterItem, SearchFilterItem};
 use self::dataset::Dataset;
-// use self::assembly::Assembly;
-// use self::assemblies::Assemblies;
 use self::dna_extract::DnaExtract;
 use self::extensions::ErrorLogging;
 use self::maps::Maps;
@@ -52,7 +46,6 @@ use self::stats::Statistics;
 use self::subsample::Subsample;
 use self::taxa::Taxa;
 use self::taxon::Taxon;
-use self::traces::Traces;
 use super::error::Error;
 use crate::http::Context as State;
 
@@ -74,7 +67,7 @@ impl Query {
     }
 
     async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<Species, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Species::new(&state.database, canonical_name).await
     }
 
@@ -87,7 +80,7 @@ impl Query {
     }
 
     async fn sources(&self, ctx: &Context<'_>) -> Result<Vec<Source>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Source::all(&state.database).await
     }
 
@@ -97,36 +90,22 @@ impl Query {
         by: source::SourceBy,
         filters: Option<Vec<FilterItem>>,
     ) -> Result<Source, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Source::new(&state.database, &by, filters.unwrap_or_default()).await
     }
 
     async fn dataset(&self, ctx: &Context<'_>, by: dataset::DatasetBy) -> Result<Dataset, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Dataset::new(&state.database, &by).await
     }
 
-    async fn traces(&self, uuid: String) -> Traces {
-        let uuid = uuid::Uuid::parse_str(&uuid).unwrap();
-        Traces { uuid }
-    }
-
-    // async fn assembly(&self, ctx: &Context<'_>, accession: String) -> Result<Assembly, Error> {
-    //     let state = ctx.data::<State>().unwrap();
-    //     Assembly::new(&state.database, &accession).await
-    // }
-
-    // async fn assemblies(&self) -> Assemblies {
-    //     Assemblies {}
-    // }
-
     async fn specimen(&self, ctx: &Context<'_>, by: specimen::SpecimenBy) -> Result<Specimen, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Specimen::new(&state.database, &by).await
     }
 
     async fn marker(&self, ctx: &Context<'_>, accession: String) -> Result<Marker, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Marker::new(&state.database, &accession).await
     }
 
@@ -139,26 +118,26 @@ impl Query {
     }
 
     async fn subsample(&self, ctx: &Context<'_>, by: subsample::SubsampleBy) -> Result<Option<Subsample>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Subsample::new(&state.database, &by).await
     }
 
     async fn dna_extract(&self, ctx: &Context<'_>, by: dna_extract::DnaExtractBy) -> Result<Option<DnaExtract>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         DnaExtract::new(&state.database, &by).await
     }
 
     async fn sequence(&self, ctx: &Context<'_>, by: sequence::SequenceBy) -> Result<Vec<Sequence>, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Sequence::new(&state.database, &by).await
     }
 
     async fn taxon(&self, ctx: &Context<'_>, rank: taxon::TaxonRank, canonical_name: String) -> Result<Taxon, Error> {
-        let state = ctx.data::<State>().unwrap();
+        let state = ctx.data::<State>()?;
         Taxon::new(&state.database, rank, canonical_name).await
     }
 
-    async fn provenance(&self, ctx: &Context<'_>) -> Provenance {
+    async fn provenance(&self) -> Provenance {
         Provenance {}
     }
 }

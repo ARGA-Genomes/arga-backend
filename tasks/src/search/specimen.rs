@@ -1,15 +1,9 @@
-use serde::Deserialize;
-use serde::Serialize;
-
-use diesel::*;
-use diesel::RunQueryDsl;
-use diesel::r2d2::{ConnectionManager, Pool};
-
-use uuid::Uuid;
 use anyhow::Error;
-
-use arga_core::models::TaxonomicStatus;
 use arga_core::schema;
+use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::{RunQueryDsl, *};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
@@ -31,7 +25,7 @@ pub struct SpecimenDoc {
 }
 
 pub fn get_specimens(pool: &PgPool) -> Result<Vec<SpecimenDoc>, Error> {
-    use schema::{names, taxa, specimens, datasets, collection_events};
+    use schema::{collection_events, datasets, names, specimens};
     let mut conn = pool.get()?;
 
     let docs = specimens::table

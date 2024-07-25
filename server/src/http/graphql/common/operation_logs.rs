@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::datasets::{DatasetDetails, DatasetVersion};
-use super::taxonomy::{NomenclaturalActType, TaxonomicStatus};
+use super::taxonomy::NomenclaturalActType;
 use crate::database::{models, Database};
 use crate::http::Error;
 
