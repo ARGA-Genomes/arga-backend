@@ -1,6 +1,7 @@
 use arga_core::models;
 use async_graphql::*;
 use bigdecimal::ToPrimitive;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::common::datasets::DatasetDetails;
@@ -264,6 +265,8 @@ pub struct TaxonomicAct {
     pub source_url: Option<String>,
     pub taxon: TaxonDetails,
     pub accepted_taxon: Option<TaxonDetails>,
+    pub data_created_at: Option<DateTime<Utc>>,
+    pub data_updated_at: Option<DateTime<Utc>>,
 }
 
 impl From<taxa::TaxonomicAct> for TaxonomicAct {
@@ -274,6 +277,8 @@ impl From<taxa::TaxonomicAct> for TaxonomicAct {
             source_url: value.source_url,
             taxon: value.taxon.into(),
             accepted_taxon: value.accepted_taxon.map(|t| t.into()),
+            data_created_at: value.data_created_at,
+            data_updated_at: value.data_updated_at,
         }
     }
 }

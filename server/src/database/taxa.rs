@@ -11,6 +11,7 @@ use arga_core::models::{
     SPECIES_RANKS,
 };
 use bigdecimal::BigDecimal;
+use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel::sql_types::{Array, Nullable, Text, Varchar};
 use diesel_async::RunQueryDsl;
@@ -101,6 +102,8 @@ pub struct TaxonomicAct {
     pub accepted_taxon: Option<Taxon>,
     pub act: TaxonomicActType,
     pub source_url: Option<String>,
+    pub data_created_at: Option<DateTime<Utc>>,
+    pub data_updated_at: Option<DateTime<Utc>>,
 }
 
 
@@ -450,6 +453,8 @@ impl TaxaProvider {
                     .nullable(),
                 acts::act,
                 acts::source_url,
+                acts::data_created_at,
+                acts::data_updated_at,
             ))
             .order(taxa::scientific_name.asc())
             .load::<TaxonomicAct>(&mut conn)
