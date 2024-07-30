@@ -757,6 +757,8 @@ diesel::table! {
         source_url -> Nullable<Varchar>,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        data_created_at -> Nullable<Timestamptz>,
+        data_updated_at -> Nullable<Timestamptz>,
     }
 }
 

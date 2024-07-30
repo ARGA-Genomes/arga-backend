@@ -163,6 +163,8 @@ impl From<Map<TaxonomicActAtom>> for TaxonomicAct {
                 AcceptedTaxon(value) => act.accepted_taxon = Some(value),
                 Act(value) => act.act = Some(value),
                 SourceUrl(value) => act.source_url = Some(value),
+                CreatedAt(_) => {}
+                UpdatedAt(_) => {}
             }
         }
 

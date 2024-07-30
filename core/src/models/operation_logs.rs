@@ -1,4 +1,5 @@
 use bigdecimal::BigDecimal;
+use chrono::{DateTime, Utc};
 use diesel::backend::Backend;
 use diesel::deserialize::{self, FromSql};
 use diesel::pg::Pg;
@@ -189,6 +190,14 @@ pub enum TaxonomicActAtom {
     AcceptedTaxon(String),
     Act(TaxonomicActType),
     SourceUrl(String),
+    CreatedAt(DateTime<Utc>),
+    UpdatedAt(DateTime<Utc>),
+}
+
+impl Default for TaxonomicActAtom {
+    fn default() -> Self {
+        Self::Empty
+    }
 }
 
 impl FromSql<Jsonb, Pg> for TaxonomicActAtom {
@@ -216,6 +225,8 @@ impl ToString for TaxonomicActAtom {
             AcceptedTaxon(_) => "AcceptedTaxon",
             Act(_) => "Act",
             SourceUrl(_) => "SourceUrl",
+            CreatedAt(_) => "CreatedAt",
+            UpdatedAt(_) => "UpdatedAt",
         }
         .to_string()
     }
@@ -505,6 +516,19 @@ pub struct TaxonomicActOperation {
     pub atom: TaxonomicActAtom,
 }
 
+impl From<DataFrameOperation<TaxonomicActAtom>> for TaxonomicActOperation {
+    fn from(value: DataFrameOperation<TaxonomicActAtom>) -> Self {
+        Self {
+            operation_id: value.operation_id,
+            parent_id: value.parent_id,
+            entity_id: value.entity_id,
+            dataset_version_id: value.dataset_version_id,
+            action: value.action,
+            atom: value.atom,
+        }
+    }
+}
+
 impl LogOperation<TaxonomicActAtom> for TaxonomicActOperation {
     fn id(&self) -> &String {
         &self.entity_id
@@ -516,6 +540,31 @@ impl LogOperation<TaxonomicActAtom> for TaxonomicActOperation {
 
     fn atom(&self) -> &TaxonomicActAtom {
         &self.atom
+    }
+}
+
+#[derive(Queryable, Selectable, Debug, Deserialize, Clone)]
+#[diesel(table_name = schema::taxonomic_act_logs)]
+pub struct TaxonomicActOperationWithDataset {
+    #[diesel(embed)]
+    pub operation: TaxonomicActOperation,
+    #[diesel(embed)]
+    pub dataset_version: DatasetVersion,
+    #[diesel(embed)]
+    pub dataset: Dataset,
+}
+
+impl LogOperation<TaxonomicActAtom> for TaxonomicActOperationWithDataset {
+    fn id(&self) -> &String {
+        self.operation.id()
+    }
+
+    fn action(&self) -> &Action {
+        self.operation.action()
+    }
+
+    fn atom(&self) -> &TaxonomicActAtom {
+        self.operation.atom()
     }
 }
 

@@ -70,6 +70,8 @@ fn extract_acts(records: &Vec<Record>, classifications: &ClassificationMap) -> V
                 source_url: row.source_url.clone(),
                 created_at: Utc::now(),
                 updated_at: Utc::now(),
+                data_updated_at: None,
+                data_created_at: None,
             }
         })
         .collect::<Vec<TaxonomicAct>>();

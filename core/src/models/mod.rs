@@ -671,6 +671,7 @@ pub struct NomenclaturalAct {
 #[ExistingTypePath = "schema::sql_types::TaxonomicActType"]
 pub enum TaxonomicActType {
     Unaccepted,
+    Accepted,
     Synonym,
     Homonym,
     NomenclaturalSynonym,
@@ -691,6 +692,8 @@ pub struct TaxonomicAct {
 
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub data_created_at: Option<DateTime<Utc>>,
+    pub data_updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Queryable, Debug, Default, Serialize, Deserialize)]

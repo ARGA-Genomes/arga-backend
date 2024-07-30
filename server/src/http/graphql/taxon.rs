@@ -4,7 +4,7 @@ use bigdecimal::ToPrimitive;
 use serde::{Deserialize, Serialize};
 
 use super::common::datasets::DatasetDetails;
-use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
+use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicActType, TaxonomicRank, TaxonomicStatus};
 use super::common::NameDetails;
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::{taxa, Database};
@@ -175,6 +175,13 @@ impl TaxonQuery {
         let acts = acts.into_iter().map(|r| r.into()).collect();
         Ok(acts)
     }
+
+    async fn taxonomic_acts(&self, ctx: &Context<'_>) -> Result<Vec<TaxonomicAct>, Error> {
+        let state = ctx.data::<State>()?;
+        let acts = state.database.taxa.taxonomic_acts(&self.taxon.id).await?;
+        let acts = acts.into_iter().map(|r| r.into()).collect();
+        Ok(acts)
+    }
 }
 
 #[derive(SimpleObject)]
@@ -246,6 +253,27 @@ impl From<taxa::NomenclaturalAct> for NomenclaturalAct {
             publication: value.publication.into(),
             name: super::names::Name::new(value.name),
             acted_on: value.acted_on.into(),
+        }
+    }
+}
+
+#[derive(SimpleObject)]
+pub struct TaxonomicAct {
+    pub entity_id: String,
+    pub act: TaxonomicActType,
+    pub source_url: Option<String>,
+    pub taxon: TaxonDetails,
+    pub accepted_taxon: Option<TaxonDetails>,
+}
+
+impl From<taxa::TaxonomicAct> for TaxonomicAct {
+    fn from(value: taxa::TaxonomicAct) -> Self {
+        Self {
+            entity_id: value.entity_id,
+            act: value.act.into(),
+            source_url: value.source_url,
+            taxon: value.taxon.into(),
+            accepted_taxon: value.accepted_taxon.map(|t| t.into()),
         }
     }
 }
