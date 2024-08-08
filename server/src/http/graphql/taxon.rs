@@ -97,6 +97,10 @@ pub enum TaxonRank {
     Subordo,
     Regio,
     SpecialForm,
+
+    Pathovar,
+    Serovar,
+    Biovar,
 }
 
 #[derive(MergedObject)]
@@ -436,5 +440,8 @@ pub fn into_classification(rank: TaxonRank, value: String) -> Classification {
         TaxonRank::Subordo => Classification::Subordo(value),
         TaxonRank::Regio => Classification::Regio(value),
         TaxonRank::SpecialForm => Classification::SpecialForm(value),
+        TaxonRank::Pathovar => Classification::Pathovar(value),
+        TaxonRank::Serovar => Classification::Serovar(value),
+        TaxonRank::Biovar => Classification::Biovar(value),
     }
 }

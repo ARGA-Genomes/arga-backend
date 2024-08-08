@@ -106,6 +106,7 @@ impl From<Map<TaxonAtom>> for Taxon {
         for val in value.atoms.into_values() {
             match val {
                 Empty => {}
+                EntityId(_value) => {}
                 TaxonId(value) => taxon.taxon_id = value,
                 ParentTaxon(value) => taxon.parent_taxon = Some(value),
                 ScientificName(value) => taxon.scientific_name = value,
@@ -157,6 +158,7 @@ impl From<Map<TaxonomicActAtom>> for TaxonomicAct {
         for val in value.atoms.into_values() {
             match val {
                 Empty => {}
+                EntityId(_) => {}
                 Publication(value) => act.publication = Some(value),
                 PublicationDate(value) => act.publication_date = Some(value),
                 Taxon(value) => act.taxon = value,

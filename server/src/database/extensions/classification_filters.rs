@@ -87,6 +87,9 @@ pub enum Classification {
     Subordo(String),
     Regio(String),
     SpecialForm(String),
+    Pathovar(String),
+    Serovar(String),
+    Biovar(String),
 }
 
 #[derive(Clone)]
@@ -207,6 +210,9 @@ pub fn decompose_classification(classification: &Classification) -> (TaxonomicRa
         Classification::Subordo(value) => (TaxonomicRank::Subordo, value.clone()),
         Classification::Regio(value) => (TaxonomicRank::Regio, value.clone()),
         Classification::SpecialForm(value) => (TaxonomicRank::SpecialForm, value.clone()),
+        Classification::Pathovar(value) => (TaxonomicRank::Pathovar, value.clone()),
+        Classification::Serovar(value) => (TaxonomicRank::Serovar, value.clone()),
+        Classification::Biovar(value) => (TaxonomicRank::Biovar, value.clone()),
     }
 }
 

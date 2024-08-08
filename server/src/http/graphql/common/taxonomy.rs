@@ -315,6 +315,10 @@ pub enum TaxonomicRank {
     Subordo,
     Regio,
     SpecialForm,
+
+    Pathovar,
+    Serovar,
+    Biovar,
 }
 
 impl Default for TaxonomicRank {
@@ -399,6 +403,9 @@ impl TaxonomicRank {
             TaxonomicRank::Subordo => Classification::Subordo(name),
             TaxonomicRank::Regio => Classification::Regio(name),
             TaxonomicRank::SpecialForm => Classification::SpecialForm(name),
+            TaxonomicRank::Pathovar => Classification::Pathovar(name),
+            TaxonomicRank::Serovar => Classification::Serovar(name),
+            TaxonomicRank::Biovar => Classification::Biovar(name),
         }
     }
 }

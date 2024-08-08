@@ -171,7 +171,7 @@ impl From<String> for TaxonomicStatus {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum TaxonomicVernacularGroup {
     FloweringPlants,
     Animals,
@@ -292,6 +292,10 @@ pub enum TaxonomicRank {
     Subordo,
     Regio,
     SpecialForm,
+
+    Pathovar,
+    Serovar,
+    Biovar,
 }
 
 impl Default for TaxonomicRank {
@@ -375,6 +379,9 @@ impl std::fmt::Display for TaxonomicRank {
             TaxonomicRank::Subordo => "Subordo",
             TaxonomicRank::Regio => "Regio",
             TaxonomicRank::SpecialForm => "Special Form",
+            TaxonomicRank::Pathovar => "Pathovar",
+            TaxonomicRank::Serovar => "Serovar",
+            TaxonomicRank::Biovar => "Biovar",
         };
 
         write!(f, "{}", s)

@@ -25,6 +25,7 @@ pub enum Action {
 #[diesel(sql_type = diesel::sql_types::Jsonb)]
 pub enum TaxonAtom {
     Empty,
+    EntityId(String),
     TaxonId(String),
     AcceptedNameUsageId(String),
     ParentNameUsageId(String),
@@ -75,6 +76,7 @@ impl ToString for TaxonAtom {
 
         match self {
             Empty => "Empty",
+            EntityId(_) => "EntityId",
             TaxonId(_) => "TaxonId",
             AcceptedNameUsageId(_) => "AcceptedNameUsageId",
             ParentNameUsageId(_) => "ParentNameUsageId",
@@ -184,6 +186,7 @@ impl ToString for NomenclaturalActAtom {
 #[diesel(sql_type = diesel::sql_types::Jsonb)]
 pub enum TaxonomicActAtom {
     Empty,
+    EntityId(String),
     Publication(String),
     PublicationDate(String),
     Taxon(String),
@@ -219,6 +222,7 @@ impl ToString for TaxonomicActAtom {
 
         match self {
             Empty => "Empty",
+            EntityId(_) => "EntityId",
             Publication(_) => "Publication",
             PublicationDate(_) => "PublicationDate",
             Taxon(_) => "Taxon",
