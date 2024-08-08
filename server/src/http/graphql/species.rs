@@ -121,7 +121,8 @@ impl Species {
     async fn hierarchy(&self, ctx: &Context<'_>) -> Result<Vec<TaxonNode>, Error> {
         let classification = into_classification(TaxonRank::Species, self.canonical_name.clone());
         let state = ctx.data::<State>()?;
-        let hierarchy = state.database.taxa.hierarchy(&classification).await?;
+        let taxon = state.database.taxa.find_by_classification(&classification).await?;
+        let hierarchy = state.database.taxa.hierarchy(&taxon.id).await?;
         let hierarchy = hierarchy.into_iter().map(TaxonNode::from).collect();
         Ok(hierarchy)
     }

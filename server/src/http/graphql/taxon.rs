@@ -120,6 +120,15 @@ impl Taxon {
         let query = TaxonQuery { classification, taxon };
         Ok(Taxon(details, query))
     }
+
+    pub fn init(taxon: models::Taxon) -> Taxon {
+        let details = taxon.clone().into();
+        let query = TaxonQuery {
+            taxon,
+            classification: Classification::Domain("".to_string()),
+        };
+        Taxon(details, query)
+    }
 }
 
 pub struct TaxonQuery {
@@ -131,7 +140,7 @@ pub struct TaxonQuery {
 impl TaxonQuery {
     async fn hierarchy(&self, ctx: &Context<'_>) -> Result<Vec<TaxonNode>, Error> {
         let state = ctx.data::<State>()?;
-        let hierarchy = state.database.taxa.hierarchy(&self.classification).await?;
+        let hierarchy = state.database.taxa.hierarchy(&self.taxon.id).await?;
         let hierarchy = hierarchy.into_iter().map(TaxonNode::from).collect();
         Ok(hierarchy)
     }

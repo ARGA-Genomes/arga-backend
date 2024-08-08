@@ -17,6 +17,7 @@ use diesel::sql_types::{Array, Nullable, Text, Varchar};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
+use super::extensions::taxa_filters::TaxaFilter;
 use super::extensions::Paginate;
 use super::models::{Species, TaxonomicStatus};
 use super::{schema, schema_gnl, Error, PageResult, PgPool};
@@ -30,6 +31,7 @@ use crate::database::extensions::species_filters::{
     with_classification as with_species_classification,
 };
 use crate::database::extensions::sum_if;
+use crate::database::extensions::taxa_filters::with_taxa_filters;
 
 sql_function!(fn unnest(x: Nullable<Array<Text>>) -> Text);
 
@@ -123,6 +125,18 @@ impl TaxaProvider {
             .await?;
 
         Ok(taxon)
+    }
+
+    pub async fn find(&self, filters: &Vec<TaxaFilter>) -> Result<Vec<Taxon>, Error> {
+        use schema::taxa::dsl::*;
+        let mut conn = self.pool.get().await?;
+
+        let records = taxa
+            .filter(with_taxa_filters(filters).unwrap())
+            .load::<Taxon>(&mut conn)
+            .await?;
+
+        Ok(records)
     }
 
     pub async fn species(&self, filters: &Vec<Filter>, page: i64, per_page: i64) -> PageResult<Species> {
@@ -225,22 +239,17 @@ impl TaxaProvider {
         // Ok(options)
     }
 
-    pub async fn hierarchy(&self, classification: &ClassificationFilter) -> Result<Vec<TaxonTreeNode>, Error> {
+    pub async fn hierarchy(&self, id: &Uuid) -> Result<Vec<TaxonTreeNode>, Error> {
         use schema::taxa;
         use schema_gnl::taxa_dag as dag;
 
         let mut conn = self.pool.get().await?;
 
-        // the classification filter helper is typed for the classifications table and will raise
-        // compiler errors due to the join against another table/view. rather than making the filters
-        // generic we just box the filtered table query first and then join it.
-        // we use the same handy technique elsewhere in this file
         let nodes = taxa::table
-            .filter(with_classification(classification))
-            .into_boxed()
             .inner_join(dag::table.on(dag::taxon_id.eq(taxa::id)))
             .select(dag::all_columns)
             .filter(dag::id.ne(taxa::id))
+            .filter(dag::taxon_id.eq(id))
             .load::<TaxonTreeNode>(&mut conn)
             .await?;
 

@@ -8,7 +8,7 @@ use diesel::sql_types::Bool;
 use super::classification_filters::{decompose_classification, Classification};
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum FilterKind {
     Classification(Classification),
     VernacularGroup(TaxonomicVernacularGroup),
@@ -24,7 +24,7 @@ pub enum FilterKind {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum DataType {
     Genome,
     Locus,
@@ -33,7 +33,7 @@ pub enum DataType {
 }
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Filter {
     Include(FilterKind),
     Exclude(FilterKind),
