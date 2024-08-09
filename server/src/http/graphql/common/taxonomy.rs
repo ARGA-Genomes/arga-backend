@@ -180,6 +180,19 @@ pub enum NomenclaturalActType {
 
 
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "models::TaxonomicActType")]
+pub enum TaxonomicActType {
+    Unaccepted,
+    Accepted,
+    Synonym,
+    Homonym,
+    NomenclaturalSynonym,
+    TaxonomicSynonym,
+    ReplacedSynonym,
+}
+
+
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[graphql(remote = "models::TaxonomicVernacularGroup")]
 pub enum TaxonomicVernacularGroup {
     FloweringPlants,
@@ -302,6 +315,10 @@ pub enum TaxonomicRank {
     Subordo,
     Regio,
     SpecialForm,
+
+    Pathovar,
+    Serovar,
+    Biovar,
 }
 
 impl Default for TaxonomicRank {
@@ -386,6 +403,9 @@ impl TaxonomicRank {
             TaxonomicRank::Subordo => Classification::Subordo(name),
             TaxonomicRank::Regio => Classification::Regio(name),
             TaxonomicRank::SpecialForm => Classification::SpecialForm(name),
+            TaxonomicRank::Pathovar => Classification::Pathovar(name),
+            TaxonomicRank::Serovar => Classification::Serovar(name),
+            TaxonomicRank::Biovar => Classification::Biovar(name),
         }
     }
 }

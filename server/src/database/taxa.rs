@@ -5,11 +5,13 @@ use arga_core::models::{
     NomenclaturalActType,
     Taxon,
     TaxonTreeNode,
+    TaxonomicActType,
     TaxonomicRank,
     ACCEPTED_NAMES,
     SPECIES_RANKS,
 };
 use bigdecimal::BigDecimal;
+use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel::sql_types::{Array, Nullable, Text, Varchar};
 use diesel_async::RunQueryDsl;
@@ -90,6 +92,18 @@ pub struct NomenclaturalAct {
     pub publication: NamePublication,
     pub name: Name,
     pub acted_on: Name,
+}
+
+#[derive(Debug, Queryable)]
+#[diesel(table_name = schema::taxonomic_acts)]
+pub struct TaxonomicAct {
+    pub entity_id: String,
+    pub taxon: Taxon,
+    pub accepted_taxon: Option<Taxon>,
+    pub act: TaxonomicActType,
+    pub source_url: Option<String>,
+    pub data_created_at: Option<DateTime<Utc>>,
+    pub data_updated_at: Option<DateTime<Utc>>,
 }
 
 
@@ -415,6 +429,35 @@ impl TaxaProvider {
             ))
             .order((publications::published_year.asc(), names::scientific_name.asc()))
             .load::<NomenclaturalAct>(&mut conn)
+            .await?;
+
+        Ok(items)
+    }
+
+    pub async fn taxonomic_acts(&self, taxon_id: &Uuid) -> Result<Vec<TaxonomicAct>, Error> {
+        use schema::{taxa, taxonomic_acts as acts};
+        let mut conn = self.pool.get().await?;
+
+        let accepted = diesel::alias!(taxa as accepted_taxon);
+
+        let items = acts::table
+            .inner_join(taxa::table.on(taxa::id.eq(acts::taxon_id)))
+            .left_join(accepted.on(acts::accepted_taxon_id.eq(accepted.field(taxa::id).nullable())))
+            .filter(acts::taxon_id.eq(taxon_id))
+            .or_filter(acts::accepted_taxon_id.eq(taxon_id))
+            .select((
+                acts::entity_id,
+                Taxon::as_select(),
+                accepted
+                    .fields(<Taxon as Selectable<diesel::pg::Pg>>::construct_selection())
+                    .nullable(),
+                acts::act,
+                acts::source_url,
+                acts::data_created_at,
+                acts::data_updated_at,
+            ))
+            .order(taxa::scientific_name.asc())
+            .load::<TaxonomicAct>(&mut conn)
             .await?;
 
         Ok(items)

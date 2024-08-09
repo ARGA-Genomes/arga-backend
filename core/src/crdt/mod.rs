@@ -1,10 +1,13 @@
+pub mod dataframe;
 pub mod hlc;
 pub mod lww;
 
 use bigdecimal::BigDecimal;
 use chrono::Utc;
+pub use dataframe::{DataFrame, DataFrameOperation};
 
 use self::hlc::HybridTimestamp;
+
 
 #[derive(Debug, Copy, Clone)]
 pub struct Version(HybridTimestamp);
@@ -24,7 +27,8 @@ impl Version {
         let ts: HybridTimestamp = Utc::now().into();
         if ts > self.0 {
             Version(ts)
-        } else {
+        }
+        else {
             Version(self.0.inc())
         }
     }
@@ -39,6 +43,7 @@ impl From<Version> for BigDecimal {
         value.0.as_u64().into()
     }
 }
+
 
 #[derive(Debug)]
 pub struct Frame<Op> {

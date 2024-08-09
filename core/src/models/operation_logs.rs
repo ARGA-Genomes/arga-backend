@@ -1,4 +1,5 @@
 use bigdecimal::BigDecimal;
+use chrono::{DateTime, Utc};
 use diesel::backend::Backend;
 use diesel::deserialize::{self, FromSql};
 use diesel::pg::Pg;
@@ -8,7 +9,8 @@ use diesel::{AsExpression, Associations, FromSqlRow, Insertable, Queryable, Sele
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::{schema, DatasetVersion, TaxonomicActType, TaxonomicRank, TaxonomicStatus};
+use super::{schema, Dataset, DatasetVersion, TaxonomicActType, TaxonomicRank, TaxonomicStatus};
+use crate::crdt::DataFrameOperation;
 use crate::models::NomenclaturalActType;
 
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
@@ -23,6 +25,7 @@ pub enum Action {
 #[diesel(sql_type = diesel::sql_types::Jsonb)]
 pub enum TaxonAtom {
     Empty,
+    EntityId(String),
     TaxonId(String),
     AcceptedNameUsageId(String),
     ParentNameUsageId(String),
@@ -61,12 +64,19 @@ impl ToSql<Jsonb, Pg> for TaxonAtom {
     }
 }
 
+impl Default for TaxonAtom {
+    fn default() -> Self {
+        Self::Empty
+    }
+}
+
 impl ToString for TaxonAtom {
     fn to_string(&self) -> String {
         use TaxonAtom::*;
 
         match self {
             Empty => "Empty",
+            EntityId(_) => "EntityId",
             TaxonId(_) => "TaxonId",
             AcceptedNameUsageId(_) => "AcceptedNameUsageId",
             ParentNameUsageId(_) => "ParentNameUsageId",
@@ -90,6 +100,7 @@ impl ToString for TaxonAtom {
         .to_string()
     }
 }
+
 
 #[derive(Debug)]
 pub enum NomenclaturalActTypeError {
@@ -175,12 +186,21 @@ impl ToString for NomenclaturalActAtom {
 #[diesel(sql_type = diesel::sql_types::Jsonb)]
 pub enum TaxonomicActAtom {
     Empty,
+    EntityId(String),
     Publication(String),
     PublicationDate(String),
     Taxon(String),
     AcceptedTaxon(String),
     Act(TaxonomicActType),
     SourceUrl(String),
+    CreatedAt(DateTime<Utc>),
+    UpdatedAt(DateTime<Utc>),
+}
+
+impl Default for TaxonomicActAtom {
+    fn default() -> Self {
+        Self::Empty
+    }
 }
 
 impl FromSql<Jsonb, Pg> for TaxonomicActAtom {
@@ -202,12 +222,15 @@ impl ToString for TaxonomicActAtom {
 
         match self {
             Empty => "Empty",
+            EntityId(_) => "EntityId",
             Publication(_) => "Publication",
             PublicationDate(_) => "PublicationDate",
             Taxon(_) => "Taxon",
             AcceptedTaxon(_) => "AcceptedTaxon",
             Act(_) => "Act",
             SourceUrl(_) => "SourceUrl",
+            CreatedAt(_) => "CreatedAt",
+            UpdatedAt(_) => "UpdatedAt",
         }
         .to_string()
     }
@@ -403,6 +426,11 @@ pub trait LogOperation<T> {
     fn atom(&self) -> &T;
 }
 
+pub trait LogOperationDataset {
+    fn dataset_version(&self) -> &DatasetVersion;
+    fn dataset(&self) -> &Dataset;
+}
+
 
 #[derive(Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]
 #[diesel(belongs_to(DatasetVersion))]
@@ -415,6 +443,19 @@ pub struct TaxonOperation {
     pub dataset_version_id: Uuid,
     pub action: Action,
     pub atom: TaxonAtom,
+}
+
+impl From<DataFrameOperation<TaxonAtom>> for TaxonOperation {
+    fn from(value: DataFrameOperation<TaxonAtom>) -> Self {
+        Self {
+            operation_id: value.operation_id,
+            parent_id: value.parent_id,
+            entity_id: value.entity_id,
+            dataset_version_id: value.dataset_version_id,
+            action: value.action,
+            atom: value.atom,
+        }
+    }
 }
 
 impl LogOperation<TaxonAtom> for TaxonOperation {
@@ -431,6 +472,41 @@ impl LogOperation<TaxonAtom> for TaxonOperation {
     }
 }
 
+#[derive(Queryable, Selectable, Debug, Deserialize, Clone)]
+#[diesel(table_name = schema::taxa_logs)]
+pub struct TaxonOperationWithDataset {
+    #[diesel(embed)]
+    pub operation: TaxonOperation,
+    #[diesel(embed)]
+    pub dataset_version: DatasetVersion,
+    #[diesel(embed)]
+    pub dataset: Dataset,
+}
+
+impl LogOperation<TaxonAtom> for TaxonOperationWithDataset {
+    fn id(&self) -> &String {
+        self.operation.id()
+    }
+
+    fn action(&self) -> &Action {
+        self.operation.action()
+    }
+
+    fn atom(&self) -> &TaxonAtom {
+        self.operation.atom()
+    }
+}
+
+impl LogOperationDataset for TaxonOperationWithDataset {
+    fn dataset_version(&self) -> &DatasetVersion {
+        &self.dataset_version
+    }
+
+    fn dataset(&self) -> &Dataset {
+        &self.dataset
+    }
+}
+
 #[derive(Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]
 #[diesel(belongs_to(DatasetVersion))]
 #[diesel(table_name = schema::taxonomic_act_logs)]
@@ -444,6 +520,19 @@ pub struct TaxonomicActOperation {
     pub atom: TaxonomicActAtom,
 }
 
+impl From<DataFrameOperation<TaxonomicActAtom>> for TaxonomicActOperation {
+    fn from(value: DataFrameOperation<TaxonomicActAtom>) -> Self {
+        Self {
+            operation_id: value.operation_id,
+            parent_id: value.parent_id,
+            entity_id: value.entity_id,
+            dataset_version_id: value.dataset_version_id,
+            action: value.action,
+            atom: value.atom,
+        }
+    }
+}
+
 impl LogOperation<TaxonomicActAtom> for TaxonomicActOperation {
     fn id(&self) -> &String {
         &self.entity_id
@@ -455,6 +544,31 @@ impl LogOperation<TaxonomicActAtom> for TaxonomicActOperation {
 
     fn atom(&self) -> &TaxonomicActAtom {
         &self.atom
+    }
+}
+
+#[derive(Queryable, Selectable, Debug, Deserialize, Clone)]
+#[diesel(table_name = schema::taxonomic_act_logs)]
+pub struct TaxonomicActOperationWithDataset {
+    #[diesel(embed)]
+    pub operation: TaxonomicActOperation,
+    #[diesel(embed)]
+    pub dataset_version: DatasetVersion,
+    #[diesel(embed)]
+    pub dataset: Dataset,
+}
+
+impl LogOperation<TaxonomicActAtom> for TaxonomicActOperationWithDataset {
+    fn id(&self) -> &String {
+        self.operation.id()
+    }
+
+    fn action(&self) -> &Action {
+        self.operation.action()
+    }
+
+    fn atom(&self) -> &TaxonomicActAtom {
+        self.operation.atom()
     }
 }
 

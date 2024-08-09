@@ -6,8 +6,10 @@ use arga_core::crdt::{Frame, Version};
 use arga_core::models::{
     Action,
     DatasetVersion,
+    LogOperationDataset,
     TaxonAtom,
     TaxonOperation,
+    TaxonOperationWithDataset,
     TaxonomicActAtom,
     TaxonomicActOperation,
     TaxonomicActType,
@@ -75,6 +77,7 @@ pub struct Taxon {
     entity_id: String,
     taxon_id: String,
     parent_taxon: Option<String>,
+    dataset_id: Option<String>,
 
     scientific_name: String,
     scientific_name_authorship: Option<String>,
@@ -103,6 +106,7 @@ impl From<Map<TaxonAtom>> for Taxon {
         for val in value.atoms.into_values() {
             match val {
                 Empty => {}
+                EntityId(_value) => {}
                 TaxonId(value) => taxon.taxon_id = value,
                 ParentTaxon(value) => taxon.parent_taxon = Some(value),
                 ScientificName(value) => taxon.scientific_name = value,
@@ -154,12 +158,15 @@ impl From<Map<TaxonomicActAtom>> for TaxonomicAct {
         for val in value.atoms.into_values() {
             match val {
                 Empty => {}
+                EntityId(_) => {}
                 Publication(value) => act.publication = Some(value),
                 PublicationDate(value) => act.publication_date = Some(value),
                 Taxon(value) => act.taxon = value,
                 AcceptedTaxon(value) => act.accepted_taxon = Some(value),
                 Act(value) => act.act = Some(value),
                 SourceUrl(value) => act.source_url = Some(value),
+                CreatedAt(_) => {}
+                UpdatedAt(_) => {}
             }
         }
 
@@ -419,11 +426,16 @@ where
 
 pub fn reduce() -> Result<(), Error> {
     use schema::taxa_logs::dsl::*;
+    use schema::{dataset_versions, datasets};
 
     let pool = get_pool()?;
     let mut conn = pool.get()?;
 
-    let ops = taxa_logs.order(operation_id.asc()).load::<TaxonOperation>(&mut conn)?;
+    let ops = taxa_logs
+        .inner_join(dataset_versions::table.on(dataset_version_id.eq(dataset_versions::id)))
+        .inner_join(datasets::table.on(dataset_versions::dataset_id.eq(datasets::id)))
+        .order(operation_id.asc())
+        .load::<TaxonOperationWithDataset>(&mut conn)?;
 
     let entities = merge_ops(ops, vec![])?;
     let mut taxa = Vec::new();
@@ -431,8 +443,26 @@ pub fn reduce() -> Result<(), Error> {
     for (key, ops) in entities.into_iter() {
         let mut map = Map::new(key);
         map.reduce(&ops);
-        taxa.push(Taxon::from(map));
+
+        // include the dataset global id in the reduced output to
+        // allow for multiple taxonomic systems
+        let mut taxon = Taxon::from(map);
+        if let Some(op) = ops.first() {
+            taxon.dataset_id = Some(op.dataset().global_id.clone());
+            taxa.push(taxon);
+        }
     }
+
+    // our taxa table has a unique constraint on scientific name and dataset id.
+    // some data sources will duplicate a taxon (separate record id) to record
+    // multiple accepted names. we sort and deduplicate it here since the relationship
+    // between taxa isn't of concern here, just the name itself.
+    taxa.sort_by(|a, b| {
+        a.dataset_id
+            .cmp(&b.dataset_id)
+            .then_with(|| a.scientific_name.cmp(&b.scientific_name))
+    });
+    taxa.dedup_by(|a, b| a.scientific_name == b.scientific_name && a.dataset_id == b.dataset_id);
 
     let mut writer = csv::Writer::from_writer(std::io::stdout());
 
