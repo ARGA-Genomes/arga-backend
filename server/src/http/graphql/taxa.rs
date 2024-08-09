@@ -1,22 +1,47 @@
 use async_graphql::*;
 
-use super::common::{convert_filters, FilterItem, Page, SpeciesCard};
+use super::common::species::DataType;
+use super::common::{Page, SpeciesCard};
 use super::helpers::SpeciesHelper;
+use super::taxon::Taxon;
 use crate::database::extensions::filters::Filter;
+use crate::database::extensions::taxa_filters;
 use crate::http::{Context as State, Error};
+
+
+/// Available filters when retrieving taxa.
+#[derive(Debug, OneofObject)]
+pub enum TaxaFilter {
+    ScientificName(String),
+    CanonicalName(String),
+    VernacularGroup(String),
+    HasData(DataType),
+}
 
 
 pub struct Taxa {
     filters: Vec<Filter>,
+    taxa_filters: Vec<taxa_filters::TaxaFilter>,
 }
 
 #[Object]
 impl Taxa {
     #[graphql(skip)]
-    pub fn new(filters: Vec<FilterItem>) -> Result<Taxa, Error> {
+    pub fn new(filters: Vec<TaxaFilter>) -> Result<Taxa, Error> {
+        let taxa_filters = filters.into_iter().map(|f| f.into()).collect();
+
         Ok(Taxa {
-            filters: convert_filters(filters)?,
+            filters: vec![],
+            taxa_filters,
+            // filters: convert_filters(filters)?,
         })
+    }
+
+    async fn records(&self, ctx: &Context<'_>) -> Result<Vec<Taxon>, Error> {
+        let state = ctx.data::<State>()?;
+        let records = state.database.taxa.find(&self.taxa_filters).await?;
+        let taxa = records.into_iter().map(|r| Taxon::init(r)).collect();
+        Ok(taxa)
     }
 
     async fn species(&self, ctx: &Context<'_>, page: i64, per_page: i64) -> Result<Page<SpeciesCard>, Error> {
@@ -74,5 +99,20 @@ impl FilterOptions {
         let state = ctx.data::<State>()?;
         let options = state.database.taxa.drainage_basin_options(&self.filters).await?;
         Ok(options)
+    }
+}
+
+impl From<TaxaFilter> for taxa_filters::TaxaFilter {
+    fn from(value: TaxaFilter) -> Self {
+        use taxa_filters::DataFilter::*;
+        use taxa_filters::TaxaFilter as Filter;
+        use taxa_filters::TaxonFilter::*;
+
+        match value {
+            TaxaFilter::ScientificName(value) => Filter::Taxon(ScientificName(value)),
+            TaxaFilter::CanonicalName(value) => Filter::Taxon(CanonicalName(value)),
+            TaxaFilter::VernacularGroup(value) => Filter::Taxon(VernacularGroup(value)),
+            TaxaFilter::HasData(value) => Filter::Data(HasData(value.into())),
+        }
     }
 }

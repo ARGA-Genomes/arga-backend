@@ -11,10 +11,13 @@ pub struct TaxonDetails {
     pub canonical_name: String,
     pub authorship: Option<String>,
     pub status: TaxonomicStatus,
+    pub rank: TaxonomicRank,
     pub nomenclatural_code: String,
     pub citation: Option<String>,
     pub source: Option<String>,
     pub source_url: Option<String>,
+    pub dataset_id: uuid::Uuid,
+    pub entity_id: Option<String>,
 }
 
 impl From<models::Taxon> for TaxonDetails {
@@ -24,10 +27,13 @@ impl From<models::Taxon> for TaxonDetails {
             canonical_name: value.canonical_name,
             authorship: value.authorship,
             status: value.status.into(),
+            rank: value.rank.into(),
             nomenclatural_code: value.nomenclatural_code,
             citation: value.citation,
             source: None,
             source_url: None,
+            dataset_id: value.dataset_id,
+            entity_id: value.entity_id,
         }
     }
 }
