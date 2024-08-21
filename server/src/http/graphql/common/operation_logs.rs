@@ -75,6 +75,7 @@ pub enum TaxonAtomTextType {
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum NomenclaturalActAtomTextType {
     Empty,
+    EntityId,
     ActedOn,
     Act,
     SourceUrl,
@@ -130,6 +131,7 @@ impl NomenclaturalActAtom {
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum SpecimenAtomTextType {
     Empty,
+    EntityId,
     RecordId,
     MaterialSampleId,
     OrganismId,
@@ -253,6 +255,7 @@ impl From<models::NomenclaturalActAtom> for NomenclaturalActAtom {
 
         match value {
             Empty => Atom::text(Text::Empty, "".to_string()),
+            EntityId(value) => Atom::text(Text::EntityId, value),
             Publication(value) => Atom::text(Text::Publication, value),
             PublicationDate(value) => Atom::text(Text::PublicationDate, value),
             ActedOn(value) => Atom::text(Text::ActedOn, value),
@@ -333,6 +336,7 @@ impl From<models::SpecimenAtom> for SpecimenAtom {
 
         match value {
             Empty => Atom::text(Text::Empty, "".to_string()),
+            EntityId(value) => Atom::text(Text::EntityId, value),
             RecordId(value) => Atom::text(Text::RecordId, value),
             MaterialSampleId(value) => Atom::text(Text::MaterialSampleId, value),
             OrganismId(value) => Atom::text(Text::OrganismId, value),

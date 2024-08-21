@@ -136,6 +136,7 @@ impl From<Map<SpecimenAtom>> for Specimen {
         for val in value.atoms.into_values() {
             match val {
                 SpecimenAtom::Empty => {}
+                SpecimenAtom::EntityId(_) => {}
                 SpecimenAtom::RecordId(value) => specimen.record_id = value,
                 SpecimenAtom::MaterialSampleId(value) => specimen.material_sample_id = Some(value),
                 SpecimenAtom::OrganismId(value) => specimen.organism_id = Some(value),
