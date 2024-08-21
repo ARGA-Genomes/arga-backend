@@ -131,6 +131,7 @@ impl TryFrom<&str> for NomenclaturalActType {
 #[diesel(sql_type = diesel::sql_types::Jsonb)]
 pub enum NomenclaturalActAtom {
     Empty,
+    EntityId(String),
     Publication(String),
     PublicationDate(String),
     ActedOn(String),
@@ -158,12 +159,19 @@ impl ToSql<Jsonb, Pg> for NomenclaturalActAtom {
     }
 }
 
+impl Default for NomenclaturalActAtom {
+    fn default() -> Self {
+        Self::Empty
+    }
+}
+
 impl ToString for NomenclaturalActAtom {
     fn to_string(&self) -> String {
         use NomenclaturalActAtom::*;
 
         match self {
             Empty => "Empty",
+            EntityId(_) => "EntityId",
             Publication(_) => "Publication",
             PublicationDate(_) => "PublicationDate",
             ActedOn(_) => "ActedOn",
@@ -241,6 +249,7 @@ impl ToString for TaxonomicActAtom {
 #[diesel(sql_type = diesel::sql_types::Jsonb)]
 pub enum SpecimenAtom {
     Empty,
+    EntityId(String),
     RecordId(String),
     MaterialSampleId(String),
     OrganismId(String),
@@ -273,6 +282,12 @@ pub enum SpecimenAtom {
     IdentificationRemarks(String),
 }
 
+impl Default for SpecimenAtom {
+    fn default() -> Self {
+        Self::Empty
+    }
+}
+
 impl FromSql<Jsonb, Pg> for SpecimenAtom {
     fn from_sql(value: <Pg as Backend>::RawValue<'_>) -> deserialize::Result<Self> {
         serde_json::from_value(FromSql::<Jsonb, Pg>::from_sql(value)?).map_err(|e| e.into())
@@ -292,6 +307,7 @@ impl ToString for SpecimenAtom {
 
         match self {
             Empty => "Empty",
+            EntityId(_) => "EntityId",
             RecordId(_) => "RecordId",
             MaterialSampleId(_) => "MaterialSampleId",
             OrganismId(_) => "OrganismId",
@@ -586,6 +602,19 @@ pub struct NomenclaturalActOperation {
     pub atom: NomenclaturalActAtom,
 }
 
+impl From<DataFrameOperation<NomenclaturalActAtom>> for NomenclaturalActOperation {
+    fn from(value: DataFrameOperation<NomenclaturalActAtom>) -> Self {
+        Self {
+            operation_id: value.operation_id,
+            parent_id: value.parent_id,
+            entity_id: value.entity_id,
+            dataset_version_id: value.dataset_version_id,
+            action: value.action,
+            atom: value.atom,
+        }
+    }
+}
+
 impl LogOperation<NomenclaturalActAtom> for NomenclaturalActOperation {
     fn id(&self) -> &String {
         &self.entity_id
@@ -611,6 +640,19 @@ pub struct SpecimenOperation {
     pub dataset_version_id: Uuid,
     pub action: Action,
     pub atom: SpecimenAtom,
+}
+
+impl From<DataFrameOperation<SpecimenAtom>> for SpecimenOperation {
+    fn from(value: DataFrameOperation<SpecimenAtom>) -> Self {
+        Self {
+            operation_id: value.operation_id,
+            parent_id: value.parent_id,
+            entity_id: value.entity_id,
+            dataset_version_id: value.dataset_version_id,
+            action: value.action,
+            atom: value.atom,
+        }
+    }
 }
 
 impl LogOperation<SpecimenAtom> for SpecimenOperation {

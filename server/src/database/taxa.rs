@@ -395,11 +395,14 @@ impl TaxaProvider {
         };
         let mut conn = self.pool.get().await?;
 
+        // get all the names associated with this taxon in case there are alt names
         let name_ids = taxon_names::table
             .select(taxon_names::name_id)
             .filter(taxon_names::taxon_id.eq(taxon_id))
             .into_boxed();
 
+        // get all the taxa that are linked to the same name since we want acts from all
+        // taxonomic systems
         let taxon_ids = taxon_names::table
             .left_join(taxonomic_acts::table.on(taxon_names::taxon_id.eq(taxonomic_acts::taxon_id)))
             .select(taxon_names::taxon_id)
@@ -408,6 +411,8 @@ impl TaxaProvider {
             .load::<Uuid>(&mut conn)
             .await?;
 
+        // get any synonyms related to taxa that link to the name since they are part of
+        // the name history as well
         let synonym_taxon_ids = taxonomic_acts::table
             .select(taxonomic_acts::taxon_id)
             .filter(taxonomic_acts::taxon_id.eq_any(&taxon_ids))
@@ -415,6 +420,8 @@ impl TaxaProvider {
             .load::<Uuid>(&mut conn)
             .await?;
 
+        // lastly, we get all the linked names again incase the other taxa or synonyms
+        // have alt names linked to them
         let name_ids = taxon_names::table
             .select(taxon_names::name_id)
             .filter(taxon_names::taxon_id.eq_any(taxon_ids))
