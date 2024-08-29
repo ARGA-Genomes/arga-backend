@@ -5,7 +5,7 @@ use super::Version;
 use crate::models::Action;
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DataFrameOperation<Atom> {
     pub operation_id: BigDecimal,
     pub parent_id: BigDecimal,
@@ -15,7 +15,7 @@ pub struct DataFrameOperation<Atom> {
     pub atom: Atom,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DataFrame<Atom> {
     pub entity_id: String,
     pub dataset_version_id: Uuid,

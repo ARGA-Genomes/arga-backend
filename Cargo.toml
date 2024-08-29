@@ -2,6 +2,7 @@
 
 members = [
   "core",
+  "core/core-derive",
   "server",
   "workers",
   "tasks",

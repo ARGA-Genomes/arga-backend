@@ -396,11 +396,11 @@ where
     let mut grouped: HashMap<String, Vec<T>> = HashMap::new();
 
     for op in existing_ops.into_iter() {
-        grouped.entry(op.id().clone()).or_default().push(op);
+        grouped.entry(op.entity_id().clone()).or_default().push(op);
     }
 
     for op in new_ops.into_iter() {
-        grouped.entry(op.id().clone()).or_default().push(op);
+        grouped.entry(op.entity_id().clone()).or_default().push(op);
     }
 
     Ok(grouped)

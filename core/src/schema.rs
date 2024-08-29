@@ -515,6 +515,20 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    sequence_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
     sequences (id) {
         id -> Uuid,
         dataset_id -> Uuid,
@@ -851,6 +865,7 @@ diesel::joinable!(nomenclatural_acts -> name_publications (publication_id));
 diesel::joinable!(organisms -> names (name_id));
 diesel::joinable!(regions -> datasets (dataset_id));
 diesel::joinable!(regions -> names (name_id));
+diesel::joinable!(sequence_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(sequences -> datasets (dataset_id));
 diesel::joinable!(sequences -> dna_extracts (dna_extract_id));
 diesel::joinable!(sequences -> names (name_id));
@@ -905,6 +920,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     nomenclatural_acts,
     organisms,
     regions,
+    sequence_logs,
     sequences,
     sequencing_events,
     sequencing_run_events,
