@@ -9,7 +9,6 @@ use uuid::Uuid;
 
 use super::{schema, schema_gnl};
 
-
 pub const ACCEPTED_NAMES: [TaxonomicStatus; 6] = [
     TaxonomicStatus::Accepted,
     TaxonomicStatus::Undescribed,
@@ -27,6 +26,41 @@ pub const SPECIES_RANKS: [TaxonomicRank; 5] = [
     TaxonomicRank::Varietas,
 ];
 
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::AccessRightsStatus"]
+pub enum AccessRightsStatus {
+    #[default]
+    Open,
+    Restricted,
+    Conditional,
+    Variable,
+}
+
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::DataReuseStatus"]
+pub enum DataReuseStatus {
+    #[default]
+    Limited,
+    Unlimited,
+    None,
+    Variable,
+}
+
+#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::SourceContentType"]
+pub enum SourceContentType {
+    #[default]
+    TaxonomicBackbone,
+    EcologicalTraits,
+    GenomicData,
+    Specimens,
+    NongenomicData,
+    MorphologicalTraits,
+    BiochemicalTraits,
+    MixedDatatypes,
+    FunctionalTraits,
+    Ethnobiology,
+}
 
 #[derive(Queryable, Insertable, Debug, Clone, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::sources)]
@@ -37,6 +71,9 @@ pub struct Source {
     pub rights_holder: String,
     pub access_rights: String,
     pub license: String,
+    pub reuse_pill: DataReuseStatus,
+    pub access_pill: AccessRightsStatus,
+    pub content_type: SourceContentType,
 }
 
 #[derive(Queryable, Selectable, Insertable, AsChangeset, Debug, Clone, Default, Serialize, Deserialize)]
@@ -54,6 +91,10 @@ pub struct Dataset {
     pub rights_holder: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub reuse_pill: DataReuseStatus,
+    pub access_pill: AccessRightsStatus,
+    pub publication_year: Option<i16>,
+    pub content_type: SourceContentType,
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Identifiable, Insertable, Associations, Deserialize)]
@@ -645,7 +686,6 @@ pub struct NamePublication {
     pub record_created_at: Option<DateTime<Utc>>,
     pub record_updated_at: Option<DateTime<Utc>>,
 }
-
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::NomenclaturalActType"]

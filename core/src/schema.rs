@@ -283,7 +283,7 @@ diesel::table! {
         updated_at -> Timestamptz,
         reuse_pill -> Nullable<DataReuseStatus>,
         access_pill -> Nullable<AccessRightsStatus>,
-        publication_year -> Nullable<Int4>,
+        publication_year -> Nullable<Int2>,
         content_type -> Nullable<SourceContentType>,
     }
 }

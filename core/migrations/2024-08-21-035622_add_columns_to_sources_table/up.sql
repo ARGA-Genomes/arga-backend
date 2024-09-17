@@ -13,16 +13,16 @@ CREATE TYPE access_rights_status as ENUM (
 );
 
 CREATE TYPE source_content_type as ENUM (
-    'Taxonomic Backbone',
-    'Ecological Traits',
-    'Genomic Data',
-    'Specimens',
-    'Non-genomic Data',
-    'Morphological Traits',
-    'Biochemical Traits',
-    'Mixed datatypes',
-    'Functional Traits',
-    'Ethnobiology'
+    'taxonomic_backbone',
+    'ecological_traits',
+    'genomic_data',
+    'specimens',
+    'nongenomic_data',
+    'morphological_traits',
+    'biochemical_traits',
+    'mixed_datatypes',
+    'functional_traits',
+    'ethnobiology'
 );
 
 ALTER TABLE sources ADD COLUMN reuse_pill data_reuse_status;
