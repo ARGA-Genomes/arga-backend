@@ -71,9 +71,9 @@ pub struct Source {
     pub rights_holder: String,
     pub access_rights: String,
     pub license: String,
-    pub reuse_pill: DataReuseStatus,
-    pub access_pill: AccessRightsStatus,
-    pub content_type: SourceContentType,
+    pub reuse_pill: Option<DataReuseStatus>,
+    pub access_pill: Option<AccessRightsStatus>,
+    pub content_type: Option<SourceContentType>,
 }
 
 #[derive(Queryable, Selectable, Insertable, AsChangeset, Debug, Clone, Default, Serialize, Deserialize)]
@@ -91,10 +91,10 @@ pub struct Dataset {
     pub rights_holder: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
-    pub reuse_pill: DataReuseStatus,
-    pub access_pill: AccessRightsStatus,
+    pub reuse_pill: Option<DataReuseStatus>,
+    pub access_pill: Option<AccessRightsStatus>,
     pub publication_year: Option<i16>,
-    pub content_type: SourceContentType,
+    pub content_type: Option<SourceContentType>,
 }
 
 #[derive(Debug, Clone, Queryable, Selectable, Identifiable, Insertable, Associations, Deserialize)]
