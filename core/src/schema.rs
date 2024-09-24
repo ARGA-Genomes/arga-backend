@@ -2,12 +2,20 @@
 
 pub mod sql_types {
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "access_rights_status"))]
+    pub struct AccessRightsStatus;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "attribute_category"))]
     pub struct AttributeCategory;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "attribute_value_type"))]
     pub struct AttributeValueType;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "data_reuse_status"))]
+    pub struct DataReuseStatus;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "geometry"))]
@@ -28,6 +36,10 @@ pub mod sql_types {
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "region_type"))]
     pub struct RegionType;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "source_content_type"))]
+    pub struct SourceContentType;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "taxonomic_act_type"))]
@@ -251,6 +263,11 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::DataReuseStatus;
+    use super::sql_types::AccessRightsStatus;
+    use super::sql_types::SourceContentType;
+
     datasets (id) {
         id -> Uuid,
         source_id -> Uuid,
@@ -264,6 +281,10 @@ diesel::table! {
         rights_holder -> Nullable<Varchar>,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        reuse_pill -> Nullable<DataReuseStatus>,
+        access_pill -> Nullable<AccessRightsStatus>,
+        publication_year -> Nullable<Int2>,
+        content_type -> Nullable<SourceContentType>,
     }
 }
 
@@ -584,6 +605,11 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::DataReuseStatus;
+    use super::sql_types::AccessRightsStatus;
+    use super::sql_types::SourceContentType;
+
     sources (id) {
         id -> Uuid,
         name -> Varchar,
@@ -591,6 +617,9 @@ diesel::table! {
         rights_holder -> Varchar,
         access_rights -> Varchar,
         license -> Varchar,
+        reuse_pill -> Nullable<DataReuseStatus>,
+        access_pill -> Nullable<AccessRightsStatus>,
+        content_type -> Nullable<SourceContentType>,
     }
 }
 

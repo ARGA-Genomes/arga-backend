@@ -1,4 +1,7 @@
+use arga_core::models::AccessRightsStatus;
+use arga_core::models::DataReuseStatus;
 use arga_core::models::Dataset;
+use arga_core::models::SourceContentType;
 use axum::extract::State;
 use axum::routing::{delete, get, post, put};
 use axum::{Json, Router};
@@ -11,7 +14,6 @@ use crate::database::{schema, Database};
 use crate::http::error::InternalError;
 use crate::http::Context;
 
-
 #[derive(Deserialize, Debug)]
 struct NewDataset {
     pub source_id: Uuid,
@@ -23,6 +25,10 @@ struct NewDataset {
     pub citation: Option<String>,
     pub license: Option<String>,
     pub rights_holder: Option<String>,
+    pub reuse_pill: Option<DataReuseStatus>,
+    pub access_pill: Option<AccessRightsStatus>,
+    pub publication_year: Option<i16>,
+    pub content_type: Option<SourceContentType>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -37,8 +43,11 @@ struct UpdateDataset {
     pub citation: Option<String>,
     pub license: Option<String>,
     pub rights_holder: Option<String>,
+    pub reuse_pill: Option<DataReuseStatus>,
+    pub access_pill: Option<AccessRightsStatus>,
+    pub publication_year: Option<i16>,
+    pub content_type: Option<SourceContentType>,
 }
-
 
 async fn datasets(State(database): State<Database>) -> Result<Json<Vec<Dataset>>, InternalError> {
     use schema::datasets::dsl::*;
@@ -72,6 +81,10 @@ async fn create_datasets(
             rights_holder: row.rights_holder,
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
+            reuse_pill: row.reuse_pill,
+            access_pill: row.access_pill,
+            publication_year: row.publication_year,
+            content_type: row.content_type,
         })
     }
 
@@ -82,7 +95,6 @@ async fn create_datasets(
 
     Ok(Json(inserted))
 }
-
 
 async fn update_datasets(
     State(database): State<Database>,
@@ -105,6 +117,10 @@ async fn update_datasets(
                 license.eq(row.license),
                 rights_holder.eq(row.rights_holder),
                 updated_at.eq(chrono::Utc::now()),
+                reuse_pill.eq(row.reuse_pill),
+                access_pill.eq(row.access_pill),
+                publication_year.eq(row.publication_year),
+                content_type.eq(row.content_type),
             ))
             .execute(&mut conn)
             .await?;
@@ -124,7 +140,6 @@ async fn delete_datasets(
         .await?;
     Ok(Json(vec![]))
 }
-
 
 /// The REST gateway for the admin backend for basic CRUD operations
 pub(crate) fn router() -> Router<Context> {
