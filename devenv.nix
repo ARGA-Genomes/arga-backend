@@ -5,6 +5,7 @@
     protobuf
     diesel-cli
     cargo-udeps
+    cargo-expand
     mold
   ];
 
