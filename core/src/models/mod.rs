@@ -696,6 +696,7 @@ pub enum NomenclaturalActType {
     CombinatioNova,
     RevivedStatus,
     NameUsage,
+    SubgenusPlacement,
 }
 
 #[derive(Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
