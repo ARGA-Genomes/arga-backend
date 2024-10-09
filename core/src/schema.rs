@@ -34,6 +34,10 @@ pub mod sql_types {
     pub struct OperationAction;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "publication_type"))]
+    pub struct PublicationType;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "region_type"))]
     pub struct RegionType;
 
@@ -499,13 +503,13 @@ diesel::table! {
     nomenclatural_acts (id) {
         id -> Uuid,
         entity_id -> Varchar,
-        publication_id -> Uuid,
         name_id -> Uuid,
         acted_on_id -> Uuid,
         act -> NomenclaturalActType,
         source_url -> Varchar,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        publication_id -> Uuid,
     }
 }
 
@@ -519,6 +523,44 @@ diesel::table! {
         associated_organisms -> Nullable<Varchar>,
         previous_identifications -> Nullable<Varchar>,
         remarks -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    publication_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::PublicationType;
+
+    publications (id) {
+        id -> Uuid,
+        entity_id -> Varchar,
+        title -> Varchar,
+        authors -> Array<Nullable<Text>>,
+        published_year -> Int4,
+        published_date -> Nullable<Timestamptz>,
+        language -> Nullable<Varchar>,
+        publisher -> Nullable<Varchar>,
+        doi -> Nullable<Varchar>,
+        source_urls -> Nullable<Array<Nullable<Text>>>,
+        publication_type -> Nullable<PublicationType>,
+        citation -> Nullable<Varchar>,
+        record_created_at -> Nullable<Timestamptz>,
+        record_updated_at -> Nullable<Timestamptz>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -890,8 +932,9 @@ diesel::joinable!(name_attributes -> datasets (dataset_id));
 diesel::joinable!(name_attributes -> names (name_id));
 diesel::joinable!(name_publications -> datasets (dataset_id));
 diesel::joinable!(nomenclatural_act_logs -> dataset_versions (dataset_version_id));
-diesel::joinable!(nomenclatural_acts -> name_publications (publication_id));
+diesel::joinable!(nomenclatural_acts -> publications (publication_id));
 diesel::joinable!(organisms -> names (name_id));
+diesel::joinable!(publication_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(regions -> datasets (dataset_id));
 diesel::joinable!(regions -> names (name_id));
 diesel::joinable!(sequence_logs -> dataset_versions (dataset_version_id));
@@ -948,6 +991,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     nomenclatural_act_logs,
     nomenclatural_acts,
     organisms,
+    publication_logs,
+    publications,
     regions,
     sequence_logs,
     sequences,

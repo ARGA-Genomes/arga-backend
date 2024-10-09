@@ -701,10 +701,10 @@ pub enum NomenclaturalActType {
 
 #[derive(Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::nomenclatural_acts)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NomenclaturalAct {
     pub id: Uuid,
     pub entity_id: String,
-    pub publication_id: Uuid,
     pub name_id: Uuid,
     pub acted_on_id: Uuid,
 
@@ -713,6 +713,7 @@ pub struct NomenclaturalAct {
 
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub publication_id: Uuid,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
@@ -784,6 +785,7 @@ pub struct Job {
 
 #[derive(Clone, Identifiable, Queryable, Insertable, Selectable, Debug, Default, Serialize, Deserialize)]
 #[diesel(table_name = schema::names)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Name {
     pub id: Uuid,
     pub scientific_name: String,
@@ -1425,4 +1427,40 @@ pub struct VernacularName {
     pub vernacular_name: String,
     pub citation: Option<String>,
     pub source_url: Option<String>,
+}
+
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[ExistingTypePath = "schema::sql_types::PublicationType"]
+pub enum PublicationType {
+    Book,
+    BookChapter,
+    JournalArticle,
+    JournalVolume,
+    ProceedingsPaper,
+    Url,
+}
+
+#[derive(Queryable, Selectable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::publications)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Publication {
+    pub id: Uuid,
+    pub entity_id: String,
+    pub title: String,
+    pub authors: Vec<Option<String>>,
+    pub published_year: i32,
+    pub published_date: Option<DateTime<Utc>>,
+    pub language: Option<String>,
+    pub publisher: Option<String>,
+    pub doi: Option<String>,
+    pub source_urls: Option<Vec<Option<String>>>,
+    pub publication_type: Option<PublicationType>,
+    pub citation: Option<String>,
+
+    pub record_created_at: Option<DateTime<Utc>>,
+    pub record_updated_at: Option<DateTime<Utc>>,
+
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }

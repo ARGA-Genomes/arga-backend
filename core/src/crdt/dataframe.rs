@@ -90,3 +90,16 @@ impl<Atom: Default> DataFrame<Atom> {
         self.operations.into_iter().map(|op| op.into()).collect()
     }
 }
+
+
+impl<Atom: std::fmt::Debug> std::fmt::Display for DataFrame<Atom> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for op in self.operations.iter() {
+            f.write_fmt(format_args!(
+                "{} {} {} {} {:?}\n",
+                op.operation_id, op.parent_id, op.entity_id, op.action, op.atom
+            ))?;
+        }
+        Ok(())
+    }
+}
