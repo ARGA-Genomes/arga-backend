@@ -73,9 +73,9 @@ impl From<HybridTimestamp> for DateTime<Utc> {
         let months = ts.months() % 12;
 
         NaiveDate::from_ymd_opt(years.into(), months.into(), ts.days().into())
-            .unwrap()
+            .unwrap_or_default()
             .and_hms_milli_opt(ts.hours().into(), ts.minutes().into(), ts.seconds().into(), ts.milliseconds().into())
-            .unwrap()
+            .unwrap_or_default()
             .and_utc()
     }
 }

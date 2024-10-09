@@ -3,6 +3,7 @@ use arga_core::models::{
     Name,
     NamePublication,
     NomenclaturalActType,
+    Publication,
     Taxon,
     TaxonTreeNode,
     TaxonomicActType,
@@ -86,12 +87,13 @@ pub struct HistoryItem {
 // joined aliased table
 #[derive(Debug, Queryable)]
 #[diesel(table_name = schema::nomenclatural_acts)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct NomenclaturalAct {
     pub entity_id: String,
     pub act: NomenclaturalActType,
     pub source_url: String,
 
-    pub publication: NamePublication,
+    pub publication: Publication,
     pub name: Name,
     pub acted_on: Name,
 }
@@ -386,13 +388,7 @@ impl TaxaProvider {
     }
 
     pub async fn nomenclatural_acts(&self, taxon_id: &Uuid) -> Result<Vec<NomenclaturalAct>, Error> {
-        use schema::{
-            name_publications as publications,
-            names,
-            nomenclatural_acts as acts,
-            taxon_names,
-            taxonomic_acts,
-        };
+        use schema::{names, nomenclatural_acts as acts, publications, taxon_names, taxonomic_acts};
         let mut conn = self.pool.get().await?;
 
         // get all the names associated with this taxon in case there are alt names
@@ -439,7 +435,7 @@ impl TaxaProvider {
                 acts::entity_id,
                 acts::act,
                 acts::source_url,
-                NamePublication::as_select(),
+                Publication::as_select(),
                 Name::as_select(),
                 acted_on.fields(<Name as Selectable<diesel::pg::Pg>>::construct_selection()),
             ))
