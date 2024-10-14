@@ -1,4 +1,5 @@
 use arga_core::models;
+use async_graphql::SimpleObject;
 use async_graphql::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -7,8 +8,10 @@ use super::common::{convert_filters, DatasetDetails, FilterItem, Page, SpeciesCa
 use super::helpers::SpeciesHelper;
 use crate::database::extensions::filters::Filter;
 use crate::database::Database;
+use crate::http::graphql::common::datasets::AccessRightsStatus;
+use crate::http::graphql::common::datasets::DataReuseStatus;
+use crate::http::graphql::common::datasets::SourceContentType;
 use crate::http::{Context as State, Error};
-
 
 #[derive(OneofObject)]
 pub enum SourceBy {
@@ -50,7 +53,6 @@ impl Source {
     }
 }
 
-
 pub struct SourceQuery {
     source: models::Source,
     filters: Vec<Filter>,
@@ -83,7 +85,6 @@ impl SourceQuery {
     }
 }
 
-
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
 pub struct SourceDetails {
     pub id: Uuid,
@@ -92,6 +93,9 @@ pub struct SourceDetails {
     pub rights_holder: String,
     pub access_rights: String,
     pub license: String,
+    pub reuse_pill: Option<DataReuseStatus>,
+    pub access_pill: Option<AccessRightsStatus>,
+    pub content_type: Option<SourceContentType>,
 }
 
 impl From<models::Source> for SourceDetails {
@@ -103,6 +107,9 @@ impl From<models::Source> for SourceDetails {
             rights_holder: value.rights_holder,
             access_rights: value.access_rights,
             license: value.license,
+            reuse_pill: value.reuse_pill.map(|r| r.into()),
+            access_pill: value.access_pill.map(|a| a.into()),
+            content_type: value.content_type.map(|c| c.into()),
         }
     }
 }
