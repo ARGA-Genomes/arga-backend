@@ -83,6 +83,7 @@ pub enum NomenclaturalActAtomTextType {
     PublicationDate,
 
     ScientificName,
+    Authorship,
     CanonicalName,
     AuthorityName,
     AuthorityYear,
@@ -262,6 +263,7 @@ impl From<models::NomenclaturalActAtom> for NomenclaturalActAtom {
             Act(value) => Atom::act(NomenclaturalActAtomActType::NomenclaturalActType, value.into()),
             SourceUrl(value) => Atom::text(Text::SourceUrl, value),
             ScientificName(value) => Atom::text(Text::ScientificName, value),
+            Authorship(value) => Atom::text(Text::Authorship, value),
             CanonicalName(value) => Atom::text(Text::CanonicalName, value),
             AuthorityName(value) => Atom::text(Text::AuthorityName, value),
             AuthorityYear(value) => Atom::text(Text::AuthorityYear, value),

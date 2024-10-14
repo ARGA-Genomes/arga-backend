@@ -11,11 +11,11 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 use uuid::Uuid;
 
-use super::{schema, Dataset, DatasetVersion, TaxonomicActType, TaxonomicRank, TaxonomicStatus};
+use super::{schema, Dataset, DatasetVersion, PublicationType, TaxonomicActType, TaxonomicRank, TaxonomicStatus};
 use crate::crdt::DataFrameOperation;
 use crate::models::NomenclaturalActType;
 
-#[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
+#[derive(Clone, Debug, Display, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::OperationAction"]
 pub enum Action {
     Create,
@@ -217,6 +217,7 @@ pub enum NomenclaturalActAtom {
     SourceUrl(String),
 
     ScientificName(String),
+    Authorship(String),
     CanonicalName(String),
     AuthorityName(String),
     AuthorityYear(String),
@@ -377,4 +378,38 @@ pub struct SequenceOperation {
     pub dataset_version_id: Uuid,
     pub action: Action,
     pub atom: SequenceAtom,
+}
+
+
+#[derive(Atom, Debug, Clone, Default, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Display)]
+#[diesel(sql_type = diesel::sql_types::Jsonb)]
+pub enum PublicationAtom {
+    #[default]
+    Empty,
+    EntityId(String),
+    Title(String),
+    Authors(Vec<String>),
+    PublishedYear(i32),
+    PublishedDate(DateTime<Utc>),
+    Language(String),
+    Publisher(String),
+    Doi(String),
+    SourceUrl(String),
+    Type(PublicationType),
+    Citation(String),
+    RecordCreatedAt(DateTime<Utc>),
+    RecordUpdatedAt(DateTime<Utc>),
+}
+
+#[derive(OperationLog, Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]
+#[diesel(belongs_to(DatasetVersion))]
+#[diesel(table_name = schema::publication_logs)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct PublicationOperation {
+    pub operation_id: BigDecimal,
+    pub parent_id: BigDecimal,
+    pub entity_id: String,
+    pub dataset_version_id: Uuid,
+    pub action: Action,
+    pub atom: PublicationAtom,
 }
