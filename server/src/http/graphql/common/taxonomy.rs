@@ -187,19 +187,6 @@ pub enum NomenclaturalActType {
 
 
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-#[graphql(remote = "models::TaxonomicActType")]
-pub enum TaxonomicActType {
-    Unaccepted,
-    Accepted,
-    Synonym,
-    Homonym,
-    NomenclaturalSynonym,
-    TaxonomicSynonym,
-    ReplacedSynonym,
-}
-
-
-#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[graphql(remote = "models::TaxonomicVernacularGroup")]
 pub enum TaxonomicVernacularGroup {
     FloweringPlants,

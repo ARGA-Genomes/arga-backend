@@ -1,8 +1,8 @@
 pub mod bpa;
 pub mod ncbi;
 // pub mod bold;
-pub mod oplogger;
-pub mod plazi;
+// pub mod oplogger;
+// pub mod plazi;
 
 #[derive(clap::Subcommand)]
 pub enum Command {
@@ -15,11 +15,10 @@ pub enum Command {
     // Extra processing for BOLD datasets
     // #[command(subcommand)]
     // Bold(bold::Command),
-    #[command(subcommand)]
-    Plazi(plazi::Command),
-
-    #[command(subcommand)]
-    Oplog(oplogger::Command),
+    // #[command(subcommand)]
+    // Plazi(plazi::Command),
+    // #[command(subcommand)]
+    // Oplog(oplogger::Command),
 }
 
 pub fn process_command(command: &Command) {
@@ -29,8 +28,8 @@ pub fn process_command(command: &Command) {
         Command::Ncbi(cmd) => ncbi::process_command(cmd),
         Command::Bpa(cmd) => bpa::process_command(cmd),
         // Command::Bold(cmd) => bold::process_command(cmd),
-        Command::Plazi(cmd) => plazi::process_command(cmd),
-        Command::Oplog(cmd) => oplogger::process_command(cmd),
+        // Command::Plazi(cmd) => plazi::process_command(cmd),
+        // Command::Oplog(cmd) => oplogger::process_command(cmd),
     }
 }
 

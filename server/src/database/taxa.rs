@@ -6,7 +6,6 @@ use arga_core::models::{
     Publication,
     Taxon,
     TaxonTreeNode,
-    TaxonomicActType,
     TaxonomicRank,
     ACCEPTED_NAMES,
     SPECIES_RANKS,
@@ -104,7 +103,6 @@ pub struct TaxonomicAct {
     pub entity_id: String,
     pub taxon: Taxon,
     pub accepted_taxon: Option<Taxon>,
-    pub act: TaxonomicActType,
     pub source_url: Option<String>,
     pub data_created_at: Option<DateTime<Utc>>,
     pub data_updated_at: Option<DateTime<Utc>>,
@@ -463,7 +461,6 @@ impl TaxaProvider {
                 accepted
                     .fields(<Taxon as Selectable<diesel::pg::Pg>>::construct_selection())
                     .nullable(),
-                acts::act,
                 acts::source_url,
                 acts::data_created_at,
                 acts::data_updated_at,

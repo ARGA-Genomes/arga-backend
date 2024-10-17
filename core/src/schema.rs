@@ -46,10 +46,6 @@ pub mod sql_types {
     pub struct SourceContentType;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
-    #[diesel(postgres_type(name = "taxonomic_act_type"))]
-    pub struct TaxonomicActType;
-
-    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "taxonomic_rank"))]
     pub struct TaxonomicRank;
 
@@ -830,15 +826,11 @@ diesel::table! {
 }
 
 diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::TaxonomicActType;
-
     taxonomic_acts (id) {
         id -> Uuid,
         entity_id -> Varchar,
         taxon_id -> Uuid,
         accepted_taxon_id -> Nullable<Uuid>,
-        act -> TaxonomicActType,
         source_url -> Nullable<Varchar>,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,

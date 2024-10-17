@@ -34,7 +34,7 @@ use super::importers::{
     // taxon_importer,
     taxon_history_importer,
     taxon_photo_importer,
-    taxonomic_act_importer,
+    // taxonomic_act_importer,
     vernacular_importer,
 };
 
@@ -139,7 +139,7 @@ impl ThreadedJob {
             "import_classification" => classification_importer::import(path, pool)?,
             "import_name_publication" => name_publication_importer::import(path, &dataset?, pool)?,
             "import_nomenclatural_act" => nomenclatural_act_importer::import(path, pool)?,
-            "import_taxonomic_act" => taxonomic_act_importer::import(path, pool)?,
+            // "import_taxonomic_act" => taxonomic_act_importer::import(path, pool)?,
             _ => panic!("Unknown job worker: {}", worker),
         }
 

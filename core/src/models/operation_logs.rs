@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use strum::Display;
 use uuid::Uuid;
 
-use super::{schema, Dataset, DatasetVersion, PublicationType, TaxonomicActType, TaxonomicRank, TaxonomicStatus};
+use super::{schema, Dataset, DatasetVersion, PublicationType, TaxonomicRank, TaxonomicStatus};
 use crate::crdt::DataFrameOperation;
 use crate::models::NomenclaturalActType;
 
@@ -130,7 +130,6 @@ pub enum TaxonomicActAtom {
     PublicationDate(String),
     Taxon(String),
     AcceptedTaxon(String),
-    Act(TaxonomicActType),
     SourceUrl(String),
     CreatedAt(DateTime<Utc>),
     UpdatedAt(DateTime<Utc>),

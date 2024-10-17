@@ -39,7 +39,7 @@ use super::formatting::{
     Uri,
     Uuid,
 };
-use crate::data::oplogger::get_pool;
+// use crate::data::oplogger::get_pool;
 use crate::data::plazi::formatting::{Span, SpanStack};
 use crate::data::{Error, ParseError};
 

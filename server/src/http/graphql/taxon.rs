@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::common::datasets::DatasetDetails;
-use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicActType, TaxonomicRank, TaxonomicStatus};
+use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
 use super::common::NameDetails;
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::{taxa, Database};
@@ -323,7 +323,6 @@ impl From<taxa::NomenclaturalAct> for NomenclaturalAct {
 #[derive(SimpleObject)]
 pub struct TaxonomicAct {
     pub entity_id: String,
-    pub act: TaxonomicActType,
     pub source_url: Option<String>,
     pub taxon: TaxonDetails,
     pub accepted_taxon: Option<TaxonDetails>,
@@ -335,7 +334,6 @@ impl From<taxa::TaxonomicAct> for TaxonomicAct {
     fn from(value: taxa::TaxonomicAct) -> Self {
         Self {
             entity_id: value.entity_id,
-            act: value.act.into(),
             source_url: value.source_url,
             taxon: value.taxon.into(),
             accepted_taxon: value.accepted_taxon.map(|t| t.into()),
