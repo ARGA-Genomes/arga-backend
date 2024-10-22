@@ -304,6 +304,7 @@ pub enum TaxonomicRank {
 
     AggregateGenera,
     AggregateSpecies,
+    Supercohort,
     Cohort,
     Subcohort,
     Division,
@@ -391,6 +392,7 @@ impl std::fmt::Display for TaxonomicRank {
             TaxonomicRank::HigherTaxon => "Higher Taxon",
             TaxonomicRank::AggregateGenera => "Aggregate Genera",
             TaxonomicRank::AggregateSpecies => "Aggregate Species",
+            TaxonomicRank::Supercohort => "Supercohort",
             TaxonomicRank::Cohort => "Cohort",
             TaxonomicRank::Subcohort => "Subcohort",
             TaxonomicRank::Division => "Division",

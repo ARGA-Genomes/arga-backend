@@ -280,6 +280,7 @@ pub enum TaxonomicRank {
 
     AggregateGenera,
     AggregateSpecies,
+    Supercohort,
     Cohort,
     Subcohort,
     Division,
@@ -369,6 +370,7 @@ impl TaxonomicRank {
             TaxonomicRank::HigherTaxon => Classification::HigherTaxon(name),
             TaxonomicRank::AggregateGenera => Classification::AggregateGenera(name),
             TaxonomicRank::AggregateSpecies => Classification::AggregateSpecies(name),
+            TaxonomicRank::Supercohort => Classification::Supercohort(name),
             TaxonomicRank::Cohort => Classification::Cohort(name),
             TaxonomicRank::Subcohort => Classification::Subcohort(name),
             TaxonomicRank::Division => Classification::Division(name),

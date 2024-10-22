@@ -68,6 +68,7 @@ pub enum TaxonRank {
 
     AggregateGenera,
     AggregateSpecies,
+    Supercohort,
     Cohort,
     Subcohort,
     Division,
@@ -467,6 +468,7 @@ pub fn into_classification(rank: TaxonRank, value: String) -> Classification {
         TaxonRank::HigherTaxon => Classification::HigherTaxon(value),
         TaxonRank::AggregateGenera => Classification::AggregateGenera(value),
         TaxonRank::AggregateSpecies => Classification::AggregateSpecies(value),
+        TaxonRank::Supercohort => Classification::Supercohort(value),
         TaxonRank::Cohort => Classification::Cohort(value),
         TaxonRank::Subcohort => Classification::Subcohort(value),
         TaxonRank::Division => Classification::Division(value),
