@@ -18,12 +18,14 @@ pub const ACCEPTED_NAMES: [TaxonomicStatus; 6] = [
     TaxonomicStatus::Informal,
 ];
 
-pub const SPECIES_RANKS: [TaxonomicRank; 5] = [
+pub const SPECIES_RANKS: [TaxonomicRank; 7] = [
     TaxonomicRank::Species,
     TaxonomicRank::Subspecies,
     TaxonomicRank::AggregateSpecies,
     TaxonomicRank::Infraspecies,
     TaxonomicRank::Varietas,
+    TaxonomicRank::Variety,
+    TaxonomicRank::Subvariety,
 ];
 
 #[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]

@@ -21,7 +21,7 @@ use uuid::Uuid;
 use super::extensions::species_filters::SpeciesFilter;
 use super::extensions::taxa_filters::TaxaFilter;
 use super::extensions::Paginate;
-use super::models::{Species, TaxonomicStatus};
+use super::models::Species;
 use super::{schema, schema_gnl, Error, PageResult, PgPool};
 use crate::database::extensions::classification_filters::{
     with_classification,
@@ -146,11 +146,8 @@ impl TaxaProvider {
         let mut conn = self.pool.get().await?;
 
         let records = species
-            .filter(status.eq_any(&[
-                TaxonomicStatus::Accepted,
-                TaxonomicStatus::Undescribed,
-                TaxonomicStatus::Hybrid,
-            ]))
+            .filter(status.eq_any(ACCEPTED_NAMES))
+            .filter(rank.eq_any(SPECIES_RANKS))
             .filter(with_species_filters(&filters).unwrap())
             .order_by(scientific_name)
             .paginate(page)
