@@ -4,6 +4,7 @@ use arga_core::models::{
     NamePublication,
     NomenclaturalActType,
     Publication,
+    Specimen,
     Taxon,
     TaxonTreeNode,
     TaxonomicRank,
@@ -470,5 +471,62 @@ impl TaxaProvider {
             .await?;
 
         Ok(items)
+    }
+
+    pub async fn type_specimens(&self, taxon_id: &Uuid) -> Result<Vec<Specimen>, Error> {
+        use schema::specimens;
+        let mut conn = self.pool.get().await?;
+
+        let name_ids = self.all_associated_names(taxon_id).await?;
+
+        let specimens = specimens::table
+            .filter(specimens::name_id.eq_any(name_ids))
+            .filter(specimens::type_status.is_not_null())
+            .limit(10)
+            .load::<Specimen>(&mut conn)
+            .await?;
+
+        Ok(specimens)
+    }
+
+    pub async fn all_associated_names(&self, taxon_id: &Uuid) -> Result<Vec<Uuid>, Error> {
+        use schema::{taxon_names, taxonomic_acts};
+        let mut conn = self.pool.get().await?;
+
+        // get all the names associated with this taxon in case there are alt names
+        let name_ids = taxon_names::table
+            .select(taxon_names::name_id)
+            .filter(taxon_names::taxon_id.eq(taxon_id))
+            .into_boxed();
+
+        // get all the taxa that are linked to the same name since we want names from all
+        // taxonomic systems
+        let taxon_ids = taxon_names::table
+            .left_join(taxonomic_acts::table.on(taxon_names::taxon_id.eq(taxonomic_acts::taxon_id)))
+            .select(taxon_names::taxon_id)
+            .filter(taxon_names::name_id.eq_any(name_ids))
+            .or_filter(taxonomic_acts::accepted_taxon_id.eq(taxon_id))
+            .load::<Uuid>(&mut conn)
+            .await?;
+
+        // get any synonyms related to taxa that link to the name since they are part of
+        // the name history as well
+        let synonym_taxon_ids = taxonomic_acts::table
+            .select(taxonomic_acts::taxon_id)
+            .filter(taxonomic_acts::taxon_id.eq_any(&taxon_ids))
+            .or_filter(taxonomic_acts::accepted_taxon_id.eq_any(&taxon_ids))
+            .load::<Uuid>(&mut conn)
+            .await?;
+
+        // lastly, we get all the linked names again incase the other taxa or synonyms
+        // have alt names linked to them
+        let name_ids = taxon_names::table
+            .select(taxon_names::name_id)
+            .filter(taxon_names::taxon_id.eq_any(taxon_ids))
+            .or_filter(taxon_names::taxon_id.eq_any(synonym_taxon_ids))
+            .load::<Uuid>(&mut conn)
+            .await?;
+
+        Ok(name_ids)
     }
 }

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::common::datasets::DatasetDetails;
 use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
 use super::common::NameDetails;
+use super::specimen::SpecimenDetails;
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::{taxa, Database};
 use crate::http::{Context as State, Error};
@@ -196,6 +197,13 @@ impl TaxonQuery {
         let acts = state.database.taxa.taxonomic_acts(&self.taxon.id).await?;
         let acts = acts.into_iter().map(|r| r.into()).collect();
         Ok(acts)
+    }
+
+    async fn type_specimens(&self, ctx: &Context<'_>) -> Result<Vec<SpecimenDetails>, Error> {
+        let state = ctx.data::<State>()?;
+        let specimens = state.database.taxa.type_specimens(&self.taxon.id).await?;
+        let specimens = specimens.into_iter().map(|r| r.into()).collect();
+        Ok(specimens)
     }
 }
 
@@ -422,6 +430,7 @@ impl From<taxa::SpeciesSummary> for DataBreakdown {
         }
     }
 }
+
 
 pub fn into_classification(rank: TaxonRank, value: String) -> Classification {
     match rank {
