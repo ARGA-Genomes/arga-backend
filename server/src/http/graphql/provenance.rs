@@ -1,6 +1,6 @@
 use async_graphql::*;
 
-use super::common::operation_logs::{NomenclaturalActOperation, OperationBy, SpecimenOperation};
+use super::common::operation_logs::{NomenclaturalActOperation, OperationBy, SpecimenOperation, TaxonOperation};
 use crate::http::{Context as State, Error};
 
 
@@ -11,6 +11,11 @@ impl Provenance {
     pub async fn specimen(&self, ctx: &Context<'_>, by: OperationBy) -> Result<Vec<SpecimenOperation>, Error> {
         let state = ctx.data::<State>()?;
         SpecimenOperation::new(&state.database, by).await
+    }
+
+    pub async fn taxon(&self, ctx: &Context<'_>, by: OperationBy) -> Result<Vec<TaxonOperation>, Error> {
+        let state = ctx.data::<State>()?;
+        TaxonOperation::new(&state.database, by).await
     }
 
     pub async fn nomenclatural_act(
