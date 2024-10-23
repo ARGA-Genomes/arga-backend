@@ -18,6 +18,7 @@ use diesel::sql_types::{Array, Nullable, Text, Varchar};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
+use super::extensions::species_filters::SpeciesFilter;
 use super::extensions::taxa_filters::TaxaFilter;
 use super::extensions::Paginate;
 use super::models::{Species, TaxonomicStatus};
@@ -26,10 +27,10 @@ use crate::database::extensions::classification_filters::{
     with_classification,
     Classification as ClassificationFilter,
 };
-use crate::database::extensions::filters::{with_filters, Filter};
+use crate::database::extensions::filters::Filter;
 use crate::database::extensions::species_filters::{
-    // with_parent_classification,
     with_classification as with_species_classification,
+    with_species_filters,
 };
 use crate::database::extensions::sum_if;
 use crate::database::extensions::taxa_filters::with_taxa_filters;
@@ -140,7 +141,7 @@ impl TaxaProvider {
         Ok(records)
     }
 
-    pub async fn species(&self, filters: &Vec<Filter>, page: i64, per_page: i64) -> PageResult<Species> {
+    pub async fn species(&self, filters: &Vec<SpeciesFilter>, page: i64, per_page: i64) -> PageResult<Species> {
         use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
@@ -150,7 +151,7 @@ impl TaxaProvider {
                 TaxonomicStatus::Undescribed,
                 TaxonomicStatus::Hybrid,
             ]))
-            .filter(with_filters(&filters).unwrap())
+            .filter(with_species_filters(&filters).unwrap())
             .order_by(scientific_name)
             .paginate(page)
             .per_page(per_page)

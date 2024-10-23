@@ -6,9 +6,11 @@ use serde::{Deserialize, Serialize};
 
 use super::common::datasets::DatasetDetails;
 use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
-use super::common::NameDetails;
+use super::common::{NameDetails, Page, SpeciesCard};
+use super::helpers::SpeciesHelper;
 use super::specimen::SpecimenDetails;
 use crate::database::extensions::classification_filters::Classification;
+use crate::database::extensions::species_filters::SpeciesFilter;
 use crate::database::{taxa, Database};
 use crate::http::{Context as State, Error};
 
@@ -204,6 +206,20 @@ impl TaxonQuery {
         let specimens = state.database.taxa.type_specimens(&self.taxon.id).await?;
         let specimens = specimens.into_iter().map(|r| r.into()).collect();
         Ok(specimens)
+    }
+
+    async fn species(&self, ctx: &Context<'_>, page: i64, per_page: i64) -> Result<Page<SpeciesCard>, Error> {
+        let state = ctx.data::<State>()?;
+        let helper = SpeciesHelper::new(&state.database);
+
+        let filter = SpeciesFilter::Classification(self.classification.clone());
+        let page = state.database.taxa.species(&vec![filter], page, per_page).await?;
+        let cards = helper.filtered_cards(page.records).await?;
+
+        Ok(Page {
+            records: cards,
+            total: page.total,
+        })
     }
 }
 
