@@ -248,6 +248,8 @@ pub enum SpecimenAtom {
     MaterialSampleId(String),
     OrganismId(String),
     ScientificName(String),
+    CanonicalName(String),
+    Authorship(String),
 
     InstitutionName(String),
     InstitutionCode(String),

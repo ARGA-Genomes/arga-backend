@@ -183,6 +183,14 @@ pub enum NomenclaturalActType {
     SubspeciesNova,
     NameUsage,
     SubgenusPlacement,
+
+    OriginalDescription,
+    Redescription,
+    Demotion,
+    Promotion,
+    Synonymisation,
+    HeterotypicSynonymy,
+    HomotypicSynonymy,
 }
 
 

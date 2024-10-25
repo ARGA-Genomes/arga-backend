@@ -177,6 +177,8 @@ pub enum SpecimenAtomTextType {
     MaterialSampleId,
     OrganismId,
     ScientificName,
+    CanonicalName,
+    Authorship,
 
     InstitutionName,
     InstitutionCode,
@@ -383,6 +385,8 @@ impl From<models::SpecimenAtom> for SpecimenAtom {
             MaterialSampleId(value) => Atom::text(Text::MaterialSampleId, value),
             OrganismId(value) => Atom::text(Text::OrganismId, value),
             ScientificName(value) => Atom::text(Text::ScientificName, value),
+            CanonicalName(value) => Atom::text(Text::CanonicalName, value),
+            Authorship(value) => Atom::text(Text::Authorship, value),
             InstitutionName(value) => Atom::text(Text::InstitutionName, value),
             InstitutionCode(value) => Atom::text(Text::InstitutionCode, value),
             CollectionCode(value) => Atom::text(Text::CollectionCode, value),

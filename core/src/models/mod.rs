@@ -701,6 +701,14 @@ pub enum NomenclaturalActType {
     RevivedStatus,
     NameUsage,
     SubgenusPlacement,
+
+    OriginalDescription,
+    Redescription,
+    Demotion,
+    Promotion,
+    Synonymisation,
+    HeterotypicSynonymy,
+    HomotypicSynonymy,
 }
 
 #[derive(Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
