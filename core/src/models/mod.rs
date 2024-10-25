@@ -791,6 +791,17 @@ pub struct Name {
     pub authorship: Option<String>,
 }
 
+impl From<Taxon> for Name {
+    fn from(value: Taxon) -> Self {
+        Self {
+            id: uuid::Uuid::new_v4(),
+            scientific_name: value.scientific_name,
+            canonical_name: value.canonical_name,
+            authorship: value.authorship,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::RegionType"]
 pub enum RegionType {
