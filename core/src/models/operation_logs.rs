@@ -127,6 +127,7 @@ pub enum TaxonomicActAtom {
     #[default]
     Empty,
     EntityId(String),
+    DatasetId(String),
     Publication(String),
     PublicationDate(String),
     Taxon(String),
