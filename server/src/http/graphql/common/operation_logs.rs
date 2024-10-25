@@ -55,6 +55,7 @@ pub enum Action {
 pub enum TaxonAtomTextType {
     Empty,
     EntityId,
+    DatasetId,
     TaxonId,
     AcceptedNameUsageId,
     ParentNameUsageId,
@@ -480,6 +481,7 @@ impl From<models::TaxonAtom> for TaxonAtom {
         match value {
             Empty => Atom::text(Text::Empty, "".to_string()),
             EntityId(value) => Atom::text(Text::EntityId, value),
+            DatasetId(value) => Atom::text(Text::DatasetId, value),
             TaxonId(value) => Atom::text(Text::TaxonId, value),
             AcceptedNameUsageId(value) => Atom::text(Text::AcceptedNameUsageId, value),
             ParentNameUsageId(value) => Atom::text(Text::ParentNameUsageId, value),

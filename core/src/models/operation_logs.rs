@@ -42,6 +42,7 @@ pub enum TaxonAtom {
     #[default]
     Empty,
     EntityId(String),
+    DatasetId(String),
     TaxonId(String),
     AcceptedNameUsageId(String),
     ParentNameUsageId(String),
