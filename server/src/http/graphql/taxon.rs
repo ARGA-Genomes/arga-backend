@@ -111,17 +111,20 @@ pub enum TaxonRank {
 pub struct Taxon(TaxonDetails, TaxonQuery);
 
 impl Taxon {
+    // TODO: replace this endpoint with an id taxon query since we now use a multi taxa system
     pub async fn new(db: &Database, rank: TaxonRank, canonical_name: String) -> Result<Taxon, Error> {
-        let classification = into_classification(rank, canonical_name);
-        let taxon = db.taxa.find_by_classification(&classification).await?;
-        let mut details: TaxonDetails = taxon.clone().into();
+        let classification = into_classification(rank, canonical_name.clone());
+        let mut taxa = db.taxa.find_by_classification(&classification).await?;
 
-        // get source info
-        let dataset = db.datasets.find_by_id(&taxon.dataset_id).await?;
-        details.source = Some(dataset.name);
-        details.source_url = dataset.url;
+        // sort by dataset name for some consistency
+        taxa.sort_by(|a, b| a.dataset.name.cmp(&b.dataset.name));
+        let taxon = taxa.first().ok_or_else(|| Error::NotFound(canonical_name))?;
+        let details: TaxonDetails = taxon.clone().into();
 
-        let query = TaxonQuery { classification, taxon };
+        let query = TaxonQuery {
+            classification,
+            taxon: taxon.taxon.clone(),
+        };
         Ok(Taxon(details, query))
     }
 

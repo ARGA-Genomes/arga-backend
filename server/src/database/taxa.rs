@@ -7,6 +7,7 @@ use arga_core::models::{
     Specimen,
     Taxon,
     TaxonTreeNode,
+    TaxonWithDataset,
     TaxonomicRank,
     ACCEPTED_NAMES,
     SPECIES_RANKS,
@@ -117,16 +118,23 @@ pub struct TaxaProvider {
 }
 
 impl TaxaProvider {
-    pub async fn find_by_classification(&self, classification: &ClassificationFilter) -> Result<Taxon, Error> {
+    pub async fn find_by_classification(
+        &self,
+        classification: &ClassificationFilter,
+    ) -> Result<Vec<TaxonWithDataset>, Error> {
+        use schema::datasets;
         use schema::taxa::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let taxon = taxa
+        let records = taxa
             .filter(with_classification(classification))
-            .first::<Taxon>(&mut conn)
+            .into_boxed()
+            .inner_join(datasets::table.on(dataset_id.eq(datasets::id)))
+            .select((Taxon::as_select(), Dataset::as_select()))
+            .load::<TaxonWithDataset>(&mut conn)
             .await?;
 
-        Ok(taxon)
+        Ok(records)
     }
 
     pub async fn find(&self, filters: &Vec<TaxaFilter>) -> Result<Vec<Taxon>, Error> {

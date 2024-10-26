@@ -474,6 +474,15 @@ pub struct Taxon {
     pub entity_id: Option<String>,
 }
 
+#[derive(Queryable, Selectable, Debug, Deserialize, Clone)]
+#[diesel(table_name = schema::taxa)]
+pub struct TaxonWithDataset {
+    #[diesel(embed)]
+    pub taxon: Taxon,
+    #[diesel(embed)]
+    pub dataset: Dataset,
+}
+
 #[derive(Identifiable, Insertable, Selectable, Queryable, Associations, Debug, Clone)]
 #[diesel(belongs_to(Taxon))]
 #[diesel(belongs_to(Name))]

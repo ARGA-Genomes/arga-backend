@@ -118,11 +118,19 @@ impl Species {
         Ok(details)
     }
 
+    // TODO: hierarchy should be returned for a specific taxon or return for all taxa
     async fn hierarchy(&self, ctx: &Context<'_>) -> Result<Vec<TaxonNode>, Error> {
         let classification = into_classification(TaxonRank::Species, self.canonical_name.clone());
         let state = ctx.data::<State>()?;
-        let taxon = state.database.taxa.find_by_classification(&classification).await?;
-        let hierarchy = state.database.taxa.hierarchy(&taxon.id).await?;
+        let mut all_taxa = state.database.taxa.find_by_classification(&classification).await?;
+
+        // sort by dataset name for some consistency
+        all_taxa.sort_by(|a, b| a.dataset.name.cmp(&b.dataset.name));
+        let taxon = all_taxa
+            .get(0)
+            .ok_or_else(|| Error::NotFound(self.canonical_name.clone()))?;
+
+        let hierarchy = state.database.taxa.hierarchy(&taxon.taxon.id).await?;
         let hierarchy = hierarchy.into_iter().map(TaxonNode::from).collect();
         Ok(hierarchy)
     }

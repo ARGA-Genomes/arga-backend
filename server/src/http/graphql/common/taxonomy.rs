@@ -38,6 +38,24 @@ impl From<models::Taxon> for TaxonDetails {
     }
 }
 
+impl From<models::TaxonWithDataset> for TaxonDetails {
+    fn from(value: models::TaxonWithDataset) -> Self {
+        Self {
+            scientific_name: value.taxon.scientific_name,
+            canonical_name: value.taxon.canonical_name,
+            authorship: value.taxon.authorship,
+            status: value.taxon.status.into(),
+            rank: value.taxon.rank.into(),
+            nomenclatural_code: value.taxon.nomenclatural_code,
+            citation: value.taxon.citation,
+            source: Some(value.dataset.name),
+            source_url: value.dataset.url,
+            dataset_id: value.taxon.dataset_id,
+            entity_id: value.taxon.entity_id,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject, Default)]
 pub struct NameDetails {
     pub scientific_name: String,
