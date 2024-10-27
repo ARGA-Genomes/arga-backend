@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::common::datasets::DatasetDetails;
-use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
+use super::common::taxonomy::{sort_taxa_priority, NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
 use super::common::{NameDetails, Page, SpeciesCard};
 use super::helpers::SpeciesHelper;
 use super::specimen::SpecimenDetails;
@@ -117,7 +117,7 @@ impl Taxon {
         let mut taxa = db.taxa.find_by_classification(&classification).await?;
 
         // sort by dataset name for some consistency
-        taxa.sort_by(|a, b| a.dataset.name.cmp(&b.dataset.name));
+        sort_taxa_priority(&mut taxa);
         let taxon = taxa.first().ok_or_else(|| Error::NotFound(canonical_name))?;
         let details: TaxonDetails = taxon.clone().into();
 

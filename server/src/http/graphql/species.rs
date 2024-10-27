@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use uuid::Uuid;
 
+use super::common::taxonomy::sort_taxa_priority;
 use super::common::{
     convert_whole_genome_filters,
     DatasetDetails,
@@ -125,7 +126,7 @@ impl Species {
         let mut all_taxa = state.database.taxa.find_by_classification(&classification).await?;
 
         // sort by dataset name for some consistency
-        all_taxa.sort_by(|a, b| a.dataset.name.cmp(&b.dataset.name));
+        sort_taxa_priority(&mut all_taxa);
         let taxon = all_taxa
             .get(0)
             .ok_or_else(|| Error::NotFound(self.canonical_name.clone()))?;

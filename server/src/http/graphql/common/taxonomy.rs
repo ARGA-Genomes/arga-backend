@@ -431,3 +431,14 @@ impl TaxonomicRank {
         }
     }
 }
+
+
+pub fn sort_taxa_priority(taxa: &mut Vec<models::TaxonWithDataset>) {
+    use std::cmp::Ordering;
+
+    taxa.sort_by(|a, b| match (a.dataset.name.as_str(), b.dataset.name.as_str()) {
+        ("Atlas of Living Australia", _) => Ordering::Less,
+        (_, "Atlas of Living Australia") => Ordering::Greater,
+        _ => a.dataset.name.cmp(&b.dataset.name),
+    });
+}
