@@ -866,7 +866,7 @@ pub struct IndigenousKnowledge {
     pub source_url: Option<String>,
 }
 
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::specimens)]
 pub struct Specimen {
     pub id: Uuid,

@@ -111,6 +111,15 @@ pub struct TaxonomicAct {
     pub data_updated_at: Option<DateTime<Utc>>,
 }
 
+#[derive(Debug, Selectable, Queryable)]
+#[diesel(table_name = schema::specimens)]
+pub struct TypeSpecimen {
+    #[diesel(embed)]
+    pub specimen: Specimen,
+    #[diesel(embed)]
+    pub name: Name,
+}
+
 
 #[derive(Clone)]
 pub struct TaxaProvider {
@@ -479,17 +488,19 @@ impl TaxaProvider {
         Ok(items)
     }
 
-    pub async fn type_specimens(&self, taxon_id: &Uuid) -> Result<Vec<Specimen>, Error> {
-        use schema::specimens;
+    pub async fn type_specimens(&self, taxon_id: &Uuid) -> Result<Vec<TypeSpecimen>, Error> {
+        use schema::{names, specimens};
         let mut conn = self.pool.get().await?;
 
         let name_ids = self.all_associated_names(taxon_id).await?;
 
         let specimens = specimens::table
+            .inner_join(names::table.on(names::id.eq(specimens::name_id)))
+            .select((Specimen::as_select(), Name::as_select()))
             .filter(specimens::name_id.eq_any(name_ids))
             .filter(specimens::type_status.is_not_null())
             .limit(10)
-            .load::<Specimen>(&mut conn)
+            .load::<TypeSpecimen>(&mut conn)
             .await?;
 
         Ok(specimens)

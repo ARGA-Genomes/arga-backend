@@ -204,7 +204,7 @@ impl TaxonQuery {
         Ok(acts)
     }
 
-    async fn type_specimens(&self, ctx: &Context<'_>) -> Result<Vec<SpecimenDetails>, Error> {
+    async fn type_specimens(&self, ctx: &Context<'_>) -> Result<Vec<TypeSpecimen>, Error> {
         let state = ctx.data::<State>()?;
         let specimens = state.database.taxa.type_specimens(&self.taxon.id).await?;
         let specimens = specimens.into_iter().map(|r| r.into()).collect();
@@ -413,6 +413,23 @@ impl From<taxa::TaxonSummary> for TaxonSummary {
         }
     }
 }
+
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct TypeSpecimen {
+    pub specimen: SpecimenDetails,
+    pub name: NameDetails,
+}
+
+impl From<taxa::TypeSpecimen> for TypeSpecimen {
+    fn from(value: taxa::TypeSpecimen) -> Self {
+        TypeSpecimen {
+            specimen: value.specimen.into(),
+            name: value.name.into(),
+        }
+    }
+}
+
 
 #[derive(SimpleObject)]
 pub struct DataBreakdown {
