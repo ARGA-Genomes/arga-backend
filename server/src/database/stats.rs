@@ -123,6 +123,7 @@ impl StatsProvider {
             .filter(with_classification(&taxon))
             .into_boxed()
             .inner_join(datasets::table.on(taxa::dataset_id.eq(datasets::id)))
+            .filter(datasets::global_id.eq("ARGA:TL:0001013"))
             .order(datasets::global_id.asc())
             .first::<uuid::Uuid>(&mut conn)
             .await?;

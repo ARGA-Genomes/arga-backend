@@ -3,12 +3,14 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::database::Error;
-use crate::database::extensions::filters::{with_filters, Filter};
-
 use super::extensions::Paginate;
-use super::{schema, schema_gnl, PgPool, PageResult};
-use super::models::{Source, Dataset};
+use super::models::{Dataset, Source};
+use super::{schema, schema_gnl, PageResult, PgPool};
+use crate::database::extensions::filters::{with_filters, Filter};
+use crate::database::Error;
+
+
+const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
 
 
 #[derive(Clone)]
@@ -21,10 +23,7 @@ impl SourceProvider {
         use schema::sources::dsl::*;
         let mut conn = self.pool.get().await?;
 
-        let records = sources
-            .order_by(name)
-            .load::<Source>(&mut conn)
-            .await?;
+        let records = sources.order_by(name).load::<Source>(&mut conn).await?;
 
         Ok(records)
     }
@@ -74,8 +73,14 @@ impl SourceProvider {
         Ok(records)
     }
 
-    pub async fn species(&self, source: &Source, filters: &Vec<Filter>, page: i64, page_size: i64) -> PageResult<Species> {
-        use schema::{datasets, taxon_names, name_attributes as attrs};
+    pub async fn species(
+        &self,
+        source: &Source,
+        filters: &Vec<Filter>,
+        page: i64,
+        page_size: i64,
+    ) -> PageResult<Species> {
+        use schema::{datasets, name_attributes as attrs, taxon_names};
         use schema_gnl::species;
         let mut conn = self.pool.get().await?;
 
@@ -91,6 +96,7 @@ impl SourceProvider {
             .select(species::all_columns)
             .distinct()
             .filter(datasets::source_id.eq(source.id))
+            .filter(datasets::global_id.eq(ALA_DATASET_ID))
             .order_by(species::scientific_name)
             .paginate(page)
             .per_page(page_size)
