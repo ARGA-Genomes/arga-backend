@@ -89,14 +89,17 @@ impl SourceProvider {
             None => species::table.into_boxed(),
         };
 
+        let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
+
         let records = query
             .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
             .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
             .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
+            .inner_join(taxa_datasets.on(taxa_datasets.field(datasets::id).eq(species::dataset_id)))
             .select(species::all_columns)
             .distinct()
             .filter(datasets::source_id.eq(source.id))
-            .filter(datasets::global_id.eq(ALA_DATASET_ID))
+            .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
             .order_by(species::scientific_name)
             .paginate(page)
             .per_page(page_size)
