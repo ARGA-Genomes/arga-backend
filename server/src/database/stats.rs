@@ -42,6 +42,18 @@ struct TaxonStat {
     pub other: Option<BigDecimal>,
     pub total_genomic: Option<BigDecimal>,
     pub species: Option<i64>,
+
+    pub complete_genomes: Option<BigDecimal>,
+    pub partial_genomes: Option<BigDecimal>,
+    pub assembly_chromosomes: Option<BigDecimal>,
+    pub assembly_scaffolds: Option<BigDecimal>,
+    pub assembly_contigs: Option<BigDecimal>,
+
+    pub complete_genomes_coverage: i64,
+    pub partial_genomes_coverage: i64,
+    pub assembly_chromosomes_coverage: i64,
+    pub assembly_scaffolds_coverage: i64,
+    pub assembly_contigs_coverage: i64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Queryable, Default)]
@@ -56,6 +68,18 @@ pub struct TaxonStatNode {
     pub other: Option<BigDecimal>,
     pub total_genomic: Option<BigDecimal>,
     pub species: Option<i64>,
+
+    pub complete_genomes: Option<BigDecimal>,
+    pub partial_genomes: Option<BigDecimal>,
+    pub assembly_chromosomes: Option<BigDecimal>,
+    pub assembly_scaffolds: Option<BigDecimal>,
+    pub assembly_contigs: Option<BigDecimal>,
+
+    pub complete_genomes_coverage: i64,
+    pub partial_genomes_coverage: i64,
+    pub assembly_chromosomes_coverage: i64,
+    pub assembly_scaffolds_coverage: i64,
+    pub assembly_contigs_coverage: i64,
 
     pub children: HashMap<String, TaxonStatNode>,
 }
@@ -153,6 +177,16 @@ impl StatsProvider {
                 taxa_tree_stats::other,
                 taxa_tree_stats::total_genomic,
                 taxa_tree_stats::species,
+                taxa_tree_stats::complete_genomes,
+                taxa_tree_stats::partial_genomes,
+                taxa_tree_stats::assembly_chromosomes,
+                taxa_tree_stats::assembly_scaffolds,
+                taxa_tree_stats::assembly_contigs,
+                taxa_tree_stats::complete_genomes_coverage,
+                taxa_tree_stats::partial_genomes_coverage,
+                taxa_tree_stats::assembly_chromosomes_coverage,
+                taxa_tree_stats::assembly_scaffolds_coverage,
+                taxa_tree_stats::assembly_contigs_coverage,
             ))
             // we only wants paths generated from a specific root node otherwise
             // we'd get the same taxon from paths with different roots since the taxa
@@ -224,6 +258,16 @@ impl From<TaxonStat> for TaxonStatNode {
             other: value.other,
             total_genomic: value.total_genomic,
             species: value.species,
+            complete_genomes: value.complete_genomes,
+            partial_genomes: value.partial_genomes,
+            assembly_chromosomes: value.assembly_chromosomes,
+            assembly_scaffolds: value.assembly_scaffolds,
+            assembly_contigs: value.assembly_contigs,
+            complete_genomes_coverage: value.complete_genomes_coverage,
+            partial_genomes_coverage: value.partial_genomes_coverage,
+            assembly_chromosomes_coverage: value.assembly_chromosomes_coverage,
+            assembly_scaffolds_coverage: value.assembly_scaffolds_coverage,
+            assembly_contigs_coverage: value.assembly_contigs_coverage,
             children: HashMap::new(),
         }
     }

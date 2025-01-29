@@ -127,6 +127,17 @@ pub struct TaxonTreeNodeStatistics {
     /// The total amount of species belonging to the taxon
     pub species: Option<u64>,
 
+    /// The total amount of complete genomes for all species under this taxon
+    pub complete_genomes: Option<u64>,
+    /// The total amount of partial genomes for all species under this taxon
+    pub partial_genomes: Option<u64>,
+    /// The total amount of chromosomes for all species under this taxon
+    pub assembly_chromosomes: Option<u64>,
+    /// The total amount of scaffolds for all species under this taxon
+    pub assembly_scaffolds: Option<u64>,
+    /// The total amount of contigs for all species under this taxon
+    pub assembly_contigs: Option<u64>,
+
     /// The taxa that fall below this taxon rank
     pub children: Vec<TaxonTreeNodeStatistics>,
 }
@@ -164,6 +175,11 @@ impl From<TaxonStatNode> for TaxonTreeNodeStatistics {
             other: value.other.map(|v| v.to_u64().unwrap_or_default()),
             total_genomic: value.total_genomic.map(|v| v.to_u64().unwrap_or_default()),
             species: value.species.map(|v| v as u64),
+            complete_genomes: value.complete_genomes.map(|v| v.to_u64().unwrap_or_default()),
+            partial_genomes: value.partial_genomes.map(|v| v.to_u64().unwrap_or_default()),
+            assembly_chromosomes: value.assembly_chromosomes.map(|v| v.to_u64().unwrap_or_default()),
+            assembly_scaffolds: value.assembly_scaffolds.map(|v| v.to_u64().unwrap_or_default()),
+            assembly_contigs: value.assembly_contigs.map(|v| v.to_u64().unwrap_or_default()),
             children,
         }
     }
