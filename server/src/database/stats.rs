@@ -182,11 +182,11 @@ impl StatsProvider {
                 taxa_tree_stats::assembly_chromosomes,
                 taxa_tree_stats::assembly_scaffolds,
                 taxa_tree_stats::assembly_contigs,
-                taxa_tree_stats::complete_genomes_coverage,
-                taxa_tree_stats::partial_genomes_coverage,
-                taxa_tree_stats::assembly_chromosomes_coverage,
-                taxa_tree_stats::assembly_scaffolds_coverage,
-                taxa_tree_stats::assembly_contigs_coverage,
+                taxa_tree_stats::total_complete_genomes_coverage,
+                taxa_tree_stats::total_partial_genomes_coverage,
+                taxa_tree_stats::total_assembly_chromosomes_coverage,
+                taxa_tree_stats::total_assembly_scaffolds_coverage,
+                taxa_tree_stats::total_assembly_contigs_coverage,
             ))
             // we only wants paths generated from a specific root node otherwise
             // we'd get the same taxon from paths with different roots since the taxa
