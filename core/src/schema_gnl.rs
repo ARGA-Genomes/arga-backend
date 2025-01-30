@@ -152,17 +152,18 @@ diesel::table! {
         other -> Nullable<Numeric>,
         total_genomic -> Nullable<Numeric>,
         species -> Nullable<BigInt>,
+
         complete_genomes -> Nullable<Numeric>,
         partial_genomes -> Nullable<Numeric>,
         assembly_chromosomes -> Nullable<Numeric>,
         assembly_scaffolds -> Nullable<Numeric>,
         assembly_contigs -> Nullable<Numeric>,
 
-        complete_genomes_coverage -> BigInt,
-        partial_genomes_coverage -> BigInt,
-        assembly_chromosomes_coverage -> BigInt,
-        assembly_scaffolds_coverage -> BigInt,
-        assembly_contigs_coverage -> BigInt,
+        total_complete_genomes_coverage -> BigInt,
+        total_partial_genomes_coverage -> BigInt,
+        total_assembly_chromosomes_coverage -> BigInt,
+        total_assembly_scaffolds_coverage -> BigInt,
+        total_assembly_contigs_coverage -> BigInt,
     }
 }
 
