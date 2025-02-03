@@ -91,6 +91,16 @@ diesel::table! {
 }
 
 diesel::table! {
+    alternative_identifiers (id) {
+        id -> Uuid,
+        name_id -> Uuid,
+        source_name -> Varchar,
+        identifier -> Varchar,
+        identifier_url -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     annotation_events (id) {
         id -> Uuid,
         dataset_id -> Uuid,
@@ -897,6 +907,7 @@ diesel::table! {
 diesel::joinable!(accession_events -> datasets (dataset_id));
 diesel::joinable!(accession_events -> specimens (specimen_id));
 diesel::joinable!(admin_media -> names (name_id));
+diesel::joinable!(alternative_identifiers -> names (name_id));
 diesel::joinable!(annotation_events -> datasets (dataset_id));
 diesel::joinable!(annotation_events -> sequences (sequence_id));
 diesel::joinable!(assemblies -> names (name_id));
@@ -959,6 +970,7 @@ diesel::joinable!(vernacular_names -> names (name_id));
 diesel::allow_tables_to_appear_in_same_query!(
     accession_events,
     admin_media,
+    alternative_identifiers,
     annotation_events,
     assemblies,
     assembly_events,
