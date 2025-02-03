@@ -110,6 +110,16 @@ pub struct DatasetVersion {
     pub imported_at: DateTime<Utc>,
 }
 
+#[derive(Queryable, Selectable, Insertable, AsChangeset, Debug, Clone, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema::alternative_identifiers)]
+pub struct AlternativeIdentifier {
+    pub id: Uuid,
+    pub name_id: Uuid,
+    pub source_name: String,
+    pub identifier: String,
+    pub identifier_url: Option<String>,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::TaxonomicStatus"]
 pub enum TaxonomicStatus {
@@ -628,6 +638,30 @@ impl Species {
                 },
                 _ => Group::Animals,
             },
+
+            // ALA system: plants
+            Some("Plantae") => match phylum {
+                Some("Bryophyta") => match class {
+                    Some("Bryopsida") => Group::Mosses,
+                    _ => Group::HigherPlants,
+                },
+                Some("Marchantiophyta") => Group::Liverworts,
+                Some("Anthocerotophyta") => Group::Hornworts,
+                Some("Charophyta") => match (order, subclass) {
+                    (Some("Pinales"), _) => Group::ConifersAndCycads,
+                    (Some("Cycadales"), _) => Group::ConifersAndCycads,
+                    (_, Some("Polypodiidae")) => Group::Ferns,
+                    (_, Some("Magnoliidae")) => Group::FloweringPlants,
+                    _ => Group::HigherPlants,
+                },
+                _ => Group::HigherPlants,
+            },
+
+            // ALA system: chromists
+            Some("Chromista") => Group::Chromists,
+
+            // ALA system: fungi
+            Some("Fungi") => Group::Fungi,
 
             // plants
             None => match regnum {
@@ -1446,7 +1480,6 @@ pub struct VernacularName {
     pub citation: Option<String>,
     pub source_url: Option<String>,
 }
-
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::PublicationType"]
