@@ -10,7 +10,7 @@ use crate::database::extensions::filters::{with_filters, Filter};
 use crate::database::Error;
 
 
-const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
+pub const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
 
 
 #[derive(Clone)]
