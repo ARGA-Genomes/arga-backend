@@ -94,3 +94,4 @@ SELECT * FROM stats;
 
 CREATE INDEX taxa_tree_stats_taxon_id ON taxa_tree_stats (taxon_id);
 CREATE INDEX taxa_tree_stats_id ON taxa_tree_stats (id);
+CREATE UNIQUE INDEX taxa_tree_stats_id_taxon_id ON taxa_tree_stats (id, taxon_id);

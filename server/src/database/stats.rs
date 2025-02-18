@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use arga_core::models::{Dataset, TaxonomicRank};
 use arga_core::schema_gnl;
 use async_graphql::SimpleObject;
-use bigdecimal::{BigDecimal, ToPrimitive};
+use bigdecimal::BigDecimal;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
@@ -90,7 +90,7 @@ pub struct TaxonStatNode {
 pub struct TaxonomicRankStat {
     pub rank: TaxonomicRank,
     pub children: i64,
-    pub coverage: i64,
+    pub coverage: f32,
 }
 
 
@@ -141,7 +141,8 @@ impl StatsProvider {
     /// This will group all taxa that belong to one of the specified ranks and aggregate the stats
     /// that are available in the taxa stats tree itself.
     pub async fn taxonomic_ranks(&self, ranks: &Vec<TaxonomicRank>) -> Result<Vec<TaxonomicRankStat>, Error> {
-        use diesel::dsl::{count_star, sum};
+        use diesel::dsl::{count_star, sql};
+        use diesel::sql_types::Float;
         use schema::{datasets, taxa};
         use schema_gnl::taxa_tree_stats;
 
@@ -163,17 +164,21 @@ impl StatsProvider {
             .filter(taxa_tree_stats::taxon_id.eq(eukaryota_uuid))
             .filter(taxa::rank.eq_any(ranks))
             .group_by(taxa::rank)
-            .select((taxa::rank, count_star(), sum(taxa_tree_stats::total_complete_genomes_coverage)))
-            .load::<(TaxonomicRank, i64, Option<BigDecimal>)>(&mut conn)
+            .select((
+                taxa::rank,
+                count_star(),
+                // sum(taxa_tree_stats::total_complete_genomes_coverage),
+                sql::<Float>("(sum(total_complete_genomes_coverage::float4 / case when children = 0 then 1 else children end) / count(*))::float4").assume_not_null(),
+            ))
+            .load::<(TaxonomicRank, i64, f32)>(&mut conn)
             .await?;
-
 
         let stats = records
             .into_iter()
             .map(|(rank, children, coverage)| TaxonomicRankStat {
                 rank,
                 children,
-                coverage: coverage.unwrap_or_default().to_i64().unwrap_or(0),
+                coverage,
             })
             .collect();
 

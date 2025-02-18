@@ -203,7 +203,7 @@ impl From<TaxonStatNode> for TaxonTreeNodeStatistics {
 pub struct TaxonomicRankStatistic {
     pub rank: TaxonomicRank,
     pub children: i64,
-    pub coverage: i64,
+    pub coverage: f32,
 }
 
 impl From<TaxonomicRankStat> for TaxonomicRankStatistic {

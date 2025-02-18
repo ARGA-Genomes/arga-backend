@@ -37,3 +37,4 @@ COMMENT ON COLUMN taxa_tree.path_id IS 'The taxon that this particular path star
 
 CREATE INDEX taxa_tree_taxon_id ON taxa_tree (taxon_id);
 CREATE INDEX taxa_tree_path_id ON taxa_tree (path_id);
+CREATE UNIQUE INDEX taxa_tree_taxon_id_path_id ON taxa_tree (taxon_id, path_id, depth);
