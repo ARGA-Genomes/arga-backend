@@ -171,6 +171,7 @@ impl StatsProvider {
                 taxa::rank,
                 count_star(),
                 sum_if(taxa_tree_stats::total_complete_genomes_coverage.gt(0)),
+                // FIXME: either we don't need this field or we create a type safe equivalent
                 sql::<Float>("(sum(total_complete_genomes_coverage::float4 / case when children = 0 then 1 else children end) / count(*))::float4").assume_not_null(),
             ))
             .load::<(TaxonomicRank, i64, i64, f32)>(&mut conn)
@@ -187,6 +188,25 @@ impl StatsProvider {
             .collect();
 
         Ok(stats)
+    }
+
+    pub async fn complete_genomes_by_year(&self) -> Result<Vec<(i32, i64)>, Error> {
+        use diesel::dsl::{count_star, sql};
+        use diesel::sql_types::Integer;
+        use schema_gnl::whole_genomes;
+
+        let mut conn = self.pool.get().await?;
+
+        // FIXME: we are skipping lots of type checks here instead of adding a date extraction utility
+        // extension or an extra derived field in the whole_genomes table
+        let complete_genomes = whole_genomes::table
+            .select((sql::<Integer>("date_part('year', to_date(release_date, 'YYYY/MM/DD'))::integer"), count_star()))
+            .filter(whole_genomes::quality.eq("Complete Genome"))
+            .group_by(sql::<Integer>("1"))
+            .load::<(i32, i64)>(&mut conn)
+            .await?;
+
+        Ok(complete_genomes)
     }
 
     /// Get stats for a specific taxon and it's decendents.
