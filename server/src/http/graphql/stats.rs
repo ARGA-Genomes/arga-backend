@@ -204,6 +204,7 @@ pub struct TaxonomicRankStatistic {
     pub rank: TaxonomicRank,
     pub children: i64,
     pub coverage: f32,
+    pub at_least_one: i64,
 }
 
 impl From<TaxonomicRankStat> for TaxonomicRankStatistic {
@@ -212,6 +213,7 @@ impl From<TaxonomicRankStat> for TaxonomicRankStatistic {
             rank: value.rank.into(),
             children: value.children,
             coverage: value.coverage,
+            at_least_one: value.at_least_one,
         }
     }
 }
