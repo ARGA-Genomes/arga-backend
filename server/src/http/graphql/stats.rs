@@ -85,6 +85,16 @@ impl Statistics {
         let stats = state.database.stats.taxonomic_ranks(&ranks).await?;
         Ok(stats.into_iter().map(|s| s.into()).collect())
     }
+
+    async fn complete_genomes_by_year(&self, ctx: &Context<'_>) -> Result<Vec<CompleteGenomesByYearStatistic>, Error> {
+        let state = ctx.data::<State>()?;
+        let stats = state.database.stats.complete_genomes_by_year().await?;
+        let stats = stats
+            .into_iter()
+            .map(|(year, total)| CompleteGenomesByYearStatistic { year, total })
+            .collect();
+        Ok(stats)
+    }
 }
 
 
@@ -216,4 +226,10 @@ impl From<TaxonomicRankStat> for TaxonomicRankStatistic {
             at_least_one: value.at_least_one,
         }
     }
+}
+
+#[derive(Clone, Debug, Default, SimpleObject, Serialize, Deserialize)]
+pub struct CompleteGenomesByYearStatistic {
+    pub year: i32,
+    pub total: i64,
 }
