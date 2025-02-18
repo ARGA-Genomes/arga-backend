@@ -46,4 +46,4 @@ CREATE INDEX taxa_dag_down_taxon_id ON taxa_dag_down (taxon_id);
 
 -- because the underlying taxa tree is a DAG we know that a taxon can only ever appear once for each taxon_id 'query'.
 -- by creating a uniqueness constraint on taxon_id and id we can concurrently update the tree without locking the table
-CREATE UNIQUE INDEX taxa_dag_down_taxon_id_id ON taxa_dag_down (taxon_id, id);
+CREATE UNIQUE INDEX taxa_dag_down_taxon_id_id ON taxa_dag_down (taxon_id, id, depth);

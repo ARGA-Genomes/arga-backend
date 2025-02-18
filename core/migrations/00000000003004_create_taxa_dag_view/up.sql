@@ -49,3 +49,4 @@ FROM dag
 ORDER BY taxon_id ASC, depth ASC;
 
 CREATE INDEX taxa_dag_id ON taxa_dag (taxon_id);
+CREATE UNIQUE INDEX taxa_dag_id_taxon_id ON taxa_dag (id, taxon_id);
