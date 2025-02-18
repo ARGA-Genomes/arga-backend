@@ -1,10 +1,11 @@
+use arga_core::models;
 use async_graphql::*;
 use bigdecimal::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use super::common::taxonomy::TaxonomicRank;
-use crate::database::stats::{BreakdownItem, TaxonStatNode};
+use crate::database::stats::{BreakdownItem, TaxonStatNode, TaxonomicRankStat};
 use crate::http::{Context as State, Error};
 
 
@@ -71,6 +72,18 @@ impl Statistics {
             species_with_data: stats.total_species_with_data,
             breakdown: breakdown.species,
         })
+    }
+
+    async fn taxonomic_ranks(
+        &self,
+        ctx: &Context<'_>,
+        ranks: Vec<TaxonomicRank>,
+    ) -> Result<Vec<TaxonomicRankStatistic>, Error> {
+        let state = ctx.data::<State>()?;
+        let ranks: Vec<models::TaxonomicRank> = ranks.into_iter().map(|r| r.into()).collect();
+
+        let stats = state.database.stats.taxonomic_ranks(&ranks).await?;
+        Ok(stats.into_iter().map(|s| s.into()).collect())
     }
 }
 
@@ -181,6 +194,24 @@ impl From<TaxonStatNode> for TaxonTreeNodeStatistics {
             assembly_scaffolds: value.assembly_scaffolds.map(|v| v.to_u64().unwrap_or_default()),
             assembly_contigs: value.assembly_contigs.map(|v| v.to_u64().unwrap_or_default()),
             children,
+        }
+    }
+}
+
+
+#[derive(Clone, Debug, Default, SimpleObject, Serialize, Deserialize)]
+pub struct TaxonomicRankStatistic {
+    pub rank: TaxonomicRank,
+    pub children: i64,
+    pub coverage: i64,
+}
+
+impl From<TaxonomicRankStat> for TaxonomicRankStatistic {
+    fn from(value: TaxonomicRankStat) -> Self {
+        Self {
+            rank: value.rank.into(),
+            children: value.children,
+            coverage: value.coverage,
         }
     }
 }

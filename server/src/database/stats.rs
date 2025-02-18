@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use arga_core::models::{Dataset, TaxonomicRank};
 use arga_core::schema_gnl;
 use async_graphql::SimpleObject;
-use bigdecimal::BigDecimal;
+use bigdecimal::{BigDecimal, ToPrimitive};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::extensions::classification_filters::Classification;
 use super::{schema, Error, PgPool};
 use crate::database::extensions::classification_filters::with_classification;
+use crate::database::sources::ALA_DATASET_ID;
 
 
 #[derive(Clone, Debug, SimpleObject, Serialize, Deserialize)]
@@ -85,6 +86,14 @@ pub struct TaxonStatNode {
 }
 
 
+#[derive(Clone, Debug, Serialize, Deserialize, Queryable, Default)]
+pub struct TaxonomicRankStat {
+    pub rank: TaxonomicRank,
+    pub children: i64,
+    pub coverage: i64,
+}
+
+
 #[derive(Clone, Debug, SimpleObject, Serialize, Deserialize, Queryable)]
 #[serde(rename_all = "camelCase")]
 pub struct BreakdownItem {
@@ -128,6 +137,49 @@ impl StatsProvider {
         Ok(DatasetBreakdown { species })
     }
 
+    /// Get stats for a whole rank in the default taxonomic tree.
+    /// This will group all taxa that belong to one of the specified ranks and aggregate the stats
+    /// that are available in the taxa stats tree itself.
+    pub async fn taxonomic_ranks(&self, ranks: &Vec<TaxonomicRank>) -> Result<Vec<TaxonomicRankStat>, Error> {
+        use diesel::dsl::{count_star, sum};
+        use schema::{datasets, taxa};
+        use schema_gnl::taxa_tree_stats;
+
+        let mut conn = self.pool.get().await?;
+
+        // get the eukaryota taxon that belongs to the default taxonomic dataset
+        let eukaryota_uuid = taxa::table
+            .select(taxa::id)
+            .inner_join(datasets::table.on(taxa::dataset_id.eq(datasets::id)))
+            .filter(datasets::global_id.eq(ALA_DATASET_ID))
+            .filter(taxa::scientific_name.eq("Eukaryota"))
+            .first::<uuid::Uuid>(&mut conn)
+            .await?;
+
+        // the taxa tree will give us all taxa nodes that descend from the root node, so we can
+        // aggregate knowing that we will only get on version of the taxon
+        let records = taxa_tree_stats::table
+            .inner_join(taxa::table.on(taxa_tree_stats::id.eq(taxa::id)))
+            .filter(taxa_tree_stats::taxon_id.eq(eukaryota_uuid))
+            .filter(taxa::rank.eq_any(ranks))
+            .group_by(taxa::rank)
+            .select((taxa::rank, count_star(), sum(taxa_tree_stats::total_complete_genomes_coverage)))
+            .load::<(TaxonomicRank, i64, Option<BigDecimal>)>(&mut conn)
+            .await?;
+
+
+        let stats = records
+            .into_iter()
+            .map(|(rank, children, coverage)| TaxonomicRankStat {
+                rank,
+                children,
+                coverage: coverage.unwrap_or_default().to_i64().unwrap_or(0),
+            })
+            .collect();
+
+        Ok(stats)
+    }
+
     /// Get stats for a specific taxon and it's decendents.
     /// This will traverse the tree from the specified root taxon and stop once it reaches
     /// the last rank in the include_ranks parameter. By only including descendents in the specified
@@ -147,7 +199,7 @@ impl StatsProvider {
             .filter(with_classification(&taxon))
             .into_boxed()
             .inner_join(datasets::table.on(taxa::dataset_id.eq(datasets::id)))
-            .filter(datasets::global_id.eq("ARGA:TL:0001013"))
+            .filter(datasets::global_id.eq(ALA_DATASET_ID))
             .order(datasets::global_id.asc())
             .first::<uuid::Uuid>(&mut conn)
             .await?;
