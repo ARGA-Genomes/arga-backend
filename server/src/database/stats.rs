@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::extensions::classification_filters::Classification;
 use super::{schema, Error, PgPool};
 use crate::database::extensions::classification_filters::with_classification;
+use crate::database::extensions::sum_if;
 use crate::database::sources::ALA_DATASET_ID;
 
 
@@ -91,6 +92,7 @@ pub struct TaxonomicRankStat {
     pub rank: TaxonomicRank,
     pub children: i64,
     pub coverage: f32,
+    pub at_least_one: i64,
 }
 
 
@@ -157,6 +159,7 @@ impl StatsProvider {
             .first::<uuid::Uuid>(&mut conn)
             .await?;
 
+
         // the taxa tree will give us all taxa nodes that descend from the root node, so we can
         // aggregate knowing that we will only get on version of the taxon
         let records = taxa_tree_stats::table
@@ -167,18 +170,19 @@ impl StatsProvider {
             .select((
                 taxa::rank,
                 count_star(),
-                // sum(taxa_tree_stats::total_complete_genomes_coverage),
+                sum_if(taxa_tree_stats::total_complete_genomes_coverage.gt(0)),
                 sql::<Float>("(sum(total_complete_genomes_coverage::float4 / case when children = 0 then 1 else children end) / count(*))::float4").assume_not_null(),
             ))
-            .load::<(TaxonomicRank, i64, f32)>(&mut conn)
+            .load::<(TaxonomicRank, i64, i64, f32)>(&mut conn)
             .await?;
 
         let stats = records
             .into_iter()
-            .map(|(rank, children, coverage)| TaxonomicRankStat {
+            .map(|(rank, children, at_least_one, coverage)| TaxonomicRankStat {
                 rank,
                 children,
                 coverage,
+                at_least_one,
             })
             .collect();
 
