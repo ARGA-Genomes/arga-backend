@@ -192,17 +192,29 @@ impl StatsProvider {
 
     pub async fn complete_genomes_by_year(&self) -> Result<Vec<(i32, i64)>, Error> {
         use diesel::dsl::{count_star, sql};
-        use diesel::sql_types::Integer;
-        use schema_gnl::whole_genomes;
+        use diesel::sql_types::{Integer, Varchar};
+        use schema::{datasets, taxon_names};
+        use schema_gnl::{sequence_milestones, species};
 
         let mut conn = self.pool.get().await?;
 
+        let kingdoms = vec!["Animalia", "Plantae", "Fungi", "Chromista", "Protista"];
+
         // FIXME: we are skipping lots of type checks here instead of adding a date extraction utility
         // extension or an extra derived field in the whole_genomes table
-        let complete_genomes = whole_genomes::table
-            .select((sql::<Integer>("date_part('year', to_date(release_date, 'YYYY/MM/DD'))::integer"), count_star()))
-            .filter(whole_genomes::quality.eq("Complete Genome"))
+        let complete_genomes = sequence_milestones::table
+            .inner_join(taxon_names::table.on(taxon_names::name_id.eq(sequence_milestones::name_id)))
+            .inner_join(species::table.on(species::id.eq(taxon_names::taxon_id)))
+            .inner_join(datasets::table.on(datasets::id.eq(species::dataset_id)))
+            .filter(sequence_milestones::quality.eq("Complete Genome"))
+            .filter(datasets::global_id.eq(ALA_DATASET_ID))
+            .filter(sql::<Varchar>("classification->>'kingdom'").eq_any(kingdoms))
+            .select((
+                sql::<Integer>("date_part('year', to_date(deposition_date, 'YYYY/MM/DD'))::integer"),
+                count_star(),
+            ))
             .group_by(sql::<Integer>("1"))
+            .order_by(sql::<Integer>("1"))
             .load::<(i32, i64)>(&mut conn)
             .await?;
 

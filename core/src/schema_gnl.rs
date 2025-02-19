@@ -177,8 +177,30 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    sequence_milestones (name_id, quality) {
+        name_id -> Uuid,
+        quality -> Varchar,
+        sequencing_date -> Nullable<Varchar>,
+        assembly_date -> Nullable<Varchar>,
+        annotation_date -> Nullable<Varchar>,
+        deposition_date -> Nullable<Varchar>,
+    }
+}
 
-use super::schema::{accession_events, datasets, name_attributes, names, specimens, taxa, taxon_names};
+
+use super::schema::{
+    accession_events,
+    assembly_events,
+    datasets,
+    deposition_events,
+    name_attributes,
+    names,
+    sequences,
+    specimens,
+    taxa,
+    taxon_names,
+};
 
 diesel::joinable!(species -> taxa (id));
 diesel::joinable!(whole_genomes -> datasets (dataset_id));
@@ -199,7 +221,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     name_data_summaries,
     taxa_dag,
     taxa_tree,
-    taxa_tree_stats
+    taxa_tree_stats,
+    sequence_milestones,
 );
 
 diesel::allow_tables_to_appear_in_same_query!(datasets, whole_genomes);
@@ -208,6 +231,9 @@ diesel::allow_tables_to_appear_in_same_query!(datasets, species);
 diesel::allow_tables_to_appear_in_same_query!(datasets, specimen_stats);
 
 diesel::allow_tables_to_appear_in_same_query!(species, taxon_names);
+diesel::allow_tables_to_appear_in_same_query!(species, assembly_events);
+diesel::allow_tables_to_appear_in_same_query!(species, deposition_events);
+diesel::allow_tables_to_appear_in_same_query!(species, sequences);
 diesel::allow_tables_to_appear_in_same_query!(specimen_stats, specimens);
 diesel::allow_tables_to_appear_in_same_query!(specimen_stats, accession_events);
 
@@ -220,3 +246,6 @@ diesel::allow_tables_to_appear_in_same_query!(taxa, species);
 diesel::allow_tables_to_appear_in_same_query!(taxa, markers);
 diesel::allow_tables_to_appear_in_same_query!(taxa, whole_genomes);
 diesel::allow_tables_to_appear_in_same_query!(taxa, name_data_summaries);
+
+diesel::allow_tables_to_appear_in_same_query!(sequence_milestones, taxon_names);
+diesel::allow_tables_to_appear_in_same_query!(sequence_milestones, datasets);
