@@ -178,9 +178,9 @@ diesel::table! {
 }
 
 diesel::table! {
-    sequence_milestones (name_id, quality) {
+    sequence_milestones (name_id, representation) {
         name_id -> Uuid,
-        quality -> Varchar,
+        representation -> Varchar,
         sequencing_date -> Nullable<Varchar>,
         assembly_date -> Nullable<Varchar>,
         annotation_date -> Nullable<Varchar>,

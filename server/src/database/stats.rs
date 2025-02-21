@@ -206,7 +206,7 @@ impl StatsProvider {
             .inner_join(taxon_names::table.on(taxon_names::name_id.eq(sequence_milestones::name_id)))
             .inner_join(species::table.on(species::id.eq(taxon_names::taxon_id)))
             .inner_join(datasets::table.on(datasets::id.eq(species::dataset_id)))
-            .filter(sequence_milestones::quality.eq("Complete Genome"))
+            .filter(sequence_milestones::representation.eq("Full"))
             .filter(datasets::global_id.eq(ALA_DATASET_ID))
             .filter(sql::<Varchar>("classification->>'kingdom'").eq_any(kingdoms))
             .select((
