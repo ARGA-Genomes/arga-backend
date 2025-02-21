@@ -110,16 +110,6 @@ pub struct DatasetVersion {
     pub imported_at: DateTime<Utc>,
 }
 
-#[derive(Queryable, Selectable, Insertable, AsChangeset, Debug, Clone, Default, Serialize, Deserialize)]
-#[diesel(table_name = schema::alternative_identifiers)]
-pub struct AlternativeIdentifier {
-    pub id: Uuid,
-    pub name_id: Uuid,
-    pub source_name: String,
-    pub identifier: String,
-    pub identifier_url: Option<String>,
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::TaxonomicStatus"]
 pub enum TaxonomicStatus {
