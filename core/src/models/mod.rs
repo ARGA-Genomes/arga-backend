@@ -65,6 +65,7 @@ pub enum SourceContentType {
 }
 
 #[derive(Queryable, Insertable, Debug, Clone, Default, Serialize, Deserialize)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 #[diesel(table_name = schema::sources)]
 pub struct Source {
     pub id: Uuid,
@@ -73,6 +74,7 @@ pub struct Source {
     pub rights_holder: String,
     pub access_rights: String,
     pub license: String,
+    pub lists_id: Option<String>,
     pub reuse_pill: Option<DataReuseStatus>,
     pub access_pill: Option<AccessRightsStatus>,
     pub content_type: Option<SourceContentType>,
