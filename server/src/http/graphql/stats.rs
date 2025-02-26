@@ -161,6 +161,12 @@ pub struct TaxonTreeNodeStatistics {
     /// The total amount of contigs for all species under this taxon
     pub assembly_contigs: Option<u64>,
 
+    pub complete_genomes_coverage: i64,
+    pub partial_genomes_coverage: i64,
+    pub assembly_chromosomes_coverage: i64,
+    pub assembly_scaffolds_coverage: i64,
+    pub assembly_contigs_coverage: i64,
+
     /// The taxa that fall below this taxon rank
     pub children: Vec<TaxonTreeNodeStatistics>,
 }
@@ -203,6 +209,11 @@ impl From<TaxonStatNode> for TaxonTreeNodeStatistics {
             assembly_chromosomes: value.assembly_chromosomes.map(|v| v.to_u64().unwrap_or_default()),
             assembly_scaffolds: value.assembly_scaffolds.map(|v| v.to_u64().unwrap_or_default()),
             assembly_contigs: value.assembly_contigs.map(|v| v.to_u64().unwrap_or_default()),
+            complete_genomes_coverage: value.complete_genomes_coverage,
+            partial_genomes_coverage: value.partial_genomes_coverage,
+            assembly_chromosomes_coverage: value.assembly_chromosomes_coverage,
+            assembly_scaffolds_coverage: value.assembly_scaffolds_coverage,
+            assembly_contigs_coverage: value.assembly_contigs_coverage,
             children,
         }
     }
