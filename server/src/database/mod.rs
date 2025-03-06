@@ -2,6 +2,7 @@ pub mod extensions;
 
 pub mod datasets;
 pub mod dna_extracts;
+pub mod list_groups;
 pub mod maps;
 pub mod markers;
 pub mod names;
@@ -79,6 +80,7 @@ pub struct Database {
     pub specimens: specimens::SpecimenProvider,
     pub subsamples: subsamples::SubsampleProvider,
     pub dna_extracts: dna_extracts::DnaExtractProvider,
+    pub list_groups: list_groups::ListGroupProvider,
     pub sequences: sequences::SequenceProvider,
     pub maps: maps::MapsProvider,
     pub provenance: provenance::ProvenanceProvider,
@@ -102,6 +104,7 @@ impl Database {
             specimens: specimens::SpecimenProvider { pool: pool.clone() },
             subsamples: subsamples::SubsampleProvider { pool: pool.clone() },
             dna_extracts: dna_extracts::DnaExtractProvider { pool: pool.clone() },
+            list_groups: list_groups::ListGroupProvider { pool: pool.clone() },
             sequences: sequences::SequenceProvider { pool: pool.clone() },
             maps: maps::MapsProvider { pool: pool.clone() },
             provenance: provenance::ProvenanceProvider { pool: pool.clone() },

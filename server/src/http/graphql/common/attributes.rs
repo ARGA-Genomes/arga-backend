@@ -19,3 +19,13 @@ pub enum BushfireRecoveryTrait {
     CumulativeHighRiskExposure,
     OtherThreats,
 }
+
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "models::AttributeValueType")]
+pub enum AttributeValueType {
+    Boolean,
+    Integer,
+    Decimal,
+    String,
+    Timestamp,
+}
