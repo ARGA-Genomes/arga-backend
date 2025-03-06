@@ -9,8 +9,10 @@ WITH taxa_data_summaries AS (
         SUM(specimens) AS specimens,
         SUM(other) AS other,
         SUM(total_genomic) AS total_genomic,
-        SUM(complete_genomes) AS complete_genomes,
+
+        SUM(full_genomes) AS full_genomes,
         SUM(partial_genomes) AS partial_genomes,
+        SUM(complete_genomes) AS complete_genomes,
         SUM(assembly_chromosomes) AS assembly_chromosomes,
         SUM(assembly_scaffolds) AS assembly_scaffolds,
         SUM(assembly_contigs) AS assembly_contigs
@@ -36,8 +38,9 @@ taxon_stats AS (
         FIRST_VALUE(specimens) OVER tree_paths AS specimens,
         FIRST_VALUE(other) OVER tree_paths AS other,
         FIRST_VALUE(total_genomic) OVER tree_paths AS total_genomic,
-        FIRST_VALUE(complete_genomes) OVER tree_paths AS complete_genomes,
+        FIRST_VALUE(full_genomes) OVER tree_paths AS full_genomes,
         FIRST_VALUE(partial_genomes) OVER tree_paths AS partial_genomes,
+        FIRST_VALUE(complete_genomes) OVER tree_paths AS complete_genomes,
         FIRST_VALUE(assembly_chromosomes) OVER tree_paths AS assembly_chromosomes,
         FIRST_VALUE(assembly_scaffolds) OVER tree_paths AS assembly_scaffolds,
         FIRST_VALUE(assembly_contigs) OVER tree_paths AS assembly_contigs,
@@ -45,8 +48,9 @@ taxon_stats AS (
         -- it full coverage for the node. this is useful further on when summarising a node
         -- and comparing the total coverage against the amount of children to determine coverage
         -- for a node at any part of the hierarchy without losing that information to aggregation
-        CASE WHEN FIRST_VALUE(complete_genomes) OVER tree_paths > 0 THEN 1 ELSE 0 END AS complete_genomes_coverage,
+        CASE WHEN FIRST_VALUE(full_genomes) OVER tree_paths > 0 THEN 1 ELSE 0 END AS full_genomes_coverage,
         CASE WHEN FIRST_VALUE(partial_genomes) OVER tree_paths > 0 THEN 1 ELSE 0 END AS partial_genomes_coverage,
+        CASE WHEN FIRST_VALUE(complete_genomes) OVER tree_paths > 0 THEN 1 ELSE 0 END AS complete_genomes_coverage,
         CASE WHEN FIRST_VALUE(assembly_chromosomes) OVER tree_paths > 0 THEN 1 ELSE 0 END AS assembly_chromosomes_coverage,
         CASE WHEN FIRST_VALUE(assembly_scaffolds) OVER tree_paths > 0 THEN 1 ELSE 0 END AS assembly_scaffolds_coverage,
         CASE WHEN FIRST_VALUE(assembly_contigs) OVER tree_paths > 0 THEN 1 ELSE 0 END AS assembly_contigs_coverage
@@ -73,15 +77,17 @@ stats AS (
         SUM(other) AS other,
         SUM(total_genomic) AS total_genomic,
         SUM(CASE WHEN taxa.rank='species' THEN 1 ELSE 0 END) AS species,
-        SUM(complete_genomes) AS complete_genomes,
+        SUM(full_genomes) AS full_genomes,
         SUM(partial_genomes) AS partial_genomes,
+        SUM(complete_genomes) AS complete_genomes,
         SUM(assembly_chromosomes) AS assembly_chromosomes,
         SUM(assembly_scaffolds) AS assembly_scaffolds,
         SUM(assembly_contigs) AS assembly_contigs,
         -- sum up all the coverage for the node and divide it by the amount of children to determine
         -- the total coverage for this specific node
-        SUM(complete_genomes_coverage) AS total_complete_genomes_coverage,
+        SUM(full_genomes_coverage) AS total_full_genomes_coverage,
         SUM(partial_genomes_coverage) AS total_partial_genomes_coverage,
+        SUM(complete_genomes_coverage) AS total_complete_genomes_coverage,
         SUM(assembly_chromosomes_coverage) AS total_assembly_chromosomes_coverage,
         SUM(assembly_scaffolds_coverage) AS total_assembly_scaffolds_coverage,
         SUM(assembly_contigs_coverage) AS total_assembly_contigs_coverage
