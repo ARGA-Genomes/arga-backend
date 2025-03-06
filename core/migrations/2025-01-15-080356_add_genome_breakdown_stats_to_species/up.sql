@@ -63,3 +63,6 @@ LEFT JOIN (
   JOIN taxon_names ON taxon_names.name_id = vernacular_names.name_id
   GROUP BY taxon_id
 ) vernacular_names ON taxa.id = vernacular_names.taxon_id;
+
+
+CREATE UNIQUE INDEX species_id ON species (id);
