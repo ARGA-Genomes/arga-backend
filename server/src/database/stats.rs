@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use super::extensions::classification_filters::Classification;
 use super::{schema, Error, PgPool};
 use crate::database::extensions::classification_filters::with_classification;
+use crate::database::extensions::filters::with_classification as with_species_classification;
 use crate::database::extensions::sum_if;
 use crate::database::sources::ALA_DATASET_ID;
 
@@ -45,8 +46,9 @@ struct TaxonStat {
     pub total_genomic: Option<BigDecimal>,
     pub species: Option<i64>,
 
-    pub complete_genomes: Option<BigDecimal>,
+    pub full_genomes: Option<BigDecimal>,
     pub partial_genomes: Option<BigDecimal>,
+    pub complete_genomes: Option<BigDecimal>,
     pub assembly_chromosomes: Option<BigDecimal>,
     pub assembly_scaffolds: Option<BigDecimal>,
     pub assembly_contigs: Option<BigDecimal>,
@@ -71,8 +73,9 @@ pub struct TaxonStatNode {
     pub total_genomic: Option<BigDecimal>,
     pub species: Option<i64>,
 
-    pub complete_genomes: Option<BigDecimal>,
+    pub full_genomes: Option<BigDecimal>,
     pub partial_genomes: Option<BigDecimal>,
+    pub complete_genomes: Option<BigDecimal>,
     pub assembly_chromosomes: Option<BigDecimal>,
     pub assembly_scaffolds: Option<BigDecimal>,
     pub assembly_contigs: Option<BigDecimal>,
@@ -142,7 +145,11 @@ impl StatsProvider {
     /// Get stats for a whole rank in the default taxonomic tree.
     /// This will group all taxa that belong to one of the specified ranks and aggregate the stats
     /// that are available in the taxa stats tree itself.
-    pub async fn taxonomic_ranks(&self, ranks: &Vec<TaxonomicRank>) -> Result<Vec<TaxonomicRankStat>, Error> {
+    pub async fn taxonomic_ranks(
+        &self,
+        taxon: Classification,
+        ranks: &Vec<TaxonomicRank>,
+    ) -> Result<Vec<TaxonomicRankStat>, Error> {
         use diesel::dsl::{count_star, sql};
         use diesel::sql_types::Float;
         use schema::{datasets, taxa};
@@ -153,9 +160,10 @@ impl StatsProvider {
         // get the eukaryota taxon that belongs to the default taxonomic dataset
         let eukaryota_uuid = taxa::table
             .select(taxa::id)
+            .filter(with_classification(&taxon))
+            .into_boxed()
             .inner_join(datasets::table.on(taxa::dataset_id.eq(datasets::id)))
             .filter(datasets::global_id.eq(ALA_DATASET_ID))
-            .filter(taxa::scientific_name.eq("Eukaryota"))
             .first::<uuid::Uuid>(&mut conn)
             .await?;
 
@@ -170,9 +178,9 @@ impl StatsProvider {
             .select((
                 taxa::rank,
                 count_star(),
-                sum_if(taxa_tree_stats::total_complete_genomes_coverage.gt(0)),
+                sum_if(taxa_tree_stats::total_full_genomes_coverage.gt(0)),
                 // FIXME: either we don't need this field or we create a type safe equivalent
-                sql::<Float>("(sum(total_complete_genomes_coverage::float4 / case when children = 0 then 1 else children end) / count(*))::float4").assume_not_null(),
+                sql::<Float>("(sum(total_full_genomes_coverage::float4 / case when children = 0 then 1 else children end) / count(*))::float4").assume_not_null(),
             ))
             .load::<(TaxonomicRank, i64, i64, f32)>(&mut conn)
             .await?;
@@ -190,15 +198,18 @@ impl StatsProvider {
         Ok(stats)
     }
 
-    pub async fn complete_genomes_by_year(&self) -> Result<Vec<(i32, i64)>, Error> {
+    pub async fn complete_genomes_by_year(&self, taxon: Classification) -> Result<Vec<(i32, i64)>, Error> {
         use diesel::dsl::{count_star, sql};
-        use diesel::sql_types::{Integer, Varchar};
+        use diesel::sql_types::Integer;
         use schema::{datasets, taxon_names};
         use schema_gnl::{sequence_milestones, species};
 
         let mut conn = self.pool.get().await?;
 
-        let kingdoms = vec!["Animalia", "Plantae", "Fungi", "Chromista", "Protista"];
+        let filtered_species = species::table
+            .filter(with_species_classification(&taxon))
+            .select(species::id)
+            .into_boxed();
 
         // FIXME: we are skipping lots of type checks here instead of adding a date extraction utility
         // extension or an extra derived field in the whole_genomes table
@@ -206,9 +217,9 @@ impl StatsProvider {
             .inner_join(taxon_names::table.on(taxon_names::name_id.eq(sequence_milestones::name_id)))
             .inner_join(species::table.on(species::id.eq(taxon_names::taxon_id)))
             .inner_join(datasets::table.on(datasets::id.eq(species::dataset_id)))
+            .filter(taxon_names::taxon_id.eq_any(filtered_species))
             .filter(sequence_milestones::representation.eq("Full"))
             .filter(datasets::global_id.eq(ALA_DATASET_ID))
-            .filter(sql::<Varchar>("classification->>'kingdom'").eq_any(kingdoms))
             .select((
                 sql::<Integer>("date_part('year', to_date(deposition_date, 'YYYY/MM/DD'))::integer"),
                 count_star(),
@@ -270,8 +281,9 @@ impl StatsProvider {
                 taxa_tree_stats::other,
                 taxa_tree_stats::total_genomic,
                 taxa_tree_stats::species,
-                taxa_tree_stats::complete_genomes,
+                taxa_tree_stats::full_genomes,
                 taxa_tree_stats::partial_genomes,
+                taxa_tree_stats::complete_genomes,
                 taxa_tree_stats::assembly_chromosomes,
                 taxa_tree_stats::assembly_scaffolds,
                 taxa_tree_stats::assembly_contigs,
@@ -351,8 +363,9 @@ impl From<TaxonStat> for TaxonStatNode {
             other: value.other,
             total_genomic: value.total_genomic,
             species: value.species,
-            complete_genomes: value.complete_genomes,
+            full_genomes: value.full_genomes,
             partial_genomes: value.partial_genomes,
+            complete_genomes: value.complete_genomes,
             assembly_chromosomes: value.assembly_chromosomes,
             assembly_scaffolds: value.assembly_scaffolds,
             assembly_contigs: value.assembly_contigs,
