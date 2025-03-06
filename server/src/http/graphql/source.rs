@@ -4,10 +4,10 @@ use async_graphql::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::common::{convert_filters, DatasetDetails, FilterItem, Page, SpeciesCard};
+use super::common::{DatasetDetails, FilterItem, Page, SpeciesCard, convert_filters};
 use super::helpers::SpeciesHelper;
-use crate::database::extensions::filters::Filter;
 use crate::database::Database;
+use crate::database::extensions::filters::Filter;
 use crate::http::graphql::common::datasets::AccessRightsStatus;
 use crate::http::graphql::common::datasets::DataReuseStatus;
 use crate::http::graphql::common::datasets::SourceContentType;
@@ -76,6 +76,7 @@ impl SourceQuery {
             .sources
             .species(&self.source, &self.filters, page, page_size)
             .await?;
+
         let cards = helper.filtered_cards(page.records).await?;
 
         Ok(Page {

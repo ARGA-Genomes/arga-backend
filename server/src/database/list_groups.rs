@@ -27,7 +27,7 @@ pub struct ListGroupProvider {
 
 impl ListGroupProvider {
     pub async fn find(&self, source_name: &str) -> Result<Vec<ListGroup>, Error> {
-        use schema::{name_attributes, sources, datasets};
+        use schema::{datasets, name_attributes, sources};
 
         let mut conn = self.pool.get().await?;
 
@@ -44,7 +44,7 @@ impl ListGroupProvider {
                 name_attributes::value_str,
                 name_attributes::value_timestamp,
                 datasets::source_id,
-                sources::name
+                sources::name,
             ))
             .load::<ListGroup>(&mut conn)
             .await?;

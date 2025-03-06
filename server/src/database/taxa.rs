@@ -1,17 +1,8 @@
 use arga_core::models::{
-    Dataset,
-    Name,
-    NamePublication,
-    NomenclaturalActType,
-    Publication,
-    Specimen,
-    Taxon,
-    TaxonTreeNode,
-    TaxonWithDataset,
-    TaxonomicRank,
-    ACCEPTED_NAMES,
-    SPECIES_RANKS,
+    ACCEPTED_NAMES, Dataset, Name, NamePublication, NomenclaturalActType, Publication, SPECIES_RANKS, Specimen, Taxon,
+    TaxonTreeNode, TaxonWithDataset, TaxonomicRank,
 };
+use arga_core::schema::accession_events::specimen_id;
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
@@ -19,19 +10,17 @@ use diesel::sql_types::{Array, Nullable, Text, Varchar};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
+use super::extensions::Paginate;
 use super::extensions::species_filters::SpeciesFilter;
 use super::extensions::taxa_filters::TaxaFilter;
-use super::extensions::Paginate;
 use super::models::Species;
-use super::{schema, schema_gnl, Error, PageResult, PgPool};
+use super::{Error, PageResult, PgPool, schema, schema_gnl};
 use crate::database::extensions::classification_filters::{
-    with_classification,
-    Classification as ClassificationFilter,
+    Classification as ClassificationFilter, with_classification,
 };
 use crate::database::extensions::filters::Filter;
 use crate::database::extensions::species_filters::{
-    with_classification as with_species_classification,
-    with_species_filters,
+    with_classification as with_species_classification, with_species_filters,
 };
 use crate::database::extensions::sum_if;
 use crate::database::extensions::taxa_filters::with_taxa_filters;
@@ -120,7 +109,6 @@ pub struct TypeSpecimen {
     pub name: Name,
 }
 
-
 #[derive(Clone)]
 pub struct TaxaProvider {
     pub pool: PgPool,
@@ -161,11 +149,18 @@ impl TaxaProvider {
     pub async fn species(&self, filters: &Vec<SpeciesFilter>, page: i64, per_page: i64) -> PageResult<Species> {
         use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
+        let species_filters = with_species_filters(&filters);
 
-        let records = species
+        let mut query = species
             .filter(status.eq_any(ACCEPTED_NAMES))
             .filter(rank.eq_any(SPECIES_RANKS))
-            .filter(with_species_filters(&filters).unwrap())
+            .into_boxed();
+
+        if let Some(filter) = species_filters {
+            query = query.filter(filter);
+        }
+
+        let records = query
             .order_by(scientific_name)
             .paginate(page)
             .per_page(per_page)
