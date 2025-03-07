@@ -172,6 +172,7 @@ pub struct TaxonTreeNodeStatistics {
     /// The total amount of contigs for all species under this taxon
     pub assembly_contigs: Option<u64>,
 
+    pub full_genomes_coverage: i64,
     pub complete_genomes_coverage: i64,
     pub partial_genomes_coverage: i64,
     pub assembly_chromosomes_coverage: i64,
@@ -221,6 +222,7 @@ impl From<TaxonStatNode> for TaxonTreeNodeStatistics {
             assembly_chromosomes: value.assembly_chromosomes.map(|v| v.to_u64().unwrap_or_default()),
             assembly_scaffolds: value.assembly_scaffolds.map(|v| v.to_u64().unwrap_or_default()),
             assembly_contigs: value.assembly_contigs.map(|v| v.to_u64().unwrap_or_default()),
+            full_genomes_coverage: value.full_genomes_coverage,
             complete_genomes_coverage: value.complete_genomes_coverage,
             partial_genomes_coverage: value.partial_genomes_coverage,
             assembly_chromosomes_coverage: value.assembly_chromosomes_coverage,

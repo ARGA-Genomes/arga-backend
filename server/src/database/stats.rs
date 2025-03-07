@@ -53,6 +53,7 @@ struct TaxonStat {
     pub assembly_scaffolds: Option<BigDecimal>,
     pub assembly_contigs: Option<BigDecimal>,
 
+    pub full_genomes_coverage: i64,
     pub complete_genomes_coverage: i64,
     pub partial_genomes_coverage: i64,
     pub assembly_chromosomes_coverage: i64,
@@ -80,6 +81,7 @@ pub struct TaxonStatNode {
     pub assembly_scaffolds: Option<BigDecimal>,
     pub assembly_contigs: Option<BigDecimal>,
 
+    pub full_genomes_coverage: i64,
     pub complete_genomes_coverage: i64,
     pub partial_genomes_coverage: i64,
     pub assembly_chromosomes_coverage: i64,
@@ -287,6 +289,7 @@ impl StatsProvider {
                 taxa_tree_stats::assembly_chromosomes,
                 taxa_tree_stats::assembly_scaffolds,
                 taxa_tree_stats::assembly_contigs,
+                taxa_tree_stats::total_full_genomes_coverage,
                 taxa_tree_stats::total_complete_genomes_coverage,
                 taxa_tree_stats::total_partial_genomes_coverage,
                 taxa_tree_stats::total_assembly_chromosomes_coverage,
@@ -369,6 +372,7 @@ impl From<TaxonStat> for TaxonStatNode {
             assembly_chromosomes: value.assembly_chromosomes,
             assembly_scaffolds: value.assembly_scaffolds,
             assembly_contigs: value.assembly_contigs,
+            full_genomes_coverage: value.full_genomes_coverage,
             complete_genomes_coverage: value.complete_genomes_coverage,
             partial_genomes_coverage: value.partial_genomes_coverage,
             assembly_chromosomes_coverage: value.assembly_chromosomes_coverage,
