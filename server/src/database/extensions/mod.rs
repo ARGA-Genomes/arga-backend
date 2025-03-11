@@ -1,6 +1,7 @@
 pub mod classification_filters;
 pub mod column_sum;
 pub mod filters;
+pub mod name_attributes_filters;
 pub mod pagination;
 pub mod species_filters;
 pub mod taxa_filters;

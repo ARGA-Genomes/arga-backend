@@ -3,7 +3,6 @@ pub mod helpers;
 
 pub mod dataset;
 pub mod dna_extract;
-pub mod list_groups;
 pub mod extensions;
 pub mod maps;
 pub mod marker;
@@ -28,12 +27,10 @@ use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Extension, Router};
-use list_groups::ListGroupDetails;
 
 use self::common::{FilterItem, SearchFilterItem};
 use self::dataset::Dataset;
 use self::dna_extract::DnaExtract;
-use self::list_groups::ListGroups;
 use self::extensions::ErrorLogging;
 use self::maps::Maps;
 use self::marker::Marker;
@@ -114,11 +111,6 @@ impl Query {
 
     async fn markers(&self) -> Markers {
         Markers {}
-    }
-
-    async fn list_groups(&self, ctx: &Context<'_>, source_name: String) -> Result<Vec<ListGroupDetails>, Error> {
-        let state = ctx.data::<State>()?;
-        ListGroups::new(&state.database, &source_name).await
     }
 
     async fn taxa(&self, filters: Vec<taxa::TaxaFilter>) -> Result<Taxa, Error> {

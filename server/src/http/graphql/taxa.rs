@@ -8,7 +8,6 @@ use crate::database::extensions::filters::Filter;
 use crate::database::extensions::taxa_filters;
 use crate::http::{Context as State, Error};
 
-
 /// Available filters when retrieving taxa.
 #[derive(Debug, OneofObject)]
 pub enum TaxaFilter {
@@ -17,7 +16,6 @@ pub enum TaxaFilter {
     VernacularGroup(String),
     HasData(DataType),
 }
-
 
 pub struct Taxa {
     filters: Vec<Filter>,
@@ -63,7 +61,6 @@ impl Taxa {
         }
     }
 }
-
 
 pub struct FilterOptions {
     filters: Vec<Filter>,

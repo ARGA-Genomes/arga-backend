@@ -1,17 +1,16 @@
-use arga_core::models::Species;
+use arga_core::models::{AttributeValueType, Species};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use super::extensions::Paginate;
 use super::models::{Dataset, Source};
-use super::{schema, schema_gnl, PageResult, PgPool};
-use crate::database::extensions::filters::{with_filters, Filter};
+use super::{PageResult, PgPool, schema, schema_gnl};
 use crate::database::Error;
-
+use crate::database::extensions::filters::{AttributeValue, Filter, NameAttribute, with_filters};
+use crate::database::extensions::name_attributes_filters::{NameAttributeFilter, with_name_attribute};
 
 pub const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
-
 
 #[derive(Clone)]
 pub struct SourceProvider {
@@ -91,6 +90,12 @@ impl SourceProvider {
 
         let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
 
+        let string_filter = NameAttributeFilter::NameAttribute(NameAttribute {
+            name: "example_string".to_owned(),
+            value: AttributeValue::String("some_value".to_owned()),
+            value_type: AttributeValueType::String,
+        });
+
         let records = query
             .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
             .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
@@ -98,6 +103,7 @@ impl SourceProvider {
             .inner_join(taxa_datasets.on(taxa_datasets.field(datasets::id).eq(species::dataset_id)))
             .select(species::all_columns)
             .distinct()
+            .filter(with_name_attribute(&string_filter))
             .filter(datasets::source_id.eq(source.id))
             .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
             .order_by(species::scientific_name)

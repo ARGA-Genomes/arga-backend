@@ -2,7 +2,6 @@ pub mod extensions;
 
 pub mod datasets;
 pub mod dna_extracts;
-pub mod list_groups;
 pub mod maps;
 pub mod markers;
 pub mod names;
@@ -16,19 +15,16 @@ pub mod stats;
 pub mod subsamples;
 pub mod taxa;
 
-
 pub use arga_core::{get_database_url, models, schema, schema_gnl};
-use diesel_async::pooled_connection::bb8::Pool;
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::AsyncPgConnection;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use diesel_async::pooled_connection::bb8::Pool;
 use thiserror::Error;
 
 use self::extensions::pagination::Page;
 use crate::http::Error as HttpError;
 
-
 pub type PgPool = Pool<AsyncPgConnection>;
-
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -80,7 +76,6 @@ pub struct Database {
     pub specimens: specimens::SpecimenProvider,
     pub subsamples: subsamples::SubsampleProvider,
     pub dna_extracts: dna_extracts::DnaExtractProvider,
-    pub list_groups: list_groups::ListGroupProvider,
     pub sequences: sequences::SequenceProvider,
     pub maps: maps::MapsProvider,
     pub provenance: provenance::ProvenanceProvider,
@@ -104,7 +99,6 @@ impl Database {
             specimens: specimens::SpecimenProvider { pool: pool.clone() },
             subsamples: subsamples::SubsampleProvider { pool: pool.clone() },
             dna_extracts: dna_extracts::DnaExtractProvider { pool: pool.clone() },
-            list_groups: list_groups::ListGroupProvider { pool: pool.clone() },
             sequences: sequences::SequenceProvider { pool: pool.clone() },
             maps: maps::MapsProvider { pool: pool.clone() },
             provenance: provenance::ProvenanceProvider { pool: pool.clone() },

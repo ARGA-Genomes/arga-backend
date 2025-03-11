@@ -5,9 +5,7 @@ use diesel::sql_types::Bool;
 
 use super::filters::DataType;
 
-
 type BoxedExpression<'a> = Box<dyn BoxableExpression<taxa::table, Pg, SqlType = Bool> + 'a>;
-
 
 #[derive(Clone, Debug)]
 pub enum TaxaFilter {
@@ -26,7 +24,6 @@ pub enum TaxonFilter {
 pub enum DataFilter {
     HasData(DataType),
 }
-
 
 /// Filter the taxa table that have the provided taxonomy data
 pub fn with_taxonomy(taxon: &TaxonFilter) -> BoxedExpression {
