@@ -33,22 +33,6 @@ pub enum DataType {
 }
 
 #[derive(Clone, Debug)]
-pub enum AttributeValue {
-    Boolean(bool),
-    Integer(i64),
-    Decimal(BigDecimal),
-    String(String),
-    Timestamp(NaiveDateTime),
-}
-
-#[derive(Clone, Debug)]
-pub struct NameAttribute {
-    pub name: String,
-    pub value: AttributeValue,
-    pub value_type: AttributeValueType,
-}
-
-#[derive(Clone, Debug)]
 pub enum Filter {
     Include(FilterKind),
     Exclude(FilterKind),

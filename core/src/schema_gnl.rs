@@ -127,6 +127,7 @@ diesel::table! {
         other -> BigInt,
         total_genomic -> BigInt,
         traits -> Nullable<Array<Varchar>>,
+        attributes -> Nullable<Jsonb>,
         vernacular_names -> Nullable<Array<Varchar>>,
     }
 }
@@ -188,17 +189,8 @@ diesel::table! {
     }
 }
 
-
 use super::schema::{
-    accession_events,
-    assembly_events,
-    datasets,
-    deposition_events,
-    name_attributes,
-    names,
-    sequences,
-    specimens,
-    taxa,
+    accession_events, assembly_events, datasets, deposition_events, name_attributes, names, sequences, specimens, taxa,
     taxon_names,
 };
 
