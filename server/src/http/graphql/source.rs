@@ -1,13 +1,14 @@
 use arga_core::models;
 use async_graphql::SimpleObject;
 use async_graphql::*;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::common::{convert_filters, DatasetDetails, FilterItem, Page, SpeciesCard};
+use super::common::{DatasetDetails, FilterItem, Page, SpeciesCard, convert_filters};
 use super::helpers::SpeciesHelper;
-use crate::database::extensions::filters::Filter;
 use crate::database::Database;
+use crate::database::extensions::filters::Filter;
 use crate::http::graphql::common::datasets::AccessRightsStatus;
 use crate::http::graphql::common::datasets::DataReuseStatus;
 use crate::http::graphql::common::datasets::SourceContentType;
@@ -53,6 +54,21 @@ impl Source {
     }
 }
 
+#[derive(OneofObject)]
+pub enum NameAttributeValue {
+    Int(i64),
+    Bool(bool),
+    String(String),
+    Timestamp(DateTime<Utc>),
+    Decimal(f64),
+}
+
+#[derive(InputObject)]
+pub struct NameAttributeFilter {
+    pub name: String,
+    pub value: NameAttributeValue,
+}
+
 pub struct SourceQuery {
     source: models::Source,
     filters: Vec<Filter>,
@@ -67,15 +83,40 @@ impl SourceQuery {
         Ok(datasets)
     }
 
-    async fn species(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpeciesCard>, Error> {
+    async fn species(
+        &self,
+        ctx: &Context<'_>,
+        page: i64,
+        page_size: i64,
+        attributes: Option<NameAttributeFilter>,
+    ) -> Result<Page<SpeciesCard>, Error> {
         let state = ctx.data::<State>()?;
         let helper = SpeciesHelper::new(&state.database);
+
+        let attrs = match attributes {
+            Some(attr) => {
+                serde_json::json!([{
+                    "name": attr.name,
+                        "value": match attr.value {
+                        NameAttributeValue::Int(i) => serde_json::Value::Number(serde_json::Number::from(i)),
+                        NameAttributeValue::Bool(b) => serde_json::Value::Bool(b),
+                        NameAttributeValue::String(s) => serde_json::Value::String(s),
+                        NameAttributeValue::Timestamp(t) => serde_json::Value::String(t.to_rfc3339()),
+                        NameAttributeValue::Decimal(d) => serde_json::Value::Number(
+                            serde_json::Number::from_f64(d).unwrap_or_else(|| serde_json::Number::from(0))
+                        ),
+                    }
+                }])
+            }
+            None => serde_json::json!([]),
+        };
 
         let page = state
             .database
             .sources
-            .species(&self.source, &self.filters, page, page_size)
+            .species(&self.source, &self.filters, page, page_size, attrs)
             .await?;
+
         let cards = helper.filtered_cards(page.records).await?;
 
         Ok(Page {

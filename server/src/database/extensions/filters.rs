@@ -1,12 +1,13 @@
-use arga_core::models::{TaxonomicStatus, TaxonomicVernacularGroup};
+use arga_core::models::{AttributeValueType, TaxonomicStatus, TaxonomicVernacularGroup};
 // use arga_core::schema::{taxa, ecology, names};
 use arga_core::schema_gnl::species;
+use bigdecimal::BigDecimal;
+use chrono::NaiveDateTime;
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
 
-use super::classification_filters::{decompose_classification, Classification};
-
+use super::classification_filters::{Classification, decompose_classification};
 
 #[derive(Clone, Debug)]
 pub enum FilterKind {
@@ -23,7 +24,6 @@ pub enum FilterKind {
     // BushfireRecovery(BushfireRecoveryTrait),
 }
 
-
 #[derive(Clone, Debug)]
 pub enum DataType {
     Genome,
@@ -32,13 +32,11 @@ pub enum DataType {
     Other,
 }
 
-
 #[derive(Clone, Debug)]
 pub enum Filter {
     Include(FilterKind),
     Exclude(FilterKind),
 }
-
 
 pub fn filter_taxa(filters: &Vec<Filter>) -> species::BoxedQuery<Pg> {
     species::table
@@ -52,12 +50,10 @@ pub fn filter_taxa(filters: &Vec<Filter>) -> species::BoxedQuery<Pg> {
         .into_boxed()
 }
 
-
 // type BoxedTaxaExpression<'a> = Box<dyn BoxableExpression<taxa::table, Pg, SqlType = Nullable<Bool>> + 'a>;
 // type BoxedEcologyExpression<'a> = Box<dyn BoxableExpression<ecology::table, Pg, SqlType = Bool> + 'a>;
 
 type BoxedExpression<'a> = Box<dyn BoxableExpression<species::table, Pg, SqlType = Bool> + 'a>;
-
 
 /// Filter the species table with a global filter enum
 pub fn with_filter(filter: &Filter) -> BoxedExpression {
@@ -101,7 +97,6 @@ pub fn with_filters(filters: &Vec<Filter>) -> Option<BoxedExpression> {
 
     predicates
 }
-
 
 // /// Filter the taxa table with a vernacular group value
 // pub fn with_drainage_basin(value: &str) -> BoxedTaxaExpression {
@@ -325,7 +320,6 @@ pub fn without_classification(classification: &Classification) -> BoxedExpressio
 //         Trait::OtherThreats => Box::new(taxa::traits.contains(vec!["Other plausible threats or expert-driven nominations"])),
 //     }
 // }
-
 
 /// Filter the species table to records that have a specific type of associated data
 pub fn with_data(data_type: &DataType) -> BoxedExpression {

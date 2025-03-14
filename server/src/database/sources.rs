@@ -1,17 +1,16 @@
 use arga_core::models::Species;
+use diesel::expression_methods::PgJsonbExpressionMethods;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use super::extensions::Paginate;
 use super::models::{Dataset, Source};
-use super::{schema, schema_gnl, PageResult, PgPool};
-use crate::database::extensions::filters::{with_filters, Filter};
+use super::{PageResult, PgPool, schema, schema_gnl};
 use crate::database::Error;
-
+use crate::database::extensions::filters::{Filter, with_filters};
 
 pub const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
-
 
 #[derive(Clone)]
 pub struct SourceProvider {
@@ -79,6 +78,7 @@ impl SourceProvider {
         filters: &Vec<Filter>,
         page: i64,
         page_size: i64,
+        attributes: serde_json::Value,
     ) -> PageResult<Species> {
         use schema::{datasets, name_attributes as attrs, taxon_names};
         use schema_gnl::species;
@@ -98,6 +98,7 @@ impl SourceProvider {
             .inner_join(taxa_datasets.on(taxa_datasets.field(datasets::id).eq(species::dataset_id)))
             .select(species::all_columns)
             .distinct()
+            .filter(species::attributes.contains(&attributes))
             .filter(datasets::source_id.eq(source.id))
             .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
             .order_by(species::scientific_name)

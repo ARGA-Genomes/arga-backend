@@ -514,6 +514,7 @@ pub struct Species {
     pub total_genomic: i64,
 
     pub traits: Option<Vec<String>>,
+    pub attributes: Option<serde_json::Value>,
     pub vernacular_names: Option<Vec<String>>,
 }
 

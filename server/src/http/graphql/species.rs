@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 use uuid::Uuid;
 
+use super::common::attributes::AttributeValueType;
 use super::common::taxonomy::sort_taxa_priority;
 use super::common::{
     convert_whole_genome_filters,
@@ -521,16 +522,6 @@ impl From<species::SpecimenSummary> for SpecimenSummary {
 pub enum AttributeCategory {
     BushfireRecovery,
     VenomousSpecies,
-}
-
-#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-#[graphql(remote = "models::AttributeValueType")]
-pub enum AttributeValueType {
-    Boolean,
-    Integer,
-    Decimal,
-    String,
-    Timestamp,
 }
 
 /// Attributes for a specific species
