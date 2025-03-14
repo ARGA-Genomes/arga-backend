@@ -6,9 +6,9 @@ use uuid::Uuid;
 
 use super::extensions::Paginate;
 use super::models::{Dataset, Source};
-use super::{PageResult, PgPool, schema, schema_gnl};
+use super::{schema, schema_gnl, PageResult, PgPool};
+use crate::database::extensions::filters::{with_filters, Filter};
 use crate::database::Error;
-use crate::database::extensions::filters::{Filter, with_filters};
 
 pub const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
 
@@ -78,7 +78,7 @@ impl SourceProvider {
         filters: &Vec<Filter>,
         page: i64,
         page_size: i64,
-        attributes: serde_json::Value,
+        attributes: Option<serde_json::Value>,
     ) -> PageResult<Species> {
         use schema::{datasets, name_attributes as attrs, taxon_names};
         use schema_gnl::species;
@@ -87,6 +87,11 @@ impl SourceProvider {
         let query = match with_filters(&filters) {
             Some(predicates) => species::table.filter(predicates).into_boxed(),
             None => species::table.into_boxed(),
+        };
+
+        let query = match attributes {
+            Some(attrs) => query.filter(species::attributes.contains(attrs)),
+            None => query,
         };
 
         let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
@@ -98,7 +103,6 @@ impl SourceProvider {
             .inner_join(taxa_datasets.on(taxa_datasets.field(datasets::id).eq(species::dataset_id)))
             .select(species::all_columns)
             .distinct()
-            .filter(species::attributes.contains(&attributes))
             .filter(datasets::source_id.eq(source.id))
             .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
             .order_by(species::scientific_name)

@@ -1,17 +1,14 @@
 use arga_core::models;
-use async_graphql::SimpleObject;
-use async_graphql::*;
+use async_graphql::{SimpleObject, *};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::common::{DatasetDetails, FilterItem, Page, SpeciesCard, convert_filters};
+use super::common::{convert_filters, DatasetDetails, FilterItem, Page, SpeciesCard};
 use super::helpers::SpeciesHelper;
-use crate::database::Database;
 use crate::database::extensions::filters::Filter;
-use crate::http::graphql::common::datasets::AccessRightsStatus;
-use crate::http::graphql::common::datasets::DataReuseStatus;
-use crate::http::graphql::common::datasets::SourceContentType;
+use crate::database::Database;
+use crate::http::graphql::common::datasets::{AccessRightsStatus, DataReuseStatus, SourceContentType};
 use crate::http::{Context as State, Error};
 
 #[derive(OneofObject)]
@@ -114,7 +111,7 @@ impl SourceQuery {
         let page = state
             .database
             .sources
-            .species(&self.source, &self.filters, page, page_size, attrs)
+            .species(&self.source, &self.filters, page, page_size, Some(attrs))
             .await?;
 
         let cards = helper.filtered_cards(page.records).await?;

@@ -1,28 +1,38 @@
 use arga_core::models::{
-    ACCEPTED_NAMES, Dataset, Name, NamePublication, NomenclaturalActType, Publication, SPECIES_RANKS, Specimen, Taxon,
-    TaxonTreeNode, TaxonWithDataset, TaxonomicRank,
+    Dataset,
+    Name,
+    NamePublication,
+    NomenclaturalActType,
+    Publication,
+    Specimen,
+    Taxon,
+    TaxonTreeNode,
+    TaxonWithDataset,
+    TaxonomicRank,
+    ACCEPTED_NAMES,
+    SPECIES_RANKS,
 };
-use arga_core::schema::accession_events::specimen_id;
-use bigdecimal::BigDecimal;
+use bigdecimal::{BigDecimal, Zero};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel::sql_types::{Array, Nullable, Text, Varchar};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use super::extensions::Paginate;
 use super::extensions::species_filters::SpeciesFilter;
 use super::extensions::taxa_filters::TaxaFilter;
+use super::extensions::{sum_if, Paginate};
 use super::models::Species;
-use super::{Error, PageResult, PgPool, schema, schema_gnl};
+use super::{schema, schema_gnl, Error, PageResult, PgPool};
 use crate::database::extensions::classification_filters::{
-    Classification as ClassificationFilter, with_classification,
+    with_classification,
+    Classification as ClassificationFilter,
 };
 use crate::database::extensions::filters::Filter;
 use crate::database::extensions::species_filters::{
-    with_classification as with_species_classification, with_species_filters,
+    with_classification as with_species_classification,
+    with_species_filters,
 };
-use crate::database::extensions::sum_if;
 use crate::database::extensions::taxa_filters::with_taxa_filters;
 
 sql_function!(fn unnest(x: Nullable<Array<Text>>) -> Text);
@@ -108,6 +118,7 @@ pub struct TypeSpecimen {
     #[diesel(embed)]
     pub name: Name,
 }
+
 
 #[derive(Clone)]
 pub struct TaxaProvider {

@@ -655,11 +655,11 @@ diesel::table! {
         rights_holder -> Varchar,
         access_rights -> Varchar,
         license -> Varchar,
-        #[max_length = 24]
-        lists_id -> Nullable<Varchar>,
         reuse_pill -> Nullable<DataReuseStatus>,
         access_pill -> Nullable<AccessRightsStatus>,
         content_type -> Nullable<SourceContentType>,
+        #[max_length = 24]
+        lists_id -> Nullable<Varchar>,
     }
 }
 

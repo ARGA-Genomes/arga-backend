@@ -96,6 +96,9 @@ pub struct Taxonomy {
 
     /// Renamed taxonomy for the same species
     pub synonyms: Vec<Taxonomy>,
+
+    pub traits: Option<Vec<String>>,
+    pub attributes: Option<serde_json::Value>,
 }
 
 impl From<models::Taxon> for Taxonomy {
@@ -113,6 +116,8 @@ impl From<models::Taxon> for Taxonomy {
             citation: value.citation,
             source: None,
             source_url: None,
+            traits: None,
+            attributes: None,
         }
     }
 }
@@ -131,6 +136,8 @@ impl From<models::Species> for Taxonomy {
             citation: None,
             source: None,
             source_url: None,
+            traits: value.traits,
+            attributes: value.attributes,
         }
     }
 }
