@@ -13,8 +13,9 @@ SELECT
     summaries.specimens,
     summaries.other,
     summaries.total_genomic,
-    summaries.complete_genomes,
+    summaries.full_genomes,
     summaries.partial_genomes,
+    summaries.complete_genomes,
     summaries.assembly_chromosomes,
     summaries.assembly_scaffolds,
     summaries.assembly_contigs,
@@ -36,8 +37,9 @@ JOIN (
       SUM(specimens) AS specimens,
       SUM(other) AS other,
       SUM(total_genomic) AS total_genomic,
-      SUM(complete_genomes) AS complete_genomes,
+      SUM(full_genomes) AS full_genomes,
       SUM(partial_genomes) AS partial_genomes,
+      SUM(complete_genomes) AS complete_genomes,
       SUM(assembly_chromosomes) AS assembly_chromosomes,
       SUM(assembly_scaffolds) AS assembly_scaffolds,
       SUM(assembly_contigs) AS assembly_contigs
@@ -61,3 +63,6 @@ LEFT JOIN (
   JOIN taxon_names ON taxon_names.name_id = vernacular_names.name_id
   GROUP BY taxon_id
 ) vernacular_names ON taxa.id = vernacular_names.taxon_id;
+
+
+CREATE UNIQUE INDEX species_id ON species (id);

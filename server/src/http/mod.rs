@@ -1,27 +1,26 @@
-use anyhow::Context as ErrorContext;
-use axum::extract::FromRef;
 use std::net::SocketAddr;
 
+use anyhow::Context as ErrorContext;
+use arga_core::search::SearchIndex;
+use axum::extract::FromRef;
 use axum::http::{HeaderValue, Method};
 use axum::Router;
-
+use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
-use tower_http::compression::CompressionLayer;
 
-use arga_core::search::SearchIndex;
 use crate::database::Database;
 
+pub mod admin;
+pub mod auth;
 pub mod error;
 pub mod graphql;
 pub mod health;
-pub mod admin;
-pub mod auth;
 
 pub use error::Error;
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Config {
     /// The address to bind the http listener to. For local development
     /// this will almost always be 127.0.0.1:5000. For production it needs
@@ -53,11 +52,7 @@ impl FromRef<Context> for Database {
 ///
 /// This will create the context based on the configuration
 /// and kick off the http server.
-pub async fn serve(
-    config: Config,
-    database: Database,
-) -> anyhow::Result<()>
-{
+pub async fn serve(config: Config, database: Database) -> anyhow::Result<()> {
     let addr = config.bind_address.clone();
 
     let context = Context {
@@ -90,13 +85,12 @@ fn router(context: Context) -> Result<Router, Error> {
         .merge(health::router())
         .merge(graphql::router(context.clone()))
         .merge(admin::router(context.clone()))
-        .layer(TraceLayer::new_for_http())
-        .layer(
-            CorsLayer::new()
-                .allow_origin(origin)
-                .allow_methods([Method::GET]),
-        )
         .layer(CompressionLayer::new())
+        .layer(
+            CorsLayer::permissive(), // .allow_origin(origin)
+                                     // .allow_methods([Method::GET, Method::OPTIONS]),
+        )
+        .layer(TraceLayer::new_for_http())
         .with_state(context);
 
     Ok(router)

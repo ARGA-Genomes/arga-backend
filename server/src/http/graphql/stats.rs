@@ -77,18 +77,27 @@ impl Statistics {
     async fn taxonomic_ranks(
         &self,
         ctx: &Context<'_>,
+        taxon_rank: TaxonomicRank,
+        taxon_canonical_name: String,
         ranks: Vec<TaxonomicRank>,
     ) -> Result<Vec<TaxonomicRankStatistic>, Error> {
         let state = ctx.data::<State>()?;
+        let classification = taxon_rank.to_classification(taxon_canonical_name);
         let ranks: Vec<models::TaxonomicRank> = ranks.into_iter().map(|r| r.into()).collect();
 
-        let stats = state.database.stats.taxonomic_ranks(&ranks).await?;
+        let stats = state.database.stats.taxonomic_ranks(classification, &ranks).await?;
         Ok(stats.into_iter().map(|s| s.into()).collect())
     }
 
-    async fn complete_genomes_by_year(&self, ctx: &Context<'_>) -> Result<Vec<CompleteGenomesByYearStatistic>, Error> {
+    async fn complete_genomes_by_year(
+        &self,
+        ctx: &Context<'_>,
+        taxon_rank: TaxonomicRank,
+        taxon_canonical_name: String,
+    ) -> Result<Vec<CompleteGenomesByYearStatistic>, Error> {
         let state = ctx.data::<State>()?;
-        let stats = state.database.stats.complete_genomes_by_year().await?;
+        let classification = taxon_rank.to_classification(taxon_canonical_name);
+        let stats = state.database.stats.complete_genomes_by_year(classification).await?;
         let stats = stats
             .into_iter()
             .map(|(year, total)| CompleteGenomesByYearStatistic { year, total })
@@ -150,10 +159,12 @@ pub struct TaxonTreeNodeStatistics {
     /// The total amount of species belonging to the taxon
     pub species: Option<u64>,
 
-    /// The total amount of complete genomes for all species under this taxon
-    pub complete_genomes: Option<u64>,
+    /// The total amount of full genomes for all species under this taxon
+    pub full_genomes: Option<u64>,
     /// The total amount of partial genomes for all species under this taxon
     pub partial_genomes: Option<u64>,
+    /// The total amount of complete genomes for all species under this taxon
+    pub complete_genomes: Option<u64>,
     /// The total amount of chromosomes for all species under this taxon
     pub assembly_chromosomes: Option<u64>,
     /// The total amount of scaffolds for all species under this taxon
@@ -161,6 +172,7 @@ pub struct TaxonTreeNodeStatistics {
     /// The total amount of contigs for all species under this taxon
     pub assembly_contigs: Option<u64>,
 
+    pub full_genomes_coverage: i64,
     pub complete_genomes_coverage: i64,
     pub partial_genomes_coverage: i64,
     pub assembly_chromosomes_coverage: i64,
@@ -204,11 +216,13 @@ impl From<TaxonStatNode> for TaxonTreeNodeStatistics {
             other: value.other.map(|v| v.to_u64().unwrap_or_default()),
             total_genomic: value.total_genomic.map(|v| v.to_u64().unwrap_or_default()),
             species: value.species.map(|v| v as u64),
-            complete_genomes: value.complete_genomes.map(|v| v.to_u64().unwrap_or_default()),
+            full_genomes: value.full_genomes.map(|v| v.to_u64().unwrap_or_default()),
             partial_genomes: value.partial_genomes.map(|v| v.to_u64().unwrap_or_default()),
+            complete_genomes: value.complete_genomes.map(|v| v.to_u64().unwrap_or_default()),
             assembly_chromosomes: value.assembly_chromosomes.map(|v| v.to_u64().unwrap_or_default()),
             assembly_scaffolds: value.assembly_scaffolds.map(|v| v.to_u64().unwrap_or_default()),
             assembly_contigs: value.assembly_contigs.map(|v| v.to_u64().unwrap_or_default()),
+            full_genomes_coverage: value.full_genomes_coverage,
             complete_genomes_coverage: value.complete_genomes_coverage,
             partial_genomes_coverage: value.partial_genomes_coverage,
             assembly_chromosomes_coverage: value.assembly_chromosomes_coverage,
