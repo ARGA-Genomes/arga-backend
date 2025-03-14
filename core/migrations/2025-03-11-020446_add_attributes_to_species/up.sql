@@ -42,11 +42,11 @@ LEFT JOIN (
     taxon_id,
     array_agg(name::text) filter (WHERE value_type = 'boolean') AS traits,
     jsonb_agg(CASE
-     WHEN value_type = 'boolean' THEN jsonb_build_object(name, value_bool)
-     WHEN value_type = 'string' THEN jsonb_build_object(name, value_str)
-     WHEN value_type = 'integer' THEN jsonb_build_object(name, value_int)
-     WHEN value_type = 'decimal' THEN jsonb_build_object(name, value_decimal)
-     WHEN value_type = 'timestamp' THEN jsonb_build_object(name, value_timestamp)
+     WHEN value_type = 'boolean' THEN jsonb_build_object('name', name, 'value', value_bool)
+     WHEN value_type = 'string' THEN jsonb_build_object('name', name, 'value', value_str)
+     WHEN value_type = 'integer' THEN jsonb_build_object('name', name, 'value', value_int)
+     WHEN value_type = 'decimal' THEN jsonb_build_object('name', name, 'value', value_decimal)
+     WHEN value_type = 'timestamp' THEN jsonb_build_object('name', name, 'value', value_timestamp)
     END) AS attributes
   FROM name_attributes
   JOIN taxon_names ON taxon_names.name_id = name_attributes.name_id
