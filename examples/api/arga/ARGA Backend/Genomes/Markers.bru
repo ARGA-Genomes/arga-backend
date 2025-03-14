@@ -1,0 +1,39 @@
+meta {
+  name: Markers
+  type: graphql
+  seq: 3
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	markers {
+  		species(canonicalName: "Rhinella marina") {
+  			id
+  			accession
+  			basepairs
+  			fastaUrl
+  			sourceUrl
+  			gbAcs
+  			markerCode
+  			materialSampleId
+  			nucleotide
+  			recordedBy
+  			shape
+  			type
+  			version
+  			extraData
+  		}
+  	}
+  }
+  
+}

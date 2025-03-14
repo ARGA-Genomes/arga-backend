@@ -1,0 +1,92 @@
+meta {
+  name: Full Text
+  type: graphql
+  seq: 11
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    search(filters: [
+  		{ filter: DATA_TYPE, action: INCLUDE, value: "Taxon" },
+  		{ filter: DATA_TYPE, action: INCLUDE, value: "Genome" },
+  	]) {
+  		fullText (query: "corroboree", perPage: 20, page: 0) {
+  			total
+  			records {
+  				... on TaxonItem {
+  					type
+  					status
+  					score
+  					canonicalName
+  					commonNames
+  					subspecies
+  					synonyms
+  					classification {
+  						kingdom
+  						phylum
+  						class
+  						order
+  						family
+  						genus
+  					}
+  					dataSummary {
+  						assemblies
+  						referenceGenomes
+  						wholeGenomes
+  						partialGenomes
+  						barcodes
+  					}
+  				}
+  				... on GenomeItem {
+  					type
+  					status
+  					score
+  					canonicalName
+  					accession
+  					genomeRep
+  					dataSource
+  					level
+  					referenceGenome
+  					releaseDate
+  				}
+  				... on LocusItem {
+  					type
+  					status
+  					score
+  					canonicalName
+  					accession
+  					locusType
+  					dataSource
+  					voucherStatus
+  					eventDate
+  					eventLocation
+  				}
+  				... on SpecimenItem {
+  					type
+  					status
+  					score
+  					canonicalName
+  					accession
+  					dataSource
+  					institutionCode
+  					collectionCode
+  					recordedBy
+  					identifiedBy
+  					eventDate
+  					eventLocation
+  				}
+  			}
+  		}
+    }
+  }
+}

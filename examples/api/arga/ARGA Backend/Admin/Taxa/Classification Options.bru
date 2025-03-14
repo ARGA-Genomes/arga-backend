@@ -1,0 +1,19 @@
+meta {
+  name: Classification Options
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://localhost:5000/api/admin/classification_options
+  body: none
+  auth: none
+}
+
+query {
+  ~q: felis
+}
+
+headers {
+  accept-encoding: gzip
+}

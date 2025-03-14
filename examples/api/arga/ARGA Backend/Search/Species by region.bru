@@ -1,0 +1,34 @@
+meta {
+  name: Species by region
+  type: graphql
+  seq: 12
+}
+
+post {
+  url: https://nectar-arga-dev-5.ala.org.au/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    search {
+  		species: speciesByRegion (ibraRegion: ["Kanmantoo", "NSW South Western Slopes", "Spencer Gulf Shelf Province"], offset: 500, limit: 100) {
+  			scientificName
+  			canonicalName
+  			kingdom
+  			phylum
+  			class
+  			order
+  			family
+  			genus
+  			totalRecords
+  			totalBarcodes
+  		}
+    }
+  }
+}

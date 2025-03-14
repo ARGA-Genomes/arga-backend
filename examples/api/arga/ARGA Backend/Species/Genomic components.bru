@@ -1,0 +1,42 @@
+meta {
+  name: Genomic components
+  type: graphql
+  seq: 8
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	species(canonicalName: "Phascolarctos cinereus") {
+  		genomicComponents(page: 1, pageSize: 5) {
+  			total
+  			records {
+  				sequenceId
+  				dnaExtractId
+  				datasetName
+  				recordId
+  				latitude
+  				longitude
+  				accession
+  				materialSampleId
+  				estimatedSize
+  				dataType
+  				sequencedBy
+  				depositedBy
+  				releaseDate
+  				dataType
+  			}
+  		}
+  	}
+  }
+  
+}

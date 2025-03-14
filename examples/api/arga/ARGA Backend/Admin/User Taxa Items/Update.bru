@@ -1,0 +1,22 @@
+meta {
+  name: Update
+  type: http
+  seq: 10
+}
+
+put {
+  url: http://localhost:5000/api/admin/user_taxon/1ace20f1-9f6d-4ad5-81f3-3991a9cc5d55
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+  	"name": "Test List",
+  	"description": "Testing the user taxa lists"
+  }
+}

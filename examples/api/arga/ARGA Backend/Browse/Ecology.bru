@@ -1,0 +1,51 @@
+meta {
+  name: Ecology
+  type: graphql
+  seq: 19
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    taxa(filters: [
+  			{ filter: ECOLOGY, action: INCLUDE, value: "marine" }
+  		]) {
+  		species(page: 1, perPage: 15) {
+  			total,
+  			records {
+  				taxonomy {
+  					scientificName
+  					canonicalName
+  					authority
+  					kingdom
+  					phylum
+  					class
+  					order
+  					family
+  					genus
+  					vernacularGroup
+  				}
+  				photo {
+  					url
+  				}
+  				dataSummary {
+  					wholeGenomes
+  					partialGenomes
+  					organelles
+  					barcodes
+  					other
+  				}
+  			}
+  		}
+    }
+  }
+}

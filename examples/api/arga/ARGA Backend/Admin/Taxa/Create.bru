@@ -1,0 +1,39 @@
+meta {
+  name: Create
+  type: http
+  seq: 6
+}
+
+post {
+  url: http://localhost:5000/api/admin/classifications
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  [
+  	{
+  		"dataset_id": "6ef8d83b-b1fb-49b4-95eb-aa59e547b9dd",
+  		"parent_id": "7bc987cf-d44d-41df-ad7f-5344ba02745d",
+  		"taxon_id": "ARGA:BT:99999999",
+  		"rank": "Species",
+  		"accepted_name_usage": "Goranos primus, Sterjov 2023",
+  		"original_name_usage": "Goranos primus, Sterjov 2023",
+  		"scientific_name": "Goranos primus, Sterjov 2023",
+  		"scientific_name_authorship": "Sterjov 2023",
+  		"canonical_name": "Goranos primus",
+  		"nomenclatural_code": "GBXN",
+  		"status": "Accepted",
+  		
+  		"specific_epithet": "primus",
+  		"intraspecific_epithet": "",
+  		"name_according_to": "Gorblax",
+  		"name_published_in": "Gorblaxian survey of Earth",
+  		"remarks": "a type of large lazy plant eater"
+  	}
+  ]
+}

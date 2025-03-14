@@ -1,0 +1,58 @@
+meta {
+  name: Taxa
+  type: graphql
+  seq: 3
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    provenance {
+      taxon(by: { entityId: "10617707158148877154" }) {
+        operationId
+        parentId
+        action
+        atom {
+          ... on TaxonAtomText {
+            type
+            value
+          }
+          ... on TaxonAtomRank {
+            type
+            value
+          }
+          ... on TaxonAtomStatus {
+            type
+            value
+          }
+        }
+        datasetVersion {
+          datasetId
+          version
+          createdAt
+          importedAt
+        }
+        dataset {
+          id
+          name
+          shortName
+          rightsHolder
+          citation
+          license
+          description
+          url
+        }
+      }
+    }
+  }
+  
+}

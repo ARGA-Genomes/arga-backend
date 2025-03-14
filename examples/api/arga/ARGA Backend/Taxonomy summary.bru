@@ -1,0 +1,57 @@
+meta {
+  name: Taxonomy summary
+  type: graphql
+  seq: 14
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    # Curvularia trifolii
+    # Aspergillus fumigatus
+    # Dacelo (Dacelo) leachii
+  	taxon(rank: SPECIES, canonicalName: "Macropus giganteus") {
+  		scientificName
+  		canonicalName
+  		status
+  		nomenclaturalCode
+  		citation
+  		source
+  		sourceUrl
+      entityId
+  		
+  		summary {
+  			canonicalName
+  			species
+  			speciesData
+  			speciesGenomes
+  		}
+  				
+  		speciesSummary {
+  			name
+  			genomes
+  			markers
+  			specimens
+  			other
+  			totalGenomic
+  		}
+  		speciesGenomeSummary {
+  			name
+  			genomes
+  			markers
+  			specimens
+  			other
+  			totalGenomic
+      }
+    }
+  }
+}

@@ -1,0 +1,50 @@
+meta {
+  name: Specimens
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  {
+    provenance {
+      specimen(by: { entityId: "15325740082421375454" }) {
+        operationId
+        parentId
+        action
+        atom {
+          ... on SpecimenAtomText {
+            type
+            value
+          }
+          ... on SpecimenAtomNumber {
+            type
+            value
+          }
+        }
+        datasetVersion {
+          datasetId
+          version
+          createdAt
+          importedAt
+        }
+        dataset {
+          id
+          name
+          shortName
+          rightsHolder
+          citation
+          license
+          description
+          url
+        }
+      }
+    }
+  }
+  
+}

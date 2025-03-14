@@ -1,0 +1,52 @@
+meta {
+  name: Assemblies
+  type: graphql
+  seq: 4
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	assemblies {
+  		species(page: 1, perPage: 15) {
+  			total
+  			records {
+  				taxonomy {
+  					scientificName
+  					authority
+  					canonicalName
+  					class
+  					family
+  					genus
+  					kingdom
+  					order
+  					phylum
+  				}
+  				photo {
+  					url
+  					source
+  					publisher
+  					rightsHolder
+  					license
+  				}
+  				dataSummary {
+  					barcodes
+  					other
+  					partialGenomes
+  					wholeGenomes
+  				}
+  			}
+  		}
+  	}
+  }
+  
+}

@@ -1,0 +1,71 @@
+meta {
+  name: Taxonomy
+  type: graphql
+  seq: 8
+}
+
+post {
+  url: https://app.arga.org.au/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	taxon(rank: ORDER, canonicalName: "Carnivora") {
+  		scientificName
+  		canonicalName
+  # 		authorship
+  		status
+  		nomenclaturalCode
+  		citation
+  # 		source
+  # 		sourceUrl
+  		
+  		hierarchy {
+  			scientificName
+  			canonicalName
+  			rank
+  			depth
+  		}
+  
+  		summary {
+  			children
+  			childrenData
+  			childrenGenomes
+  			species
+  			speciesData
+  			speciesGenomes
+  		}
+  		dataSummary {
+  			name
+  			genomes
+  			markers
+  			specimens
+  			other
+  			totalGenomic
+  		}
+  		speciesSummary {
+  			name
+  			genomes
+  			markers
+  			specimens
+  			other
+  			totalGenomic
+  		}
+  		speciesGenomeSummary {
+  			name
+  			genomes
+  			markers
+  			specimens
+  			other
+  			totalGenomic
+  		}
+  	}
+  }
+  
+}

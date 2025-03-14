@@ -1,0 +1,22 @@
+meta {
+  name: Create
+  type: http
+  seq: 9
+}
+
+post {
+  url: http://localhost:5000/api/admin/user_taxa
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+  	"name": "Test List",
+  	"description": "Testing the user taxa lists"
+  }
+}

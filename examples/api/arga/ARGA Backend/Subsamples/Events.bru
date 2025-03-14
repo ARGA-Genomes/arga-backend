@@ -1,0 +1,40 @@
+meta {
+  name: Events
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	subsample(by: { recordId: "BSECO289-11" }) {
+  		id
+  		specimenId
+  		recordId
+  		materialSampleId
+  		institutionName
+  		institutionCode
+  		typeStatus
+  		
+  		events {
+  			subsamples {
+  				id
+  				eventDate
+  				eventTime
+  				subsampledBy
+  				preparationType
+  			}
+  		}
+  	}
+  }
+  
+}

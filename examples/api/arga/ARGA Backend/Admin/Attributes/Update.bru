@@ -1,0 +1,24 @@
+meta {
+  name: Update
+  type: http
+  seq: 9
+}
+
+put {
+  url: http://localhost:5000/api/admin/attributes/2655165c-eea3-41af-a2d8-6526eebbd853
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+  	"name": "aTestAttribute",
+  	"data_type": "String",
+  	"description": "Testing attribute update",
+  	"reference_url": "http://gnl.arga.org.au/aTestAttribute"
+  }
+}

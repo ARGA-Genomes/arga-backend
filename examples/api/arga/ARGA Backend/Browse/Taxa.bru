@@ -1,0 +1,49 @@
+meta {
+  name: Taxa
+  type: graphql
+  seq: 14
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    taxa(filters: [
+  			{ filter: KINGDOM, action: INCLUDE, value: "Animalia" }
+  			{ filter: PHYLUM, action: INCLUDE, value: "Chordata" }
+  			{ filter: CLASS, action: INCLUDE, value: "Mammalia" }
+  			{ filter: ORDER, action: INCLUDE, value: "Carnivora" }
+  			{ filter: FAMILY, action: INCLUDE, value: "Felidae" }
+  			{ filter: HAS_DATA, action: INCLUDE, value: "Locus" }
+  		]) {
+  		species(page: 1, perPage: 15) {
+  			total,
+  			records {
+  				taxonomy {
+  					scientificName
+  					canonicalName
+  					vernacularGroup
+  					rank
+  				}
+  				photo {
+  					url
+  				}
+  				dataSummary {
+  					genomes
+  					loci
+  					specimens
+  					other
+  				}
+  			}
+  		}
+    }
+  }
+}

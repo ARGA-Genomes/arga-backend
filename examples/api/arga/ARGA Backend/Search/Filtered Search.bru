@@ -1,0 +1,59 @@
+meta {
+  name: Filtered Search
+  type: graphql
+  seq: 13
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    search {
+  		bacteria: filtered (kingdom:"Bacteria") {
+  			total
+  			records {
+  				id
+  				scientificName
+  				genus
+  			}
+      }
+  		naegleria: filtered (genus: "Naegleria") {
+  			total
+  			records {
+  				id
+  				scientificName
+  				eventDate
+  			}
+  		}
+      filtered (kingdom:"Animalia", genus:"Aedes") {
+  			total
+  			records {
+  				id
+  				scientificName
+  				genus
+  				subgenus
+  				kingdom
+  				phylum
+  				family
+  				class
+  				speciesGroup
+  				speciesSubgroup
+  				biome
+  				eventDate
+  				eventTime
+  				license
+  				recordedBy
+  				identifiedBy
+  			}
+  		}
+    }
+  }
+}

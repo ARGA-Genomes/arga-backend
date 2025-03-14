@@ -1,0 +1,30 @@
+meta {
+  name: Order
+  type: graphql
+  seq: 10
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    stats {
+      order(order: "Anura") {
+  			totalFamilies
+  			familiesWithData
+  			breakdown {
+  				name
+  				total
+  			}
+  		}
+    }
+  }
+}

@@ -1,0 +1,45 @@
+meta {
+  name: Datasets
+  type: graphql
+  seq: 24
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    dataset(by: { name: "ARGA data: Significant milestones in Australian biodiversity genomics" }) {
+  		citation
+  		license
+  		rightsHolder
+  		url
+  		updatedAt
+  		species(page: 1) {
+  			total,
+  			records {
+  				taxonomy {
+  					scientificName
+  					canonicalName
+  				}
+  				photo {
+  					url
+  				}
+  				dataSummary {
+  					genomes
+  					loci
+  					specimens
+  					other
+  				}
+  			}
+  		}
+    }
+  }
+}

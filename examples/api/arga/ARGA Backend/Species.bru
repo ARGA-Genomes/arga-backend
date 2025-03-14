@@ -1,0 +1,116 @@
+meta {
+  name: Species
+  type: graphql
+  seq: 7
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    species(canonicalName: "Felis catus") {
+  		dataSummary {
+  			genomes
+  			loci
+  			specimens
+  			other
+  			totalGenomic
+  		}
+  		indigenousEcologicalKnowledge {
+  			id
+  			name
+  			datasetName
+  			culturalConnection
+  			foodUse
+  			medicinalUse
+  			sourceUrl
+  		}
+  		vernacularNames {
+  			datasetId
+  			vernacularName
+  			citation
+  			sourceUrl
+  		}
+  		synonyms {
+  			scientificName
+  			canonicalName
+  			authorship
+  		}
+  		taxonomy {
+  			scientificName
+  			canonicalName
+  			authorship
+  			status
+  			rank
+  			nomenclaturalCode
+  			citation
+  			vernacularGroup
+  			synonyms {
+  				scientificName
+  			}
+  # 			authority
+  # 			status
+  # 			kingdom
+  # 			phylum
+  # 			class
+  # 			order
+  # 			family
+  # 			genus
+  # 			vernacularGroup
+  # 			synonyms {
+  # 				scientificName
+  # 			}
+  # 			vernacularNames {
+  # 				name
+  # 				language
+  # 			}
+  		}
+  		conservation {
+  			status
+  			state
+  			source
+  		}
+  		photos {
+  			url
+  			source
+  			publisher
+  			license
+  			rightsHolder
+  		}
+  		regions {
+  			ibra {
+  				names
+  				dataset {
+  					citation
+  					createdAt
+  					description
+  					globalId
+  					id
+  					license
+  					name
+  					rightsHolder
+  					shortName
+  					updatedAt
+  					url
+  				}
+  			}
+  			imcra {
+  				names
+  				dataset {
+  					name
+  					url
+  					citation
+  				}
+  			}
+  		}
+    }
+  }
+}

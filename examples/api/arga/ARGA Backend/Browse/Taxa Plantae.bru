@@ -1,0 +1,43 @@
+meta {
+  name: Taxa Plantae
+  type: graphql
+  seq: 16
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    taxa(filters: [
+  			{ filter: KINGDOM, action: INCLUDE, value: "Plantae" }
+  			{ filter: FAMILY, action: INCLUDE, value: "Proteaceae" }
+  		]) {
+  		species(page: 1, perPage: 15) {
+  			total,
+  			records {
+  				taxonomy {
+  					scientificName
+  					canonicalName
+  				}
+  				photo {
+  					url
+  				}
+  				dataSummary {
+  					genomes
+  					loci
+  					specimens
+  					other
+  				}
+  			}
+  		}
+    }
+  }
+}

@@ -1,0 +1,70 @@
+meta {
+  name: Taxa
+  type: graphql
+  seq: 11
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    # Curvularia trifolii
+    # Aspergillus fumigatus
+    #taxa(rank: SPECIES, canonicalName: "Aspergillus fumigatus") {
+    taxa(
+      filters: [
+        # { canonicalName: "Plantae" }
+        { canonicalName:"Aspergillus" }
+        # { canonicalName: "Aspergillus fumigatus" }
+        # { scientificName: "Aspergillus fumigatus Fresen." }
+        # { hasData: "GENOME" }
+        # { hasData: "LOCUS", hasData:"SPECIMEN" }
+      ]
+    ) {
+      records {
+        scientificName
+        canonicalName
+        authorship
+        status
+        rank
+        nomenclaturalCode
+        citation
+        source
+        sourceUrl
+        datasetId
+        entityId
+        
+        # hierarchy {
+        #   canonicalName
+        #   rank
+        #   depth
+        # }
+        # descendants(rank: GENUS) {
+        #   canonicalName
+        #   species
+        # }
+        # taxonomicActs {
+        #   sourceUrl
+        # }
+      }
+      
+      species(page: 1, perPage:10) {
+        total
+        # records {
+        #   taxonomy {
+        #     canonicalName
+        #   }
+        # }
+      }
+    }
+  }
+  
+}

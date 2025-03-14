@@ -1,0 +1,42 @@
+meta {
+  name: Taxon
+  type: graphql
+  seq: 9
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    species(canonicalName: "Theonella xanthus") {
+  		taxonomy {
+        scientificName
+  			canonicalName
+        authorship
+  			vernacularGroup
+  		}
+      hierarchy {
+        canonicalName
+        scientificName
+        rank
+        depth
+      }
+  		regions {
+  			ibra {
+  				names
+  			}
+  			imcra {
+  				names
+  			}
+  		}
+    }
+  }
+}

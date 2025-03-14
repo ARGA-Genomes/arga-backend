@@ -1,0 +1,26 @@
+meta {
+  name: Genus
+  type: graphql
+  seq: 9
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    search {
+  		genus (family: "Felidae") {
+  			genusName
+  			totalRecords
+  		}
+    }
+  }
+}

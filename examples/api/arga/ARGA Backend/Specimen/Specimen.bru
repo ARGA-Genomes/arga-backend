@@ -1,0 +1,86 @@
+meta {
+  name: Specimen
+  type: graphql
+  seq: 3
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	specimen(specimenId: "2005b16a-aad2-4ba8-9db2-36d244794bb8") {
+  		id
+  		typeStatus
+  		collectionCode
+  		institutionName
+  		institutionCode
+  		organismId
+  		latitude
+  		longitude
+  		recordedBy
+  		remarks
+  		
+  		events {
+  			id
+  			eventDate
+  			eventRemarks
+  			fieldNotes
+  			fieldNumber
+  			habitat
+  			samplingEffort
+  			samplingProtocol
+  			samplingSizeUnit
+  			samplingSizeValue
+  			
+  			events {
+  				... on CollectionEvent {
+  					id
+  					behavior
+  					catalogNumber
+  					degreeOfEstablishment
+  					establishmentMeans
+  					individualCount
+  					lifeStage
+  					occurrenceStatus
+  					organismQuantity
+  					organismQuantityType
+  					otherCatalogNumbers
+  					pathway
+  					preparation
+  					recordNumber
+  					reproductiveCondition
+  					sex
+  				}
+  				... on SequencingEvent {
+  					id
+  					targetGene
+  					dnaSequence
+  					runs {
+  						id
+  						direction
+  						pcrPrimerNameForward
+  						pcrPrimerNameReverse
+  						sequencePrimerForwardName
+  						sequencePrimerReverseName
+  						sequencingCenter
+  						sequencingDate
+  						targetGene
+  						traceId
+  						traceName
+  						traceLink
+  					}
+  				}
+  			}
+  		}
+  	}
+  }
+  
+}

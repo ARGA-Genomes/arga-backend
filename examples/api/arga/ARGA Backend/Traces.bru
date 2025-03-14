@@ -1,0 +1,28 @@
+meta {
+  name: Traces
+  type: graphql
+  seq: 12
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    traces(uuid: "f07f9c22-461c-4678-b8c4-ccc7136966e4") {
+  		analyzed {
+  			g
+  			a
+  			t
+  			c
+  		}
+  	}
+  }
+}

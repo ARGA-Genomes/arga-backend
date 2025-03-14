@@ -1,0 +1,42 @@
+meta {
+  name: Complete Genomes (year)
+  type: graphql
+  seq: 8
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    stats {
+      taxonomicRanks(
+        taxonRank: "CLASS"
+        taxonCanonicalName: "Mammalia"
+        ranks: [
+          "DOMAIN"
+          "KINGDOM"
+          "PHYLUM"
+          "CLASS"
+          "ORDER"
+          "FAMILY"
+          "GENUS"
+          "SPECIES"
+        ]
+      ) {
+        rank
+        children
+        coverage
+        atLeastOne
+      }
+    }
+  }
+  
+}

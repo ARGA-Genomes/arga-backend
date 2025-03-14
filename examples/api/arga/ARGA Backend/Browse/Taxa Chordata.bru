@@ -1,0 +1,49 @@
+meta {
+  name: Taxa Chordata
+  type: graphql
+  seq: 15
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    taxa(filters: [
+  			{ filter: PHYLUM, action: INCLUDE, value: "Chordata" }
+  		]) {
+  		species(page: 1, perPage: 15) {
+  			total,
+  			records {
+  				taxonomy {
+  					scientificName
+  					canonicalName
+  					authority
+  					kingdom
+  					phylum
+  					class
+  					order
+  					family
+  					genus
+  				}
+  				photo {
+  					url
+  				}
+  				dataSummary {
+  					genomes
+  					loci
+  					specimens
+  					other
+  				}
+  			}
+  		}
+    }
+  }
+}

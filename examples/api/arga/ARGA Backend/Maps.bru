@@ -1,0 +1,25 @@
+meta {
+  name: Maps
+  type: graphql
+  seq: 13
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    maps(tolerance: 0.1) {
+  		ibra(regions: ["Brigalow Belt North"])
+  		imcraProvincial(regions: ["Bass Strait Shelf Province"])
+  		imcraMesoscale(regions: ["Bass Strait Shelf Province"])
+  	}
+  }
+}

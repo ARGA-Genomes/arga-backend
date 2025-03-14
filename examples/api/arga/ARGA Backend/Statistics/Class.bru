@@ -1,0 +1,30 @@
+meta {
+  name: Class
+  type: graphql
+  seq: 12
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    stats {
+      class(class: "Amphibia") {
+  			totalOrders
+  			ordersWithData
+  			breakdown {
+  				name
+  				total
+  			}
+  		}
+    }
+  }
+}

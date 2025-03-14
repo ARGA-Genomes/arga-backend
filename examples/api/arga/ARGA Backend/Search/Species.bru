@@ -1,0 +1,27 @@
+meta {
+  name: Species
+  type: graphql
+  seq: 10
+}
+
+post {
+  url: https://nectar-arga-dev-5.ala.org.au/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    search {
+  		species(genus: "Felis") {
+  			scientificName
+  			canonicalName
+  			#totalRecords
+  		}
+    }
+  }
+}

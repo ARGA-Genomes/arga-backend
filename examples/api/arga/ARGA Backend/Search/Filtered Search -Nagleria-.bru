@@ -1,0 +1,31 @@
+meta {
+  name: Filtered Search -Nagleria-
+  type: graphql
+  seq: 14
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    search {
+  		filtered2 (genus: "Felis") {
+  			total
+  			records {
+  				id
+  				speciesUuid
+  				scientificName
+  				genomicDataRecords
+  			}
+  		}
+    }
+  }
+}

@@ -1,0 +1,51 @@
+meta {
+  name: Ibra
+  type: graphql
+  seq: 20
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    taxa(filters: [
+  			{ filter: IBRA, action: INCLUDE, value: "Australian Alps" }
+  		]) {
+  		species(page: 1, perPage: 15) {
+  			total,
+  			records {
+  				taxonomy {
+  					scientificName
+  					canonicalName
+  					authority
+  					kingdom
+  					phylum
+  					class
+  					order
+  					family
+  					genus
+  					vernacularGroup
+  				}
+  				photo {
+  					url
+  				}
+  				dataSummary {
+  					wholeGenomes
+  					partialGenomes
+  					organelles
+  					barcodes
+  					other
+  				}
+  			}
+  		}
+    }
+  }
+}

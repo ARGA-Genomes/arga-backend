@@ -1,0 +1,30 @@
+meta {
+  name: Dataset
+  type: graphql
+  seq: 11
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    stats {
+      dataset(name: "Indigenous Ecological Knowledge species: Noongar Boodjar People") {
+  			totalSpecies
+  			speciesWithData
+  			breakdown {
+  				name
+  				total
+  			}
+  		}
+    }
+  }
+}

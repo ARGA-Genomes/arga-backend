@@ -1,0 +1,61 @@
+meta {
+  name: Source
+  type: graphql
+  seq: 25
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	source(by: { name: "ARGA Milestone Species" }) {
+  		id
+  		license
+  		accessRights
+  		rightsHolder
+  		author
+  		name
+  
+  		datasets {
+  			id
+  			name
+  			shortName
+  			description
+  			license
+  			rightsHolder
+  			url
+  			updatedAt
+  			shortName
+  			citation
+  		}
+  
+  		species(page: 1, pageSize: 10) {
+  			total
+  			records {
+  				taxonomy {
+  					scientificName
+  					canonicalName
+  				}
+  				photo {
+  					url
+  				}
+  				dataSummary {
+  					genomes
+  					loci
+  					specimens
+  					other
+  				}
+  			}
+  		}
+  	}
+  }
+  
+}

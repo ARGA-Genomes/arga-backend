@@ -1,0 +1,48 @@
+meta {
+  name: Reference genome
+  type: graphql
+  seq: 9
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	species(canonicalName: "Felis catus") {
+  		referenceGenome {
+  			sequenceId
+  			dnaExtractId
+  			datasetName
+  			recordId
+  			latitude
+  			longitude
+  			accession
+  			materialSampleId
+  			name
+  			quality
+  			releaseType
+  			releaseDate
+  			representation
+  			versionStatus
+  			estimatedSize
+  			excludedFromRefseq
+  			assemblyType
+  			genomeSize
+  			dataType
+  			sequencedBy
+  			assembledBy
+  			annotatedBy
+  			depositedBy
+  		}
+  	}
+  }
+  
+}

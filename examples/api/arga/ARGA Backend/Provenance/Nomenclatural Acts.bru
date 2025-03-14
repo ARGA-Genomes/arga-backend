@@ -1,0 +1,58 @@
+meta {
+  name: Nomenclatural Acts
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    provenance {
+      nomenclaturalAct(by: { entityId: "15325740082421375454" }) {
+        operationId
+        parentId
+        action
+        atom {
+          ... on NomenclaturalActAtomText {
+            type
+            value
+          }
+          ... on NomenclaturalActAtomType {
+            type
+            value
+          }
+          ... on NomenclaturalActAtomDateTime {
+            type
+            value
+          }
+        }
+        datasetVersion {
+          datasetId
+          version
+          createdAt
+          importedAt
+        }
+        dataset {
+          id
+          name
+          shortName
+          rightsHolder
+          citation
+          license
+          description
+          url
+        }
+      }
+    }
+  }
+  
+}

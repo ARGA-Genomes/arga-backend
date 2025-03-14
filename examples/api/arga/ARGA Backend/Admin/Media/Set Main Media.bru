@@ -1,0 +1,21 @@
+meta {
+  name: Set Main Media
+  type: http
+  seq: 6
+}
+
+post {
+  url: http://localhost:5000/api/admin/media/7e2e66ec-34a6-4511-b578-b4d15a7d3cc7/main
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+  	"species": "Felis catus"
+  }
+}

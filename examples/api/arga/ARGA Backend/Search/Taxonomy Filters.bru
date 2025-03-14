@@ -1,0 +1,65 @@
+meta {
+  name: Taxonomy Filters
+  type: graphql
+  seq: 16
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    search {
+      filters {
+        taxonomy {
+          kingdom {
+            totalMatches
+            values {
+              matches
+              value
+            }
+          }
+  
+          phylum {
+            totalMatches
+            values {
+              matches
+              value
+            }
+          }
+  
+          class {
+            totalMatches
+            values {
+              matches
+              value
+            }
+          }
+  
+          family {
+            totalMatches
+            values {
+              matches
+              value
+            }
+          }
+  
+          genus {
+            totalMatches
+            values {
+              matches
+              value
+            }
+          }
+        }
+      }
+    }
+  }
+}

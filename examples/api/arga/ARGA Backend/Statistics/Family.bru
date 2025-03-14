@@ -1,0 +1,30 @@
+meta {
+  name: Family
+  type: graphql
+  seq: 9
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    stats {
+      family(family: "Rhinolophidae") {
+  			totalGenera
+  			generaWithData
+  			breakdown {
+  				name
+  				total
+  			}
+  		}
+    }
+  }
+}

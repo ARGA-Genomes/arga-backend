@@ -1,0 +1,51 @@
+meta {
+  name: Assembly
+  type: graphql
+  seq: 3
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	assembly(accession: "JAFEKA000000000.1") {
+  		id
+  		name
+  		quality
+  		assemblyType
+  		genomeSize
+  		submittedBy
+  		versionStatus
+  
+  		stats {
+  			id
+  			totalLength
+  			spannedGaps
+  			unspannedGaps
+  			componentCount
+  			contigCount
+  			contigL50
+  			contigN50
+  			gcPerc
+  			moleculeCount
+  			regionCount
+  			scaffoldCount
+  			scaffoldL50
+  			scaffoldN50
+  			scaffoldN75
+  			scaffoldN90
+  			topLevelCount
+  			totalGapLength
+  		}
+  	}
+  }
+  
+}

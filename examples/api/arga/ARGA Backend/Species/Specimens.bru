@@ -1,0 +1,40 @@
+meta {
+  name: Specimens
+  type: graphql
+  seq: 10
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	species(canonicalName: "Felis catus") {
+  		specimens(page: 1, pageSize: 5) {
+  			total
+  			records {
+  				id
+  				recordId
+  				accession
+  				datasetName
+  				typeStatus
+  				locality
+  				country
+  				latitude,
+  				longitude,
+  				sequences
+  				wholeGenomes
+  				markers
+  			}
+  		}
+  	}
+  }
+  
+}

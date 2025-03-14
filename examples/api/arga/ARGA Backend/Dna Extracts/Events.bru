@@ -1,0 +1,44 @@
+meta {
+  name: Events
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	dnaExtract(by: { recordId: "BSECO289-11" }) {
+  		id
+  		subsampleId
+  		recordId
+  		
+  		events {
+  			dnaExtracts {
+  				id
+  				eventDate
+  				eventTime
+  				extractedBy
+  				extractionMethod
+  				measurementMethod
+  				preparationType
+  				preservationType
+  				concentration
+  				concentrationMethod
+  				quality
+  				absorbance260230
+  				absorbance260280
+  			}
+  		}
+  	}
+  }
+  
+}

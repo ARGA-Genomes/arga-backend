@@ -1,0 +1,47 @@
+meta {
+  name: Ranks
+  type: graphql
+  seq: 7
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  fragment TreeNode on TaxonTreeNodeStatistics {
+        scientificName
+        canonicalName
+        rank
+        loci
+        genomes
+        specimens
+        other
+        totalGenomic
+    		species
+  }
+  
+  {
+  
+    stats {
+      taxonBreakdown(taxonRank: "DOMAIN", taxonCanonicalName:"Eukaryota", includeRanks:["DOMAIN", "KINGDOM","PHYLUM"]) {
+  			...TreeNode
+        children {
+          ...TreeNode
+          children {
+            ...TreeNode
+            children{
+              ...TreeNode
+            }
+          }
+        }
+  		}
+    }
+  }
+}

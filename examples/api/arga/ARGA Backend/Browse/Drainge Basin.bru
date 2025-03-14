@@ -1,0 +1,58 @@
+meta {
+  name: Drainge Basin
+  type: graphql
+  seq: 23
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    taxa(filters: [
+  			{ filter: DRAINAGE_BASIN, action: INCLUDE, value: "Murray-Darling basin" }
+  		]) {
+  		species(page: 1, perPage: 15) {
+  			total,
+  			records {
+  				taxonomy {
+  					scientificName
+  					canonicalName
+  					authority
+  					kingdom
+  					phylum
+  					class
+  					order
+  					family
+  					genus
+  					vernacularGroup
+  				}
+  				photo {
+  					url
+  				}
+  				dataSummary {
+  					wholeGenomes
+  					partialGenomes
+  					organelles
+  					barcodes
+  					other
+  				}
+  			}
+  		}
+  		filterOptions {
+  			ecology
+  			ibra
+  			imcra
+  			state
+  			drainageBasin
+  		}
+    }
+  }
+}

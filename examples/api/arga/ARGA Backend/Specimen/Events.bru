@@ -1,0 +1,96 @@
+meta {
+  name: Events
+  type: graphql
+  seq: 4
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	specimen(by: { recordId: "ABCAP133-05" }) {
+  		id
+  		recordId
+  		organismId
+  		materialSampleId
+  		collectionCode
+  		institutionName
+  		institutionCode
+  		recordedBy
+  		identifiedBy
+  		identifiedDate
+  		typeStatus
+  		latitude
+  		longitude
+  		locationSource
+  		locality
+  		country
+  		countryCode
+  		county
+  		municipality
+  		stateProvince
+  		depth
+  		elevation
+  		depthAccuracy
+  		elevationAccuracy
+  		details
+  		remarks
+  		identificationRemarks
+  		
+  		events {
+  			collections {
+  				id
+  				eventDate
+  				eventTime
+  				collectedBy
+  				behavior
+  				catalogNumber
+  				degreeOfEstablishment
+  				envBroadScale
+  				envLocalScale
+  				envMedium
+  				habitat
+  				establishmentMeans
+  				individualCount
+  				isolate
+  				lifeStage
+  				occurrenceStatus
+  				organismQuantity
+  				organismQuantityType
+  				otherCatalogNumbers
+  				pathway
+  				preparation
+  				recordNumber
+  				refBiomaterial
+  				reproductiveCondition
+  				sex
+  				sourceMatId
+  				specificHost
+  				strain
+  				remarks
+  				fieldNotes
+  			}
+  			accessions {
+  				id
+  				eventDate
+  				eventTime
+  				accession
+  				accessionedBy
+  				institutionName
+  				institutionCode
+  				materialSampleId
+  				typeStatus
+  			}
+  		}
+  	}
+  }
+  
+}

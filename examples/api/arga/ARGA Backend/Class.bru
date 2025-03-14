@@ -1,0 +1,56 @@
+meta {
+  name: Class
+  type: graphql
+  seq: 5
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    class(class: "Amphibia") {
+  		taxonomy {
+        canonicalName
+        authorship
+        kingdom
+        phylum
+        class
+        order
+      }
+  		species {
+  			taxonomy {
+  				scientificName
+  				authorship
+  				canonicalName
+  				class
+  				family
+  				genus
+  				kingdom
+  				order
+  				phylum
+  			}
+  			photo {
+  				url
+  				source
+  				publisher
+  				rightsHolder
+  				license
+  			}
+  			dataSummary {
+  				barcodes
+  				other
+  				partialGenomes
+  				wholeGenomes
+  			}
+  		}
+    }
+  }
+}

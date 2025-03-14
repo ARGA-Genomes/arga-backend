@@ -1,0 +1,40 @@
+meta {
+  name: Overview
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    overview {
+  		sequences
+  		loci
+  		specimens
+  		
+      animals		
+  		plants
+  		fungi
+  		protista
+  		
+  		wholeGenomes
+  		allRecords
+  		allSpecies
+  		
+  		sources {
+  			id
+  			name
+  			total
+  		}
+    }
+  }
+}

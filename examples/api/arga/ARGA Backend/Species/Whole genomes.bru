@@ -1,0 +1,50 @@
+meta {
+  name: Whole genomes
+  type: graphql
+  seq: 7
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	species(canonicalName: "Felis catus") {
+  		wholeGenomes(page: 1, pageSize: 5, filters: [{ filter: ASSEMBLY_LEVEL, action: INCLUDE, value: "Contig"}]) {
+  			total
+  			records {
+  				sequenceId
+  				dnaExtractId
+  				datasetName
+  				recordId
+  				latitude
+  				longitude
+  				accession
+  				materialSampleId
+  				name
+  				quality
+  				releaseType
+  				representation
+  				versionStatus
+  				estimatedSize
+  				excludedFromRefseq
+  				assemblyType
+  				genomeSize
+  				dataType
+  				sequencedBy
+  				assembledBy
+  				annotatedBy
+  				depositedBy
+  			}
+  		}
+  	}
+  }
+  
+}

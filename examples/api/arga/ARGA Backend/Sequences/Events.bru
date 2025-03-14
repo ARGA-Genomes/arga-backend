@@ -1,0 +1,112 @@
+meta {
+  name: Events
+  type: graphql
+  seq: 4
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	sequence(by: { recordId: "2825220" }) {
+  		id
+  		dnaExtractId
+  		recordId
+  		datasetName
+  
+  		events {
+  			sequencing {
+  				id
+  				eventDate
+  				eventTime
+  				materialSampleId
+  				sequencedBy
+  				targetGene
+  				ampliconSize
+  				estimatedSize
+  				concentration
+  				baitSetName
+  				baitSetReference
+  				dnaSequence
+  			}
+  			sequencingRuns {
+  				id
+  				targetGene
+  				sequencingDate
+  				sequencingEventId
+  				sequencingMethod
+  				sequencingCenter
+  				sequencingCenterCode
+  				sequencePrimerForwardName
+  				sequencePrimerReverseName
+  				pcrPrimerNameForward
+  				pcrPrimerNameReverse
+  				direction
+  				analysisSoftware
+  				analysisDescription
+  				libraryProtocol
+  				trace {
+  					accession
+  					traceName
+  					traceId
+  					traceLink
+  				}
+  			}
+  			assemblies {
+  				id
+  				eventDate
+  				eventTime
+  				name
+  				quality
+  				assemblyType
+  				genomeSize
+  				assembledBy
+  				versionStatus
+  			}
+  			annotations {
+  				id
+  				eventDate
+  				eventTime
+  				representation
+  				releaseType
+  				replicons
+  				coverage
+  				standardOperatingProcedures
+  				annotatedBy
+  			}
+  			dataDepositions {
+  				id
+  				eventDate
+  				eventTime
+  				accession
+  				dataType
+  				institutionName
+  				collectionName
+  				collectionCode
+  				materialSampleId
+  				submittedBy
+  				asmNotLiveDate
+  				excludedFromRefseq
+  				lastUpdated
+  
+  				title
+  				url
+  				fundingAttribution
+  				reference
+  				accessRights
+  				rightsHolder
+  				sourceUri
+  			}
+  		}
+  	}
+  }
+  
+}

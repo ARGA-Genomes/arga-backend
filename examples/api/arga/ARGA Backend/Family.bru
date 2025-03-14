@@ -1,0 +1,59 @@
+meta {
+  name: Family
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: https://staging.arga.org.au/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    family(family: "Myobatrachidae") {
+  		taxonomy {
+        canonicalName
+        authorship
+        kingdom
+        phylum
+        class
+        order
+      }
+  		species {
+  			taxonomy {
+  				scientificName
+  				authorship
+  				canonicalName
+  				class
+  				family
+  				genus
+  				kingdom
+  				order
+  				phylum
+  				subspecies {
+  					canonicalName
+  				}
+  			}
+  			photo {
+  				url
+  				source
+  				publisher
+  				rightsHolder
+  				license
+  			}
+  			dataSummary {
+  				barcodes
+  				other
+  				partialGenomes
+  				wholeGenomes
+  			}
+  		}
+    }
+  }
+}

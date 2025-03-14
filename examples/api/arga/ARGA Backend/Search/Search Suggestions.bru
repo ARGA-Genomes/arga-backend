@@ -1,0 +1,28 @@
+meta {
+  name: Search Suggestions
+  type: graphql
+  seq: 15
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    search {
+  		suggestions (query: "felis nigri") {
+  			guid
+  			speciesName
+  			commonName
+  			matched
+  		}
+    }
+  }
+}

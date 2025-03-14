@@ -1,0 +1,40 @@
+meta {
+  name: Sources
+  type: graphql
+  seq: 4
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    sources {
+      name
+      author
+      rightsHolder
+      accessRights
+      license
+  
+      datasets {
+        id
+        name
+        shortName
+        description
+        url
+        citation
+        license
+        rightsHolder
+        createdAt
+        updatedAt
+      }
+    }
+  }
+}

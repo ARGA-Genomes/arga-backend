@@ -1,0 +1,34 @@
+meta {
+  name: Attributes
+  type: graphql
+  seq: 12
+}
+
+post {
+  url: localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+  	species(canonicalName: "Antechinus argentus") {
+  		attributes {
+  			id
+  			name
+  			category
+  			valueType
+  			valueBool
+  			valueInt
+  			valueDecimal
+  			valueTimestamp
+  			valueStr
+  		}
+  	}
+  }
+  
+}

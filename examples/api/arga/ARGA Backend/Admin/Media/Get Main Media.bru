@@ -1,0 +1,15 @@
+meta {
+  name: Get Main Media
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://localhost:5000/api/admin/media/main
+  body: none
+  auth: none
+}
+
+query {
+  scientific_name: Felis catus
+}
