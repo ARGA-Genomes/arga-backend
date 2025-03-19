@@ -12,9 +12,9 @@ use arga_core::models::DataReuseStatus;
 use arga_core::models::SourceContentType;
 
 use crate::database::models::Source;
-use crate::database::{schema, Database};
-use crate::http::error::InternalError;
+use crate::database::{Database, schema};
 use crate::http::Context;
+use crate::http::error::InternalError;
 
 #[derive(Deserialize, Debug)]
 struct NewSource {

@@ -5,13 +5,16 @@ use diesel::sql_types::Bool;
 
 use super::filters::DataType;
 
+
 type BoxedExpression<'a> = Box<dyn BoxableExpression<taxa::table, Pg, SqlType = Bool> + 'a>;
+
 
 #[derive(Clone, Debug)]
 pub enum TaxaFilter {
     Data(DataFilter),
     Taxon(TaxonFilter),
 }
+
 
 #[derive(Clone, Debug)]
 pub enum TaxonFilter {
@@ -20,10 +23,12 @@ pub enum TaxonFilter {
     VernacularGroup(String),
 }
 
+
 #[derive(Clone, Debug)]
 pub enum DataFilter {
     HasData(DataType),
 }
+
 
 /// Filter the taxa table that have the provided taxonomy data
 pub fn with_taxonomy(taxon: &TaxonFilter) -> BoxedExpression {
@@ -34,6 +39,7 @@ pub fn with_taxonomy(taxon: &TaxonFilter) -> BoxedExpression {
     }
 }
 
+
 /// Filter the taxa table with a global filter enum
 pub fn with_taxa_filter(filter: &TaxaFilter) -> BoxedExpression {
     match filter {
@@ -41,6 +47,7 @@ pub fn with_taxa_filter(filter: &TaxaFilter) -> BoxedExpression {
         TaxaFilter::Data(value) => todo!(),
     }
 }
+
 
 /// Narrow down the results from the taxa table with multiple filters
 pub fn with_taxa_filters(filters: &Vec<TaxaFilter>) -> Option<BoxedExpression> {

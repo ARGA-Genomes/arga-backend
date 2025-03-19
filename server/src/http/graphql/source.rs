@@ -1,13 +1,15 @@
 use arga_core::models;
 use async_graphql::{SimpleObject, *};
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::common::{convert_filters, DatasetDetails, FilterItem, Page, SpeciesCard};
+use super::common::{DatasetDetails, FilterItem, Page, SpeciesCard, convert_filters};
 use super::helpers::SpeciesHelper;
-use crate::database::extensions::filters::Filter;
+use super::taxon::{DataBreakdown, TaxonSummary};
 use crate::database::Database;
+use crate::database::extensions::classification_filters::Classification;
+use crate::database::extensions::filters::Filter;
+use crate::database::extensions::species_filters::NameAttributeFilter;
 use crate::http::graphql::common::datasets::{AccessRightsStatus, DataReuseStatus, SourceContentType};
 use crate::http::{Context as State, Error};
 
@@ -21,7 +23,12 @@ pub enum SourceBy {
 pub struct Source(SourceDetails, SourceQuery);
 
 impl Source {
-    pub async fn new(db: &Database, by: &SourceBy, filters: Vec<FilterItem>) -> Result<Source, Error> {
+    pub async fn new(
+        db: &Database,
+        by: &SourceBy,
+        filters: Vec<FilterItem>,
+        species_attribute: Option<NameAttributeFilter>,
+    ) -> Result<Source, Error> {
         let source = match by {
             SourceBy::Id(id) => db.sources.find_by_id(id).await?,
             SourceBy::Name(name) => db.sources.find_by_name(name).await?,
@@ -30,6 +37,7 @@ impl Source {
         let query = SourceQuery {
             source,
             filters: convert_filters(filters)?,
+            species_attribute,
         };
         Ok(Source(details, query))
     }
@@ -43,6 +51,7 @@ impl Source {
                 let query = SourceQuery {
                     source: record,
                     filters: vec![],
+                    species_attribute: None,
                 };
                 Source(details, query)
             })
@@ -51,24 +60,10 @@ impl Source {
     }
 }
 
-#[derive(OneofObject)]
-pub enum NameAttributeValue {
-    Int(i64),
-    Bool(bool),
-    String(String),
-    Timestamp(DateTime<Utc>),
-    Decimal(f64),
-}
-
-#[derive(InputObject)]
-pub struct NameAttributeFilter {
-    pub name: String,
-    pub value: NameAttributeValue,
-}
-
 pub struct SourceQuery {
     source: models::Source,
     filters: Vec<Filter>,
+    species_attribute: Option<NameAttributeFilter>,
 }
 
 #[Object]
@@ -80,38 +75,14 @@ impl SourceQuery {
         Ok(datasets)
     }
 
-    async fn species(
-        &self,
-        ctx: &Context<'_>,
-        page: i64,
-        page_size: i64,
-        attributes: Option<NameAttributeFilter>,
-    ) -> Result<Page<SpeciesCard>, Error> {
+    async fn species(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpeciesCard>, Error> {
         let state = ctx.data::<State>()?;
         let helper = SpeciesHelper::new(&state.database);
-
-        let attrs = match attributes {
-            Some(attr) => {
-                serde_json::json!([{
-                    "name": attr.name,
-                        "value": match attr.value {
-                        NameAttributeValue::Int(i) => serde_json::Value::Number(serde_json::Number::from(i)),
-                        NameAttributeValue::Bool(b) => serde_json::Value::Bool(b),
-                        NameAttributeValue::String(s) => serde_json::Value::String(s),
-                        NameAttributeValue::Timestamp(t) => serde_json::Value::String(t.to_rfc3339()),
-                        NameAttributeValue::Decimal(d) => serde_json::Value::Number(
-                            serde_json::Number::from_f64(d).unwrap_or_else(|| serde_json::Number::from(0))
-                        ),
-                    }
-                }])
-            }
-            None => serde_json::json!([]),
-        };
 
         let page = state
             .database
             .sources
-            .species(&self.source, &self.filters, page, page_size, Some(attrs))
+            .species(&self.source, &self.filters, page, page_size, &self.species_attribute)
             .await?;
 
         let cards = helper.filtered_cards(page.records).await?;
@@ -120,6 +91,41 @@ impl SourceQuery {
             records: cards,
             total: page.total,
         })
+    }
+
+    async fn summary(&self, ctx: &Context<'_>) -> Result<TaxonSummary, Error> {
+        let state = ctx.data::<State>()?;
+        let summary = state
+            .database
+            .taxa
+            .taxon_summary(&Classification::Domain("Eukaryota".to_string()), &self.species_attribute)
+            .await?;
+
+        Ok(summary.into())
+    }
+
+    async fn species_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
+        let state = ctx.data::<State>()?;
+        let summaries = state
+            .database
+            .taxa
+            .species_summary(&Classification::Domain("Eukaryota".to_string()), &self.species_attribute)
+            .await?;
+        let summaries = summaries.into_iter().map(|r| r.into()).collect();
+
+        Ok(summaries)
+    }
+
+    async fn species_genome_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
+        let state = ctx.data::<State>()?;
+        let summaries = state
+            .database
+            .taxa
+            .species_genome_summary(&Classification::Domain("Eukaryota".to_string()), &self.species_attribute)
+            .await?;
+
+        let summaries = summaries.into_iter().map(|r| r.into()).collect();
+        Ok(summaries)
     }
 }
 
@@ -136,6 +142,7 @@ pub struct SourceDetails {
     pub access_pill: Option<AccessRightsStatus>,
     pub content_type: Option<SourceContentType>,
 }
+
 
 impl From<models::Source> for SourceDetails {
     fn from(value: models::Source) -> Self {
