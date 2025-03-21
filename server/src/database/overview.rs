@@ -1,19 +1,18 @@
-use arga_core::models::{ACCEPTED_NAMES, SPECIES_RANKS};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::Deserialize;
 
+use super::PgPool;
 use crate::database::extensions::classification_filters::Classification;
-use crate::database::extensions::species_filters::with_classification;
+use crate::database::extensions::species_filters::with_accepted_classification;
 use crate::database::schema_gnl;
 use crate::http::Error;
-
-use super::PgPool;
 
 
 pub struct Overview {
     pub total: i64,
 }
+
 
 #[derive(Debug, Queryable, Clone, Deserialize)]
 pub struct OverviewRecord {
@@ -27,105 +26,19 @@ pub struct OverviewProvider {
     pub pool: PgPool,
 }
 
+
 impl OverviewProvider {
-    pub async fn all_species(&self) -> Result<Overview, Error> {
+    pub async fn classification(&self, by: &Classification) -> Result<Overview, Error> {
         use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
 
         let total: i64 = species
-            .filter(status.eq_any(ACCEPTED_NAMES))
-            .filter(rank.eq_any(SPECIES_RANKS))
-            .filter(with_classification(&Classification::Domain("Eukaryota".to_string())))
+            .filter(with_accepted_classification(by))
             .count()
             .get_result(&mut conn)
             .await?;
 
         Ok(Overview { total })
-    }
-
-    pub async fn animals(&self) -> Result<Overview, Error> {
-        use schema_gnl::species::dsl::*;
-        let mut conn = self.pool.get().await?;
-
-        let total: i64 = species
-            .filter(status.eq_any(ACCEPTED_NAMES))
-            .filter(rank.eq_any(SPECIES_RANKS))
-            .filter(with_classification(&Classification::Kingdom("Animalia".to_string())))
-            .count()
-            .get_result(&mut conn)
-            .await?;
-
-        Ok(Overview {
-            total,
-        })
-    }
-
-    pub async fn plants(&self) -> Result<Overview, Error> {
-        use schema_gnl::species::dsl::*;
-        let mut conn = self.pool.get().await?;
-
-        let total: i64 = species
-            .filter(status.eq_any(ACCEPTED_NAMES))
-            .filter(rank.eq_any(SPECIES_RANKS))
-            .filter(with_classification(&Classification::Regnum("Plantae".to_string())))
-            .count()
-            .get_result(&mut conn)
-            .await?;
-
-        Ok(Overview {
-            total,
-        })
-    }
-
-    pub async fn fungi(&self) -> Result<Overview, Error> {
-        use schema_gnl::species::dsl::*;
-        let mut conn = self.pool.get().await?;
-
-        let total: i64 = species
-            .filter(status.eq_any(ACCEPTED_NAMES))
-            .filter(rank.eq_any(SPECIES_RANKS))
-            .filter(with_classification(&Classification::Regnum("Fungi".to_string())))
-            .count()
-            .get_result(&mut conn)
-            .await?;
-
-        Ok(Overview {
-            total,
-        })
-    }
-
-    pub async fn bacteria(&self) -> Result<Overview, Error> {
-        use schema_gnl::species::dsl::*;
-        let mut conn = self.pool.get().await?;
-
-        let total: i64 = species
-            .filter(status.eq_any(ACCEPTED_NAMES))
-            .filter(rank.eq_any(SPECIES_RANKS))
-            .filter(with_classification(&Classification::Kingdom("Bacteria".to_string())))
-            .count()
-            .get_result(&mut conn)
-            .await?;
-
-        Ok(Overview {
-            total,
-        })
-    }
-
-    pub async fn protista(&self) -> Result<Overview, Error> {
-        use schema_gnl::species::dsl::*;
-        let mut conn = self.pool.get().await?;
-
-        let total: i64 = species
-            .filter(status.eq_any(ACCEPTED_NAMES))
-            .filter(rank.eq_any(SPECIES_RANKS))
-            .filter(with_classification(&Classification::Superkingdom("Protista".to_string())))
-            .count()
-            .get_result(&mut conn)
-            .await?;
-
-        Ok(Overview {
-            total,
-        })
     }
 
     pub async fn sequences(&self) -> Result<Overview, Error> {

@@ -2,9 +2,9 @@ use std::net::SocketAddr;
 
 use anyhow::Context as ErrorContext;
 use arga_core::search::SearchIndex;
-use axum::extract::FromRef;
-use axum::http::{HeaderValue, Method};
 use axum::Router;
+use axum::extract::FromRef;
+use axum::http::HeaderValue;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
