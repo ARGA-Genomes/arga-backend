@@ -5,13 +5,13 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use super::common::datasets::DatasetDetails;
-use super::common::taxonomy::{sort_taxa_priority, NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
+use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus, sort_taxa_priority};
 use super::common::{NameDetails, Page, SpeciesCard};
 use super::helpers::SpeciesHelper;
 use super::specimen::SpecimenDetails;
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::extensions::species_filters::SpeciesFilter;
-use crate::database::{taxa, Database};
+use crate::database::{Database, taxa};
 use crate::http::{Context as State, Error};
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -154,7 +154,7 @@ impl TaxonQuery {
 
     async fn summary(&self, ctx: &Context<'_>) -> Result<TaxonSummary, Error> {
         let state = ctx.data::<State>()?;
-        let summary = state.database.taxa.taxon_summary(&self.classification).await?;
+        let summary = state.database.taxa.taxon_summary(&self.classification, &None).await?;
         Ok(summary.into())
     }
 
@@ -171,14 +171,18 @@ impl TaxonQuery {
 
     async fn species_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>()?;
-        let summaries = state.database.taxa.species_summary(&self.classification).await?;
+        let summaries = state.database.taxa.species_summary(&self.classification, &None).await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
 
     async fn species_genome_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>()?;
-        let summaries = state.database.taxa.species_genome_summary(&self.classification).await?;
+        let summaries = state
+            .database
+            .taxa
+            .species_genome_summary(&self.classification, &None)
+            .await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }

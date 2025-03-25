@@ -1,8 +1,6 @@
-use arga_core::models::{AttributeValueType, TaxonomicStatus, TaxonomicVernacularGroup};
+use arga_core::models::{TaxonomicStatus, TaxonomicVernacularGroup};
 // use arga_core::schema::{taxa, ecology, names};
 use arga_core::schema_gnl::species;
-use bigdecimal::BigDecimal;
-use chrono::NaiveDateTime;
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
@@ -24,6 +22,7 @@ pub enum FilterKind {
     // BushfireRecovery(BushfireRecoveryTrait),
 }
 
+
 #[derive(Clone, Debug)]
 pub enum DataType {
     Genome,
@@ -32,11 +31,13 @@ pub enum DataType {
     Other,
 }
 
+
 #[derive(Clone, Debug)]
 pub enum Filter {
     Include(FilterKind),
     Exclude(FilterKind),
 }
+
 
 pub fn filter_taxa(filters: &Vec<Filter>) -> species::BoxedQuery<Pg> {
     species::table
@@ -54,6 +55,7 @@ pub fn filter_taxa(filters: &Vec<Filter>) -> species::BoxedQuery<Pg> {
 // type BoxedEcologyExpression<'a> = Box<dyn BoxableExpression<ecology::table, Pg, SqlType = Bool> + 'a>;
 
 type BoxedExpression<'a> = Box<dyn BoxableExpression<species::table, Pg, SqlType = Bool> + 'a>;
+
 
 /// Filter the species table with a global filter enum
 pub fn with_filter(filter: &Filter) -> BoxedExpression {
@@ -83,6 +85,7 @@ pub fn with_filter(filter: &Filter) -> BoxedExpression {
     }
 }
 
+
 /// Narrow down the results from the taxa table with multiple filters
 pub fn with_filters(filters: &Vec<Filter>) -> Option<BoxedExpression> {
     let mut predicates: Option<BoxedExpression> = None;
@@ -97,6 +100,7 @@ pub fn with_filters(filters: &Vec<Filter>) -> Option<BoxedExpression> {
 
     predicates
 }
+
 
 // /// Filter the taxa table with a vernacular group value
 // pub fn with_drainage_basin(value: &str) -> BoxedTaxaExpression {
@@ -142,6 +146,7 @@ pub fn with_filters(filters: &Vec<Filter>) -> Option<BoxedExpression> {
 // pub fn without_ecology(value: &str) -> BoxedTaxaExpression {
 //     Box::new(taxa::ecology.contains(vec![value]))
 // }
+
 
 /// Filter the species table with a vernacular group value
 pub fn with_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpression {
@@ -205,6 +210,7 @@ pub fn with_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpressio
         ),
     }
 }
+
 
 /// Filter the species table excluding a vernacular group value
 pub fn without_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpression {
@@ -321,6 +327,7 @@ pub fn without_classification(classification: &Classification) -> BoxedExpressio
 //     }
 // }
 
+
 /// Filter the species table to records that have a specific type of associated data
 pub fn with_data(data_type: &DataType) -> BoxedExpression {
     match data_type {
@@ -330,6 +337,7 @@ pub fn with_data(data_type: &DataType) -> BoxedExpression {
         DataType::Other => Box::new(species::other.gt(0)),
     }
 }
+
 
 /// Filter the species table to records that dont have a specific type of associated data
 pub fn without_data(data_type: &DataType) -> BoxedExpression {

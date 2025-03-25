@@ -1,14 +1,15 @@
 use arga_core::models::Species;
-use diesel::expression_methods::PgJsonbExpressionMethods;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use super::extensions::Paginate;
+use super::extensions::species_filters::NameAttributeFilter;
 use super::models::{Dataset, Source};
-use super::{schema, schema_gnl, PageResult, PgPool};
-use crate::database::extensions::filters::{with_filters, Filter};
+use super::{PageResult, PgPool, schema, schema_gnl};
 use crate::database::Error;
+use crate::database::extensions::filters::{Filter, with_filters};
+use crate::database::extensions::species_filters::with_attribute;
 
 pub const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
 
@@ -16,6 +17,7 @@ pub const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
 pub struct SourceProvider {
     pub pool: PgPool,
 }
+
 
 impl SourceProvider {
     pub async fn all_records(&self) -> Result<Vec<Source>, Error> {
@@ -78,7 +80,7 @@ impl SourceProvider {
         filters: &Vec<Filter>,
         page: i64,
         page_size: i64,
-        attributes: Option<serde_json::Value>,
+        attribute: &Option<NameAttributeFilter>,
     ) -> PageResult<Species> {
         use schema::{datasets, name_attributes as attrs, taxon_names};
         use schema_gnl::species;
@@ -89,8 +91,8 @@ impl SourceProvider {
             None => species::table.into_boxed(),
         };
 
-        let query = match attributes {
-            Some(attrs) => query.filter(species::attributes.contains(attrs)),
+        let query = match attribute {
+            Some(attr) => query.filter(with_attribute(attr)),
             None => query,
         };
 

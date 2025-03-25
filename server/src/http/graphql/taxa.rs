@@ -8,6 +8,7 @@ use crate::database::extensions::filters::Filter;
 use crate::database::extensions::taxa_filters;
 use crate::http::{Context as State, Error};
 
+
 /// Available filters when retrieving taxa.
 #[derive(Debug, OneofObject)]
 pub enum TaxaFilter {
@@ -17,10 +18,12 @@ pub enum TaxaFilter {
     HasData(DataType),
 }
 
+
 pub struct Taxa {
     filters: Vec<Filter>,
     taxa_filters: Vec<taxa_filters::TaxaFilter>,
 }
+
 
 #[Object]
 impl Taxa {
@@ -66,6 +69,7 @@ pub struct FilterOptions {
     filters: Vec<Filter>,
 }
 
+
 #[Object]
 impl FilterOptions {
     async fn ecology(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
@@ -98,6 +102,7 @@ impl FilterOptions {
         Ok(options)
     }
 }
+
 
 impl From<TaxaFilter> for taxa_filters::TaxaFilter {
     fn from(value: TaxaFilter) -> Self {
