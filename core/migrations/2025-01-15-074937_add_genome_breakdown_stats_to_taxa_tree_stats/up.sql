@@ -84,13 +84,17 @@ stats AS (
         SUM(assembly_scaffolds) AS assembly_scaffolds,
         SUM(assembly_contigs) AS assembly_contigs,
         -- sum up all the coverage for the node and divide it by the amount of children to determine
-        -- the total coverage for this specific node
-        SUM(full_genomes_coverage) AS total_full_genomes_coverage,
-        SUM(partial_genomes_coverage) AS total_partial_genomes_coverage,
-        SUM(complete_genomes_coverage) AS total_complete_genomes_coverage,
-        SUM(assembly_chromosomes_coverage) AS total_assembly_chromosomes_coverage,
-        SUM(assembly_scaffolds_coverage) AS total_assembly_scaffolds_coverage,
-        SUM(assembly_contigs_coverage) AS total_assembly_contigs_coverage
+        -- the total coverage for this specific node.
+        --
+        -- we want to also clamp the coverage if we are a species node so that the coverage effectively
+        -- has a resolution of species and not subspecies or varieties. this is largely a practical matter
+        -- as the stability of the tree is much greater at the species level compared to the ranks beneath it
+        LEAST(SUM(full_genomes_coverage), SUM(CASE WHEN taxa.rank='species' THEN 1 ELSE 0 END)) AS total_full_genomes_coverage,
+        LEAST(SUM(partial_genomes_coverage), SUM(CASE WHEN taxa.rank='species' THEN 1 ELSE 0 END)) AS total_partial_genomes_coverage,
+        LEAST(SUM(complete_genomes_coverage), SUM(CASE WHEN taxa.rank='species' THEN 1 ELSE 0 END)) AS total_complete_genomes_coverage,
+        LEAST(SUM(assembly_chromosomes_coverage), SUM(CASE WHEN taxa.rank='species' THEN 1 ELSE 0 END)) AS total_assembly_chromosomes_coverage,
+        LEAST(SUM(assembly_scaffolds_coverage), SUM(CASE WHEN taxa.rank='species' THEN 1 ELSE 0 END)) AS total_assembly_scaffolds_coverage,
+        LEAST(SUM(assembly_contigs_coverage), SUM(CASE WHEN taxa.rank='species' THEN 1 ELSE 0 END)) AS total_assembly_contigs_coverage
     FROM taxon_stats
     JOIN taxa ON taxon_stats.path_id = taxa.id
     GROUP BY taxon_id, taxon_stats.id

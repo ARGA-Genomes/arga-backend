@@ -25,22 +25,14 @@ body:graphql {
         other
         totalGenomic
     		species
+    fullGenomesCoverage
   }
   
   {
   
     stats {
-      taxonBreakdown(taxonRank: "DOMAIN", taxonCanonicalName:"Eukaryota", includeRanks:["DOMAIN", "KINGDOM","PHYLUM"]) {
+      taxonBreakdown(taxonRank: "CLASS", taxonCanonicalName:"Mammalia", includeRanks:["ORDER"]) {
   			...TreeNode
-        children {
-          ...TreeNode
-          children {
-            ...TreeNode
-            children{
-              ...TreeNode
-            }
-          }
-        }
   		}
     }
   }

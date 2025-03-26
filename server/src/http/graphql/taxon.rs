@@ -3,6 +3,7 @@ use async_graphql::*;
 use bigdecimal::ToPrimitive;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use super::common::datasets::DatasetDetails;
 use super::common::taxonomy::{sort_taxa_priority, NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
@@ -107,39 +108,45 @@ pub enum TaxonRank {
     Biovar,
 }
 
+#[derive(InputObject)]
+pub struct TaxonByClassification {
+    pub canonical_name: String,
+    pub rank: TaxonRank,
+    pub dataset_id: Uuid,
+}
+
+#[derive(OneofObject)]
+pub enum TaxonBy {
+    Id(Uuid),
+    Classification(TaxonByClassification),
+}
+
 #[derive(MergedObject)]
 pub struct Taxon(TaxonDetails, TaxonQuery);
 
 impl Taxon {
-    // TODO: replace this endpoint with an id taxon query since we now use a multi taxa system
-    pub async fn new(db: &Database, rank: TaxonRank, canonical_name: String) -> Result<Taxon, Error> {
-        let classification = into_classification(rank, canonical_name.clone());
-        let mut taxa = db.taxa.find_by_classification(&classification).await?;
-
-        // sort by dataset name for some consistency
-        sort_taxa_priority(&mut taxa);
-        let taxon = taxa.first().ok_or_else(|| Error::NotFound(canonical_name))?;
-        let details: TaxonDetails = taxon.clone().into();
-
-        let query = TaxonQuery {
-            classification,
-            taxon: taxon.taxon.clone(),
+    pub async fn new(db: &Database, by: TaxonBy) -> Result<Taxon, Error> {
+        let taxon = match by {
+            TaxonBy::Id(id) => db.taxa.find_by_id(&id).await?,
+            TaxonBy::Classification(name) => {
+                let classification = into_classification(name.rank, name.canonical_name);
+                db.taxa
+                    .find_one_by_classification(&classification, &name.dataset_id)
+                    .await?
+            }
         };
-        Ok(Taxon(details, query))
+
+        Ok(Taxon::init(taxon))
     }
 
     pub fn init(taxon: models::Taxon) -> Taxon {
         let details = taxon.clone().into();
-        let query = TaxonQuery {
-            taxon,
-            classification: Classification::Domain("".to_string()),
-        };
+        let query = TaxonQuery { taxon };
         Taxon(details, query)
     }
 }
 
 pub struct TaxonQuery {
-    classification: Classification,
     taxon: models::Taxon,
 }
 
@@ -152,33 +159,22 @@ impl TaxonQuery {
         Ok(hierarchy)
     }
 
-    async fn summary(&self, ctx: &Context<'_>) -> Result<TaxonSummary, Error> {
+    async fn summary(&self, ctx: &Context<'_>, rank: TaxonomicRank) -> Result<RankSummary, Error> {
         let state = ctx.data::<State>()?;
-        let summary = state.database.taxa.taxon_summary(&self.classification).await?;
+        let summary = state.database.taxa.rank_summary(&self.taxon.id, &rank.into()).await?;
         Ok(summary.into())
     }
 
-    async fn descendants(&self, ctx: &Context<'_>, rank: TaxonomicRank) -> Result<Vec<TaxonSummary>> {
+    async fn species_genomic_data_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>()?;
-        let summaries = state
-            .database
-            .taxa
-            .descendant_summary(&self.classification, rank.into())
-            .await?;
+        let summaries = state.database.taxa.species_genomic_data_summary(&self.taxon.id).await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
 
-    async fn species_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
+    async fn species_genomes_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>()?;
-        let summaries = state.database.taxa.species_summary(&self.classification).await?;
-        let summaries = summaries.into_iter().map(|r| r.into()).collect();
-        Ok(summaries)
-    }
-
-    async fn species_genome_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
-        let state = ctx.data::<State>()?;
-        let summaries = state.database.taxa.species_genome_summary(&self.classification).await?;
+        let summaries = state.database.taxa.species_genomes_summary(&self.taxon.id).await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
@@ -215,8 +211,15 @@ impl TaxonQuery {
         let state = ctx.data::<State>()?;
         let helper = SpeciesHelper::new(&state.database);
 
-        let filter = SpeciesFilter::Classification(self.classification.clone());
-        let page = state.database.taxa.species(&vec![filter], page, per_page).await?;
+        let classification =
+            into_classification(TaxonRank::from(self.taxon.rank.clone()), self.taxon.canonical_name.clone());
+
+        let filter = SpeciesFilter::Classification(classification.clone());
+        let page = state
+            .database
+            .taxa
+            .species(&vec![filter], &self.taxon.dataset_id, page, per_page)
+            .await?;
         let cards = helper.filtered_cards(page.records).await?;
 
         Ok(Page {
@@ -392,24 +395,21 @@ impl From<models::TaxonTreeNode> for TaxonNode {
 }
 
 #[derive(SimpleObject)]
-pub struct TaxonSummary {
-    /// The name of the taxon this summary pertains to
-    pub canonical_name: String,
-    /// Total amount of descendant species
-    pub species: i64,
-    /// Total amount of descendant species with genomes
-    pub species_genomes: i64,
-    /// Total amount of descendant species with any genomic data
-    pub species_data: i64,
+pub struct RankSummary {
+    /// Total amount of taxa in the rank
+    pub total: i64,
+    /// Total amount of taxa in the rank with genomes
+    pub genomes: i64,
+    /// Total amount of taxa in the rank with any genomic data
+    pub genomic_data: i64,
 }
 
-impl From<taxa::TaxonSummary> for TaxonSummary {
-    fn from(value: taxa::TaxonSummary) -> Self {
+impl From<taxa::RankSummary> for RankSummary {
+    fn from(value: taxa::RankSummary) -> Self {
         Self {
-            canonical_name: value.canonical_name,
-            species: value.species,
-            species_genomes: value.species_genomes,
-            species_data: value.species_data,
+            total: value.total,
+            genomes: value.genomes,
+            genomic_data: value.genomic_data,
         }
     }
 }
@@ -433,8 +433,9 @@ impl From<taxa::TypeSpecimen> for TypeSpecimen {
 
 #[derive(SimpleObject)]
 pub struct DataBreakdown {
-    pub name: String,
-    pub markers: i64,
+    pub scientific_name: String,
+    pub canonical_name: String,
+    pub loci: i64,
     pub genomes: i64,
     pub specimens: i64,
     pub other: i64,
@@ -444,8 +445,9 @@ pub struct DataBreakdown {
 impl From<taxa::DataSummary> for DataBreakdown {
     fn from(value: taxa::DataSummary) -> Self {
         Self {
-            name: value.canonical_name,
-            markers: value.markers.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
+            scientific_name: value.scientific_name,
+            canonical_name: value.canonical_name,
+            loci: value.loci.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
             genomes: value.genomes.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
             specimens: value.specimens.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
             other: value.other.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
@@ -457,12 +459,13 @@ impl From<taxa::DataSummary> for DataBreakdown {
 impl From<taxa::SpeciesSummary> for DataBreakdown {
     fn from(value: taxa::SpeciesSummary) -> Self {
         Self {
-            name: value.name,
-            markers: value.markers,
-            genomes: value.genomes,
-            specimens: value.specimens,
-            other: value.other,
-            total_genomic: value.total_genomic,
+            scientific_name: value.scientific_name,
+            canonical_name: value.canonical_name,
+            loci: value.loci.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
+            genomes: value.genomes.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
+            specimens: value.specimens.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
+            other: value.other.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
+            total_genomic: value.total_genomic.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
         }
     }
 }

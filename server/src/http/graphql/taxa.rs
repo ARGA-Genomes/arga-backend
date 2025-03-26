@@ -42,18 +42,18 @@ impl Taxa {
         Ok(taxa)
     }
 
-    async fn species(&self, ctx: &Context<'_>, page: i64, per_page: i64) -> Result<Page<SpeciesCard>, Error> {
-        let state = ctx.data::<State>()?;
-        let helper = SpeciesHelper::new(&state.database);
+    // async fn species(&self, ctx: &Context<'_>, page: i64, per_page: i64) -> Result<Page<SpeciesCard>, Error> {
+    //     let state = ctx.data::<State>()?;
+    //     let helper = SpeciesHelper::new(&state.database);
 
-        let page = state.database.taxa.species(&vec![], page, per_page).await?;
-        let cards = helper.filtered_cards(page.records).await?;
+    //     let page = state.database.taxa.species(&vec![], page, per_page).await?;
+    //     let cards = helper.filtered_cards(page.records).await?;
 
-        Ok(Page {
-            records: cards,
-            total: page.total,
-        })
-    }
+    //     Ok(Page {
+    //         records: cards,
+    //         total: page.total,
+    //     })
+    // }
 
     async fn filter_options(&self) -> FilterOptions {
         FilterOptions {
