@@ -1,0 +1,42 @@
+meta {
+  name: Taxon breakdown
+  type: graphql
+  seq: 9
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    stats {
+      taxonBreakdown(
+        taxonRank: "FAMILY"
+        taxonCanonicalName: "Macropodidae"
+        includeRanks: ["GENUS"]
+      ) {
+        scientificName
+        canonicalName
+        species
+        fullGenomes
+        fullGenomesCoverage
+  
+        children {
+          scientificName
+          canonicalName
+          species
+          fullGenomes
+          fullGenomesCoverage
+        }
+      }
+    }
+  }
+  
+}

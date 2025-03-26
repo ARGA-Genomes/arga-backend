@@ -1,0 +1,175 @@
+meta {
+  name: Taxon
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    # Curvularia trifolii
+    # Aspergillus fumigatus
+    # Dacelo (Dacelo) leachii
+    taxon(
+      by: {
+        classification: {
+          rank: FAMILY
+          canonicalName: "Macropodidae"
+          datasetId: "add01cb4-cc00-47fb-b4e0-cdc8d7ed564d"
+        }
+      }
+    ) {
+      scientificName
+      canonicalName
+      status
+      nomenclaturalCode
+      citation
+      source
+      sourceUrl
+      entityId
+  
+      # typeSpecimens {
+      #   typeStatus
+      #   recordId
+      #   materialSampleId
+      #   collectionCode
+      #   institutionCode
+      #   institutionName
+      #   recordedBy
+      #   identifiedBy
+      #   locality
+      #   country
+      #   stateProvince
+      #   latitude
+      #   longitude
+      # }
+  
+      taxonomicActs {
+        entityId
+        sourceUrl
+        dataCreatedAt
+        dataUpdatedAt
+        taxon {
+          scientificName
+          canonicalName
+          authorship
+          status
+          nomenclaturalCode
+          citation
+          source
+          sourceUrl
+        }
+        acceptedTaxon {
+          scientificName
+          canonicalName
+          authorship
+          status
+          nomenclaturalCode
+          citation
+          source
+          sourceUrl
+        }
+      }
+  
+      nomenclaturalActs {
+        entityId
+        act
+        sourceUrl
+        name {
+          scientificName
+          canonicalName
+          authorship
+          taxa {
+            scientificName
+            status
+            nomenclaturalCode
+          }
+        }
+        actedOn {
+          scientificName
+          canonicalName
+          authorship
+        }
+        publication {
+          citation
+          publishedYear
+          sourceUrls
+          citation
+        }
+      }
+  
+      history {
+        scientificName
+        canonicalName
+        authorship
+        rank
+        status
+        citation
+        sourceUrl
+        publication {
+          publishedYear
+          citation
+          sourceUrl
+          typeCitation
+        }
+        dataset {
+          name
+          shortName
+          url
+          license
+          rightsHolder
+          citation
+        }
+      }
+  
+      summary(rank:SPECIES) {
+        total
+        genomes
+        genomicData
+      }
+  
+      speciesGenomesSummary {
+        canonicalName
+        genomes
+        loci
+        specimens
+        other
+        totalGenomic
+      }
+      speciesGenomicDataSummary {
+        canonicalName
+        genomes
+        loci
+        specimens
+        other
+        totalGenomic
+      }
+  
+      species(page:1, perPage:10) {
+        total
+        records {
+          taxonomy {
+            canonicalName
+          }
+        }
+      }
+      
+      hierarchy {
+        scientificName
+        canonicalName
+        rank
+        depth
+      }
+    }
+  }
+  
+}

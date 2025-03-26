@@ -1,18 +1,18 @@
 use arga_core::models::{
-    ACCEPTED_NAMES,
     Dataset,
     Name,
     NamePublication,
     NomenclaturalActType,
     Publication,
-    SPECIES_RANKS,
     Specimen,
     Taxon,
     TaxonTreeNode,
     TaxonWithDataset,
     TaxonomicRank,
+    ACCEPTED_NAMES,
+    SPECIES_RANKS,
 };
-use bigdecimal::BigDecimal;
+use bigdecimal::{BigDecimal, Zero};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
 use diesel::sql_types::{Array, Nullable, Text, Varchar};
@@ -21,12 +21,12 @@ use uuid::Uuid;
 
 use super::extensions::species_filters::{NameAttributeFilter, SpeciesFilter};
 use super::extensions::taxa_filters::TaxaFilter;
-use super::extensions::{Paginate, sum_if};
+use super::extensions::{sum_if, Paginate};
 use super::models::Species;
-use super::{Error, PageResult, PgPool, schema, schema_gnl};
+use super::{schema, schema_gnl, Error, PageResult, PgPool};
 use crate::database::extensions::classification_filters::{
-    Classification as ClassificationFilter,
     with_classification,
+    Classification as ClassificationFilter,
 };
 use crate::database::extensions::filters::Filter;
 use crate::database::extensions::species_filters::{
@@ -42,38 +42,52 @@ sql_function!(fn unnest(x: Nullable<Array<Text>>) -> Text);
 
 #[derive(Debug, Queryable)]
 pub struct DataSummary {
+    pub scientific_name: String,
+    pub canonical_name: String,
+
+    pub loci: Option<BigDecimal>,
+    pub genomes: Option<BigDecimal>,
+    pub specimens: Option<BigDecimal>,
+    pub other: Option<BigDecimal>,
+    pub total_genomic: Option<BigDecimal>,
+
+    pub full_genomes: Option<BigDecimal>,
+    pub partial_genomes: Option<BigDecimal>,
+    pub complete_genomes: Option<BigDecimal>,
+    pub assembly_chromosomes: Option<BigDecimal>,
+    pub assembly_scaffolds: Option<BigDecimal>,
+    pub assembly_contigs: Option<BigDecimal>,
+
+    pub full_genomes_coverage: Option<BigDecimal>,
+    pub partial_genomes_coverage: Option<BigDecimal>,
+    pub complete_genomes_coverage: Option<BigDecimal>,
+    pub assembly_chromosomes_coverage: Option<BigDecimal>,
+    pub assembly_scaffolds_coverage: Option<BigDecimal>,
+    pub assembly_contigs_coverage: Option<BigDecimal>,
+}
+
+#[derive(Debug, Queryable)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct SpeciesSummary {
+    pub scientific_name: String,
     pub canonical_name: String,
     pub genomes: Option<BigDecimal>,
-    pub markers: Option<BigDecimal>,
+    pub loci: Option<BigDecimal>,
     pub specimens: Option<BigDecimal>,
     pub other: Option<BigDecimal>,
     pub total_genomic: Option<BigDecimal>,
 }
 
-
 #[derive(Debug, Queryable)]
-pub struct SpeciesSummary {
-    pub name: String,
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct RankSummary {
+    /// Total amount of taxa in the rank
+    pub total: i64,
+    /// Total amount of taxa in the rank with genomes
     pub genomes: i64,
-    pub markers: i64,
-    pub specimens: i64,
-    pub other: i64,
-    pub total_genomic: i64,
+    /// Total amount of taxa in the rank with any genomic data
+    pub genomic_data: i64,
 }
-
-
-#[derive(Debug, Queryable)]
-pub struct TaxonSummary {
-    /// The name of the taxon this summary pertains to
-    pub canonical_name: String,
-    /// Total amount of descendant species
-    pub species: i64,
-    /// Total amount of descendant species with genomes
-    pub species_genomes: i64,
-    /// Total amount of descendant species with any genomic data
-    pub species_data: i64,
-}
-
 
 #[derive(Debug, Queryable, Selectable)]
 #[diesel(table_name = schema::taxon_history)]
@@ -88,7 +102,6 @@ pub struct HistoryItem {
     #[diesel(embed)]
     pub publication: Option<NamePublication>,
 }
-
 
 // because acted_on is an aliased table we don't implement
 // Selectable as it will use the `name` table rather than the
@@ -106,7 +119,6 @@ pub struct NomenclaturalAct {
     pub acted_on: Name,
 }
 
-
 #[derive(Debug, Queryable)]
 #[diesel(table_name = schema::taxonomic_acts)]
 pub struct TaxonomicAct {
@@ -117,7 +129,6 @@ pub struct TaxonomicAct {
     pub data_created_at: Option<DateTime<Utc>>,
     pub data_updated_at: Option<DateTime<Utc>>,
 }
-
 
 #[derive(Debug, Selectable, Queryable)]
 #[diesel(table_name = schema::specimens)]
@@ -134,8 +145,30 @@ pub struct TaxaProvider {
     pub pool: PgPool,
 }
 
-
 impl TaxaProvider {
+    pub async fn find_by_id(&self, id: &Uuid) -> Result<Taxon, Error> {
+        use schema::taxa;
+        let mut conn = self.pool.get().await?;
+        let record = taxa::table.filter(taxa::id.eq(id)).get_result(&mut conn).await?;
+        Ok(record)
+    }
+
+    pub async fn find_one_by_classification(
+        &self,
+        classification: &ClassificationFilter,
+        dataset_id: &Uuid,
+    ) -> Result<Taxon, Error> {
+        use schema::taxa;
+        let mut conn = self.pool.get().await?;
+
+        let record = taxa::table
+            .filter(taxa::dataset_id.eq(dataset_id))
+            .filter(with_classification(classification))
+            .get_result(&mut conn)
+            .await?;
+        Ok(record)
+    }
+
     pub async fn find_by_classification(
         &self,
         classification: &ClassificationFilter,
@@ -167,14 +200,21 @@ impl TaxaProvider {
         Ok(records)
     }
 
-    pub async fn species(&self, filters: &Vec<SpeciesFilter>, page: i64, per_page: i64) -> PageResult<Species> {
-        use schema_gnl::species::dsl::*;
+    pub async fn species(
+        &self,
+        filters: &Vec<SpeciesFilter>,
+        dataset_id: &Uuid,
+        page: i64,
+        per_page: i64,
+    ) -> PageResult<Species> {
+        use schema_gnl::species;
         let mut conn = self.pool.get().await?;
         let species_filters = with_species_filters(&filters);
 
-        let mut query = species
-            .filter(status.eq_any(ACCEPTED_NAMES))
-            .filter(rank.eq_any(SPECIES_RANKS))
+        let mut query = species::table
+            .filter(species::dataset_id.eq(dataset_id))
+            .filter(species::status.eq_any(ACCEPTED_NAMES))
+            .filter(species::rank.eq_any(SPECIES_RANKS))
             .into_boxed();
 
         if let Some(filter) = species_filters {
@@ -182,7 +222,7 @@ impl TaxaProvider {
         }
 
         let records = query
-            .order_by(scientific_name)
+            .order_by(species::scientific_name)
             .paginate(page)
             .per_page(per_page)
             .load::<(Species, i64)>(&mut conn)
@@ -288,29 +328,99 @@ impl TaxaProvider {
         Ok(nodes)
     }
 
-    pub async fn descendant_summary(
-        &self,
-        classification: &ClassificationFilter,
-        rank: TaxonomicRank,
-    ) -> Result<Vec<TaxonSummary>, Error> {
-        use diesel::dsl::{count_star, sql};
-        use schema_gnl::species;
+    /// Summary statistics for a specific rank below the specified taxon
+    pub async fn rank_summary(&self, taxon_id: &Uuid, rank: &TaxonomicRank) -> Result<RankSummary, Error> {
+        use diesel::dsl::count_star;
+        use schema::taxa;
+        use schema_gnl::taxa_tree_stats as stats;
+
         let mut conn = self.pool.get().await?;
 
-        let rank = rank.to_string().to_lowercase();
-        let selector = format!("species.classification->>'{rank}'");
-        let rank_group = sql::<Varchar>(&selector);
-
-        let records = species::table
-            .filter(with_accepted_classification(classification))
-            .filter(species::classification.retrieve_as_text(rank).is_not_null())
-            .group_by(&rank_group)
-            .select((&rank_group, count_star(), sum_if(species::genomes.gt(0)), sum_if(species::total_genomic.gt(0))))
-            .load::<TaxonSummary>(&mut conn)
+        // the taxa_tree_stats view summarises the total amount of data linked to descendants
+        // of the supplied taxon. since we want the number of species that have data we instead
+        // filter the taxa tree to species level nodes and count how many of them have a record
+        // greater than zero. to get multiple values from one query we leverage the sum_if extension.
+        let (total, genomes, genomic_data) = stats::table
+            .inner_join(taxa::table.on(taxa::id.eq(stats::id)))
+            .filter(stats::taxon_id.eq(taxon_id))
+            .filter(taxa::rank.eq(rank))
+            .select((
+                count_star(),
+                sum_if(stats::genomes.gt(BigDecimal::zero())),
+                sum_if(stats::total_genomic.gt(BigDecimal::zero())),
+            ))
+            .get_result::<(i64, i64, i64)>(&mut conn)
             .await?;
 
-        Ok(records)
+        Ok(RankSummary {
+            total,
+            genomes,
+            genomic_data,
+        })
     }
+
+    // the top 10 species that have the most genomic data
+    pub async fn species_genomic_data_summary(&self, taxon_id: &Uuid) -> Result<Vec<SpeciesSummary>, Error> {
+        use schema::taxa;
+        use schema_gnl::taxa_tree_stats as stats;
+        let mut conn = self.pool.get().await?;
+
+        // the taxa tree stats view aggregates the stats going up, so by searching for
+        // all taxa with a rank of species underneath the provided taxon uuid we make sure
+        // that any data linked to a subspecies or variety will be included in the stat for
+        // the species itself
+        let summaries = stats::table
+            .inner_join(taxa::table.on(taxa::id.eq(stats::id)))
+            .select((
+                taxa::scientific_name,
+                taxa::canonical_name,
+                stats::genomes,
+                stats::loci,
+                stats::specimens,
+                stats::other,
+                stats::total_genomic,
+            ))
+            .filter(stats::taxon_id.eq(taxon_id))
+            .filter(taxa::rank.eq(TaxonomicRank::Species))
+            .order(stats::total_genomic.desc())
+            .limit(10)
+            .load::<SpeciesSummary>(&mut conn)
+            .await?;
+
+        Ok(summaries)
+    }
+
+    // the top 10 species that have the most genomes
+    pub async fn species_genomes_summary(&self, taxon_id: &Uuid) -> Result<Vec<SpeciesSummary>, Error> {
+        use schema::taxa;
+        use schema_gnl::taxa_tree_stats as stats;
+        let mut conn = self.pool.get().await?;
+
+        // the taxa tree stats view aggregates the stats going up, so by searching for
+        // all taxa with a rank of species underneath the provided taxon uuid we make sure
+        // that any data linked to a subspecies or variety will be included in the stat for
+        // the species itself
+        let summaries = stats::table
+            .inner_join(taxa::table.on(taxa::id.eq(stats::id)))
+            .select((
+                taxa::scientific_name,
+                taxa::canonical_name,
+                stats::genomes,
+                stats::loci,
+                stats::specimens,
+                stats::other,
+                stats::total_genomic,
+            ))
+            .filter(stats::taxon_id.eq(taxon_id))
+            .filter(taxa::rank.eq(TaxonomicRank::Species))
+            .order(stats::genomes.desc())
+            .limit(10)
+            .load::<SpeciesSummary>(&mut conn)
+            .await?;
+
+        Ok(summaries)
+    }
+
 
     pub async fn taxon_summary(
         &self,

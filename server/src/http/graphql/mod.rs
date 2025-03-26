@@ -134,9 +134,9 @@ impl Query {
         Sequence::new(&state.database, &by).await
     }
 
-    async fn taxon(&self, ctx: &Context<'_>, rank: taxon::TaxonRank, canonical_name: String) -> Result<Taxon, Error> {
+    async fn taxon(&self, ctx: &Context<'_>, by: taxon::TaxonBy) -> Result<Taxon, Error> {
         let state = ctx.data::<State>()?;
-        Taxon::new(&state.database, rank, canonical_name).await
+        Taxon::new(&state.database, by).await
     }
 
     async fn provenance(&self) -> Provenance {
