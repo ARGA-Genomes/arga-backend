@@ -3,13 +3,13 @@ use async_graphql::{SimpleObject, *};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::common::{DatasetDetails, FilterItem, Page, SpeciesCard, convert_filters};
+use super::common::{convert_filters, DatasetDetails, FilterItem, Page, SpeciesCard};
 use super::helpers::SpeciesHelper;
-use super::taxon::{DataBreakdown, TaxonSummary};
-use crate::database::Database;
+use super::taxon::{DataBreakdown, RankSummary};
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::extensions::filters::Filter;
 use crate::database::extensions::species_filters::NameAttributeFilter;
+use crate::database::Database;
 use crate::http::graphql::common::datasets::{AccessRightsStatus, DataReuseStatus, SourceContentType};
 use crate::http::{Context as State, Error};
 
@@ -93,7 +93,7 @@ impl SourceQuery {
         })
     }
 
-    async fn summary(&self, ctx: &Context<'_>) -> Result<TaxonSummary, Error> {
+    async fn summary(&self, ctx: &Context<'_>) -> Result<RankSummary, Error> {
         let state = ctx.data::<State>()?;
         let summary = state
             .database

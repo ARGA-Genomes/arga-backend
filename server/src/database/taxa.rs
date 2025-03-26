@@ -15,7 +15,7 @@ use arga_core::models::{
 use bigdecimal::{BigDecimal, Zero};
 use chrono::{DateTime, Utc};
 use diesel::prelude::*;
-use diesel::sql_types::{Array, Nullable, Text, Varchar};
+use diesel::sql_types::{Array, Nullable, Text};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
@@ -68,7 +68,7 @@ pub struct DataSummary {
 
 #[derive(Debug, Queryable)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct SpeciesSummary {
+pub struct Summary {
     pub scientific_name: String,
     pub canonical_name: String,
     pub genomes: Option<BigDecimal>,
@@ -76,6 +76,17 @@ pub struct SpeciesSummary {
     pub specimens: Option<BigDecimal>,
     pub other: Option<BigDecimal>,
     pub total_genomic: Option<BigDecimal>,
+}
+
+#[derive(Debug, Queryable)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct SpeciesSummary {
+    pub canonical_name: String,
+    pub genomes: i64,
+    pub loci: i64,
+    pub specimens: i64,
+    pub other: i64,
+    pub total_genomic: i64,
 }
 
 #[derive(Debug, Queryable)]
@@ -360,7 +371,7 @@ impl TaxaProvider {
     }
 
     // the top 10 species that have the most genomic data
-    pub async fn species_genomic_data_summary(&self, taxon_id: &Uuid) -> Result<Vec<SpeciesSummary>, Error> {
+    pub async fn species_genomic_data_summary(&self, taxon_id: &Uuid) -> Result<Vec<Summary>, Error> {
         use schema::taxa;
         use schema_gnl::taxa_tree_stats as stats;
         let mut conn = self.pool.get().await?;
@@ -384,14 +395,14 @@ impl TaxaProvider {
             .filter(taxa::rank.eq(TaxonomicRank::Species))
             .order(stats::total_genomic.desc())
             .limit(10)
-            .load::<SpeciesSummary>(&mut conn)
+            .load::<Summary>(&mut conn)
             .await?;
 
         Ok(summaries)
     }
 
     // the top 10 species that have the most genomes
-    pub async fn species_genomes_summary(&self, taxon_id: &Uuid) -> Result<Vec<SpeciesSummary>, Error> {
+    pub async fn species_genomes_summary(&self, taxon_id: &Uuid) -> Result<Vec<Summary>, Error> {
         use schema::taxa;
         use schema_gnl::taxa_tree_stats as stats;
         let mut conn = self.pool.get().await?;
@@ -415,18 +426,17 @@ impl TaxaProvider {
             .filter(taxa::rank.eq(TaxonomicRank::Species))
             .order(stats::genomes.desc())
             .limit(10)
-            .load::<SpeciesSummary>(&mut conn)
+            .load::<Summary>(&mut conn)
             .await?;
 
         Ok(summaries)
     }
 
-
     pub async fn taxon_summary(
         &self,
         classification: &ClassificationFilter,
         attribute: &Option<NameAttributeFilter>,
-    ) -> Result<TaxonSummary, Error> {
+    ) -> Result<RankSummary, Error> {
         use schema_gnl::species;
         let mut conn = self.pool.get().await?;
 
@@ -463,11 +473,10 @@ impl TaxaProvider {
             .get_result::<i64>(&mut conn)
             .await?;
 
-        Ok(TaxonSummary {
-            canonical_name: "".to_string(),
-            species,
-            species_genomes,
-            species_data,
+        Ok(RankSummary {
+            total: species,
+            genomes: species_genomes,
+            genomic_data: species_data,
         })
     }
 

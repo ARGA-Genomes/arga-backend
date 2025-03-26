@@ -456,8 +456,8 @@ impl From<taxa::DataSummary> for DataBreakdown {
     }
 }
 
-impl From<taxa::SpeciesSummary> for DataBreakdown {
-    fn from(value: taxa::SpeciesSummary) -> Self {
+impl From<taxa::Summary> for DataBreakdown {
+    fn from(value: taxa::Summary) -> Self {
         Self {
             scientific_name: value.scientific_name,
             canonical_name: value.canonical_name,
@@ -466,6 +466,20 @@ impl From<taxa::SpeciesSummary> for DataBreakdown {
             specimens: value.specimens.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
             other: value.other.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
             total_genomic: value.total_genomic.map(|v| v.to_i64().unwrap_or(0)).unwrap_or(0),
+        }
+    }
+}
+
+impl From<taxa::SpeciesSummary> for DataBreakdown {
+    fn from(value: taxa::SpeciesSummary) -> Self {
+        Self {
+            scientific_name: "".to_string(),
+            canonical_name: value.canonical_name,
+            loci: value.loci,
+            genomes: value.genomes,
+            specimens: value.specimens,
+            other: value.other,
+            total_genomic: value.total_genomic,
         }
     }
 }
