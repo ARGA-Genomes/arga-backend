@@ -103,7 +103,7 @@ impl SourceProvider {
 
         let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
 
-        let records = query
+        let records = with_sorting(query, sort, direction)
             .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
             .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
             .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
@@ -112,7 +112,6 @@ impl SourceProvider {
             .distinct()
             .filter(datasets::source_id.eq(source.id))
             .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
-            .order_by(species::loci)
             .paginate(page)
             .per_page(page_size)
             .load::<(Species, i64)>(&mut conn)

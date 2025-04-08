@@ -4,11 +4,10 @@ use arga_core::models::Species;
 use async_graphql::*;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-
 use uuid::Uuid;
 
-use crate::database::{Database, schema};
 use crate::database::models::{Taxon, TaxonPhoto};
+use crate::database::{Database, schema};
 use crate::http::Error;
 use crate::http::graphql::common::{SpeciesCard, SpeciesDataSummary};
 
@@ -19,7 +18,9 @@ pub struct SpeciesHelper {
 
 impl SpeciesHelper {
     pub fn new(database: &Database) -> SpeciesHelper {
-        SpeciesHelper { database: database.clone() }
+        SpeciesHelper {
+            database: database.clone(),
+        }
     }
 
     pub async fn taxonomy(&self, name_ids: &Vec<Uuid>) -> Result<Vec<Taxon>, Error> {
@@ -50,10 +51,13 @@ impl SpeciesHelper {
 
         // create the card with the taxa and some defaults
         for taxon in taxa {
-            cards.insert(taxon.id, SpeciesCard {
-                taxonomy: taxon.into(),
-                ..Default::default()
-            });
+            cards.insert(
+                taxon.id,
+                SpeciesCard {
+                    taxonomy: taxon.into(),
+                    ..Default::default()
+                },
+            );
         }
 
         // assign the photo associated with the name
@@ -63,7 +67,9 @@ impl SpeciesHelper {
             .await?;
 
         for photo in photos.into_iter() {
-            cards.entry(photo.taxon_id).and_modify(|card| card.photo = Some(photo.into()));
+            cards
+                .entry(photo.taxon_id)
+                .and_modify(|card| card.photo = Some(photo.into()));
         }
 
         // sort by name and output the combined species data
@@ -84,20 +90,26 @@ impl SpeciesHelper {
         // of the species to look up data associated with the taxonomy
         let taxon_ids: Vec<Uuid> = species.iter().map(|s| s.id).collect();
 
+        // Save the original order of species by their IDs
+        let order: Vec<Uuid> = species.iter().map(|record| record.id).collect();
+
         let mut cards: HashMap<Uuid, SpeciesCard> = HashMap::new();
 
         // create the card with the taxa and some defaults
         for record in species {
-            cards.insert(record.id, SpeciesCard {
-                data_summary: SpeciesDataSummary {
-                    genomes: record.genomes,
-                    loci: record.loci,
-                    specimens: record.specimens,
-                    other: record.other,
+            cards.insert(
+                record.id,
+                SpeciesCard {
+                    data_summary: SpeciesDataSummary {
+                        genomes: record.genomes,
+                        loci: record.loci,
+                        specimens: record.specimens,
+                        other: record.other,
+                    },
+                    taxonomy: record.into(),
+                    ..Default::default()
                 },
-                taxonomy: record.into(),
-                ..Default::default()
-            });
+            );
         }
 
         // assign the photo associated with the name
@@ -107,12 +119,17 @@ impl SpeciesHelper {
             .await?;
 
         for photo in photos.into_iter() {
-            cards.entry(photo.taxon_id).and_modify(|card| card.photo = Some(photo.into()));
+            cards
+                .entry(photo.taxon_id)
+                .and_modify(|card| card.photo = Some(photo.into()));
         }
 
-        // reorder the cards since the hashmap effectively randomises them
-        let mut cards: Vec<SpeciesCard> = cards.into_values().collect();
-        cards.sort_by(|a, b| a.taxonomy.scientific_name.cmp(&b.taxonomy.scientific_name));
-        Ok(cards)
+        // reorder the cards to follow the original order of the species vector
+        let ordered_cards: Vec<SpeciesCard> = order
+            .into_iter()
+            .map(|id| cards.remove(&id).expect("Card should exist for species"))
+            .collect();
+
+        Ok(ordered_cards)
     }
 }

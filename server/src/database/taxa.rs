@@ -235,8 +235,7 @@ impl TaxaProvider {
             query = query.filter(filter);
         }
 
-        let records = query
-            .order_by(with_sorting(sort, direction))
+        let records = with_sorting(query, sort, direction)
             .paginate(page)
             .per_page(per_page)
             .load::<(Species, i64)>(&mut conn)
