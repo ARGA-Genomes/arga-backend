@@ -9,7 +9,7 @@ use super::models::{Dataset, Source};
 use super::{PageResult, PgPool, schema, schema_gnl};
 use crate::database::Error;
 use crate::database::extensions::filters::{Filter, with_filters};
-use crate::database::extensions::species_filters::with_attribute;
+use crate::database::extensions::species_filters::{SortDirection, SpeciesSort, with_attribute, with_sorting};
 
 pub const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
 
@@ -80,6 +80,8 @@ impl SourceProvider {
         filters: &Vec<Filter>,
         page: i64,
         page_size: i64,
+        sort: SpeciesSort,
+        direction: SortDirection,
         attribute: &Option<NameAttributeFilter>,
     ) -> PageResult<Species> {
         use schema::{datasets, name_attributes as attrs, taxon_names};
@@ -96,6 +98,9 @@ impl SourceProvider {
             None => query,
         };
 
+        // Dynamically sort query based on parameters
+        // let query = with_sorting(query, sort, direction);
+
         let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
 
         let records = query
@@ -107,7 +112,7 @@ impl SourceProvider {
             .distinct()
             .filter(datasets::source_id.eq(source.id))
             .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
-            .order_by(species::scientific_name)
+            .order_by(species::loci)
             .paginate(page)
             .per_page(page_size)
             .load::<(Species, i64)>(&mut conn)

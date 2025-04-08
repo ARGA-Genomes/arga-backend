@@ -6,13 +6,14 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::common::datasets::DatasetDetails;
-use super::common::taxonomy::{sort_taxa_priority, NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
+use super::common::species::{SortDirection, SpeciesSort};
+use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
 use super::common::{NameDetails, Page, SpeciesCard};
 use super::helpers::SpeciesHelper;
 use super::specimen::SpecimenDetails;
 use crate::database::extensions::classification_filters::Classification;
-use crate::database::extensions::species_filters::SpeciesFilter;
-use crate::database::{taxa, Database};
+use crate::database::extensions::species_filters::{self, SpeciesFilter};
+use crate::database::{Database, taxa};
 use crate::http::{Context as State, Error};
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -207,7 +208,14 @@ impl TaxonQuery {
         Ok(specimens)
     }
 
-    async fn species(&self, ctx: &Context<'_>, page: i64, per_page: i64) -> Result<Page<SpeciesCard>, Error> {
+    async fn species(
+        &self,
+        ctx: &Context<'_>,
+        page: i64,
+        per_page: i64,
+        sort: Option<SpeciesSort>,
+        sort_direction: Option<SortDirection>,
+    ) -> Result<Page<SpeciesCard>, Error> {
         let state = ctx.data::<State>()?;
         let helper = SpeciesHelper::new(&state.database);
 
@@ -218,8 +226,22 @@ impl TaxonQuery {
         let page = state
             .database
             .taxa
-            .species(&vec![filter], &self.taxon.dataset_id, page, per_page)
+            .species(
+                &vec![filter],
+                &self.taxon.dataset_id,
+                page,
+                per_page,
+                match sort {
+                    Some(srt) => srt.into(),
+                    _ => species_filters::SpeciesSort::ScientificName,
+                },
+                match sort_direction {
+                    Some(dir) => dir.into(),
+                    _ => species_filters::SortDirection::Asc,
+                },
+            )
             .await?;
+
         let cards = helper.filtered_cards(page.records).await?;
 
         Ok(Page {

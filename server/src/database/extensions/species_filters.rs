@@ -2,18 +2,61 @@ use arga_core::models::{ACCEPTED_NAMES, SPECIES_RANKS};
 use arga_core::schema_gnl::species;
 use async_graphql::{InputObject, OneofObject};
 use chrono::{DateTime, Utc};
+use diesel::dsl::sql;
+use diesel::expression::SqlLiteral;
 use diesel::pg::Pg;
 use diesel::prelude::*;
-use diesel::sql_types::{Bool, Nullable, Varchar};
+use diesel::sql_types::{Bool, Nullable, Untyped, Varchar};
 
 use super::classification_filters::{Classification, decompose_classification};
 
 type BoxedExpression<'a> = Box<dyn BoxableExpression<species::table, Pg, SqlType = Bool> + 'a>;
 
-
 #[derive(Clone, Debug)]
 pub enum SpeciesFilter {
     Classification(Classification),
+}
+
+#[derive(Clone, Debug)]
+pub enum SpeciesSort {
+    ScientificName,
+    CanonicalName,
+    ClassificationHierarchy,
+    Genomes,
+    Loci,
+    Specimens,
+    Other,
+    TotalGenomic,
+}
+
+#[derive(Clone, Debug)]
+pub enum SortDirection {
+    Asc,
+    Desc,
+}
+
+pub fn with_sorting(sort: SpeciesSort, direction: SortDirection) -> SqlLiteral<Untyped> {
+    let clause = match (sort, direction) {
+        (SpeciesSort::ScientificName, SortDirection::Asc) => "scientific_name ASC",
+        (SpeciesSort::ScientificName, SortDirection::Desc) => "scientific_name DESC",
+        (SpeciesSort::CanonicalName, SortDirection::Asc) => "canonical_name ASC",
+        (SpeciesSort::CanonicalName, SortDirection::Desc) => "canonical_name DESC",
+        // (SpeciesSort::ClassificationHierarchy, SortDirection::Asc) => "classification_hierarchy ASC",
+        // (SpeciesSort::ClassificationHierarchy, SortDirection::Desc) => "classification_hierarchy DESC",
+        (SpeciesSort::ClassificationHierarchy, SortDirection::Asc) => "scientific_name ASC",
+        (SpeciesSort::ClassificationHierarchy, SortDirection::Desc) => "scientific_name DESC",
+        (SpeciesSort::Genomes, SortDirection::Asc) => "species.genomes ASC",
+        (SpeciesSort::Genomes, SortDirection::Desc) => "genomes DESC",
+        (SpeciesSort::Loci, SortDirection::Asc) => "species.loci ASC",
+        (SpeciesSort::Loci, SortDirection::Desc) => "species.loci DESC",
+        (SpeciesSort::Specimens, SortDirection::Asc) => "specimens ASC",
+        (SpeciesSort::Specimens, SortDirection::Desc) => "specimens DESC",
+        (SpeciesSort::Other, SortDirection::Asc) => "other ASC",
+        (SpeciesSort::Other, SortDirection::Desc) => "other DESC",
+        (SpeciesSort::TotalGenomic, SortDirection::Asc) => "total_genomic ASC",
+        (SpeciesSort::TotalGenomic, SortDirection::Desc) => "total_genomic DESC",
+    };
+    sql::<Untyped>(clause)
 }
 
 

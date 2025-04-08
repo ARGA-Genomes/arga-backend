@@ -3,13 +3,14 @@ use async_graphql::{SimpleObject, *};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::common::{convert_filters, DatasetDetails, FilterItem, Page, SpeciesCard};
+use super::common::species::{SortDirection, SpeciesSort};
+use super::common::{DatasetDetails, FilterItem, Page, SpeciesCard, convert_filters};
 use super::helpers::SpeciesHelper;
 use super::taxon::{DataBreakdown, RankSummary};
+use crate::database::Database;
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::extensions::filters::Filter;
-use crate::database::extensions::species_filters::NameAttributeFilter;
-use crate::database::Database;
+use crate::database::extensions::species_filters::{self, NameAttributeFilter};
 use crate::http::graphql::common::datasets::{AccessRightsStatus, DataReuseStatus, SourceContentType};
 use crate::http::{Context as State, Error};
 
@@ -75,14 +76,35 @@ impl SourceQuery {
         Ok(datasets)
     }
 
-    async fn species(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpeciesCard>, Error> {
+    async fn species(
+        &self,
+        ctx: &Context<'_>,
+        page: i64,
+        page_size: i64,
+        sort: Option<SpeciesSort>,
+        sort_direction: Option<SortDirection>,
+    ) -> Result<Page<SpeciesCard>, Error> {
         let state = ctx.data::<State>()?;
         let helper = SpeciesHelper::new(&state.database);
 
         let page = state
             .database
             .sources
-            .species(&self.source, &self.filters, page, page_size, &self.species_attribute)
+            .species(
+                &self.source,
+                &self.filters,
+                page,
+                page_size,
+                match sort {
+                    Some(srt) => srt.into(),
+                    _ => species_filters::SpeciesSort::ScientificName,
+                },
+                match sort_direction {
+                    Some(dir) => dir.into(),
+                    _ => species_filters::SortDirection::Asc,
+                },
+                &self.species_attribute,
+            )
             .await?;
 
         let cards = helper.filtered_cards(page.records).await?;

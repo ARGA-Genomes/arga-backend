@@ -1,16 +1,16 @@
 use arga_core::models::{
+    ACCEPTED_NAMES,
     Dataset,
     Name,
     NamePublication,
     NomenclaturalActType,
     Publication,
+    SPECIES_RANKS,
     Specimen,
     Taxon,
     TaxonTreeNode,
     TaxonWithDataset,
     TaxonomicRank,
-    ACCEPTED_NAMES,
-    SPECIES_RANKS,
 };
 use bigdecimal::{BigDecimal, Zero};
 use chrono::{DateTime, Utc};
@@ -19,20 +19,21 @@ use diesel::sql_types::{Array, Nullable, Text};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use super::extensions::species_filters::{NameAttributeFilter, SpeciesFilter};
+use super::extensions::species_filters::{NameAttributeFilter, SortDirection, SpeciesFilter, SpeciesSort};
 use super::extensions::taxa_filters::TaxaFilter;
-use super::extensions::{sum_if, Paginate};
+use super::extensions::{Paginate, sum_if};
 use super::models::Species;
-use super::{schema, schema_gnl, Error, PageResult, PgPool};
+use super::{Error, PageResult, PgPool, schema, schema_gnl};
 use crate::database::extensions::classification_filters::{
-    with_classification,
     Classification as ClassificationFilter,
+    with_classification,
 };
 use crate::database::extensions::filters::Filter;
 use crate::database::extensions::species_filters::{
     with_accepted_classification,
     with_attribute,
     with_classification as with_species_classification,
+    with_sorting,
     with_species_filters,
 };
 use crate::database::extensions::taxa_filters::with_taxa_filters;
@@ -217,6 +218,8 @@ impl TaxaProvider {
         dataset_id: &Uuid,
         page: i64,
         per_page: i64,
+        sort: SpeciesSort,
+        direction: SortDirection,
     ) -> PageResult<Species> {
         use schema_gnl::species;
         let mut conn = self.pool.get().await?;
@@ -233,7 +236,7 @@ impl TaxaProvider {
         }
 
         let records = query
-            .order_by(species::scientific_name)
+            .order_by(with_sorting(sort, direction))
             .paginate(page)
             .per_page(per_page)
             .load::<(Species, i64)>(&mut conn)
