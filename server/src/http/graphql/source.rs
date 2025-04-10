@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 use super::common::species::{SortDirection, SpeciesSort};
 use super::common::{DatasetDetails, FilterItem, Page, SpeciesCard, convert_filters};
-use super::helpers::SpeciesHelper;
+use super::helpers::{self, SpeciesHelper};
 use super::taxon::{DataBreakdown, RankSummary};
 use crate::database::Database;
 use crate::database::extensions::classification_filters::Classification;
@@ -113,6 +113,28 @@ impl SourceQuery {
             records: cards,
             total: page.total,
         })
+    }
+
+    async fn species_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        let state = ctx.data::<State>()?;
+
+        let page = state
+            .database
+            .sources
+            .species(
+                &self.source,
+                &self.filters,
+                1,       // hard coded page size
+                1000000, // some arbitrary number of records that hopefully is enough for all of them (1 million)
+                species_filters::SpeciesSort::ScientificName,
+                species_filters::SortDirection::Asc,
+                &self.species_attribute,
+            )
+            .await?;
+
+        let csv = helpers::csv::species(page.records).await?;
+
+        Ok(csv)
     }
 
     async fn summary(&self, ctx: &Context<'_>) -> Result<RankSummary, Error> {

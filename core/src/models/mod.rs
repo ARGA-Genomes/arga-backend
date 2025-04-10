@@ -167,6 +167,55 @@ impl Default for TaxonomicStatus {
     }
 }
 
+impl std::fmt::Display for TaxonomicStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            TaxonomicStatus::Accepted => "Accepted",
+            TaxonomicStatus::Undescribed => "Undescribed",
+            TaxonomicStatus::SpeciesInquirenda => "SpeciesInquirenda",
+            TaxonomicStatus::TaxonInquirendum => "TaxonInquirendum",
+            TaxonomicStatus::ManuscriptName => "ManuscriptName",
+            TaxonomicStatus::Hybrid => "Hybrid",
+            TaxonomicStatus::Synonym => "Synonym",
+            TaxonomicStatus::Homonym => "Homonym",
+            TaxonomicStatus::Unaccepted => "Unaccepted",
+            TaxonomicStatus::Informal => "Informal",
+            TaxonomicStatus::Placeholder => "Placeholder",
+            TaxonomicStatus::Basionym => "Basionym",
+            TaxonomicStatus::NomenclaturalSynonym => "NomenclaturalSynonym",
+            TaxonomicStatus::TaxonomicSynonym => "TaxonomicSynonym",
+            TaxonomicStatus::ReplacedSynonym => "ReplacedSynonym",
+            TaxonomicStatus::Misspelled => "Misspelled",
+            TaxonomicStatus::OrthographicVariant => "OrthographicVariant",
+            TaxonomicStatus::Misapplied => "Misapplied",
+            TaxonomicStatus::Excluded => "Excluded",
+            TaxonomicStatus::AlternativeName => "AlternativeName",
+            TaxonomicStatus::ProParteMisapplied => "ProParteMisapplied",
+            TaxonomicStatus::ProParteTaxonomicSynonym => "ProParteTaxonomicSynonym",
+            TaxonomicStatus::DoubtfulMisapplied => "DoubtfulMisapplied",
+            TaxonomicStatus::DoubtfulTaxonomicSynonym => "DoubtfulTaxonomicSynonym",
+            TaxonomicStatus::DoubtfulProParteMisapplied => "DoubtfulProParteMisapplied",
+            TaxonomicStatus::DoubtfulProParteTaxonomicSynonym => "DoubtfulProParteTaxonomicSynonym",
+            TaxonomicStatus::Unassessed => "Unassessed",
+            TaxonomicStatus::Unavailable => "Unavailable",
+            TaxonomicStatus::Uncertain => "Uncertain",
+            TaxonomicStatus::UnjustifiedEmendation => "UnjustifiedEmendation",
+            TaxonomicStatus::NomenDubium => "NomenDubium",
+            TaxonomicStatus::NomenNudum => "NomenNudum",
+            TaxonomicStatus::NomenOblitum => "NomenOblitum",
+            TaxonomicStatus::InterimUnpublished => "InterimUnpublished",
+            TaxonomicStatus::IncorrectGrammaticalAgreementOfSpecificEpithet => {
+                "IncorrectGrammaticalAgreementOfSpecificEpithet"
+            }
+            TaxonomicStatus::SupersededCombination => "SupersededCombination",
+            TaxonomicStatus::SupersededRank => "SupersededRank",
+        };
+
+        write!(f, "{}", s)
+    }
+}
+
+
 // TODO: this would be better as a derive macro so that we dont miss string
 // to enum conversions, or use serde enum deserialization
 impl From<String> for TaxonomicStatus {
