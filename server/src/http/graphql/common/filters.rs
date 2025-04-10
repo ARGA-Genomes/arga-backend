@@ -1,5 +1,5 @@
 use arga_core::search::SearchFilter;
-use async_graphql::{from_value, Enum, InputObject, Value};
+use async_graphql::{Enum, InputObject, Value, from_value};
 use serde::{Deserialize, Serialize};
 
 use super::search::SearchDataType;
@@ -19,6 +19,7 @@ use crate::http::Error;
 pub enum FilterType {
     VernacularGroup,
     HasData,
+    Attribute,
     // Ecology,
     // Ibra,
     // Imcra,
@@ -79,7 +80,15 @@ pub enum FilterAction {
 pub struct FilterItem {
     filter: FilterType,
     action: FilterAction,
-    value: String,
+    value: serde_json::Value,
+}
+
+fn filter_value_string(value: serde_json::Value) -> String {
+    if value.is_string() {
+        return value.as_str().unwrap().to_string();
+    }
+
+    String::from("INVALID-VALUE-TYPE")
 }
 
 /// Converts a graphql filter into the common filter enum
@@ -88,59 +97,111 @@ impl TryFrom<FilterItem> for Filter {
 
     fn try_from(source: FilterItem) -> Result<Self, Self::Error> {
         let kind = match source.filter {
-            FilterType::VernacularGroup => {
-                FilterKind::VernacularGroup(from_value::<TaxonomicVernacularGroup>(Value::String(source.value))?.into())
+            FilterType::VernacularGroup => FilterKind::VernacularGroup(
+                from_value::<TaxonomicVernacularGroup>(Value::String(filter_value_string(source.value).to_string()))?
+                    .into(),
+            ),
+
+            FilterType::HasData => {
+                FilterKind::HasData(from_value::<DataType>(Value::String(filter_value_string(source.value)))?.into())
             }
+            FilterType::Attribute => FilterKind::Attribute(source.value),
 
-            FilterType::HasData => FilterKind::HasData(from_value::<DataType>(Value::String(source.value))?.into()),
-
-            // FilterType::Ecology => FilterKind::Ecology(source.value),
-            // FilterType::Ibra => FilterKind::Ibra(source.value),
-            // FilterType::Imcra => FilterKind::Imcra(source.value),
-            // FilterType::State => FilterKind::State(source.value),
-            // FilterType::DrainageBasin => FilterKind::DrainageBasin(source.value),
+            // FilterType::Ecology => FilterKind::Ecology(filter_value_string(source.value)),
+            // FilterType::Ibra => FilterKind::Ibra(filter_value_string(source.value)),
+            // FilterType::Imcra => FilterKind::Imcra(filter_value_string(source.value)),
+            // FilterType::State => FilterKind::State(filter_value_string(source.value)),
+            // FilterType::DrainageBasin => FilterKind::DrainageBasin(filter_value_string(source.value)),
 
             // FilterType::BushfireRecovery => FilterKind::BushfireRecovery(
-            //     from_value::<BushfireRecoveryTrait>(Value::String(source.value))?.into()
+            //     from_value::<BushfireRecoveryTrait>(Value::String(filter_value_string(source.value)))?.into()
             // ),
-            FilterType::Domain => FilterKind::Classification(Classification::Domain(source.value)),
-            FilterType::Superkingdom => FilterKind::Classification(Classification::Superkingdom(source.value)),
-            FilterType::Kingdom => FilterKind::Classification(Classification::Kingdom(source.value)),
-            FilterType::Subkingdom => FilterKind::Classification(Classification::Subkingdom(source.value)),
-            FilterType::Phylum => FilterKind::Classification(Classification::Phylum(source.value)),
-            FilterType::Subphylum => FilterKind::Classification(Classification::Subphylum(source.value)),
-            FilterType::Superclass => FilterKind::Classification(Classification::Superclass(source.value)),
-            FilterType::Class => FilterKind::Classification(Classification::Class(source.value)),
-            FilterType::Subclass => FilterKind::Classification(Classification::Subclass(source.value)),
-            FilterType::Superorder => FilterKind::Classification(Classification::Superorder(source.value)),
-            FilterType::Order => FilterKind::Classification(Classification::Order(source.value)),
-            FilterType::Suborder => FilterKind::Classification(Classification::Suborder(source.value)),
-            FilterType::Hyporder => FilterKind::Classification(Classification::Hyporder(source.value)),
-            FilterType::Superfamily => FilterKind::Classification(Classification::Superfamily(source.value)),
-            FilterType::Family => FilterKind::Classification(Classification::Family(source.value)),
-            FilterType::Subfamily => FilterKind::Classification(Classification::Subfamily(source.value)),
-            FilterType::Supertribe => FilterKind::Classification(Classification::Supertribe(source.value)),
-            FilterType::Tribe => FilterKind::Classification(Classification::Tribe(source.value)),
-            FilterType::Subtribe => FilterKind::Classification(Classification::Subtribe(source.value)),
-            FilterType::Genus => FilterKind::Classification(Classification::Genus(source.value)),
-            FilterType::Subgenus => FilterKind::Classification(Classification::Subgenus(source.value)),
-            FilterType::Cohort => FilterKind::Classification(Classification::Cohort(source.value)),
-            FilterType::Subcohort => FilterKind::Classification(Classification::Subcohort(source.value)),
-            FilterType::Division => FilterKind::Classification(Classification::Division(source.value)),
-            FilterType::Subdivision => FilterKind::Classification(Classification::Subdivision(source.value)),
-            FilterType::Section => FilterKind::Classification(Classification::Section(source.value)),
-            FilterType::Regnum => FilterKind::Classification(Classification::Regnum(source.value)),
-            FilterType::Familia => FilterKind::Classification(Classification::Familia(source.value)),
-            FilterType::Classis => FilterKind::Classification(Classification::Classis(source.value)),
-            FilterType::Ordo => FilterKind::Classification(Classification::Ordo(source.value)),
-            FilterType::Forma => FilterKind::Classification(Classification::Forma(source.value)),
-            FilterType::Subclassis => FilterKind::Classification(Classification::Subclassis(source.value)),
-            FilterType::Superordo => FilterKind::Classification(Classification::Superordo(source.value)),
-            FilterType::Sectio => FilterKind::Classification(Classification::Sectio(source.value)),
-            FilterType::Series => FilterKind::Classification(Classification::Series(source.value)),
-            FilterType::Subfamilia => FilterKind::Classification(Classification::Subfamilia(source.value)),
-            FilterType::Subordo => FilterKind::Classification(Classification::Subordo(source.value)),
-            FilterType::Regio => FilterKind::Classification(Classification::Regio(source.value)),
+            FilterType::Domain => FilterKind::Classification(Classification::Domain(filter_value_string(source.value))),
+            FilterType::Superkingdom => {
+                FilterKind::Classification(Classification::Superkingdom(filter_value_string(source.value)))
+            }
+            FilterType::Kingdom => {
+                FilterKind::Classification(Classification::Kingdom(filter_value_string(source.value)))
+            }
+            FilterType::Subkingdom => {
+                FilterKind::Classification(Classification::Subkingdom(filter_value_string(source.value)))
+            }
+            FilterType::Phylum => FilterKind::Classification(Classification::Phylum(filter_value_string(source.value))),
+            FilterType::Subphylum => {
+                FilterKind::Classification(Classification::Subphylum(filter_value_string(source.value)))
+            }
+            FilterType::Superclass => {
+                FilterKind::Classification(Classification::Superclass(filter_value_string(source.value)))
+            }
+            FilterType::Class => FilterKind::Classification(Classification::Class(filter_value_string(source.value))),
+            FilterType::Subclass => {
+                FilterKind::Classification(Classification::Subclass(filter_value_string(source.value)))
+            }
+            FilterType::Superorder => {
+                FilterKind::Classification(Classification::Superorder(filter_value_string(source.value)))
+            }
+            FilterType::Order => FilterKind::Classification(Classification::Order(filter_value_string(source.value))),
+            FilterType::Suborder => {
+                FilterKind::Classification(Classification::Suborder(filter_value_string(source.value)))
+            }
+            FilterType::Hyporder => {
+                FilterKind::Classification(Classification::Hyporder(filter_value_string(source.value)))
+            }
+            FilterType::Superfamily => {
+                FilterKind::Classification(Classification::Superfamily(filter_value_string(source.value)))
+            }
+            FilterType::Family => FilterKind::Classification(Classification::Family(filter_value_string(source.value))),
+            FilterType::Subfamily => {
+                FilterKind::Classification(Classification::Subfamily(filter_value_string(source.value)))
+            }
+            FilterType::Supertribe => {
+                FilterKind::Classification(Classification::Supertribe(filter_value_string(source.value)))
+            }
+            FilterType::Tribe => FilterKind::Classification(Classification::Tribe(filter_value_string(source.value))),
+            FilterType::Subtribe => {
+                FilterKind::Classification(Classification::Subtribe(filter_value_string(source.value)))
+            }
+            FilterType::Genus => FilterKind::Classification(Classification::Genus(filter_value_string(source.value))),
+            FilterType::Subgenus => {
+                FilterKind::Classification(Classification::Subgenus(filter_value_string(source.value)))
+            }
+            FilterType::Cohort => FilterKind::Classification(Classification::Cohort(filter_value_string(source.value))),
+            FilterType::Subcohort => {
+                FilterKind::Classification(Classification::Subcohort(filter_value_string(source.value)))
+            }
+            FilterType::Division => {
+                FilterKind::Classification(Classification::Division(filter_value_string(source.value)))
+            }
+            FilterType::Subdivision => {
+                FilterKind::Classification(Classification::Subdivision(filter_value_string(source.value)))
+            }
+            FilterType::Section => {
+                FilterKind::Classification(Classification::Section(filter_value_string(source.value)))
+            }
+            FilterType::Regnum => FilterKind::Classification(Classification::Regnum(filter_value_string(source.value))),
+            FilterType::Familia => {
+                FilterKind::Classification(Classification::Familia(filter_value_string(source.value)))
+            }
+            FilterType::Classis => {
+                FilterKind::Classification(Classification::Classis(filter_value_string(source.value)))
+            }
+            FilterType::Ordo => FilterKind::Classification(Classification::Ordo(filter_value_string(source.value))),
+            FilterType::Forma => FilterKind::Classification(Classification::Forma(filter_value_string(source.value))),
+            FilterType::Subclassis => {
+                FilterKind::Classification(Classification::Subclassis(filter_value_string(source.value)))
+            }
+            FilterType::Superordo => {
+                FilterKind::Classification(Classification::Superordo(filter_value_string(source.value)))
+            }
+            FilterType::Sectio => FilterKind::Classification(Classification::Sectio(filter_value_string(source.value))),
+            FilterType::Series => FilterKind::Classification(Classification::Series(filter_value_string(source.value))),
+            FilterType::Subfamilia => {
+                FilterKind::Classification(Classification::Subfamilia(filter_value_string(source.value)))
+            }
+            FilterType::Subordo => {
+                FilterKind::Classification(Classification::Subordo(filter_value_string(source.value)))
+            }
+            FilterType::Regio => FilterKind::Classification(Classification::Regio(filter_value_string(source.value))),
         };
 
         Ok(match source.action {

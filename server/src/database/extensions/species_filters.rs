@@ -1,10 +1,10 @@
 use arga_core::models::{ACCEPTED_NAMES, SPECIES_RANKS};
 use arga_core::schema_gnl::species;
-use async_graphql::{InputObject, OneofObject};
-use chrono::{DateTime, Utc};
+use diesel::dsl::not;
 use diesel::pg::Pg;
 use diesel::prelude::*;
-use diesel::sql_types::{Bool, Nullable, Varchar};
+use diesel::sql_types::{Bool, Varchar};
+use serde_json::Value;
 
 use super::classification_filters::{Classification, decompose_classification};
 
@@ -109,35 +109,15 @@ pub fn with_species_filters(filters: &Vec<SpeciesFilter>) -> Option<BoxedExpress
     predicates
 }
 
-type AttrsBoxedExpression<'a> = Box<dyn BoxableExpression<species::table, Pg, SqlType = Nullable<Bool>> + 'a>;
+type AttrsBoxedExpression<'a> = Box<dyn BoxableExpression<species::table, Pg, SqlType = Bool> + 'a>;
 
-#[derive(OneofObject)]
-pub enum NameAttributeValue {
-    Int(i64),
-    Bool(bool),
-    String(String),
-    Timestamp(DateTime<Utc>),
-    Decimal(f64),
-}
 
-#[derive(InputObject)]
-pub struct NameAttributeFilter {
-    pub name: String,
-    pub value: NameAttributeValue,
+/// Filter species based on their associated name attributes JSON
+pub fn with_attribute(attibute: &Value) -> AttrsBoxedExpression {
+    Box::new(species::attributes.contains(attibute).assume_not_null())
 }
 
 /// Filter species based on their associated name attributes JSON
-pub fn with_attribute(attibute: &NameAttributeFilter) -> AttrsBoxedExpression {
-    Box::new(species::attributes.contains(serde_json::json!([{
-        "name": attibute.name,
-            "value": match &attibute.value {
-            NameAttributeValue::Int(i) => serde_json::Value::Number(serde_json::Number::from(*i)),
-            NameAttributeValue::Bool(b) => serde_json::Value::Bool(*b),
-            NameAttributeValue::String(s) => serde_json::Value::String(s.clone()),
-            NameAttributeValue::Timestamp(t) => serde_json::Value::String(t.to_rfc3339()),
-            NameAttributeValue::Decimal(d) => serde_json::Value::Number(
-                serde_json::Number::from_f64(*d).unwrap_or_else(|| serde_json::Number::from(0))
-            ),
-        }
-    }])))
+pub fn without_attribute(attibute: &Value) -> AttrsBoxedExpression {
+    Box::new(not(species::attributes.contains(attibute).assume_not_null()))
 }

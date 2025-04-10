@@ -6,11 +6,9 @@ use uuid::Uuid;
 use super::common::species::{SortDirection, SpeciesSort};
 use super::common::{DatasetDetails, FilterItem, Page, SpeciesCard, convert_filters};
 use super::helpers::{self, SpeciesHelper};
-use super::taxon::{DataBreakdown, RankSummary};
 use crate::database::Database;
-use crate::database::extensions::classification_filters::Classification;
 use crate::database::extensions::filters::Filter;
-use crate::database::extensions::species_filters::{self, NameAttributeFilter};
+use crate::database::extensions::species_filters::{self};
 use crate::http::graphql::common::datasets::{AccessRightsStatus, DataReuseStatus, SourceContentType};
 use crate::http::{Context as State, Error};
 
@@ -24,12 +22,7 @@ pub enum SourceBy {
 pub struct Source(SourceDetails, SourceQuery);
 
 impl Source {
-    pub async fn new(
-        db: &Database,
-        by: &SourceBy,
-        filters: Vec<FilterItem>,
-        species_attribute: Option<NameAttributeFilter>,
-    ) -> Result<Source, Error> {
+    pub async fn new(db: &Database, by: &SourceBy, filters: Vec<FilterItem>) -> Result<Source, Error> {
         let source = match by {
             SourceBy::Id(id) => db.sources.find_by_id(id).await?,
             SourceBy::Name(name) => db.sources.find_by_name(name).await?,
@@ -38,7 +31,6 @@ impl Source {
         let query = SourceQuery {
             source,
             filters: convert_filters(filters)?,
-            species_attribute,
         };
         Ok(Source(details, query))
     }
@@ -52,7 +44,6 @@ impl Source {
                 let query = SourceQuery {
                     source: record,
                     filters: vec![],
-                    species_attribute: None,
                 };
                 Source(details, query)
             })
@@ -64,7 +55,6 @@ impl Source {
 pub struct SourceQuery {
     source: models::Source,
     filters: Vec<Filter>,
-    species_attribute: Option<NameAttributeFilter>,
 }
 
 #[Object]
@@ -103,7 +93,6 @@ impl SourceQuery {
                     Some(dir) => dir.into(),
                     _ => species_filters::SortDirection::Asc,
                 },
-                &self.species_attribute,
             )
             .await?;
 
@@ -128,48 +117,12 @@ impl SourceQuery {
                 1000000, // some arbitrary number of records that hopefully is enough for all of them (1 million)
                 species_filters::SpeciesSort::ScientificName,
                 species_filters::SortDirection::Asc,
-                &self.species_attribute,
             )
             .await?;
 
         let csv = helpers::csv::species(page.records).await?;
 
         Ok(csv)
-    }
-
-    async fn summary(&self, ctx: &Context<'_>) -> Result<RankSummary, Error> {
-        let state = ctx.data::<State>()?;
-        let summary = state
-            .database
-            .taxa
-            .taxon_summary(&Classification::Domain("Eukaryota".to_string()), &self.species_attribute)
-            .await?;
-
-        Ok(summary.into())
-    }
-
-    async fn species_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
-        let state = ctx.data::<State>()?;
-        let summaries = state
-            .database
-            .taxa
-            .species_summary(&Classification::Domain("Eukaryota".to_string()), &self.species_attribute)
-            .await?;
-        let summaries = summaries.into_iter().map(|r| r.into()).collect();
-
-        Ok(summaries)
-    }
-
-    async fn species_genome_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
-        let state = ctx.data::<State>()?;
-        let summaries = state
-            .database
-            .taxa
-            .species_genome_summary(&Classification::Domain("Eukaryota".to_string()), &self.species_attribute)
-            .await?;
-
-        let summaries = summaries.into_iter().map(|r| r.into()).collect();
-        Ok(summaries)
     }
 }
 

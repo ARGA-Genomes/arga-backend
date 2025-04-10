@@ -19,7 +19,7 @@ use diesel::sql_types::{Array, Nullable, Text};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use super::extensions::species_filters::{NameAttributeFilter, SortDirection, SpeciesFilter, SpeciesSort};
+use super::extensions::species_filters::{SortDirection, SpeciesFilter, SpeciesSort};
 use super::extensions::taxa_filters::TaxaFilter;
 use super::extensions::{Paginate, sum_if};
 use super::models::Species;
@@ -31,7 +31,6 @@ use crate::database::extensions::classification_filters::{
 use crate::database::extensions::filters::Filter;
 use crate::database::extensions::species_filters::{
     with_accepted_classification,
-    with_attribute,
     with_classification as with_species_classification,
     with_sorting,
     with_species_filters,
@@ -434,32 +433,20 @@ impl TaxaProvider {
         Ok(summaries)
     }
 
-    pub async fn taxon_summary(
-        &self,
-        classification: &ClassificationFilter,
-        attribute: &Option<NameAttributeFilter>,
-    ) -> Result<RankSummary, Error> {
+    pub async fn taxon_summary(&self, classification: &ClassificationFilter) -> Result<RankSummary, Error> {
         use schema_gnl::species;
         let mut conn = self.pool.get().await?;
 
-        let mut species_query = species::table
+        let species_query = species::table
             .filter(with_accepted_classification(classification))
             .into_boxed();
-        let mut species_genomes_query = species::table
+        let species_genomes_query = species::table
             .filter(with_accepted_classification(classification))
             .into_boxed();
-        let mut species_data_query = species::table
+        let species_data_query = species::table
             .filter(with_accepted_classification(classification))
             .into_boxed();
 
-        match attribute {
-            Some(attr) => {
-                species_query = species_query.filter(with_attribute(attr));
-                species_genomes_query = species_genomes_query.filter(with_attribute(attr));
-                species_data_query = species_data_query.filter(with_attribute(attr));
-            }
-            None => {}
-        }
 
         let species = species_query.count().get_result::<i64>(&mut conn).await?;
 
@@ -482,21 +469,13 @@ impl TaxaProvider {
         })
     }
 
-    pub async fn species_summary(
-        &self,
-        filter: &ClassificationFilter,
-        attribute: &Option<NameAttributeFilter>,
-    ) -> Result<Vec<SpeciesSummary>, Error> {
+    pub async fn species_summary(&self, filter: &ClassificationFilter) -> Result<Vec<SpeciesSummary>, Error> {
         use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
         let query = species
             .select((canonical_name, genomes, loci, specimens, other, total_genomic))
             .into_boxed();
 
-        let query = match attribute {
-            Some(attr) => query.filter(with_attribute(attr)),
-            None => query,
-        };
 
         let summaries = query
             .filter(with_species_classification(filter))
@@ -508,21 +487,13 @@ impl TaxaProvider {
         Ok(summaries)
     }
 
-    pub async fn species_genome_summary(
-        &self,
-        filter: &ClassificationFilter,
-        attribute: &Option<NameAttributeFilter>,
-    ) -> Result<Vec<SpeciesSummary>, Error> {
+    pub async fn species_genome_summary(&self, filter: &ClassificationFilter) -> Result<Vec<SpeciesSummary>, Error> {
         use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
         let query = species
             .select((canonical_name, genomes, loci, specimens, other, total_genomic))
             .into_boxed();
 
-        let query = match attribute {
-            Some(attr) => query.filter(with_attribute(attr)),
-            None => query,
-        };
 
         let summaries = query
             .filter(with_species_classification(filter))

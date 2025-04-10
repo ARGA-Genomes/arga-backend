@@ -6,12 +6,14 @@ use diesel::prelude::*;
 use diesel::sql_types::Bool;
 
 use super::classification_filters::{Classification, decompose_classification};
+use super::species_filters::{with_attribute, without_attribute};
 
 #[derive(Clone, Debug)]
 pub enum FilterKind {
     Classification(Classification),
     VernacularGroup(TaxonomicVernacularGroup),
     HasData(DataType),
+    Attribute(serde_json::Value),
     // Ecology(String),
     // Ibra(String),
     // Imcra(String),
@@ -64,6 +66,7 @@ pub fn with_filter(filter: &Filter) -> BoxedExpression {
             FilterKind::Classification(classification) => with_classification(classification),
             FilterKind::VernacularGroup(group) => with_vernacular_group(group),
             FilterKind::HasData(data_type) => with_data(data_type),
+            FilterKind::Attribute(attribute) => with_attribute(attribute),
             // FilterKind::Ecology(ecology) => with_ecology(ecology),
             // FilterKind::Ibra(ibra) => with_ibra(ibra),
             // FilterKind::Imcra(imcra) => with_imcra(imcra),
@@ -75,6 +78,7 @@ pub fn with_filter(filter: &Filter) -> BoxedExpression {
             FilterKind::Classification(classification) => without_classification(classification),
             FilterKind::VernacularGroup(group) => without_vernacular_group(group),
             FilterKind::HasData(data_type) => without_data(data_type),
+            FilterKind::Attribute(attribute) => without_attribute(attribute),
             // FilterKind::Ecology(ecology) => without_ecology(ecology),
             // FilterKind::Ibra(ibra) => without_ibra(ibra),
             // FilterKind::Imcra(imcra) => without_imcra(imcra),

@@ -4,12 +4,11 @@ use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use super::extensions::Paginate;
-use super::extensions::species_filters::NameAttributeFilter;
 use super::models::{Dataset, Source};
 use super::{PageResult, PgPool, schema, schema_gnl};
 use crate::database::Error;
 use crate::database::extensions::filters::{Filter, with_filters};
-use crate::database::extensions::species_filters::{SortDirection, SpeciesSort, with_attribute, with_sorting};
+use crate::database::extensions::species_filters::{SortDirection, SpeciesSort, with_sorting};
 
 pub const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
 
@@ -82,7 +81,6 @@ impl SourceProvider {
         page_size: i64,
         sort: SpeciesSort,
         direction: SortDirection,
-        attribute: &Option<NameAttributeFilter>,
     ) -> PageResult<Species> {
         use schema::{datasets, name_attributes as attrs, taxon_names};
         use schema_gnl::species;
@@ -91,11 +89,6 @@ impl SourceProvider {
         let query = match with_filters(&filters) {
             Some(predicates) => species::table.filter(predicates).into_boxed(),
             None => species::table.into_boxed(),
-        };
-
-        let query = match attribute {
-            Some(attr) => query.filter(with_attribute(attr)),
-            None => query,
         };
 
         let taxa_datasets = diesel::alias!(datasets as taxa_datasets);

@@ -212,7 +212,7 @@ impl TaxonQuery {
         &self,
         ctx: &Context<'_>,
         page: i64,
-        per_page: i64,
+        page_size: i64,
         sort: Option<SpeciesSort>,
         sort_direction: Option<SortDirection>,
     ) -> Result<Page<SpeciesCard>, Error> {
@@ -230,7 +230,7 @@ impl TaxonQuery {
                 &vec![filter],
                 &self.taxon.dataset_id,
                 page,
-                per_page,
+                page_size,
                 match sort {
                     Some(srt) => srt.into(),
                     _ => species_filters::SpeciesSort::ScientificName,
