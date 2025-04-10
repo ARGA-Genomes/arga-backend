@@ -98,9 +98,6 @@ impl SourceProvider {
             None => query,
         };
 
-        // Dynamically sort query based on parameters
-        // let query = with_sorting(query, sort, direction);
-
         let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
 
         let records = with_sorting(query, sort, direction)
