@@ -8,28 +8,26 @@ use uuid::Uuid;
 
 #[derive(Debug, Serialize)]
 pub struct ClassificationCsv {
-    pub kingdom: String,
-    pub phylum: String,
-    pub class: String,
-    pub order: String,
-    pub family: String,
-    pub genus: String,
+    pub kingdom: Option<String>,
+    pub phylum: Option<String>,
+    pub class: Option<String>,
+    pub order: Option<String>,
+    pub family: Option<String>,
+    pub genus: Option<String>,
 }
 
 pub fn normalize_classification(json: Value) -> ClassificationCsv {
     // Helper function: Given a list of possible keys, return the first found string value.
-    fn get_field(val: &Value, keys: &[&str]) -> String {
+    fn get_field(val: &Value, keys: &[&str]) -> Option<String> {
         for &key in keys {
             if let Some(field_value) = val.get(key) {
                 if let Some(s) = field_value.as_str() {
-                    return s.to_string();
+                    return Some(s.to_string());
                 }
-                // Optionally, if the value is not a string, you might convert it to a string.
-                return field_value.to_string();
             }
         }
-        // Return an empty string if none of the keys are found.
-        String::new()
+        // Return nothing if none of the keys are found.
+        None
     }
 
     ClassificationCsv {
@@ -43,7 +41,7 @@ pub fn normalize_classification(json: Value) -> ClassificationCsv {
 }
 
 #[derive(Debug, Serialize)]
-pub struct SpeciesCsv {
+pub struct SpeciesCsv<'a> {
     pub id: Uuid,
     pub scientific_name: String,
     pub canonical_name: String,
@@ -54,20 +52,25 @@ pub struct SpeciesCsv {
     pub genomes: i64,
     pub loci: i64,
     pub specimens: i64,
-    pub other: i64,
+    pub libraries: i64,
     pub total_genomic: i64,
 
     // Classification
-    pub kingdom: String,
-    pub phylum: String,
-    pub class: String,
-    pub order: String,
-    pub family: String,
-    pub genus: String,
+    pub kingdom: Option<String>,
+    pub phylum: Option<String>,
+    pub class: Option<String>,
+    pub order: Option<String>,
+    pub family: Option<String>,
+    pub genus: Option<String>,
+
+    // Meta
+    pub date_downloaded: &'a str,
 }
 
 /// This takes a collection of Species objects, and converts them into a CSV representation that is compressed by Brotli & base64 encoded
 pub async fn species(species: Vec<Species>) -> Result<String, Error> {
+    let date_downloaded = chrono::prelude::Local::now().to_string();
+
     let species_csv: Vec<SpeciesCsv> = species
         .into_iter()
         .map(|s| {
@@ -84,7 +87,7 @@ pub async fn species(species: Vec<Species>) -> Result<String, Error> {
                 genomes: s.genomes,
                 loci: s.loci,
                 specimens: s.specimens,
-                other: s.other,
+                libraries: s.other,
                 total_genomic: s.total_genomic,
 
                 // Classification
@@ -94,6 +97,9 @@ pub async fn species(species: Vec<Species>) -> Result<String, Error> {
                 order: classification.order,
                 family: classification.family,
                 genus: classification.genus,
+
+                // Other meta
+                date_downloaded: &date_downloaded,
             }
         })
         .collect();
