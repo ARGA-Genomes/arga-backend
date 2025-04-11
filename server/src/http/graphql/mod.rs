@@ -132,9 +132,14 @@ impl Query {
         Sequence::new(&state.database, &by).await
     }
 
-    async fn taxon(&self, ctx: &Context<'_>, by: taxon::TaxonBy) -> Result<Taxon, Error> {
+    async fn taxon(
+        &self,
+        ctx: &Context<'_>,
+        by: taxon::TaxonBy,
+        filters: Option<Vec<FilterItem>>,
+    ) -> Result<Taxon, Error> {
         let state = ctx.data::<State>()?;
-        Taxon::new(&state.database, by).await
+        Taxon::new(&state.database, by, filters).await
     }
 
     async fn provenance(&self) -> Provenance {

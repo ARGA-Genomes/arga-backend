@@ -19,7 +19,7 @@ use diesel::sql_types::{Array, Nullable, Text};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use super::extensions::species_filters::{SortDirection, SpeciesFilter, SpeciesSort};
+use super::extensions::species_filters::{SortDirection, SpeciesSort};
 use super::extensions::taxa_filters::TaxaFilter;
 use super::extensions::{Paginate, sum_if};
 use super::models::Species;
@@ -28,12 +28,11 @@ use crate::database::extensions::classification_filters::{
     Classification as ClassificationFilter,
     with_classification,
 };
-use crate::database::extensions::filters::Filter;
+use crate::database::extensions::filters::{Filter, with_filters};
 use crate::database::extensions::species_filters::{
     with_accepted_classification,
     with_classification as with_species_classification,
     with_sorting,
-    with_species_filters,
 };
 use crate::database::extensions::taxa_filters::with_taxa_filters;
 
@@ -213,7 +212,7 @@ impl TaxaProvider {
 
     pub async fn species(
         &self,
-        filters: &Vec<SpeciesFilter>,
+        filters: &Vec<Filter>,
         dataset_id: &Uuid,
         page: i64,
         per_page: i64,
@@ -222,17 +221,16 @@ impl TaxaProvider {
     ) -> PageResult<Species> {
         use schema_gnl::species;
         let mut conn = self.pool.get().await?;
-        let species_filters = with_species_filters(&filters);
 
-        let mut query = species::table
+        let query = match with_filters(&filters) {
+            Some(predicates) => species::table.filter(predicates).into_boxed(),
+            None => species::table.into_boxed(),
+        };
+
+        let query = query
             .filter(species::dataset_id.eq(dataset_id))
             .filter(species::status.eq_any(ACCEPTED_NAMES))
-            .filter(species::rank.eq_any(SPECIES_RANKS))
-            .into_boxed();
-
-        if let Some(filter) = species_filters {
-            query = query.filter(filter);
-        }
+            .filter(species::rank.eq_any(SPECIES_RANKS));
 
         let records = with_sorting(query, sort, direction)
             .paginate(page)

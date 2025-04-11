@@ -8,11 +8,12 @@ use uuid::Uuid;
 use super::common::datasets::DatasetDetails;
 use super::common::species::{SortDirection, SpeciesSort};
 use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
-use super::common::{NameDetails, Page, SpeciesCard};
+use super::common::{FilterItem, NameDetails, Page, SpeciesCard, convert_filters};
 use super::helpers::SpeciesHelper;
 use super::specimen::SpecimenDetails;
 use crate::database::extensions::classification_filters::Classification;
-use crate::database::extensions::species_filters::{self, SpeciesFilter};
+use crate::database::extensions::filters::{Filter, FilterKind};
+use crate::database::extensions::species_filters::{self};
 use crate::database::{Database, taxa};
 use crate::http::{Context as State, Error};
 
@@ -126,7 +127,7 @@ pub enum TaxonBy {
 pub struct Taxon(TaxonDetails, TaxonQuery);
 
 impl Taxon {
-    pub async fn new(db: &Database, by: TaxonBy) -> Result<Taxon, Error> {
+    pub async fn new(db: &Database, by: TaxonBy, filters: Option<Vec<FilterItem>>) -> Result<Taxon, Error> {
         let taxon = match by {
             TaxonBy::Id(id) => db.taxa.find_by_id(&id).await?,
             TaxonBy::Classification(name) => {
@@ -137,18 +138,25 @@ impl Taxon {
             }
         };
 
-        Ok(Taxon::init(taxon))
+        Ok(Taxon::init(
+            taxon,
+            match filters {
+                Some(filter) => convert_filters(filter)?,
+                _ => vec![],
+            },
+        ))
     }
 
-    pub fn init(taxon: models::Taxon) -> Taxon {
+    pub fn init(taxon: models::Taxon, filters: Vec<Filter>) -> Taxon {
         let details = taxon.clone().into();
-        let query = TaxonQuery { taxon };
+        let query = TaxonQuery { taxon, filters };
         Taxon(details, query)
     }
 }
 
 pub struct TaxonQuery {
     taxon: models::Taxon,
+    filters: Vec<Filter>,
 }
 
 #[Object]
@@ -222,12 +230,14 @@ impl TaxonQuery {
         let classification =
             into_classification(TaxonRank::from(self.taxon.rank.clone()), self.taxon.canonical_name.clone());
 
-        let filter = SpeciesFilter::Classification(classification.clone());
+        let mut filters = self.filters.clone();
+        filters.push(Filter::Include(FilterKind::Classification(classification)));
+
         let page = state
             .database
             .taxa
             .species(
-                &vec![filter],
+                &filters,
                 &self.taxon.dataset_id,
                 page,
                 page_size,

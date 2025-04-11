@@ -39,7 +39,7 @@ impl Taxa {
     async fn records(&self, ctx: &Context<'_>) -> Result<Vec<Taxon>, Error> {
         let state = ctx.data::<State>()?;
         let records = state.database.taxa.find(&self.taxa_filters).await?;
-        let taxa = records.into_iter().map(|r| Taxon::init(r)).collect();
+        let taxa = records.into_iter().map(|r| Taxon::init(r, vec![])).collect();
         Ok(taxa)
     }
 

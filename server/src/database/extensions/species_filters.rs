@@ -11,11 +11,6 @@ use super::classification_filters::{Classification, decompose_classification};
 type BoxedExpression<'a> = Box<dyn BoxableExpression<species::table, Pg, SqlType = Bool> + 'a>;
 
 #[derive(Clone, Debug)]
-pub enum SpeciesFilter {
-    Classification(Classification),
-}
-
-#[derive(Clone, Debug)]
 pub enum SpeciesSort {
     ScientificName,
     CanonicalName,
@@ -84,29 +79,6 @@ pub fn with_accepted_classification(classification: &Classification) -> BoxedExp
             .and(species::rank.eq_any(SPECIES_RANKS))
             .and(with_classification(classification)),
     )
-}
-
-/// Filter the classification species view with a global filter enum
-pub fn with_species_filter(filter: &SpeciesFilter) -> BoxedExpression {
-    match filter {
-        SpeciesFilter::Classification(value) => with_classification(value),
-    }
-}
-
-/// Narrow down the results from the classification species view with multiple filters
-pub fn with_species_filters(filters: &Vec<SpeciesFilter>) -> Option<BoxedExpression> {
-    let mut predicates: Option<BoxedExpression> = None;
-
-    for filter in filters {
-        let predicate = with_species_filter(filter);
-
-        predicates = match predicates {
-            None => Some(predicate),
-            Some(others) => Some(Box::new(others.and(predicate))),
-        }
-    }
-
-    predicates
 }
 
 type AttrsBoxedExpression<'a> = Box<dyn BoxableExpression<species::table, Pg, SqlType = Bool> + 'a>;
