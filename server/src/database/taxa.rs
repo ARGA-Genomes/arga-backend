@@ -1,16 +1,16 @@
 use arga_core::models::{
+    ACCEPTED_NAMES,
     Dataset,
     Name,
     NamePublication,
     NomenclaturalActType,
     Publication,
+    SPECIES_RANKS,
     Specimen,
     Taxon,
     TaxonTreeNode,
     TaxonWithDataset,
     TaxonomicRank,
-    ACCEPTED_NAMES,
-    SPECIES_RANKS,
 };
 use bigdecimal::{BigDecimal, Zero};
 use chrono::{DateTime, Utc};
@@ -19,21 +19,20 @@ use diesel::sql_types::{Array, Nullable, Text};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use super::extensions::species_filters::{NameAttributeFilter, SpeciesFilter};
+use super::extensions::species_filters::{SortDirection, SpeciesSort};
 use super::extensions::taxa_filters::TaxaFilter;
-use super::extensions::{sum_if, Paginate};
+use super::extensions::{Paginate, sum_if};
 use super::models::Species;
-use super::{schema, schema_gnl, Error, PageResult, PgPool};
+use super::{Error, PageResult, PgPool, schema, schema_gnl};
 use crate::database::extensions::classification_filters::{
-    with_classification,
     Classification as ClassificationFilter,
+    with_classification,
 };
-use crate::database::extensions::filters::Filter;
+use crate::database::extensions::filters::{Filter, with_filters};
 use crate::database::extensions::species_filters::{
     with_accepted_classification,
-    with_attribute,
     with_classification as with_species_classification,
-    with_species_filters,
+    with_sorting,
 };
 use crate::database::extensions::taxa_filters::with_taxa_filters;
 
@@ -213,27 +212,27 @@ impl TaxaProvider {
 
     pub async fn species(
         &self,
-        filters: &Vec<SpeciesFilter>,
+        filters: &Vec<Filter>,
         dataset_id: &Uuid,
         page: i64,
         per_page: i64,
+        sort: SpeciesSort,
+        direction: SortDirection,
     ) -> PageResult<Species> {
         use schema_gnl::species;
         let mut conn = self.pool.get().await?;
-        let species_filters = with_species_filters(&filters);
 
-        let mut query = species::table
+        let query = match with_filters(&filters) {
+            Some(predicates) => species::table.filter(predicates).into_boxed(),
+            None => species::table.into_boxed(),
+        };
+
+        let query = query
             .filter(species::dataset_id.eq(dataset_id))
             .filter(species::status.eq_any(ACCEPTED_NAMES))
-            .filter(species::rank.eq_any(SPECIES_RANKS))
-            .into_boxed();
+            .filter(species::rank.eq_any(SPECIES_RANKS));
 
-        if let Some(filter) = species_filters {
-            query = query.filter(filter);
-        }
-
-        let records = query
-            .order_by(species::scientific_name)
+        let records = with_sorting(query, sort, direction)
             .paginate(page)
             .per_page(per_page)
             .load::<(Species, i64)>(&mut conn)
@@ -432,32 +431,20 @@ impl TaxaProvider {
         Ok(summaries)
     }
 
-    pub async fn taxon_summary(
-        &self,
-        classification: &ClassificationFilter,
-        attribute: &Option<NameAttributeFilter>,
-    ) -> Result<RankSummary, Error> {
+    pub async fn taxon_summary(&self, classification: &ClassificationFilter) -> Result<RankSummary, Error> {
         use schema_gnl::species;
         let mut conn = self.pool.get().await?;
 
-        let mut species_query = species::table
+        let species_query = species::table
             .filter(with_accepted_classification(classification))
             .into_boxed();
-        let mut species_genomes_query = species::table
+        let species_genomes_query = species::table
             .filter(with_accepted_classification(classification))
             .into_boxed();
-        let mut species_data_query = species::table
+        let species_data_query = species::table
             .filter(with_accepted_classification(classification))
             .into_boxed();
 
-        match attribute {
-            Some(attr) => {
-                species_query = species_query.filter(with_attribute(attr));
-                species_genomes_query = species_genomes_query.filter(with_attribute(attr));
-                species_data_query = species_data_query.filter(with_attribute(attr));
-            }
-            None => {}
-        }
 
         let species = species_query.count().get_result::<i64>(&mut conn).await?;
 
@@ -480,21 +467,13 @@ impl TaxaProvider {
         })
     }
 
-    pub async fn species_summary(
-        &self,
-        filter: &ClassificationFilter,
-        attribute: &Option<NameAttributeFilter>,
-    ) -> Result<Vec<SpeciesSummary>, Error> {
+    pub async fn species_summary(&self, filter: &ClassificationFilter) -> Result<Vec<SpeciesSummary>, Error> {
         use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
         let query = species
             .select((canonical_name, genomes, loci, specimens, other, total_genomic))
             .into_boxed();
 
-        let query = match attribute {
-            Some(attr) => query.filter(with_attribute(attr)),
-            None => query,
-        };
 
         let summaries = query
             .filter(with_species_classification(filter))
@@ -506,21 +485,13 @@ impl TaxaProvider {
         Ok(summaries)
     }
 
-    pub async fn species_genome_summary(
-        &self,
-        filter: &ClassificationFilter,
-        attribute: &Option<NameAttributeFilter>,
-    ) -> Result<Vec<SpeciesSummary>, Error> {
+    pub async fn species_genome_summary(&self, filter: &ClassificationFilter) -> Result<Vec<SpeciesSummary>, Error> {
         use schema_gnl::species::dsl::*;
         let mut conn = self.pool.get().await?;
         let query = species
             .select((canonical_name, genomes, loci, specimens, other, total_genomic))
             .into_boxed();
 
-        let query = match attribute {
-            Some(attr) => query.filter(with_attribute(attr)),
-            None => query,
-        };
 
         let summaries = query
             .filter(with_species_classification(filter))

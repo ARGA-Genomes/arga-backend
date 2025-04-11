@@ -47,7 +47,6 @@ use self::subsample::Subsample;
 use self::taxa::Taxa;
 use self::taxon::Taxon;
 use super::error::Error;
-use crate::database::extensions::species_filters::NameAttributeFilter;
 use crate::http::Context as State;
 
 pub type ArgaSchema = Schema<Query, EmptyMutation, EmptySubscription>;
@@ -90,10 +89,9 @@ impl Query {
         ctx: &Context<'_>,
         by: source::SourceBy,
         filters: Option<Vec<FilterItem>>,
-        species_attribute: Option<NameAttributeFilter>,
     ) -> Result<Source, Error> {
         let state = ctx.data::<State>()?;
-        Source::new(&state.database, &by, filters.unwrap_or_default(), species_attribute).await
+        Source::new(&state.database, &by, filters.unwrap_or_default()).await
     }
 
     async fn dataset(&self, ctx: &Context<'_>, by: dataset::DatasetBy) -> Result<Dataset, Error> {
@@ -134,9 +132,14 @@ impl Query {
         Sequence::new(&state.database, &by).await
     }
 
-    async fn taxon(&self, ctx: &Context<'_>, by: taxon::TaxonBy) -> Result<Taxon, Error> {
+    async fn taxon(
+        &self,
+        ctx: &Context<'_>,
+        by: taxon::TaxonBy,
+        filters: Option<Vec<FilterItem>>,
+    ) -> Result<Taxon, Error> {
         let state = ctx.data::<State>()?;
-        Taxon::new(&state.database, by).await
+        Taxon::new(&state.database, by, filters).await
     }
 
     async fn provenance(&self) -> Provenance {

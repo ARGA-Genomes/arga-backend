@@ -4,12 +4,11 @@ use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use super::extensions::Paginate;
-use super::extensions::species_filters::NameAttributeFilter;
 use super::models::{Dataset, Source};
 use super::{PageResult, PgPool, schema, schema_gnl};
 use crate::database::Error;
 use crate::database::extensions::filters::{Filter, with_filters};
-use crate::database::extensions::species_filters::with_attribute;
+use crate::database::extensions::species_filters::{SortDirection, SpeciesSort, with_sorting};
 
 pub const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
 
@@ -80,7 +79,8 @@ impl SourceProvider {
         filters: &Vec<Filter>,
         page: i64,
         page_size: i64,
-        attribute: &Option<NameAttributeFilter>,
+        sort: SpeciesSort,
+        direction: SortDirection,
     ) -> PageResult<Species> {
         use schema::{datasets, name_attributes as attrs, taxon_names};
         use schema_gnl::species;
@@ -91,14 +91,9 @@ impl SourceProvider {
             None => species::table.into_boxed(),
         };
 
-        let query = match attribute {
-            Some(attr) => query.filter(with_attribute(attr)),
-            None => query,
-        };
-
         let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
 
-        let records = query
+        let records = with_sorting(query, sort, direction)
             .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
             .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
             .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
@@ -107,7 +102,6 @@ impl SourceProvider {
             .distinct()
             .filter(datasets::source_id.eq(source.id))
             .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
-            .order_by(species::scientific_name)
             .paginate(page)
             .per_page(page_size)
             .load::<(Species, i64)>(&mut conn)

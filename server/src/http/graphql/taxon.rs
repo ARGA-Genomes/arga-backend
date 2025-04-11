@@ -6,13 +6,15 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::common::datasets::DatasetDetails;
-use super::common::taxonomy::{sort_taxa_priority, NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
-use super::common::{NameDetails, Page, SpeciesCard};
-use super::helpers::SpeciesHelper;
+use super::common::species::{SortDirection, SpeciesSort};
+use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
+use super::common::{FilterItem, NameDetails, Page, SpeciesCard, convert_filters};
+use super::helpers::{self, SpeciesHelper};
 use super::specimen::SpecimenDetails;
 use crate::database::extensions::classification_filters::Classification;
-use crate::database::extensions::species_filters::SpeciesFilter;
-use crate::database::{taxa, Database};
+use crate::database::extensions::filters::{Filter, FilterKind};
+use crate::database::extensions::species_filters::{self};
+use crate::database::{Database, taxa};
 use crate::http::{Context as State, Error};
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -125,7 +127,7 @@ pub enum TaxonBy {
 pub struct Taxon(TaxonDetails, TaxonQuery);
 
 impl Taxon {
-    pub async fn new(db: &Database, by: TaxonBy) -> Result<Taxon, Error> {
+    pub async fn new(db: &Database, by: TaxonBy, filters: Option<Vec<FilterItem>>) -> Result<Taxon, Error> {
         let taxon = match by {
             TaxonBy::Id(id) => db.taxa.find_by_id(&id).await?,
             TaxonBy::Classification(name) => {
@@ -136,18 +138,25 @@ impl Taxon {
             }
         };
 
-        Ok(Taxon::init(taxon))
+        Ok(Taxon::init(
+            taxon,
+            match filters {
+                Some(filter) => convert_filters(filter)?,
+                _ => vec![],
+            },
+        ))
     }
 
-    pub fn init(taxon: models::Taxon) -> Taxon {
+    pub fn init(taxon: models::Taxon, filters: Vec<Filter>) -> Taxon {
         let details = taxon.clone().into();
-        let query = TaxonQuery { taxon };
+        let query = TaxonQuery { taxon, filters };
         Taxon(details, query)
     }
 }
 
 pub struct TaxonQuery {
     taxon: models::Taxon,
+    filters: Vec<Filter>,
 }
 
 #[Object]
@@ -207,25 +216,75 @@ impl TaxonQuery {
         Ok(specimens)
     }
 
-    async fn species(&self, ctx: &Context<'_>, page: i64, per_page: i64) -> Result<Page<SpeciesCard>, Error> {
+    async fn species(
+        &self,
+        ctx: &Context<'_>,
+        page: i64,
+        page_size: i64,
+        sort: Option<SpeciesSort>,
+        sort_direction: Option<SortDirection>,
+    ) -> Result<Page<SpeciesCard>, Error> {
         let state = ctx.data::<State>()?;
         let helper = SpeciesHelper::new(&state.database);
 
         let classification =
             into_classification(TaxonRank::from(self.taxon.rank.clone()), self.taxon.canonical_name.clone());
 
-        let filter = SpeciesFilter::Classification(classification.clone());
+        let mut filters = self.filters.clone();
+        filters.push(Filter::Include(FilterKind::Classification(classification)));
+
         let page = state
             .database
             .taxa
-            .species(&vec![filter], &self.taxon.dataset_id, page, per_page)
+            .species(
+                &filters,
+                &self.taxon.dataset_id,
+                page,
+                page_size,
+                match sort {
+                    Some(srt) => srt.into(),
+                    _ => species_filters::SpeciesSort::ScientificName,
+                },
+                match sort_direction {
+                    Some(dir) => dir.into(),
+                    _ => species_filters::SortDirection::Asc,
+                },
+            )
             .await?;
+
         let cards = helper.filtered_cards(page.records).await?;
 
         Ok(Page {
             records: cards,
             total: page.total,
         })
+    }
+
+    async fn species_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        let state = ctx.data::<State>()?;
+
+        let classification =
+            into_classification(TaxonRank::from(self.taxon.rank.clone()), self.taxon.canonical_name.clone());
+
+        let mut filters = self.filters.clone();
+        filters.push(Filter::Include(FilterKind::Classification(classification)));
+
+        let page = state
+            .database
+            .taxa
+            .species(
+                &filters,
+                &self.taxon.dataset_id,
+                1,       // hard coded page size
+                1000000, // some arbitrary number of records that hopefully is enough for all of them (1 million)
+                species_filters::SpeciesSort::ScientificName,
+                species_filters::SortDirection::Asc,
+            )
+            .await?;
+
+        let csv = helpers::csv::species(page.records).await?;
+
+        Ok(csv)
     }
 }
 

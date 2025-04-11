@@ -1,8 +1,6 @@
 use async_graphql::*;
 
 use super::common::species::DataType;
-use super::common::{Page, SpeciesCard};
-use super::helpers::SpeciesHelper;
 use super::taxon::Taxon;
 use crate::database::extensions::filters::Filter;
 use crate::database::extensions::taxa_filters;
@@ -41,7 +39,7 @@ impl Taxa {
     async fn records(&self, ctx: &Context<'_>) -> Result<Vec<Taxon>, Error> {
         let state = ctx.data::<State>()?;
         let records = state.database.taxa.find(&self.taxa_filters).await?;
-        let taxa = records.into_iter().map(|r| Taxon::init(r)).collect();
+        let taxa = records.into_iter().map(|r| Taxon::init(r, vec![])).collect();
         Ok(taxa)
     }
 

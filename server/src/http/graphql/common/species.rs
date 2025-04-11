@@ -1,9 +1,8 @@
-use async_graphql::{SimpleObject, Enum};
-use serde::{Serialize, Deserialize};
-
-use crate::database::models::TaxonPhoto;
+use async_graphql::{Enum, SimpleObject};
+use serde::{Deserialize, Serialize};
 
 use super::Taxonomy;
+use crate::database::models::TaxonPhoto;
 
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, SimpleObject)]
@@ -52,4 +51,24 @@ pub enum DataType {
     Locus,
     Specimen,
     Other,
+}
+
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "crate::database::extensions::species_filters::SpeciesSort")]
+pub enum SpeciesSort {
+    ScientificName,
+    CanonicalName,
+    ClassificationHierarchy,
+    Genomes,
+    Loci,
+    Specimens,
+    Other,
+    TotalGenomic,
+}
+
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "crate::database::extensions::species_filters::SortDirection")]
+pub enum SortDirection {
+    Asc,
+    Desc,
 }

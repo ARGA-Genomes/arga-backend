@@ -1,19 +1,61 @@
 use arga_core::models::{ACCEPTED_NAMES, SPECIES_RANKS};
 use arga_core::schema_gnl::species;
-use async_graphql::{InputObject, OneofObject};
-use chrono::{DateTime, Utc};
+use diesel::dsl::not;
 use diesel::pg::Pg;
 use diesel::prelude::*;
-use diesel::sql_types::{Bool, Nullable, Varchar};
+use diesel::sql_types::{Bool, Varchar};
+use serde_json::Value;
 
 use super::classification_filters::{Classification, decompose_classification};
 
 type BoxedExpression<'a> = Box<dyn BoxableExpression<species::table, Pg, SqlType = Bool> + 'a>;
 
+#[derive(Clone, Debug)]
+pub enum SpeciesSort {
+    ScientificName,
+    CanonicalName,
+    ClassificationHierarchy,
+    Genomes,
+    Loci,
+    Specimens,
+    Other,
+    TotalGenomic,
+}
 
 #[derive(Clone, Debug)]
-pub enum SpeciesFilter {
-    Classification(Classification),
+pub enum SortDirection {
+    Asc,
+    Desc,
+}
+
+pub fn with_sorting(
+    query: species::BoxedQuery<'_, diesel::pg::Pg>,
+    sort: SpeciesSort,
+    direction: SortDirection,
+) -> species::BoxedQuery<'_, diesel::pg::Pg> {
+    use species;
+    match direction {
+        SortDirection::Asc => match sort {
+            SpeciesSort::ScientificName => query.order_by(species::scientific_name.asc()),
+            SpeciesSort::CanonicalName => query.order_by(species::canonical_name.asc()),
+            SpeciesSort::ClassificationHierarchy => query.order_by(species::scientific_name.asc()),
+            SpeciesSort::Genomes => query.order_by(species::genomes.asc()),
+            SpeciesSort::Loci => query.order_by(species::loci.asc()),
+            SpeciesSort::Specimens => query.order_by(species::specimens.asc()),
+            SpeciesSort::Other => query.order_by(species::other.asc()),
+            SpeciesSort::TotalGenomic => query.order_by(species::total_genomic.asc()),
+        },
+        SortDirection::Desc => match sort {
+            SpeciesSort::ScientificName => query.order_by(species::scientific_name.desc()),
+            SpeciesSort::CanonicalName => query.order_by(species::canonical_name.desc()),
+            SpeciesSort::ClassificationHierarchy => query.order_by(species::scientific_name.desc()),
+            SpeciesSort::Genomes => query.order_by(species::genomes.desc()),
+            SpeciesSort::Loci => query.order_by(species::loci.desc()),
+            SpeciesSort::Specimens => query.order_by(species::specimens.desc()),
+            SpeciesSort::Other => query.order_by(species::other.desc()),
+            SpeciesSort::TotalGenomic => query.order_by(species::total_genomic.desc()),
+        },
+    }
 }
 
 
@@ -39,58 +81,15 @@ pub fn with_accepted_classification(classification: &Classification) -> BoxedExp
     )
 }
 
-/// Filter the classification species view with a global filter enum
-pub fn with_species_filter(filter: &SpeciesFilter) -> BoxedExpression {
-    match filter {
-        SpeciesFilter::Classification(value) => with_classification(value),
-    }
-}
+type AttrsBoxedExpression<'a> = Box<dyn BoxableExpression<species::table, Pg, SqlType = Bool> + 'a>;
 
-/// Narrow down the results from the classification species view with multiple filters
-pub fn with_species_filters(filters: &Vec<SpeciesFilter>) -> Option<BoxedExpression> {
-    let mut predicates: Option<BoxedExpression> = None;
 
-    for filter in filters {
-        let predicate = with_species_filter(filter);
-
-        predicates = match predicates {
-            None => Some(predicate),
-            Some(others) => Some(Box::new(others.and(predicate))),
-        }
-    }
-
-    predicates
-}
-
-type AttrsBoxedExpression<'a> = Box<dyn BoxableExpression<species::table, Pg, SqlType = Nullable<Bool>> + 'a>;
-
-#[derive(OneofObject)]
-pub enum NameAttributeValue {
-    Int(i64),
-    Bool(bool),
-    String(String),
-    Timestamp(DateTime<Utc>),
-    Decimal(f64),
-}
-
-#[derive(InputObject)]
-pub struct NameAttributeFilter {
-    pub name: String,
-    pub value: NameAttributeValue,
+/// Filter species based on their associated name attributes JSON
+pub fn with_attribute(attibute: &Value) -> AttrsBoxedExpression {
+    Box::new(species::attributes.contains(attibute).assume_not_null())
 }
 
 /// Filter species based on their associated name attributes JSON
-pub fn with_attribute(attibute: &NameAttributeFilter) -> AttrsBoxedExpression {
-    Box::new(species::attributes.contains(serde_json::json!([{
-        "name": attibute.name,
-            "value": match &attibute.value {
-            NameAttributeValue::Int(i) => serde_json::Value::Number(serde_json::Number::from(*i)),
-            NameAttributeValue::Bool(b) => serde_json::Value::Bool(*b),
-            NameAttributeValue::String(s) => serde_json::Value::String(s.clone()),
-            NameAttributeValue::Timestamp(t) => serde_json::Value::String(t.to_rfc3339()),
-            NameAttributeValue::Decimal(d) => serde_json::Value::Number(
-                serde_json::Number::from_f64(*d).unwrap_or_else(|| serde_json::Number::from(0))
-            ),
-        }
-    }])))
+pub fn without_attribute(attibute: &Value) -> AttrsBoxedExpression {
+    Box::new(not(species::attributes.contains(attibute).assume_not_null()))
 }
