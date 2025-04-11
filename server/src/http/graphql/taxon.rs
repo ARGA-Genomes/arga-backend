@@ -9,7 +9,7 @@ use super::common::datasets::DatasetDetails;
 use super::common::species::{SortDirection, SpeciesSort};
 use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
 use super::common::{FilterItem, NameDetails, Page, SpeciesCard, convert_filters};
-use super::helpers::SpeciesHelper;
+use super::helpers::{self, SpeciesHelper};
 use super::specimen::SpecimenDetails;
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::extensions::filters::{Filter, FilterKind};
@@ -258,6 +258,33 @@ impl TaxonQuery {
             records: cards,
             total: page.total,
         })
+    }
+
+    async fn species_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        let state = ctx.data::<State>()?;
+
+        let classification =
+            into_classification(TaxonRank::from(self.taxon.rank.clone()), self.taxon.canonical_name.clone());
+
+        let mut filters = self.filters.clone();
+        filters.push(Filter::Include(FilterKind::Classification(classification)));
+
+        let page = state
+            .database
+            .taxa
+            .species(
+                &filters,
+                &self.taxon.dataset_id,
+                1,       // hard coded page size
+                1000000, // some arbitrary number of records that hopefully is enough for all of them (1 million)
+                species_filters::SpeciesSort::ScientificName,
+                species_filters::SortDirection::Asc,
+            )
+            .await?;
+
+        let csv = helpers::csv::species(page.records).await?;
+
+        Ok(csv)
     }
 }
 
