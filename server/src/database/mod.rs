@@ -17,9 +17,10 @@ pub mod taxa;
 
 
 pub use arga_core::{get_database_url, models, schema, schema_gnl};
-use diesel_async::AsyncPgConnection;
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use diesel::connection::{Instrumentation, InstrumentationEvent};
 use diesel_async::pooled_connection::bb8::Pool;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use diesel_async::AsyncPgConnection;
 use thiserror::Error;
 
 use self::extensions::pagination::Page;
@@ -107,5 +108,12 @@ impl Database {
             provenance: provenance::ProvenanceProvider { pool: pool.clone() },
             pool,
         })
+    }
+
+    // a simple logger that prints all events to stdout
+    pub fn simple_logger() -> Option<Box<dyn Instrumentation>> {
+        // we need the explicit argument type there due
+        // to bugs in rustc
+        Some(Box::new(|event: InstrumentationEvent<'_>| tracing::debug!("{event:?}")))
     }
 }

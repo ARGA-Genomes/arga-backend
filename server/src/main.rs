@@ -1,12 +1,9 @@
-use tracing_subscriber::{ Registry, EnvFilter };
-use tracing_subscriber::prelude::*;
-
-use dotenvy::dotenv;
-
-use arga_backend::http;
-use arga_backend::telemetry;
-
 use arga_backend::database::Database;
+use arga_backend::{http, telemetry};
+use diesel::connection::set_default_instrumentation;
+use dotenvy::dotenv;
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::{EnvFilter, Registry};
 
 
 #[tokio::main]
@@ -25,18 +22,14 @@ fn start_tracing() {
         println!("Starting trace logger with telemetry collector at: {}", endpoint);
 
         let controller = telemetry::init_metrics().expect("Failed to initialise telemetry metrics");
-        let metrics =  tracing_opentelemetry::MetricsLayer::new(controller);
+        let metrics = tracing_opentelemetry::MetricsLayer::new(controller);
 
         let tracer = telemetry::init_tracer().expect("Failed to initialise telemetry tracer");
         let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
 
         let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("info"));
 
-        subscriber
-            .with(env_filter)
-            .with(opentelemetry)
-            .with(metrics)
-            .init();
+        subscriber.with(env_filter).with(opentelemetry).with(metrics).init();
     }
     else {
         println!("Starting debug trace logger for stdout");
@@ -62,10 +55,18 @@ async fn serve() {
     // used for cors
     let frontend_host = std::env::var("FRONTEND_URL").expect("No frontend URL specified");
 
+    // show database logging if enabled
+    if std::env::var("LOG_DATABASE").is_ok() {
+        set_default_instrumentation(Database::simple_logger).expect("Failed to setup database instrumentation");
+    }
+
     // because the entire backend is in a crate we instantiate providers and any other services
     // here so that it is explicitly defined
     let db_host = arga_backend::database::get_database_url();
-    let database = Database::connect(&db_host).await.expect("Failed to connect to the database");
+
+    let database = Database::connect(&db_host)
+        .await
+        .expect("Failed to connect to the database");
 
     let config = http::Config {
         bind_address,

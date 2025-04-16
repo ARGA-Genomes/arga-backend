@@ -33,6 +33,9 @@
 
   dotenv.disableHint = true;
 
+  # debug logging
+  env.LOG_DATABASE = 1;
+
   pre-commit.hooks = {
     clippy.enable = false;
   };
