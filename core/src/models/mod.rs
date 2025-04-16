@@ -1557,3 +1557,35 @@ pub struct Publication {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+
+#[derive(Queryable, Selectable, Insertable, Debug, Default, Serialize, Deserialize)]
+#[diesel(table_name = schema_gnl::taxa_tree_stats)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct TaxonTreeStat {
+    pub taxon_id: Uuid,
+    pub id: Uuid,
+    pub tree_depth: i32,
+    pub children: i64,
+    pub descendants: i64,
+    pub loci: Option<BigDecimal>,
+    pub genomes: Option<BigDecimal>,
+    pub specimens: Option<BigDecimal>,
+    pub other: Option<BigDecimal>,
+    pub total_genomic: Option<BigDecimal>,
+    pub species: Option<i64>,
+
+    pub full_genomes: Option<BigDecimal>,
+    pub partial_genomes: Option<BigDecimal>,
+    pub complete_genomes: Option<BigDecimal>,
+    pub assembly_chromosomes: Option<BigDecimal>,
+    pub assembly_scaffolds: Option<BigDecimal>,
+    pub assembly_contigs: Option<BigDecimal>,
+
+    pub total_full_genomes_coverage: i64,
+    pub total_partial_genomes_coverage: i64,
+    pub total_complete_genomes_coverage: i64,
+    pub total_assembly_chromosomes_coverage: i64,
+    pub total_assembly_scaffolds_coverage: i64,
+    pub total_assembly_contigs_coverage: i64,
+}
