@@ -16,8 +16,8 @@ async-trait = "0.1.64"
 axum = { version = "0.6.4", features = ["macros", "multipart"] }
 axum-login = "0.4.1"
 chrono = { version = "0.4.38", features = ["serde"] }
-diesel = { version = "2.1.4", features = ["uuid", "numeric", "serde_json", "chrono", "postgres", "r2d2"] }
-diesel-async = { version = "0.3.2", features = ["postgres", "bb8"] }
+diesel = { version = "2.2.9", features = ["uuid", "numeric", "serde_json", "chrono", "postgres", "r2d2"] }
+diesel-async = { version = "0.5.2", features = ["postgres", "bb8"] }
 dotenvy = "0.15.6"
 eyre = "0.6.8"
 futures = "0.3.26"

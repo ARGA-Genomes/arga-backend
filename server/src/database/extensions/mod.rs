@@ -1,3 +1,5 @@
+pub mod filters_new;
+
 pub mod classification_filters;
 pub mod column_sum;
 pub mod filters;

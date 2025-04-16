@@ -9,6 +9,13 @@ use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 
 use super::extensions::classification_filters::Classification;
+use super::extensions::filters_new::name_attributes::Attribute;
+use super::extensions::filters_new::stats::{
+    taxa_exist_in_dataset,
+    taxa_has_attribute,
+    with_name_attributes,
+    with_taxa,
+};
 use super::{schema, Error, PgPool};
 use crate::database::extensions::classification_filters::with_classification;
 use crate::database::extensions::filters::with_classification as with_species_classification;
@@ -115,6 +122,25 @@ pub struct StatsProvider {
 }
 
 impl StatsProvider {
+    pub async fn test_filter(&self) -> Result<(), Error> {
+        use schema_gnl::taxa_tree_stats;
+        let mut conn = self.pool.get().await?;
+
+        let attr = Attribute::String("test".to_string());
+        let total: i64 = with_taxa().count().get_result(&mut conn).await?;
+        let total: i64 = with_name_attributes().count().get_result(&mut conn).await?;
+        let total: i64 = taxa_exist_in_dataset(uuid::Uuid::default())
+            .count()
+            .get_result(&mut conn)
+            .await?;
+
+        let total: uuid::Uuid = taxa_has_attribute(attr)
+            .select(taxa_tree_stats::id)
+            .get_result(&mut conn)
+            .await?;
+        Ok(())
+    }
+
     pub async fn dataset(&self, name: &str) -> Result<DatasetStats, Error> {
         use schema::{datasets, indigenous_knowledge as iek, names};
         let mut conn = self.pool.get().await?;

@@ -104,6 +104,12 @@ impl Statistics {
             .collect();
         Ok(stats)
     }
+
+    async fn test_filter(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        let state = ctx.data::<State>()?;
+        state.database.stats.test_filter().await?;
+        Ok("done".to_string())
+    }
 }
 
 
