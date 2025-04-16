@@ -13,7 +13,7 @@ use arga_core::schema_gnl::taxa_tree_stats;
 use diesel::prelude::*;
 use uuid::Uuid;
 
-use super::name_attributes::{has_attribute, Attribute, AttributeValueExpression};
+use super::name_attributes::{self as attrs, Attribute};
 
 
 // An alias of the `taxa` table.
@@ -63,7 +63,7 @@ pub fn with_taxa() -> _ {
 /// This will reduce the result set largely to the species rank or below but it's important
 /// to remember that an attribute can be assigned to any name, including higher taxonomy ones.
 #[diesel::dsl::auto_type]
-pub fn with_name_attributes() -> _ {
+pub fn taxa_tree_stats_with_name_attributes() -> _ {
     // skip the taxa table and go straight to the taxon_names join table
     // since we actually just want names linked to a taxon since the attributes
     // themselves are on names.
@@ -88,14 +88,7 @@ pub fn taxa_exist_in_dataset(dataset_id: Uuid) -> _ {
 
 
 #[diesel::dsl::auto_type]
-pub fn taxa_has_attribute(attribute: Attribute) -> _ {
-    let attr_filter: AttributeValueExpression = has_attribute(attribute);
-
-    name_attributes::table.filter(attr_filter)
-
-    // taxa_tree_stats::table
-    //     .inner_join(taxon_names::table.on(taxon_names::taxon_id.eq(taxa_tree_stats::taxon_id)))
-    //     .inner_join(attrs)
-    // let attr_filter: AttributeValueExpression = has_attribute(attribute);
-    // with_name_attributes().filter(attr_filter)
+pub fn taxa_has_attribute<'a>(attribute: Attribute) -> _ {
+    let subquery: attrs::with_taxa_attribute<'a> = attrs::with_taxa_attribute(attribute);
+    taxa_tree_stats::taxon_id.eq_any(subquery.select(taxon_names::taxon_id))
 }

@@ -114,6 +114,6 @@ impl Database {
     pub fn simple_logger() -> Option<Box<dyn Instrumentation>> {
         // we need the explicit argument type there due
         // to bugs in rustc
-        Some(Box::new(|event: InstrumentationEvent<'_>| tracing::debug!("{event:?}")))
+        Some(Box::new(|event: InstrumentationEvent<'_>| tracing::debug!("{event:#?}")))
     }
 }

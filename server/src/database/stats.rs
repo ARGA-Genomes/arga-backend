@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use arga_core::models::{Dataset, TaxonomicRank};
+use arga_core::models::{self, Dataset, TaxonomicRank};
 use arga_core::schema_gnl;
 use async_graphql::SimpleObject;
 use bigdecimal::BigDecimal;
@@ -10,16 +10,10 @@ use serde::{Deserialize, Serialize};
 
 use super::extensions::classification_filters::Classification;
 use super::extensions::filters_new::name_attributes::Attribute;
-use super::extensions::filters_new::stats::{
-    taxa_exist_in_dataset,
-    taxa_has_attribute,
-    with_name_attributes,
-    with_taxa,
-};
 use super::{schema, Error, PgPool};
 use crate::database::extensions::classification_filters::with_classification;
 use crate::database::extensions::filters::with_classification as with_species_classification;
-use crate::database::extensions::filters_new::name_attributes::has_attribute;
+use crate::database::extensions::filters_new::stats;
 use crate::database::extensions::sum_if;
 use crate::database::sources::ALA_DATASET_ID;
 
@@ -124,35 +118,28 @@ pub struct StatsProvider {
 
 impl StatsProvider {
     pub async fn test_filter(&self) -> Result<(), Error> {
-        use schema::{name_attributes, taxon_names};
         use schema_gnl::taxa_tree_stats;
 
         let mut conn = self.pool.get().await?;
 
-        let attr = Attribute::String("test".to_string());
-        // let total: i64 = with_taxa().count().get_result(&mut conn).await?;
-        // let total: i64 = with_name_attributes().count().get_result(&mut conn).await?;
-        // let total: i64 = taxa_exist_in_dataset(uuid::Uuid::default())
-        //     .count()
-        //     .get_result(&mut conn)
-        //     .await?;
+        let attr = Attribute::new("taxon group", "mammals".into());
 
-        // let id: uuid::Uuid = with_name_attributes()
-        //     .filter(name_attributes::value_str.eq("test"))
-        //     .select(taxa_tree_stats::id)
-        //     .get_result(&mut conn)
-        //     .await?;
+        let id: Vec<models::TaxonTreeStat> = taxa_tree_stats::table
+            .filter(stats::taxa_has_attribute(attr.clone()))
+            .select(taxa_tree_stats::all_columns)
+            .load(&mut conn)
+            .await?;
 
-        // let id: uuid::Uuid = taxa_tree_stats::table
-        //     .inner_join(taxon_names::table.on(taxon_names::taxon_id.eq(taxa_tree_stats::taxon_id)))
-        //     .inner_join(name_attributes::table.on(name_attributes::name_id.eq(taxon_names::name_id)))
-        //     .filter(has_attribute(attr))
-        //     .select(taxa_tree_stats::id)
-        //     .get_result(&mut conn)
-        //     .await?;
+        println!("{id:#?}");
 
-        let total: i64 = taxa_has_attribute(attr).count().get_result(&mut conn).await?;
-        println!("{total}");
+        let id: i64 = taxa_tree_stats::table
+            .filter(stats::taxa_has_attribute(attr))
+            .select(taxa_tree_stats::all_columns)
+            .count()
+            .get_result(&mut conn)
+            .await?;
+
+        println!("{id:#?}");
         Ok(())
     }
 
