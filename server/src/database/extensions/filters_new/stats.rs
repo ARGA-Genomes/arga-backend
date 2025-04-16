@@ -90,5 +90,12 @@ pub fn taxa_exist_in_dataset(dataset_id: Uuid) -> _ {
 #[diesel::dsl::auto_type]
 pub fn taxa_has_attribute(attribute: Attribute) -> _ {
     let attr_filter: AttributeValueExpression = has_attribute(attribute);
-    with_name_attributes().filter(attr_filter)
+
+    name_attributes::table.filter(attr_filter)
+
+    // taxa_tree_stats::table
+    //     .inner_join(taxon_names::table.on(taxon_names::taxon_id.eq(taxa_tree_stats::taxon_id)))
+    //     .inner_join(attrs)
+    // let attr_filter: AttributeValueExpression = has_attribute(attribute);
+    // with_name_attributes().filter(attr_filter)
 }
