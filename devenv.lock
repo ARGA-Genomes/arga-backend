@@ -3,11 +3,10 @@
     "devenv": {
       "locked": {
         "dir": "src/modules",
-        "lastModified": 1726417371,
+        "lastModified": 1745262952,
         "owner": "cachix",
         "repo": "devenv",
-        "rev": "1f55f89ca32d617b7a7c18422e3c364cb003df3d",
-        "treeHash": "b6e4651ee4f4a5a9708e4c815783148d705c7027",
+        "rev": "22465406d7981bb11043bd517ad97fc49d247687",
         "type": "github"
       },
       "original": {
@@ -23,11 +22,10 @@
         "rust-analyzer-src": "rust-analyzer-src"
       },
       "locked": {
-        "lastModified": 1726381916,
+        "lastModified": 1745217425,
         "owner": "nix-community",
         "repo": "fenix",
-        "rev": "3ade5be29c0ed4f5aeb93d9293a2b5bad62f1d1c",
-        "treeHash": "4b7097a424a22b9ec9b90db56cd6b2d4429fbc2d",
+        "rev": "4a599e8652a6ca89f79c42f6e05806813f5abd0b",
         "type": "github"
       },
       "original": {
@@ -94,11 +92,10 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1726243404,
+        "lastModified": 1744932701,
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "345c263f2f53a3710abe117f28a5cb86d0ba4059",
-        "treeHash": "dedc59dc44621b63b55c293a7341aff85a2292f7",
+        "rev": "b024ced1aac25639f8ca8fdfc2f8c4fbd66c48ef",
         "type": "github"
       },
       "original": {
@@ -110,11 +107,10 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1726436956,
+        "lastModified": 1744868846,
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "039b72d0c738c934e2e36d7fc5520d1b425287a6",
-        "treeHash": "fc1e90383b0d17eb448a46211abee3787ca3eccd",
+        "rev": "ebe4301cbd8f81c4f8d3244b3632338bbeb6d49c",
         "type": "github"
       },
       "original": {
@@ -138,11 +134,10 @@
     "rust-analyzer-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1726443025,
+        "lastModified": 1745247864,
         "owner": "rust-lang",
         "repo": "rust-analyzer",
-        "rev": "94b526fc86eaa0e90fb4d54a5ba6313aa1e9b269",
-        "treeHash": "3a9ddbe34b25b2921864f029988d2d48049b2d4a",
+        "rev": "31dbec70c68e97060916d4754c687a3e93c2440f",
         "type": "github"
       },
       "original": {

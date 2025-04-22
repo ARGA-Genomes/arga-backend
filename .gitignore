@@ -1,16 +1,13 @@
 .env
 .index
+.vscode
 
 # Devenv
 .devenv*
 devenv.local.nix
 
-
-
 # Added by cargo
-
 /target
-
 
 # Mac garbage
 .DS_Store

@@ -28,6 +28,10 @@
     listen_addresses = "127.0.0.1";
     settings = {
       max_wal_size = "10GB";
+      log_connections = true;
+      log_statement = "all";
+      logging_collector = true;
+      log_disconnections = true;
     };
   };
 
