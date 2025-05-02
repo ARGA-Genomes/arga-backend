@@ -90,6 +90,23 @@ impl Statistics {
         Ok(stats.into_iter().map(|s| s.into()).collect())
     }
 
+    async fn taxonomic_ranks_csv(
+        &self,
+        ctx: &Context<'_>,
+        taxon_rank: TaxonomicRank,
+        taxon_canonical_name: String,
+        ranks: Vec<TaxonomicRank>,
+    ) -> Result<String> {
+        let state = ctx.data::<State>()?;
+        let classification = taxon_rank.to_classification(taxon_canonical_name);
+        let ranks: Vec<models::TaxonomicRank> = ranks.into_iter().map(|r| r.into()).collect();
+
+        let stats = state.database.stats.taxonomic_ranks(classification, &ranks).await?;
+        let stats_mapped: Vec<TaxonomicRankStatistic> = stats.into_iter().map(|s| s.into()).collect();
+
+        csv::generic(stats_mapped).await
+    }
+
     async fn complete_genomes_by_year(
         &self,
         ctx: &Context<'_>,
