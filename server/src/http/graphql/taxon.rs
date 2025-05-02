@@ -9,7 +9,7 @@ use super::common::datasets::DatasetDetails;
 use super::common::species::{SortDirection, SpeciesSort};
 use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
 use super::common::{FilterItem, NameDetails, Page, SpeciesCard, convert_filters};
-use super::helpers::{self, SpeciesHelper};
+use super::helpers::{self, SpeciesHelper, csv};
 use super::specimen::SpecimenDetails;
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::extensions::filters::{Filter, FilterKind};
@@ -174,6 +174,19 @@ impl TaxonQuery {
         Ok(summary.into())
     }
 
+    async fn summary_csv(&self, ctx: &Context<'_>, rank: TaxonomicRank) -> Result<String, async_graphql::Error> {
+        let state = ctx.data::<State>()?;
+
+        let rank_summary = state.database.taxa.rank_summary(&self.taxon.id, &rank.into()).await?;
+        let species_summary = state
+            .database
+            .taxa
+            .rank_summary(&self.taxon.id, &TaxonomicRank::Species.into())
+            .await?;
+
+        csv::rank_summaries(rank_summary.into(), species_summary.into()).await
+    }
+
     async fn species_genomic_data_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>()?;
         let summaries = state.database.taxa.species_genomic_data_summary(&self.taxon.id).await?;
@@ -181,11 +194,29 @@ impl TaxonQuery {
         Ok(summaries)
     }
 
+    async fn species_genomic_data_summary_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        let state = ctx.data::<State>()?;
+        let summaries = state.database.taxa.species_genomic_data_summary(&self.taxon.id).await?;
+        let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
+
+        let csv = csv::generic(summaries).await?;
+        Ok(csv)
+    }
+
     async fn species_genomes_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>()?;
         let summaries = state.database.taxa.species_genomes_summary(&self.taxon.id).await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
+    }
+
+    async fn species_genomes_summary_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        let state = ctx.data::<State>()?;
+        let summaries = state.database.taxa.species_genomes_summary(&self.taxon.id).await?;
+        let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
+
+        let csv = csv::generic(summaries).await?;
+        Ok(csv)
     }
 
     async fn history(&self, ctx: &Context<'_>) -> Result<Vec<HistoryItem>, Error> {
@@ -490,7 +521,7 @@ impl From<taxa::TypeSpecimen> for TypeSpecimen {
 }
 
 
-#[derive(SimpleObject)]
+#[derive(SimpleObject, Serialize)]
 pub struct DataBreakdown {
     pub scientific_name: String,
     pub canonical_name: String,

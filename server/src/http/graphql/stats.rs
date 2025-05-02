@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use super::common::taxonomy::TaxonomicRank;
+use super::helpers::csv;
 use crate::database::stats::{BreakdownItem, TaxonStatNode, TaxonomicRankStat};
-use crate::http::{Context as State, Error};
+use crate::http::Context as State;
 
 
 pub struct Statistics;
@@ -14,12 +15,12 @@ pub struct Statistics;
 #[Object]
 impl Statistics {
     #[instrument(skip(self, ctx))]
-    async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<SpeciesStatistics, Error> {
+    async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<SpeciesStatistics> {
         let state = ctx.data::<State>()?;
         let names = state.database.names.find_by_canonical_name(&canonical_name).await?;
 
         if names.is_empty() {
-            return Err(Error::NotFound(canonical_name));
+            return Err(Error::new(format!("Species not found: {}", canonical_name)));
         }
 
         //FIXME: endpoint no longer needed?
@@ -48,7 +49,7 @@ impl Statistics {
         taxon_rank: TaxonomicRank,
         taxon_canonical_name: String,
         include_ranks: Vec<TaxonomicRank>,
-    ) -> Result<Vec<TaxonTreeNodeStatistics>, Error> {
+    ) -> Result<Vec<TaxonTreeNodeStatistics>> {
         let state = ctx.data::<State>()?;
         let classification = taxon_rank.to_classification(taxon_canonical_name);
         let include_ranks = include_ranks.into_iter().map(|i| i.into()).collect();
@@ -62,7 +63,7 @@ impl Statistics {
     }
 
     #[instrument(skip(self, ctx))]
-    async fn dataset(&self, ctx: &Context<'_>, name: String) -> Result<DatasetStatistics, Error> {
+    async fn dataset(&self, ctx: &Context<'_>, name: String) -> Result<DatasetStatistics> {
         let state = ctx.data::<State>()?;
         let stats = state.database.stats.dataset(&name).await?;
         let breakdown = state.database.stats.dataset_breakdown(&name).await?;
@@ -80,7 +81,7 @@ impl Statistics {
         taxon_rank: TaxonomicRank,
         taxon_canonical_name: String,
         ranks: Vec<TaxonomicRank>,
-    ) -> Result<Vec<TaxonomicRankStatistic>, Error> {
+    ) -> Result<Vec<TaxonomicRankStatistic>> {
         let state = ctx.data::<State>()?;
         let classification = taxon_rank.to_classification(taxon_canonical_name);
         let ranks: Vec<models::TaxonomicRank> = ranks.into_iter().map(|r| r.into()).collect();
@@ -89,12 +90,29 @@ impl Statistics {
         Ok(stats.into_iter().map(|s| s.into()).collect())
     }
 
+    async fn taxonomic_ranks_csv(
+        &self,
+        ctx: &Context<'_>,
+        taxon_rank: TaxonomicRank,
+        taxon_canonical_name: String,
+        ranks: Vec<TaxonomicRank>,
+    ) -> Result<String> {
+        let state = ctx.data::<State>()?;
+        let classification = taxon_rank.to_classification(taxon_canonical_name);
+        let ranks: Vec<models::TaxonomicRank> = ranks.into_iter().map(|r| r.into()).collect();
+
+        let stats = state.database.stats.taxonomic_ranks(classification, &ranks).await?;
+        let stats_mapped: Vec<TaxonomicRankStatistic> = stats.into_iter().map(|s| s.into()).collect();
+
+        csv::generic(stats_mapped).await
+    }
+
     async fn complete_genomes_by_year(
         &self,
         ctx: &Context<'_>,
         taxon_rank: TaxonomicRank,
         taxon_canonical_name: String,
-    ) -> Result<Vec<CompleteGenomesByYearStatistic>, Error> {
+    ) -> Result<Vec<CompleteGenomesByYearStatistic>> {
         let state = ctx.data::<State>()?;
         let classification = taxon_rank.to_classification(taxon_canonical_name);
         let stats = state.database.stats.complete_genomes_by_year(classification).await?;
@@ -103,6 +121,23 @@ impl Statistics {
             .map(|(year, total)| CompleteGenomesByYearStatistic { year, total })
             .collect();
         Ok(stats)
+    }
+
+    async fn complete_genomes_by_year_csv(
+        &self,
+        ctx: &Context<'_>,
+        taxon_rank: TaxonomicRank,
+        taxon_canonical_name: String,
+    ) -> Result<String> {
+        let state = ctx.data::<State>()?;
+        let classification = taxon_rank.to_classification(taxon_canonical_name);
+        let stats = state.database.stats.complete_genomes_by_year(classification).await?;
+        let stats = stats
+            .into_iter()
+            .map(|(year, total)| CompleteGenomesByYearStatistic { year, total })
+            .collect();
+
+        csv::generic(stats).await
     }
 }
 
