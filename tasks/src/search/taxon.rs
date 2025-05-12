@@ -1,12 +1,15 @@
 use anyhow::Error;
 use arga_core::models::{TaxonomicStatus, ACCEPTED_NAMES};
+use arga_core::schema::datasets;
 use arga_core::schema_gnl;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::sql_types::{Nullable, Varchar};
-use diesel::{RunQueryDsl, *};
+use diesel::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+
+pub const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
 
 type PgPool = Pool<ConnectionManager<PgConnection>>;
 
@@ -42,6 +45,7 @@ pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
     let mut conn = pool.get()?;
 
     let docs = species::table
+        .inner_join(datasets::table.on(species::dataset_id.eq(datasets::id)))
         // .left_join(synonyms::table)
         .select((
             species::id,
@@ -63,6 +67,7 @@ pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
             sql::<Nullable<Varchar>>("classification->>'familia'"),
         ))
         .filter(species::status.eq_any(&ACCEPTED_NAMES))
+        .filter(datasets::global_id.eq(ALA_DATASET_ID))
         .load::<SpeciesDoc>(&mut conn)?;
 
     Ok(docs)
