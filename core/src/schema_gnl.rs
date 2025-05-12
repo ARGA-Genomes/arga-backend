@@ -193,7 +193,15 @@ diesel::table! {
 }
 
 use super::schema::{
-    accession_events, assembly_events, datasets, deposition_events, name_attributes, names, sequences, specimens, taxa,
+    accession_events,
+    assembly_events,
+    datasets,
+    deposition_events,
+    name_attributes,
+    names,
+    sequences,
+    specimens,
+    taxa,
     taxon_names,
 };
 
@@ -233,6 +241,7 @@ diesel::allow_tables_to_appear_in_same_query!(specimen_stats, specimens);
 diesel::allow_tables_to_appear_in_same_query!(specimen_stats, accession_events);
 
 diesel::allow_tables_to_appear_in_same_query!(name_attributes, species);
+diesel::allow_tables_to_appear_in_same_query!(name_attributes, taxa_tree_stats);
 
 diesel::allow_tables_to_appear_in_same_query!(taxa, taxa_dag);
 diesel::allow_tables_to_appear_in_same_query!(taxa, taxa_tree);
@@ -241,6 +250,8 @@ diesel::allow_tables_to_appear_in_same_query!(taxa, species);
 diesel::allow_tables_to_appear_in_same_query!(taxa, markers);
 diesel::allow_tables_to_appear_in_same_query!(taxa, whole_genomes);
 diesel::allow_tables_to_appear_in_same_query!(taxa, name_data_summaries);
+
+diesel::allow_tables_to_appear_in_same_query!(taxon_names, taxa_tree_stats);
 
 diesel::allow_tables_to_appear_in_same_query!(sequence_milestones, taxon_names);
 diesel::allow_tables_to_appear_in_same_query!(sequence_milestones, datasets);
