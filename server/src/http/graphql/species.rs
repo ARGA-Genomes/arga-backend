@@ -21,6 +21,7 @@ use super::common::{
 use super::markers::SpeciesMarker;
 use super::taxon::{into_classification, TaxonNode, TaxonRank};
 use crate::database::models::{Name as ArgaName, Name};
+use crate::database::sources::ALA_DATASET_ID;
 use crate::database::{schema, species, Database};
 use crate::http::{Context as State, Error};
 
@@ -62,7 +63,7 @@ impl From<(IndigenousKnowledge, String)> for IndigenousEcologicalTrait {
 impl Species {
     #[graphql(skip)]
     pub async fn new(db: &Database, canonical_name: String) -> Result<Species, Error> {
-        use schema::{names, taxon_names};
+        use schema::{datasets, names, taxa, taxon_names};
         let mut conn = db.pool.get().await?;
 
         // get all names that match the canonical name in the request
@@ -80,7 +81,10 @@ impl Species {
             .into_boxed();
 
         let linked_name_ids = taxon_names::table
+            .inner_join(taxa::table.on(taxa::id.eq(taxon_names::taxon_id)))
+            .inner_join(datasets::table.on(datasets::id.eq(taxa::dataset_id)))
             .filter(taxon_names::taxon_id.eq_any(linked_taxa_query))
+            .filter(datasets::global_id.eq(ALA_DATASET_ID))
             .select(taxon_names::name_id)
             .load::<Uuid>(&mut conn)
             .await?;
@@ -118,23 +122,6 @@ impl Species {
         }
 
         Ok(details)
-    }
-
-    // TODO: hierarchy should be returned for a specific taxon or return for all taxa
-    async fn hierarchy(&self, ctx: &Context<'_>) -> Result<Vec<TaxonNode>, Error> {
-        let classification = into_classification(TaxonRank::Species, self.canonical_name.clone());
-        let state = ctx.data::<State>()?;
-        let mut all_taxa = state.database.taxa.find_by_classification(&classification).await?;
-
-        // sort by dataset name for some consistency
-        sort_taxa_priority(&mut all_taxa);
-        let taxon = all_taxa
-            .get(0)
-            .ok_or_else(|| Error::NotFound(self.canonical_name.clone()))?;
-
-        let hierarchy = state.database.taxa.hierarchy(&taxon.taxon.id).await?;
-        let hierarchy = hierarchy.into_iter().map(TaxonNode::from).collect();
-        Ok(hierarchy)
     }
 
     async fn vernacular_names(&self, ctx: &Context<'_>) -> Result<Vec<VernacularName>, Error> {
