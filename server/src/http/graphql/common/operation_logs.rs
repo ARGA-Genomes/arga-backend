@@ -24,7 +24,6 @@ type UtcDateTime = DateTime<Utc>;
     params(NomenclaturalActAtomActType, NomenclaturalActType)
 ))]
 #[graphql(concrete(name = "SpecimenAtomText", params(SpecimenAtomTextType, String)))]
-#[graphql(concrete(name = "SpecimenAtomNumber", params(SpecimenAtomNumberType, f64)))]
 #[graphql(concrete(name = "TaxonAtomText", params(TaxonAtomTextType, String)))]
 #[graphql(concrete(name = "TaxonAtomRank", params(TaxonAtomRankType, TaxonomicRank)))]
 #[graphql(concrete(name = "TaxonAtomStatus", params(TaxonAtomStatusType, TaxonomicStatus)))]
@@ -38,7 +37,6 @@ type NomenclaturalActAtomText = Atom<NomenclaturalActAtomTextType, String>;
 type NomenclaturalActAtomDateTime = Atom<NomenclaturalActAtomDateTimeType, UtcDateTime>;
 type NomenclaturalActAtomAct = Atom<NomenclaturalActAtomActType, NomenclaturalActType>;
 type SpecimenAtomText = Atom<SpecimenAtomTextType, String>;
-type SpecimenAtomNumber = Atom<SpecimenAtomNumberType, f64>;
 type TaxonAtomText = Atom<TaxonAtomTextType, String>;
 type TaxonAtomRank = Atom<TaxonAtomRankType, TaxonomicRank>;
 type TaxonAtomStatus = Atom<TaxonAtomStatusType, TaxonomicStatus>;
@@ -173,58 +171,32 @@ impl NomenclaturalActAtom {
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum SpecimenAtomTextType {
     Empty,
-    EntityId,
-    RecordId,
-    MaterialSampleId,
-    OrganismId,
+    SpecimenId,
     ScientificName,
-    CanonicalName,
-    Authorship,
+
+    EventDate,
+    EventTime,
 
     InstitutionName,
     InstitutionCode,
-    CollectionCode,
-    RecordedBy,
-    IdentifiedBy,
-    IdentifiedDate,
+    CollectionRepositoryId,
+    CollectionRepositoryCode,
 
     TypeStatus,
-    Locality,
-    Country,
-    CountryCode,
-    StateProvince,
-    County,
-    Municipality,
-    LocationSource,
-
-    Details,
-    Remarks,
-    IdentificationRemarks,
+    Preparation,
+    OtherCatalogNumbers,
+    Disposition,
 }
 
-#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub enum SpecimenAtomNumberType {
-    Latitude,
-    Longitude,
-    Elevation,
-    Depth,
-    ElevationAccuracy,
-    DepthAccuracy,
-}
 
 #[derive(Union)]
 pub enum SpecimenAtom {
     Text(SpecimenAtomText),
-    Number(SpecimenAtomNumber),
 }
 
 impl SpecimenAtom {
     pub fn text(r#type: SpecimenAtomTextType, value: String) -> SpecimenAtom {
         SpecimenAtom::Text(SpecimenAtomText { r#type, value })
-    }
-
-    pub fn number(r#type: SpecimenAtomNumberType, value: f64) -> SpecimenAtom {
-        SpecimenAtom::Number(SpecimenAtomNumber { r#type, value })
     }
 }
 
@@ -364,7 +336,7 @@ impl TryFrom<models::SpecimenOperation> for SpecimenOperation {
                 "Operation".to_string(),
                 value.operation_id.to_string(),
             ))?,
-            entity_id: value.entity_id,
+            entity_id: value.entity_id.to_string(),
             action: value.action.into(),
             atom: value.atom.into(),
             dataset: DatasetDetails::default(),
@@ -377,40 +349,22 @@ impl TryFrom<models::SpecimenOperation> for SpecimenOperation {
 impl From<models::SpecimenAtom> for SpecimenAtom {
     fn from(value: models::SpecimenAtom) -> Self {
         use models::SpecimenAtom::*;
-        use {SpecimenAtom as Atom, SpecimenAtomNumberType as Number, SpecimenAtomTextType as Text};
+        use {SpecimenAtom as Atom, SpecimenAtomTextType as Text};
 
         match value {
             Empty => Atom::text(Text::Empty, "".to_string()),
-            EntityId(value) => Atom::text(Text::EntityId, value),
-            RecordId(value) => Atom::text(Text::RecordId, value),
-            MaterialSampleId(value) => Atom::text(Text::MaterialSampleId, value),
-            OrganismId(value) => Atom::text(Text::OrganismId, value),
+            SpecimenId(value) => Atom::text(Text::SpecimenId, value),
             ScientificName(value) => Atom::text(Text::ScientificName, value),
-            CanonicalName(value) => Atom::text(Text::CanonicalName, value),
-            Authorship(value) => Atom::text(Text::Authorship, value),
+            EventDate(value) => Atom::text(Text::EventDate, value),
+            EventTime(value) => Atom::text(Text::EventTime, value),
             InstitutionName(value) => Atom::text(Text::InstitutionName, value),
             InstitutionCode(value) => Atom::text(Text::InstitutionCode, value),
-            CollectionCode(value) => Atom::text(Text::CollectionCode, value),
-            RecordedBy(value) => Atom::text(Text::RecordedBy, value),
-            IdentifiedBy(value) => Atom::text(Text::IdentifiedBy, value),
-            IdentifiedDate(value) => Atom::text(Text::IdentifiedDate, value),
+            CollectionRepositoryId(value) => Atom::text(Text::CollectionRepositoryId, value),
+            CollectionRepositoryCode(value) => Atom::text(Text::CollectionRepositoryCode, value),
             TypeStatus(value) => Atom::text(Text::TypeStatus, value),
-            Locality(value) => Atom::text(Text::Locality, value),
-            Country(value) => Atom::text(Text::Country, value),
-            CountryCode(value) => Atom::text(Text::CountryCode, value),
-            StateProvince(value) => Atom::text(Text::StateProvince, value),
-            County(value) => Atom::text(Text::County, value),
-            Municipality(value) => Atom::text(Text::Municipality, value),
-            Latitude(value) => Atom::number(Number::Latitude, value),
-            Longitude(value) => Atom::number(Number::Longitude, value),
-            Elevation(value) => Atom::number(Number::Elevation, value),
-            Depth(value) => Atom::number(Number::Depth, value),
-            ElevationAccuracy(value) => Atom::number(Number::ElevationAccuracy, value),
-            DepthAccuracy(value) => Atom::number(Number::DepthAccuracy, value),
-            LocationSource(value) => Atom::text(Text::LocationSource, value),
-            Details(value) => Atom::text(Text::Details, value),
-            Remarks(value) => Atom::text(Text::Remarks, value),
-            IdentificationRemarks(value) => Atom::text(Text::IdentificationRemarks, value),
+            Preparation(value) => Atom::text(Text::Preparation, value),
+            OtherCatalogNumbers(value) => Atom::text(Text::OtherCatalogNumbers, value),
+            Disposition(value) => Atom::text(Text::Disposition, value),
         }
     }
 }
