@@ -302,9 +302,9 @@ pub enum CollectionEventAtom {
     ScientificName(String),
 
     /// When the collection happened. Strictly YYYY-MM-DD
-    EventDate(String),
+    EventDate(chrono::NaiveDate),
     /// What time the collection happened. Strictly HH:MM:SS
-    EventTime(String),
+    EventTime(chrono::NaiveTime),
 
     /// The name of the person who did the collection.
     CollectedBy(String),
@@ -314,7 +314,7 @@ pub enum CollectionEventAtom {
     /// The name of the person who identified the organism at collection.
     IdentifiedBy(String),
     /// The date the organism collection was identified. Strictly YYYY-MM-DD.
-    IdentifiedDate(String),
+    IdentifiedDate(chrono::NaiveDate),
     /// Free-text notes about the identification of the collection event.
     IdentificationRemarks(String),
 

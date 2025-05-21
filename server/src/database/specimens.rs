@@ -2,8 +2,8 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::database::models::{Specimen, CollectionEvent, AccessionEvent};
 use super::{schema, Error, PgPool};
+use crate::database::models::{AccessionEvent, CollectionEvent, SpecimenOld as Specimen};
 
 
 pub enum SpecimenEvent {
@@ -19,7 +19,7 @@ pub struct SpecimenProvider {
 
 impl SpecimenProvider {
     pub async fn find_by_id(&self, specimen_id: &Uuid) -> Result<Specimen, Error> {
-        use schema::specimens;
+        use schema::specimens_old as specimens;
         let mut conn = self.pool.get().await?;
 
         let specimen = specimens::table
@@ -35,7 +35,7 @@ impl SpecimenProvider {
     }
 
     pub async fn find_by_record_id(&self, record_id: &str) -> Result<Specimen, Error> {
-        use schema::specimens;
+        use schema::specimens_old as specimens;
         let mut conn = self.pool.get().await?;
 
         let specimen = specimens::table
@@ -51,7 +51,7 @@ impl SpecimenProvider {
     }
 
     pub async fn find_by_sequence_accession(&self, accession: &str) -> Result<Specimen, Error> {
-        use schema::{specimens, subsamples, dna_extracts, sequences, deposition_events};
+        use schema::{deposition_events, dna_extracts, sequences, specimens_old as specimens, subsamples};
         let mut conn = self.pool.get().await?;
 
         let specimen = specimens::table
@@ -72,7 +72,7 @@ impl SpecimenProvider {
     }
 
     pub async fn find_by_sequence_record_id(&self, record_id: &str) -> Result<Specimen, Error> {
-        use schema::{specimens, subsamples, dna_extracts, sequences};
+        use schema::{dna_extracts, sequences, specimens_old as specimens, subsamples};
         let mut conn = self.pool.get().await?;
 
         let specimen = specimens::table
@@ -95,23 +95,27 @@ impl SpecimenProvider {
         use schema::collection_events;
         let mut conn = self.pool.get().await?;
 
-        let collections = collection_events::table
-            .filter(collection_events::specimen_id.eq(specimen_id))
-            .load::<CollectionEvent>(&mut conn)
-            .await?;
+        Ok(vec![])
 
-        Ok(collections)
+        // let collections = collection_events::table
+        //     .filter(collection_events::specimen_id.eq(specimen_id))
+        //     .load::<CollectionEvent>(&mut conn)
+        //     .await?;
+
+        // Ok(collections)
     }
 
     pub async fn accession_events(&self, specimen_id: &Uuid) -> Result<Vec<AccessionEvent>, Error> {
         use schema::accession_events;
         let mut conn = self.pool.get().await?;
 
-        let accessions = accession_events::table
-            .filter(accession_events::specimen_id.eq(specimen_id))
-            .load::<AccessionEvent>(&mut conn)
-            .await?;
+        Ok(vec![])
 
-        Ok(accessions)
+        // let accessions = accession_events::table
+        //     .filter(accession_events::specimen_id.eq(specimen_id))
+        //     .load::<AccessionEvent>(&mut conn)
+        //     .await?;
+
+        // Ok(accessions)
     }
 }

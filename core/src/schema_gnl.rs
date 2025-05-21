@@ -73,8 +73,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    specimen_stats (id) {
-        id -> Uuid,
+    specimen_stats (entity_id) {
+        entity_id -> Varchar,
         sequences -> BigInt,
         whole_genomes -> BigInt,
         markers -> BigInt,
@@ -193,6 +193,12 @@ diesel::table! {
 }
 
 diesel::table! {
+    collection_event_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
+diesel::table! {
     specimen_entities (entity_id) {
         entity_id -> Varchar,
     }
@@ -218,7 +224,7 @@ diesel::joinable!(whole_genomes -> names (name_id));
 diesel::joinable!(markers -> datasets (dataset_id));
 diesel::joinable!(markers -> names (name_id));
 diesel::joinable!(markers -> taxa (name_id));
-diesel::joinable!(specimen_stats -> specimens (id));
+diesel::joinable!(specimen_stats -> specimens (entity_id));
 diesel::joinable!(name_data_summaries -> names (name_id));
 diesel::joinable!(taxon_names -> species (taxon_id));
 diesel::joinable!(taxa_tree_stats -> taxa (taxon_id));

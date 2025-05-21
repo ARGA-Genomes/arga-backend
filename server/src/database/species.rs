@@ -174,41 +174,43 @@ impl SpeciesProvider {
     }
 
     pub async fn specimens(&self, names: &Vec<Name>, page: i64, page_size: i64) -> PageResult<SpecimenSummary> {
-        use schema::{accession_events, datasets, specimens};
+        use schema::{accession_events, datasets, specimens_old as specimens};
         use schema_gnl::specimen_stats;
         let mut conn = self.pool.get().await?;
 
         let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
 
-        let records = specimens::table
-            .inner_join(datasets::table)
-            .inner_join(specimen_stats::table)
-            .left_join(accession_events::table)
-            .select((
-                specimens::id,
-                datasets::name,
-                specimens::record_id,
-                specimens::entity_id,
-                accession_events::accession.nullable(),
-                specimens::institution_code,
-                specimens::institution_name,
-                specimens::type_status,
-                specimens::locality,
-                specimens::country,
-                specimens::latitude,
-                specimens::longitude,
-                specimen_stats::sequences,
-                specimen_stats::whole_genomes,
-                specimen_stats::markers,
-            ))
-            .filter(specimens::name_id.eq_any(name_ids))
-            .order((specimens::type_status.asc(), specimen_stats::sequences.desc()))
-            .paginate(page)
-            .per_page(page_size)
-            .load::<(SpecimenSummary, i64)>(&mut conn)
-            .await?;
+        Err(Error::NotFound("not implemented".to_string()))
 
-        Ok(records.into())
+        // let records = specimens::table
+        //     .inner_join(datasets::table)
+        //     .inner_join(specimen_stats::table)
+        //     .left_join(accession_events::table)
+        //     .select((
+        //         specimens::id,
+        //         datasets::name,
+        //         specimens::record_id,
+        //         specimens::entity_id,
+        //         accession_events::accession.nullable(),
+        //         specimens::institution_code,
+        //         specimens::institution_name,
+        //         specimens::type_status,
+        //         specimens::locality,
+        //         specimens::country,
+        //         specimens::latitude,
+        //         specimens::longitude,
+        //         specimen_stats::sequences,
+        //         specimen_stats::whole_genomes,
+        //         specimen_stats::markers,
+        //     ))
+        //     .filter(specimens::name_id.eq_any(name_ids))
+        //     .order((specimens::type_status.asc(), specimen_stats::sequences.desc()))
+        //     .paginate(page)
+        //     .per_page(page_size)
+        //     .load::<(SpecimenSummary, i64)>(&mut conn)
+        //     .await?;
+
+        // Ok(records.into())
     }
 
     pub async fn whole_genomes(

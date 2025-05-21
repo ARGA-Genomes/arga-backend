@@ -1,10 +1,10 @@
-use arga_core::models::{SequencingRunEvent, AssemblyEvent, DepositionEvent, AnnotationEvent, TraceData};
+use arga_core::models::{AnnotationEvent, AssemblyEvent, DepositionEvent, SequencingRunEvent, TraceData};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::database::models::{Sequence, SequencingEvent};
 use super::{schema, Error, PgPool};
+use crate::database::models::{Sequence, SequencingEvent};
 
 
 #[derive(Clone)]
@@ -27,7 +27,7 @@ impl SequenceProvider {
     }
 
     pub async fn find_by_accession(&self, accession: &str) -> Result<Vec<Sequence>, Error> {
-        use schema::{sequences, deposition_events};
+        use schema::{deposition_events, sequences};
         let mut conn = self.pool.get().await?;
 
         let sequence = sequences::table
@@ -53,7 +53,7 @@ impl SequenceProvider {
     }
 
     pub async fn find_by_specimen_record_id(&self, record_id: &str) -> Result<Vec<Sequence>, Error> {
-        use schema::{specimens, subsamples, dna_extracts, sequences};
+        use schema::{dna_extracts, sequences, specimens_old as specimens, subsamples};
         let mut conn = self.pool.get().await?;
 
         let sequences = specimens::table
@@ -67,7 +67,6 @@ impl SequenceProvider {
 
         Ok(sequences)
     }
-
 
     pub async fn sequencing_events(&self, sequence_id: &Uuid) -> Result<Vec<SequencingEvent>, Error> {
         use schema::sequencing_events;
@@ -132,7 +131,7 @@ impl SequenceProvider {
     }
 
     pub async fn trace_data(&self, sequence_run_event_id: &Uuid) -> Result<TraceData, Error> {
-        use schema::{sequencing_run_events, sequencing_events, deposition_events};
+        use schema::{deposition_events, sequencing_events, sequencing_run_events};
         let mut conn = self.pool.get().await?;
 
         let trace = sequencing_run_events::table

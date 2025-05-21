@@ -945,6 +945,14 @@ pub struct IndigenousKnowledge {
 #[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::specimens)]
 pub struct Specimen {
+    pub entity_id: String,
+    pub organism_id: String,
+    pub name_id: Uuid,
+}
+
+#[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::specimens_old)]
+pub struct SpecimenOld {
     pub id: Uuid,
     pub dataset_id: Uuid,
     pub name_id: Uuid,
@@ -1019,15 +1027,15 @@ pub struct Sequence {
     pub entity_id: Option<String>,
 }
 
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
+#[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::collection_events)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct CollectionEvent {
-    pub id: Uuid,
     pub entity_id: String,
-    pub field_collecting_id: String,
+    pub specimen_id: String,
     pub name_id: Uuid,
-    pub organism_id: Uuid,
-    pub specimen_id: Option<Uuid>,
+    pub organism_id: String,
+    pub field_collecting_id: Option<String>,
 
     pub event_date: Option<chrono::NaiveDate>,
     pub event_time: Option<chrono::NaiveTime>,

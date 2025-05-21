@@ -2,8 +2,8 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::database::models::{Subsample, SubsampleEvent};
 use super::{schema, Error, PgPool};
+use crate::database::models::{Subsample, SubsampleEvent};
 
 
 #[derive(Clone)]
@@ -39,7 +39,7 @@ impl SubsampleProvider {
     }
 
     pub async fn find_by_specimen_record_id(&self, record_id: &str) -> Result<Option<Subsample>, Error> {
-        use schema::{specimens, subsamples};
+        use schema::{specimens_old as specimens, subsamples};
         let mut conn = self.pool.get().await?;
 
         let subsample = specimens::table
@@ -52,7 +52,6 @@ impl SubsampleProvider {
 
         Ok(subsample)
     }
-
 
     pub async fn subsample_events(&self, subsample_id: &Uuid) -> Result<Vec<SubsampleEvent>, Error> {
         use schema::subsample_events;

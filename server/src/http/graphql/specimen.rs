@@ -33,7 +33,7 @@ impl Specimen {
 
 
 struct SpecimenQuery {
-    specimen: models::Specimen,
+    specimen: models::SpecimenOld,
 }
 
 #[Object]
@@ -95,8 +95,8 @@ pub struct SpecimenDetails {
     pub identification_remarks: Option<String>,
 }
 
-impl From<models::Specimen> for SpecimenDetails {
-    fn from(value: models::Specimen) -> Self {
+impl From<models::SpecimenOld> for SpecimenDetails {
+    fn from(value: models::SpecimenOld) -> Self {
         Self {
             id: value.id,
             entity_id: value.entity_id,
@@ -140,7 +140,6 @@ pub struct SpecimenEvents {
 
 #[derive(Clone, Debug, SimpleObject)]
 pub struct CollectionEvent {
-    pub id: Uuid,
     pub entity_id: String,
 
     pub event_date: Option<chrono::NaiveDate>,
@@ -152,7 +151,6 @@ pub struct CollectionEvent {
 impl From<models::CollectionEvent> for CollectionEvent {
     fn from(value: models::CollectionEvent) -> Self {
         Self {
-            id: value.id,
             entity_id: value.entity_id,
             event_date: value.event_date,
             event_time: value.event_time,

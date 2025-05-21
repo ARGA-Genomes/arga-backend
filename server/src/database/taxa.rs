@@ -4,7 +4,7 @@ use arga_core::models::{
     NamePublication,
     NomenclaturalActType,
     Publication,
-    Specimen,
+    SpecimenOld as Specimen,
     Taxon,
     TaxonTreeNode,
     TaxonWithDataset,
@@ -141,7 +141,7 @@ pub struct TaxonomicAct {
 }
 
 #[derive(Debug, Selectable, Queryable)]
-#[diesel(table_name = schema::specimens)]
+#[diesel(table_name = schema::specimens_old)]
 pub struct TypeSpecimen {
     #[diesel(embed)]
     pub specimen: Specimen,
@@ -626,7 +626,7 @@ impl TaxaProvider {
     }
 
     pub async fn type_specimens(&self, taxon_id: &Uuid) -> Result<Vec<TypeSpecimen>, Error> {
-        use schema::{names, specimens};
+        use schema::{names, specimens_old as specimens};
         let mut conn = self.pool.get().await?;
 
         let name_ids = self.all_associated_names(taxon_id).await?;

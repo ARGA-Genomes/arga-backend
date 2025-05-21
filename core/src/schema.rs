@@ -212,13 +212,12 @@ diesel::table! {
 }
 
 diesel::table! {
-    collection_events (id) {
-        id -> Uuid,
+    collection_events (entity_id) {
         entity_id -> Varchar,
-        field_collecting_id -> Varchar,
+        specimen_id -> Varchar,
         name_id -> Uuid,
-        organism_id -> Uuid,
-        specimen_id -> Nullable<Uuid>,
+        organism_id -> Varchar,
+        field_collecting_id -> Nullable<Varchar>,
         event_date -> Nullable<Date>,
         event_time -> Nullable<Time>,
         collected_by -> Nullable<Varchar>,
@@ -526,15 +525,16 @@ diesel::table! {
 }
 
 diesel::table! {
-    organisms (id) {
-        id -> Uuid,
+    organisms (entity_id) {
+        entity_id -> Varchar,
         name_id -> Uuid,
-        organism_id -> Nullable<Varchar>,
-        organism_name -> Nullable<Varchar>,
-        organism_scope -> Nullable<Varchar>,
-        associated_organisms -> Nullable<Varchar>,
-        previous_identifications -> Nullable<Varchar>,
-        remarks -> Nullable<Text>,
+        organism_id -> Varchar,
+        sex -> Nullable<Varchar>,
+        genotypic_sex -> Nullable<Varchar>,
+        phenotypic_sex -> Nullable<Varchar>,
+        life_stage -> Nullable<Varchar>,
+        reproductive_condition -> Nullable<Varchar>,
+        behavior -> Nullable<Varchar>,
     }
 }
 
@@ -694,7 +694,15 @@ diesel::table! {
 }
 
 diesel::table! {
-    specimens (id) {
+    specimens (entity_id) {
+        entity_id -> Varchar,
+        organism_id -> Varchar,
+        name_id -> Uuid,
+    }
+}
+
+diesel::table! {
+    specimens_old (id) {
         id -> Uuid,
         dataset_id -> Uuid,
         name_id -> Uuid,
@@ -913,7 +921,6 @@ diesel::table! {
 }
 
 diesel::joinable!(accession_events -> datasets (dataset_id));
-diesel::joinable!(accession_events -> specimens (specimen_id));
 diesel::joinable!(admin_media -> names (name_id));
 diesel::joinable!(annotation_events -> datasets (dataset_id));
 diesel::joinable!(annotation_events -> sequences (sequence_id));
@@ -957,13 +964,15 @@ diesel::joinable!(sequencing_events -> datasets (dataset_id));
 diesel::joinable!(sequencing_events -> sequences (sequence_id));
 diesel::joinable!(sequencing_run_events -> sequencing_events (sequencing_event_id));
 diesel::joinable!(specimen_logs -> dataset_versions (dataset_version_id));
-diesel::joinable!(specimens -> datasets (dataset_id));
 diesel::joinable!(specimens -> names (name_id));
+diesel::joinable!(specimens -> organisms (organism_id));
+diesel::joinable!(specimens_old -> datasets (dataset_id));
+diesel::joinable!(specimens_old -> names (name_id));
 diesel::joinable!(subsample_events -> datasets (dataset_id));
 diesel::joinable!(subsample_events -> subsamples (subsample_id));
 diesel::joinable!(subsamples -> datasets (dataset_id));
 diesel::joinable!(subsamples -> names (name_id));
-diesel::joinable!(subsamples -> specimens (specimen_id));
+diesel::joinable!(subsamples -> specimens_old (specimen_id));
 diesel::joinable!(taxa -> datasets (dataset_id));
 diesel::joinable!(taxa_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(taxon_history -> datasets (dataset_id));
@@ -1014,6 +1023,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     sources,
     specimen_logs,
     specimens,
+    specimens_old,
     subsample_events,
     subsamples,
     taxa,
