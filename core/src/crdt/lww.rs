@@ -20,50 +20,37 @@ where
         }
     }
 
-    fn update(&mut self, atom: T) {
-        let key = atom.to_string();
-        self.atoms
-            .entry(key.clone())
-            .and_modify(|val| {
-                if *val != atom {
-                    *val = atom.clone();
-                }
-            })
-            .or_insert(atom);
-    }
-
-    pub fn reduce<Op: LogOperation<T> + Clone>(&mut self, operations: &Vec<Op>) -> Vec<Op> {
-        let mut inserts: HashMap<String, Op> = HashMap::new();
-        let mut reduced: Vec<Op> = Vec::new();
-
-        // this doesn't use versioned values and thus requires the operations
-        // to be in causal order. that is to say that it should be ordered by
-        // the id which in turn should be some representation of causality like
-        // a timestamp
-        for op in operations {
-            match op.action() {
-                Action::Create => self.update(op.atom().clone()),
-                Action::Update => self.update(op.atom().clone()),
-            }
-        }
+    // this doesn't use versioned values and thus requires the operations
+    // to be in causal order. that is to say that it should be ordered by
+    // the id which in turn should be some representation of causality like
+    // a timestamp.
+    // because reduction could be called *a lot* of times on big databases we
+    // deal take and return references with the same lifetime to avoid cloning
+    pub fn reduce<'a, Op: LogOperation<T> + Clone>(&mut self, operations: &'a Vec<Op>) -> Vec<&'a Op> {
+        let mut inserts: HashMap<String, &Op> = HashMap::new();
 
         // filter out operations that don't change the atom
         for op in operations {
+            // the atom descriminant
             let key = op.atom().to_string();
 
-            match inserts.get(&key) {
-                Some(inserted_op) => {
-                    if op.atom() != inserted_op.atom() {
-                        reduced.push(op.clone());
+            // find out if an operation has previously set this field. if so then we only
+            // want to include ones that change the _last_ operation affecting that field.
+            // in this way we can make sure that values that change back and forth will still
+            // be included in the log.
+            inserts
+                .entry(key)
+                .and_modify(|old_op| {
+                    // atoms must implement PartialEq so what is considered
+                    // a change depends on the trait implementation. for the most part
+                    // this will be a variant so the value will also be tested for equality
+                    if old_op.atom() != op.atom() {
+                        *old_op = op;
                     }
-                }
-                None => {
-                    reduced.push(op.clone());
-                    inserts.insert(key, op.clone());
-                }
-            }
+                })
+                .or_insert(op);
         }
 
-        reduced
+        inserts.into_values().collect()
     }
 }

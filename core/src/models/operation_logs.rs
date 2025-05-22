@@ -356,6 +356,7 @@ pub enum CollectionEventAtom {
     FieldNotes(String),
 }
 
+
 #[derive(OperationLog, Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]
 #[diesel(belongs_to(DatasetVersion))]
 #[diesel(table_name = schema::collection_event_logs)]
@@ -368,6 +369,7 @@ pub struct CollectionEventOperation {
     pub action: Action,
     pub atom: CollectionEventAtom,
 }
+
 
 #[derive(Atom, Debug, Clone, Default, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Display)]
 #[diesel(sql_type = diesel::sql_types::Jsonb)]
