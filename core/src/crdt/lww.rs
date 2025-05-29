@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::models::{Action, LogOperation};
+use crate::models::logs::LogOperation;
 
 // a map that uses the last-write-wins policy for each entry
 #[derive(Debug)]

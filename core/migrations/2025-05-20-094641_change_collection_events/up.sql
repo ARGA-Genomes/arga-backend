@@ -89,9 +89,7 @@ CREATE INDEX collection_events_field_collecting_id ON collection_events (field_c
 
 
 CREATE MATERIALIZED VIEW collection_event_entities AS
-SELECT entity_id FROM collection_event_logs
-GROUP BY entity_id
-ORDER BY entity_id;
+SELECT entity_id FROM collection_event_logs GROUP BY entity_id ORDER BY entity_id;
 
 CREATE UNIQUE INDEX collection_event_entities_entity_id ON collection_event_entities (entity_id);
 

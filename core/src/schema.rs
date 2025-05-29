@@ -55,6 +55,20 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    accession_event_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
     accession_events (id) {
         id -> Uuid,
         dataset_id -> Uuid,
@@ -920,6 +934,7 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(accession_event_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(accession_events -> datasets (dataset_id));
 diesel::joinable!(admin_media -> names (name_id));
 diesel::joinable!(annotation_events -> datasets (dataset_id));
@@ -986,6 +1001,7 @@ diesel::joinable!(vernacular_names -> datasets (dataset_id));
 diesel::joinable!(vernacular_names -> names (name_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    accession_event_logs,
     accession_events,
     admin_media,
     annotation_events,

@@ -43,7 +43,7 @@ type TaxonAtomStatus = Atom<TaxonAtomStatusType, TaxonomicStatus>;
 
 
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-#[graphql(remote = "models::Action")]
+#[graphql(remote = "models::logs::Action")]
 pub enum Action {
     Create,
     Update,
@@ -319,10 +319,10 @@ impl SpecimenOperation {
     }
 }
 
-impl TryFrom<models::SpecimenOperation> for SpecimenOperation {
+impl TryFrom<models::logs::SpecimenOperation> for SpecimenOperation {
     type Error = Error;
 
-    fn try_from(value: models::SpecimenOperation) -> Result<Self, Self::Error> {
+    fn try_from(value: models::logs::SpecimenOperation) -> Result<Self, Self::Error> {
         let ts = HybridTimestamp::new(value.operation_id.to_u64().unwrap());
 
         Ok(Self {
@@ -346,9 +346,9 @@ impl TryFrom<models::SpecimenOperation> for SpecimenOperation {
     }
 }
 
-impl From<models::SpecimenAtom> for SpecimenAtom {
-    fn from(value: models::SpecimenAtom) -> Self {
-        use models::SpecimenAtom::*;
+impl From<models::logs::SpecimenAtom> for SpecimenAtom {
+    fn from(value: models::logs::SpecimenAtom) -> Self {
+        use models::logs::SpecimenAtom::*;
         use {SpecimenAtom as Atom, SpecimenAtomTextType as Text};
 
         match value {

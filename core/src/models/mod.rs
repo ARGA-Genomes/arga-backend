@@ -1,8 +1,10 @@
+pub mod logs;
 pub mod operation_logs;
 
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable};
+pub use logs::specimens::*;
 pub use operation_logs::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
