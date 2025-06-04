@@ -162,29 +162,45 @@ impl From<models::CollectionEvent> for CollectionEvent {
 
 #[derive(Clone, Debug, SimpleObject)]
 pub struct AccessionEvent {
-    pub id: Uuid,
-    pub event_date: Option<String>,
-    pub event_time: Option<String>,
-    pub accession: String,
-    pub accessioned_by: Option<String>,
-    pub material_sample_id: Option<String>,
+    pub entity_id: String,
+    pub specimen_id: String,
+    pub type_status: Option<String>,
+    pub event_date: Option<chrono::NaiveDate>,
+    pub event_time: Option<chrono::NaiveTime>,
+    pub collection_repository_id: Option<String>,
+    pub collection_repository_code: Option<String>,
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
-    pub type_status: Option<String>,
+    pub disposition: Option<String>,
+    pub preparation: Option<String>,
+    pub accessioned_by: Option<String>,
+    pub prepared_by: Option<String>,
+    pub identified_by: Option<String>,
+    pub identified_date: Option<chrono::NaiveDate>,
+    pub identification_remarks: Option<String>,
+    pub other_catalog_numbers: Option<String>,
 }
 
 impl From<models::AccessionEvent> for AccessionEvent {
     fn from(value: models::AccessionEvent) -> Self {
         Self {
-            id: value.id,
+            entity_id: value.entity_id,
+            specimen_id: value.specimen_id,
+            type_status: value.type_status,
             event_date: value.event_date,
             event_time: value.event_time,
-            accession: value.accession,
-            accessioned_by: value.accessioned_by,
-            material_sample_id: value.material_sample_id,
             institution_name: value.institution_name,
             institution_code: value.institution_code,
-            type_status: value.type_status,
+            collection_repository_id: value.collection_repository_id,
+            collection_repository_code: value.collection_repository_code,
+            disposition: value.disposition,
+            preparation: value.preparation,
+            accessioned_by: value.accessioned_by,
+            prepared_by: value.prepared_by,
+            identified_by: value.identified_by,
+            identified_date: value.identified_date,
+            identification_remarks: value.identification_remarks,
+            other_catalog_numbers: value.other_catalog_numbers,
         }
     }
 }
