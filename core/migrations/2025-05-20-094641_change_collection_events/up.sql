@@ -86,6 +86,36 @@ CREATE INDEX collection_events_organism_id ON collection_events (organism_id);
 CREATE INDEX collection_events_field_collecting_id ON collection_events (field_collecting_id);
 
 
+CREATE TABLE accession_events (
+    entity_id varchar PRIMARY KEY NOT NULL,
+    specimen_id varchar REFERENCES specimens ON DELETE CASCADE NOT NULL,
+
+    name_id uuid REFERENCES names ON DELETE CASCADE NOT NULL,
+
+    type_status varchar,
+    event_date date,
+    event_time time without time zone,
+
+    collection_repository_id varchar,
+    collection_repository_code varchar,
+    institution_name varchar,
+    institution_code varchar,
+
+    disposition varchar,
+    preparation varchar,
+
+    accessioned_by varchar,
+    prepared_by varchar,
+    identified_by varchar,
+    identified_date date,
+    identification_remarks varchar,
+
+    other_catalog_numbers varchar
+);
+
+CREATE INDEX accession_events_specimen_id ON accession_events (specimen_id);
+CREATE INDEX accession_events_name_id ON accession_events (name_id);
+
 
 
 CREATE MATERIALIZED VIEW collection_event_entities AS
@@ -143,25 +173,6 @@ CREATE TABLE specimens_old (
     remarks varchar,
     identification_remarks varchar
 );
-
-
-
-CREATE TABLE accession_events (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
-    specimen_id uuid NOT NULL,
-
-    event_date varchar,
-    event_time varchar,
-    accession varchar NOT NULL,
-    accessioned_by varchar,
-
-    material_sample_id varchar,
-    institution_name varchar,
-    institution_code varchar,
-    type_status varchar
-);
-
 
 
 CREATE TABLE subsamples (

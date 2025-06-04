@@ -69,19 +69,25 @@ diesel::table! {
 }
 
 diesel::table! {
-    accession_events (id) {
-        id -> Uuid,
-        dataset_id -> Uuid,
-        specimen_id -> Uuid,
-        event_date -> Nullable<Varchar>,
-        event_time -> Nullable<Varchar>,
-        accession -> Varchar,
-        accessioned_by -> Nullable<Varchar>,
-        material_sample_id -> Nullable<Varchar>,
+    accession_events (entity_id) {
+        entity_id -> Varchar,
+        specimen_id -> Varchar,
+        name_id -> Uuid,
+        type_status -> Nullable<Varchar>,
+        event_date -> Nullable<Date>,
+        event_time -> Nullable<Time>,
+        collection_repository_id -> Nullable<Varchar>,
+        collection_repository_code -> Nullable<Varchar>,
         institution_name -> Nullable<Varchar>,
         institution_code -> Nullable<Varchar>,
-        type_status -> Nullable<Varchar>,
-        entity_id -> Nullable<Varchar>,
+        disposition -> Nullable<Varchar>,
+        preparation -> Nullable<Varchar>,
+        accessioned_by -> Nullable<Varchar>,
+        prepared_by -> Nullable<Varchar>,
+        identified_by -> Nullable<Varchar>,
+        identified_date -> Nullable<Date>,
+        identification_remarks -> Nullable<Varchar>,
+        other_catalog_numbers -> Nullable<Varchar>,
     }
 }
 
@@ -935,7 +941,8 @@ diesel::table! {
 }
 
 diesel::joinable!(accession_event_logs -> dataset_versions (dataset_version_id));
-diesel::joinable!(accession_events -> datasets (dataset_id));
+diesel::joinable!(accession_events -> names (name_id));
+diesel::joinable!(accession_events -> specimens (specimen_id));
 diesel::joinable!(admin_media -> names (name_id));
 diesel::joinable!(annotation_events -> datasets (dataset_id));
 diesel::joinable!(annotation_events -> sequences (sequence_id));

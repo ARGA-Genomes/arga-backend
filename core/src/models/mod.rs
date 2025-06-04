@@ -1,5 +1,6 @@
 pub mod logs;
 pub mod operation_logs;
+pub mod specimens;
 
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
@@ -7,6 +8,7 @@ use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Sel
 pub use logs::specimens::*;
 pub use operation_logs::*;
 use serde::{Deserialize, Serialize};
+pub use specimens::*;
 use uuid::Uuid;
 
 use super::{schema, schema_gnl};
@@ -945,14 +947,6 @@ pub struct IndigenousKnowledge {
 }
 
 #[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::specimens)]
-pub struct Specimen {
-    pub entity_id: String,
-    pub organism_id: String,
-    pub name_id: Uuid,
-}
-
-#[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::specimens_old)]
 pub struct SpecimenOld {
     pub id: Uuid,
@@ -1029,71 +1023,6 @@ pub struct Sequence {
     pub entity_id: Option<String>,
 }
 
-#[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::collection_events)]
-#[diesel(check_for_backend(diesel::pg::Pg))]
-pub struct CollectionEvent {
-    pub entity_id: String,
-    pub specimen_id: String,
-    pub name_id: Uuid,
-    pub organism_id: String,
-    pub field_collecting_id: Option<String>,
-
-    pub event_date: Option<chrono::NaiveDate>,
-    pub event_time: Option<chrono::NaiveTime>,
-    pub collected_by: Option<String>,
-    pub collection_remarks: Option<String>,
-    pub identified_by: Option<String>,
-    pub identified_date: Option<chrono::NaiveDate>,
-    pub identification_remarks: Option<String>,
-
-    pub locality: Option<String>,
-    pub country: Option<String>,
-    pub country_code: Option<String>,
-    pub state_province: Option<String>,
-    pub county: Option<String>,
-    pub municipality: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-    pub elevation: Option<f64>,
-    pub depth: Option<f64>,
-    pub elevation_accuracy: Option<f64>,
-    pub depth_accuracy: Option<f64>,
-    pub location_source: Option<String>,
-
-    pub preparation: Option<String>,
-    pub environment_broad_scale: Option<String>,
-    pub environment_local_scale: Option<String>,
-    pub environment_medium: Option<String>,
-    pub habitat: Option<String>,
-    pub specific_host: Option<String>,
-    pub individual_count: Option<String>,
-    pub organism_quantity: Option<String>,
-    pub organism_quantity_type: Option<String>,
-
-    pub strain: Option<String>,
-    pub isolate: Option<String>,
-    pub field_notes: Option<String>,
-}
-
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::accession_events)]
-pub struct AccessionEvent {
-    pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub specimen_id: Uuid,
-
-    pub event_date: Option<String>,
-    pub event_time: Option<String>,
-    pub accession: String,
-    pub accessioned_by: Option<String>,
-    pub material_sample_id: Option<String>,
-
-    pub institution_name: Option<String>,
-    pub institution_code: Option<String>,
-    pub type_status: Option<String>,
-    pub entity_id: Option<String>,
-}
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::subsample_events)]

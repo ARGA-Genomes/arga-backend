@@ -202,9 +202,18 @@ pub enum AccessionEventAtom {
     InstitutionCode(String),
     OtherCatalogNumbers(String),
 
-    AccessionedBy(String),
     Disposition(String),
     Preparation(String),
+
+    AccessionedBy(String),
+    PreparedBy(String),
+
+    /// The name of the person who identified the organism at collection.
+    IdentifiedBy(String),
+    /// The date the organism collection was identified. Strictly YYYY-MM-DD.
+    IdentifiedDate(chrono::NaiveDate),
+    /// Free-text notes about the identification of the collection event.
+    IdentificationRemarks(String),
 }
 
 #[derive(OperationLog, Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]
