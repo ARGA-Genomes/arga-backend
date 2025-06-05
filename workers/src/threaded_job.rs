@@ -12,7 +12,6 @@ use super::error::Error;
 use super::importers::{
     accession_importer,
     admin_media_importer,
-
     annotation_importer,
     assembly_importer,
     classification_importer,
@@ -20,21 +19,14 @@ use super::importers::{
     dataset_importer,
     deposition_importer,
     dna_extraction_importer,
-    ecology_importer,
-    // conservation_status_importer,
-    indigenous_knowledge_importer,
     name_attribute_importer,
     name_importer,
-    name_publication_importer,
     nomenclatural_act_importer,
     region_importer,
     sequence_importer,
     source_importer,
     subsample_importer,
-    // taxon_importer,
-    taxon_history_importer,
     taxon_photo_importer,
-    // taxonomic_act_importer,
     vernacular_importer,
 };
 
@@ -117,14 +109,9 @@ impl ThreadedJob {
             "import_source" => source_importer::import(path, pool)?,
             "import_dataset" => dataset_importer::import(path, pool)?,
             "import_name" => name_importer::import(path, pool)?,
-            // "import_taxon" => taxon_importer::import(path, &dataset?, pool)?,
-            "import_taxon_history" => taxon_history_importer::import(path, &dataset?, pool)?,
             "import_taxon_photo" => taxon_photo_importer::import(path, pool)?,
             "import_vernacular" => vernacular_importer::import(path, &dataset?, pool)?,
             "import_region" => region_importer::import(path, pool)?,
-            "import_ecology" => ecology_importer::import(path, pool)?,
-            // "import_conservation_status" => conservation_status_importer::import(path, &dataset?, pool)?,
-            "import_indigenous_knowledge" => indigenous_knowledge_importer::import(path, pool)?,
             "import_collection" => collection_importer::import(path, &dataset?, &context, pool)?,
             "import_accession" => accession_importer::import(path, &dataset?, &context, pool)?,
             "import_subsample" => subsample_importer::import(path, &dataset?, &context, pool)?,
@@ -137,9 +124,7 @@ impl ThreadedJob {
             "import_admin_media" => admin_media_importer::import(path, data.dataset.clone(), pool)?,
 
             "import_classification" => classification_importer::import(path, pool)?,
-            "import_name_publication" => name_publication_importer::import(path, &dataset?, pool)?,
             "import_nomenclatural_act" => nomenclatural_act_importer::import(path, pool)?,
-            // "import_taxonomic_act" => taxonomic_act_importer::import(path, pool)?,
             _ => panic!("Unknown job worker: {}", worker),
         }
 
