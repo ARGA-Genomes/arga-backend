@@ -31,4 +31,5 @@ jobs:
       - uses: ariga/atlas-action/migrate/lint@v1
         with:
           dir: 'file://core/migrations'
+          dir-name: 'arga'
           dev-url: postgres://postgres:pass@localhost:5432/dev?sslmode=disable
