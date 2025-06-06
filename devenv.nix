@@ -1,22 +1,32 @@
 { pkgs, inputs, ... }:
 
 {
-  packages = with pkgs; [
-    protobuf
-    diesel-cli
-    cargo-udeps
-    cargo-expand
-    mold
-    postgresql.lib
-  ] ++ lib.optionals pkgs.stdenv.isDarwin [
-    pkgs.darwin.apple_sdk.frameworks.CoreFoundation
-    pkgs.darwin.apple_sdk.frameworks.Security
-    pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
-  ];
+  packages =
+    with pkgs;
+    [
+      protobuf
+      diesel-cli
+      cargo-udeps
+      cargo-expand
+      mold
+      postgresql.lib
+      atlas
+    ]
+    ++ lib.optionals pkgs.stdenv.isDarwin [
+      pkgs.darwin.apple_sdk.frameworks.CoreFoundation
+      pkgs.darwin.apple_sdk.frameworks.Security
+      pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
+    ];
 
   languages.rust = {
     enable = true;
-    components = [ "rustc" "cargo" "clippy" "rustfmt" "rust-analyzer" ];
+    components = [
+      "rustc"
+      "cargo"
+      "clippy"
+      "rustfmt"
+      "rust-analyzer"
+    ];
     toolchain = {
       rustfmt = inputs.fenix.packages.${pkgs.system}.latest.rustfmt;
     };
@@ -31,10 +41,11 @@
     };
   };
 
-  dotenv.disableHint = true;
+  dotenv.enable = true;
 
   # debug logging
   env.LOG_DATABASE = 1;
+  env.ATLAS_NO_ANON_TELEMETRY = true;
 
   pre-commit.hooks = {
     clippy.enable = false;

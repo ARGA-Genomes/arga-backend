@@ -1,3 +1,7 @@
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+
+
 CREATE TABLE sources (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name varchar NOT NULL,

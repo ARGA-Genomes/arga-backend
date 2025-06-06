@@ -219,13 +219,6 @@ impl TaxonQuery {
         Ok(csv)
     }
 
-    async fn history(&self, ctx: &Context<'_>) -> Result<Vec<HistoryItem>, Error> {
-        let state = ctx.data::<State>()?;
-        let history = state.database.taxa.history(&self.taxon.id).await?;
-        let history = history.into_iter().map(|r| r.into()).collect();
-        Ok(history)
-    }
-
     async fn nomenclatural_acts(&self, ctx: &Context<'_>) -> Result<Vec<NomenclaturalAct>, Error> {
         let state = ctx.data::<State>()?;
         let acts = state.database.taxa.nomenclatural_acts(&self.taxon.id).await?;
@@ -367,56 +360,6 @@ impl From<models::Publication> for Publication {
     }
 }
 
-
-#[derive(SimpleObject)]
-pub struct NamePublication {
-    pub citation: Option<String>,
-    pub published_year: Option<i32>,
-    pub source_url: Option<String>,
-    pub type_citation: Option<String>,
-}
-
-impl From<models::NamePublication> for NamePublication {
-    fn from(value: models::NamePublication) -> Self {
-        Self {
-            citation: value.citation,
-            published_year: value.published_year,
-            source_url: value.source_url,
-            type_citation: value.type_citation,
-        }
-    }
-}
-
-#[derive(SimpleObject)]
-pub struct HistoryItem {
-    pub dataset: DatasetDetails,
-    pub status: TaxonomicStatus,
-    pub rank: TaxonomicRank,
-    pub scientific_name: String,
-    pub canonical_name: String,
-    pub authorship: Option<String>,
-    pub citation: Option<String>,
-    pub source_url: Option<String>,
-    pub publication: Option<NamePublication>,
-    pub entity_id: Option<String>,
-}
-
-impl From<taxa::HistoryItem> for HistoryItem {
-    fn from(value: taxa::HistoryItem) -> Self {
-        Self {
-            dataset: value.dataset.into(),
-            status: value.taxon.status.into(),
-            rank: value.taxon.rank.into(),
-            scientific_name: value.taxon.scientific_name,
-            canonical_name: value.taxon.canonical_name,
-            authorship: value.taxon.authorship,
-            citation: value.taxon.citation,
-            source_url: value.source_url,
-            publication: value.publication.map(|publication| publication.into()),
-            entity_id: value.entity_id,
-        }
-    }
-}
 
 #[derive(SimpleObject)]
 pub struct NomenclaturalAct {

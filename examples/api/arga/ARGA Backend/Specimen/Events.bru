@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: localhost:5000/api
+  url: http://localhost:5000/api
   body: graphql
   auth: none
 }
@@ -16,7 +16,7 @@ headers {
 
 body:graphql {
   {
-  	specimen(by: { recordId: "ABCAP133-05" }) {
+  	specimen(by: { recordId: "QM J11296" }) {
   		id
   		recordId
   		organismId

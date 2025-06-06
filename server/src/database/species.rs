@@ -1,6 +1,6 @@
 use arga_core::models::Species;
-use diesel::prelude::*;
 use diesel::Queryable;
+use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -8,7 +8,6 @@ use uuid::Uuid;
 use super::extensions::Paginate;
 use super::models::{
     GenomicComponent,
-    IndigenousKnowledge,
     Marker,
     Name,
     NameAttribute,
@@ -20,7 +19,7 @@ use super::models::{
     VernacularName,
     WholeGenome,
 };
-use super::{schema, schema_gnl, Error, PageResult, PgPool};
+use super::{Error, PageResult, PgPool, schema, schema_gnl};
 use crate::database::extensions::whole_genome_filters;
 
 
@@ -152,25 +151,6 @@ impl SpeciesProvider {
             .await?;
 
         Ok(summaries)
-    }
-
-    pub async fn indigenous_knowledge(
-        &self,
-        name_ids: &Vec<Uuid>,
-    ) -> Result<Vec<(IndigenousKnowledge, String)>, Error> {
-        use schema::datasets;
-        use schema::indigenous_knowledge::dsl::*;
-
-        let mut conn = self.pool.get().await?;
-
-        let records = indigenous_knowledge
-            .inner_join(datasets::table)
-            .select((indigenous_knowledge::all_columns(), datasets::name))
-            .filter(name_id.eq_any(name_ids))
-            .load::<(IndigenousKnowledge, String)>(&mut conn)
-            .await?;
-
-        Ok(records)
     }
 
     pub async fn specimens(&self, names: &Vec<Name>, page: i64, page_size: i64) -> PageResult<SpecimenSummary> {
