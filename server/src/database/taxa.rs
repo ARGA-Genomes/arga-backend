@@ -1,7 +1,7 @@
 use arga_core::models::{
+    ACCEPTED_NAMES,
     Dataset,
     Name,
-    NamePublication,
     NomenclaturalActType,
     Publication,
     SpecimenOld as Specimen,
@@ -9,8 +9,6 @@ use arga_core::models::{
     TaxonTreeNode,
     TaxonWithDataset,
     TaxonomicRank,
-    ACCEPTED_NAMES,
-    SPECIES_RANKS,
 };
 use bigdecimal::{BigDecimal, Zero};
 use chrono::{DateTime, Utc};
@@ -21,14 +19,14 @@ use uuid::Uuid;
 
 use super::extensions::species_filters::{SortDirection, SpeciesSort};
 use super::extensions::taxa_filters::TaxaFilter;
-use super::extensions::{sum_if, Paginate};
+use super::extensions::{Paginate, sum_if};
 use super::models::Species;
-use super::{schema, schema_gnl, Error, PageResult, PgPool};
+use super::{Error, PageResult, PgPool, schema, schema_gnl};
 use crate::database::extensions::classification_filters::{
-    with_classification,
     Classification as ClassificationFilter,
+    with_classification,
 };
-use crate::database::extensions::filters::{with_filters, Filter};
+use crate::database::extensions::filters::{Filter, with_filters};
 use crate::database::extensions::species_filters::{
     with_accepted_classification,
     with_classification as with_species_classification,
@@ -99,19 +97,6 @@ pub struct RankSummary {
     pub genomic_data: i64,
 }
 
-#[derive(Debug, Queryable, Selectable)]
-#[diesel(table_name = schema::taxon_history)]
-pub struct HistoryItem {
-    pub source_url: Option<String>,
-    pub entity_id: Option<String>,
-
-    #[diesel(embed)]
-    pub dataset: Dataset,
-    #[diesel(embed)]
-    pub taxon: Taxon,
-    #[diesel(embed)]
-    pub publication: Option<NamePublication>,
-}
 
 // because acted_on is an aliased table we don't implement
 // Selectable as it will use the `name` table rather than the
@@ -501,41 +486,6 @@ impl TaxaProvider {
             .await?;
 
         Ok(summaries)
-    }
-
-    pub async fn history(&self, taxon_id: &Uuid) -> Result<Vec<HistoryItem>, Error> {
-        use schema::{datasets, name_publications as publications, taxa, taxon_history as history, taxon_names};
-        let mut conn = self.pool.get().await?;
-
-        let name_ids = taxon_names::table
-            .select(taxon_names::name_id)
-            .filter(taxon_names::taxon_id.eq(taxon_id))
-            .into_boxed();
-
-        let taxon_ids = taxon_names::table
-            .select(taxon_names::taxon_id)
-            .filter(taxon_names::name_id.eq_any(name_ids))
-            .load::<Uuid>(&mut conn)
-            .await?;
-
-        let synonym_original_descriptions = history::table
-            .filter(history::acted_on.eq_any(taxon_ids.clone()))
-            .select(history::taxon_id)
-            .into_boxed();
-
-        let items = history::table
-            .inner_join(datasets::table)
-            .inner_join(taxa::table.on(taxa::id.eq(history::acted_on)))
-            .left_join(publications::table)
-            .filter(history::taxon_id.eq(taxon_id))
-            .or_filter(history::acted_on.eq_any(taxon_ids))
-            .or_filter(history::taxon_id.eq_any(synonym_original_descriptions))
-            .select(HistoryItem::as_select())
-            .order((publications::published_year.asc(), taxa::scientific_name.asc()))
-            .load::<HistoryItem>(&mut conn)
-            .await?;
-
-        Ok(items)
     }
 
     pub async fn nomenclatural_acts(&self, taxon_id: &Uuid) -> Result<Vec<NomenclaturalAct>, Error> {

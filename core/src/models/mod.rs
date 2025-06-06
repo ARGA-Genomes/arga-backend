@@ -750,35 +750,6 @@ impl Species {
     }
 }
 
-#[derive(Identifiable, Insertable, Selectable, Queryable, Associations, Debug, Clone)]
-#[diesel(belongs_to(Dataset))]
-#[diesel(belongs_to(Taxon))]
-#[diesel(belongs_to(NamePublication, foreign_key = publication_id))]
-#[diesel(table_name = schema::taxon_history)]
-pub struct TaxonHistory {
-    pub id: Uuid,
-    pub acted_on: Uuid,
-    pub taxon_id: Uuid,
-    pub dataset_id: Uuid,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
-    pub publication_id: Option<Uuid>,
-    pub source_url: Option<String>,
-    pub entity_id: Option<String>,
-}
-
-#[derive(Queryable, Selectable, Insertable, Debug, Default, Serialize, Deserialize)]
-#[diesel(table_name = schema::name_publications)]
-pub struct NamePublication {
-    pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub citation: Option<String>,
-    pub published_year: Option<i32>,
-    pub source_url: Option<String>,
-    pub type_citation: Option<String>,
-    pub record_created_at: Option<DateTime<Utc>>,
-    pub record_updated_at: Option<DateTime<Utc>>,
-}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, diesel_derive_enum::DbEnum)]
 #[ExistingTypePath = "schema::sql_types::NomenclaturalActType"]
@@ -911,15 +882,6 @@ pub struct Regions {
 }
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::ecology)]
-pub struct Ecology {
-    pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
-    pub values: Vec<String>,
-}
-
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::taxon_photos)]
 pub struct TaxonPhoto {
     pub id: Uuid,
@@ -930,20 +892,6 @@ pub struct TaxonPhoto {
     pub license: Option<String>,
     pub rights_holder: Option<String>,
     pub priority: i32,
-}
-
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::indigenous_knowledge)]
-pub struct IndigenousKnowledge {
-    pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
-    pub name: String,
-    pub food_use: bool,
-    pub medicinal_use: bool,
-    pub cultural_connection: bool,
-    pub last_updated: DateTime<Utc>,
-    pub source_url: Option<String>,
 }
 
 #[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
@@ -1178,119 +1126,6 @@ pub struct DepositionEvent {
     pub reference: Option<String>,
     pub last_updated: Option<NaiveDate>,
     pub entity_id: Option<String>,
-}
-
-// postgres arrays allows nulls to be entered into an array
-// so diesel will treat it as an array of optional numbers.
-// we shorten the type here for readability
-pub type IntArray = Vec<Option<i32>>;
-
-#[derive(Clone, Queryable, Debug, Serialize, Deserialize)]
-pub struct TraceFile {
-    pub id: Uuid,
-    pub name_id: Uuid,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
-
-    pub metadata: serde_json::Value,
-
-    pub peak_locations_user: Option<IntArray>,
-    pub peak_locations_basecaller: Option<IntArray>,
-    pub quality_values_user: Option<IntArray>,
-    pub quality_values_basecaller: Option<IntArray>,
-    pub sequences_user: Option<IntArray>,
-    pub sequences_basecaller: Option<IntArray>,
-
-    pub measurements_voltage: Option<IntArray>,
-    pub measurements_current: Option<IntArray>,
-    pub measurements_power: Option<IntArray>,
-    pub measurements_temperature: Option<IntArray>,
-
-    pub analyzed_g: Option<IntArray>,
-    pub analyzed_a: Option<IntArray>,
-    pub analyzed_t: Option<IntArray>,
-    pub analyzed_c: Option<IntArray>,
-
-    pub raw_g: Option<IntArray>,
-    pub raw_a: Option<IntArray>,
-    pub raw_t: Option<IntArray>,
-    pub raw_c: Option<IntArray>,
-}
-
-#[derive(Debug, Queryable, Insertable, Default, Clone)]
-#[diesel(table_name = schema::assemblies)]
-pub struct Assembly {
-    pub id: Uuid,
-    pub name_id: Uuid,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
-
-    pub accession: String,
-    pub bioproject_id: Option<String>,
-    pub biosample_id: Option<String>,
-    pub material_sample_id: Option<String>,
-    pub nuccore: Option<String>,
-    pub refseq_category: Option<String>,
-    pub specific_host: Option<String>,
-    pub clone_strain: Option<String>,
-    pub version_status: Option<String>,
-    pub contam_screen_input: Option<String>,
-    pub release_type: Option<String>,
-    pub genome_rep: Option<String>,
-    pub gbrs_paired_asm: Option<String>,
-    pub paired_asm_comp: Option<String>,
-    pub excluded_from_refseq: Option<String>,
-    pub relation_to_type_material: Option<String>,
-    pub asm_not_live_date: Option<String>,
-    pub other_catalog_numbers: Option<String>,
-    pub recorded_by: Option<String>,
-    pub genetic_accession_uri: Option<String>,
-    pub event_date: Option<String>,
-}
-
-#[derive(Debug, Queryable, Insertable, Default)]
-#[diesel(table_name = schema::assembly_stats)]
-pub struct AssemblyStats {
-    pub id: Uuid,
-    pub assembly_id: Uuid,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
-
-    pub total_length: Option<i32>,
-    pub spanned_gaps: Option<i32>,
-    pub unspanned_gaps: Option<i32>,
-    pub region_count: Option<i32>,
-    pub scaffold_count: Option<i32>,
-    pub scaffold_n50: Option<i32>,
-    pub scaffold_l50: Option<i32>,
-    pub scaffold_n75: Option<i32>,
-    pub scaffold_n90: Option<i32>,
-    pub contig_count: Option<i32>,
-    pub contig_n50: Option<i32>,
-    pub contig_l50: Option<i32>,
-    pub total_gap_length: Option<i32>,
-    pub molecule_count: Option<i32>,
-    pub top_level_count: Option<i32>,
-    pub component_count: Option<i32>,
-    pub gc_perc: Option<i32>,
-}
-
-#[derive(Debug, Queryable, Insertable, Default, Clone)]
-#[diesel(table_name = schema::biosamples)]
-pub struct BioSample {
-    pub id: Uuid,
-    pub name_id: Uuid,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: chrono::DateTime<chrono::Utc>,
-
-    pub accession: String,
-    pub sra: Option<String>,
-    pub submission_date: Option<String>,
-    pub publication_date: Option<String>,
-    pub last_update: Option<String>,
-    pub title: Option<String>,
-    pub owner: Option<String>,
-    pub attributes: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Queryable, Insertable, Default)]
