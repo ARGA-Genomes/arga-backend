@@ -9,7 +9,7 @@ use chrono::NaiveTime;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::*;
 use tantivy::schema::{Field, Schema};
-use tantivy::{doc, DateTime, Index};
+use tantivy::{DateTime, Index, doc};
 use tracing::info;
 
 
@@ -184,6 +184,7 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
     let level = get_field(schema, "level")?;
     let assembly_type = get_field(schema, "assembly_type")?;
     let release_date = get_field(schema, "release_date")?;
+    let source_uri = get_field(schema, "source_uri")?;
 
     info!("Loading assemblies from database");
     let records = genome::get_genomes(&pool)?;
@@ -217,6 +218,9 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
                         DateTime::from_timestamp_secs(date.and_time(NaiveTime::default()).and_utc().timestamp());
                     doc.add_date(release_date, timestamp);
                 }
+            }
+            if let Some(value) = &genome.source_uri {
+                doc.add_text(source_uri, value);
             }
 
             index_writer.add_document(doc)?;

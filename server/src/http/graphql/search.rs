@@ -5,7 +5,7 @@ use async_graphql::*;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use super::common::{convert_search_filters, SearchFilterItem};
+use super::common::{SearchFilterItem, convert_search_filters};
 use crate::http::{Context as State, Error};
 
 
@@ -95,6 +95,7 @@ impl Search {
                         assembly_type: item.assembly_type,
                         reference_genome: item.reference_genome,
                         release_date: item.release_date.map(|d| d.format("%d/%m/%Y").to_string()),
+                        source_uri: item.source_uri,
                     });
                 }
                 SearchItem::Locus(item) => {
@@ -226,6 +227,7 @@ pub struct GenomeItem {
     pub score: f32,
     pub r#type: FullTextType,
     pub status: String,
+    pub source_uri: Option<String>,
 }
 
 #[derive(Debug, Deserialize, SimpleObject)]
