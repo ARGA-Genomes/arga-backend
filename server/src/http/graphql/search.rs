@@ -61,6 +61,7 @@ impl Search {
                             status: serde_json::to_string(&item.status).unwrap(),
 
                             canonical_name: item.canonical_name,
+                            rank: item.rank,
                             subspecies: item.subspecies,
                             synonyms: item.synonyms,
                             common_names: item.common_names,
@@ -203,6 +204,7 @@ pub struct DataSummary {
 #[serde(rename_all = "camelCase")]
 pub struct TaxonItem {
     pub canonical_name: Option<String>,
+    pub rank: Option<String>,
     pub subspecies: Vec<String>,
     pub synonyms: Vec<String>,
     pub common_names: Vec<String>,

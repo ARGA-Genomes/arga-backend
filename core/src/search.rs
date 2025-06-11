@@ -54,6 +54,7 @@ pub struct SpeciesItem {
     pub score: f32,
 
     pub canonical_name: Option<String>,
+    pub rank: Option<String>,
     pub subspecies: Vec<String>,
     pub synonyms: Vec<String>,
     pub common_names: Vec<String>,
@@ -132,6 +133,7 @@ struct CommonFields {
 
 #[derive(Debug, Clone)]
 struct TaxonFields {
+    rank: Field,
     subspecies: Field,
     synonyms: Field,
     common_names: Field,
@@ -238,6 +240,7 @@ impl SearchIndex {
             canonical_name: get_field(&schema, "canonical_name")?,
         };
         let taxon = TaxonFields {
+            rank: get_field(&schema, "rank")?,
             subspecies: get_field(&schema, "subspecies")?,
             synonyms: get_field(&schema, "synonyms")?,
             common_names: get_field(&schema, "common_names")?,
@@ -318,6 +321,7 @@ impl SearchIndex {
     }
 
     pub fn taxon_schema(schema_builder: &mut SchemaBuilder) {
+        schema_builder.add_text_field("rank", TEXT | STORED);
         schema_builder.add_text_field("subspecies", TEXT | STORED);
         schema_builder.add_text_field("synonyms", TEXT | STORED);
         schema_builder.add_text_field("common_names", TEXT | STORED);
@@ -472,6 +476,7 @@ impl SearchIndex {
                         status,
                         score,
                         canonical_name: get_text(&doc, self.common.canonical_name),
+                        rank: get_text(&doc, self.taxon.rank),
                         subspecies: get_all_text(&doc, self.taxon.subspecies),
                         synonyms: get_all_text(&doc, self.taxon.synonyms),
                         common_names: get_all_text(&doc, self.taxon.common_names),

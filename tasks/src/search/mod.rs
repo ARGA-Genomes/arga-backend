@@ -73,6 +73,7 @@ fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
     let name_id = get_field(schema, "name_id")?;
     let status = get_field(schema, "status")?;
     let canonical_name = get_field(schema, "canonical_name")?;
+    let rank = get_field(schema, "rank")?;
 
     // let subspecies = get_field(schema, "subspecies")?;
     // let synonyms = get_field(schema, "synonyms")?;
@@ -103,6 +104,7 @@ fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
         for species in chunk {
             let mut doc = doc!(
                 canonical_name => species.canonical_name.clone(),
+                rank => species.rank.clone(),
                 data_type => DataType::Taxon.to_string(),
                 name_id => species.name_id.to_string(),
                 status => serde_json::to_string(&species.status)?,
