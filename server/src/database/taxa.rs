@@ -1,16 +1,16 @@
 use arga_core::models::{
+    ACCEPTED_NAMES,
     Dataset,
     Name,
     NamePublication,
     NomenclaturalActType,
     Publication,
+    SPECIES_RANKS,
     Specimen,
     Taxon,
     TaxonTreeNode,
     TaxonWithDataset,
     TaxonomicRank,
-    ACCEPTED_NAMES,
-    SPECIES_RANKS,
 };
 use bigdecimal::{BigDecimal, Zero};
 use chrono::{DateTime, Utc};
@@ -21,14 +21,14 @@ use uuid::Uuid;
 
 use super::extensions::species_filters::{SortDirection, SpeciesSort};
 use super::extensions::taxa_filters::TaxaFilter;
-use super::extensions::{sum_if, Paginate};
+use super::extensions::{Paginate, sum_if};
 use super::models::Species;
-use super::{schema, schema_gnl, Error, PageResult, PgPool};
+use super::{Error, PageResult, PgPool, schema, schema_gnl};
 use crate::database::extensions::classification_filters::{
-    with_classification,
     Classification as ClassificationFilter,
+    with_classification,
 };
-use crate::database::extensions::filters::{with_filters, Filter};
+use crate::database::extensions::filters::{Filter, with_filters};
 use crate::database::extensions::species_filters::{
     with_accepted_classification,
     with_classification as with_species_classification,
@@ -356,7 +356,7 @@ impl TaxaProvider {
             .filter(taxa::rank.eq(rank))
             .select((
                 count_star(),
-                sum_if(stats::genomes.gt(BigDecimal::zero())),
+                sum_if(stats::full_genomes.gt(BigDecimal::zero())),
                 sum_if(stats::total_genomic.gt(BigDecimal::zero())),
             ))
             .get_result::<(i64, i64, i64)>(&mut conn)
