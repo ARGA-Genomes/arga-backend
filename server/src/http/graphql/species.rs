@@ -9,20 +9,18 @@ use tracing::instrument;
 use uuid::Uuid;
 
 use super::common::attributes::AttributeValueType;
-use super::common::taxonomy::sort_taxa_priority;
 use super::common::{
-    convert_whole_genome_filters,
     DatasetDetails,
     Page,
     SpeciesPhoto,
     Taxonomy,
     WholeGenomeFilterItem,
+    convert_whole_genome_filters,
 };
 use super::markers::SpeciesMarker;
-use super::taxon::{into_classification, TaxonNode, TaxonRank};
 use crate::database::models::{Name as ArgaName, Name};
 use crate::database::sources::ALA_DATASET_ID;
-use crate::database::{schema, species, Database};
+use crate::database::{Database, schema, species};
 use crate::http::{Context as State, Error};
 
 

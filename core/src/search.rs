@@ -24,12 +24,6 @@ pub enum Error {
     ParseError(String),
 }
 
-
-#[derive(Debug, Clone)]
-pub enum SearchFilter {
-    DataType(DataType),
-}
-
 #[derive(Debug, Clone)]
 pub enum DataType {
     Taxon,
@@ -381,25 +375,6 @@ impl SearchIndex {
     pub fn specimens(&self, query: &str, page: usize, per_page: usize) -> SearchResult {
         let query = format!("data_type:{} {query}", DataType::Specimen);
         self.all(&query, page, per_page)
-    }
-
-    pub fn filtered(&self, query: &str, page: usize, per_page: usize, filters: &Vec<SearchFilter>) -> SearchResult {
-        let mut filter_strings = Vec::new();
-
-        for filter in filters {
-            match filter {
-                SearchFilter::DataType(data_type) => filter_strings.push(format!("data_type:{}", data_type)),
-            }
-        }
-
-        let mut filtered_query = query.to_string();
-
-        if filter_strings.len() > 0 {
-            let types = filter_strings.join(" OR ");
-            filtered_query = format!("({}) {}", &types, &filtered_query);
-        }
-
-        self.all(&filtered_query, page, per_page)
     }
 
     pub fn all(&self, query: &str, page: usize, per_page: usize) -> SearchResult {

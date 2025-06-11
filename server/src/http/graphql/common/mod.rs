@@ -10,16 +10,13 @@ pub mod whole_genomes;
 use async_graphql::{OutputType, SimpleObject};
 pub use datasets::{DatasetDetails, DatasetVersion};
 pub use filters::{
-    convert_filters,
-    convert_search_filters,
-    convert_whole_genome_filters,
     FilterAction,
     FilterItem,
     FilterType,
-    SearchFilterItem,
-    SearchFilterType,
     WholeGenomeFilterItem,
     WholeGenomeFilterType,
+    convert_filters,
+    convert_whole_genome_filters,
 };
 pub use species::{SpeciesCard, SpeciesDataSummary, SpeciesPhoto};
 pub use taxonomy::{NameDetails, Taxonomy};

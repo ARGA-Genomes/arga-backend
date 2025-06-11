@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 
-use arga_core::search::{SearchFilter, SearchItem};
+use arga_core::search::SearchItem;
 use async_graphql::*;
 use serde::Deserialize;
 use uuid::Uuid;
 
-use super::common::{SearchFilterItem, convert_search_filters};
 use crate::http::{Context as State, Error};
 
 
@@ -17,19 +16,10 @@ pub enum WithRecordType {
 }
 
 
-pub struct Search {
-    filters: Vec<SearchFilter>,
-}
+pub struct Search {}
 
 #[Object]
 impl Search {
-    #[graphql(skip)]
-    pub fn new(filters: Vec<SearchFilterItem>) -> Result<Search, Error> {
-        Ok(Search {
-            filters: convert_search_filters(filters)?,
-        })
-    }
-
     async fn full_text(
         &self,
         ctx: &Context<'_>,
@@ -39,7 +29,7 @@ impl Search {
     ) -> Result<FullTextSearchResult, Error> {
         let state = ctx.data::<State>()?;
 
-        let (search_results, total) = state.search.filtered(&query, page, per_page, &self.filters)?;
+        let (search_results, total) = state.search.all(&query, page, per_page)?;
 
         let mut name_ids: Vec<Uuid> = Vec::new();
         let mut taxa: HashMap<Uuid, TaxonItem> = HashMap::new();
