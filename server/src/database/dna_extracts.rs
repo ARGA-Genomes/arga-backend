@@ -2,8 +2,8 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use super::{schema, Error, PgPool};
-use crate::database::models::{DnaExtract, DnaExtractionEvent};
+use super::{Error, PgPool, schema};
+use crate::database::models::{DnaExtract, DnaExtractionEvent, entity_hash};
 
 
 #[derive(Clone)]
@@ -39,14 +39,13 @@ impl DnaExtractProvider {
     }
 
     pub async fn find_by_specimen_record_id(&self, record_id: &str) -> Result<Option<DnaExtract>, Error> {
-        use schema::{dna_extracts, specimens_old as specimens, subsamples};
+        use schema::{dna_extracts, subsamples};
         let mut conn = self.pool.get().await?;
 
-        let extract = specimens::table
+        let extract = dna_extracts::table
             .inner_join(subsamples::table)
-            .inner_join(dna_extracts::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
             .select(dna_extracts::all_columns)
-            .filter(specimens::record_id.eq(record_id))
+            .filter(subsamples::specimen_id.eq(entity_hash(record_id)))
             .get_result::<DnaExtract>(&mut conn)
             .await
             .optional()?;

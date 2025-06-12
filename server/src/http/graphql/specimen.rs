@@ -1,14 +1,13 @@
 use async_graphql::*;
 use tracing::instrument;
-use uuid::Uuid;
 
-use crate::database::{models, Database};
+use crate::database::{Database, models};
 use crate::http::{Context as State, Error};
 
 
 #[derive(OneofObject)]
 pub enum SpecimenBy {
-    Id(Uuid),
+    EntityId(String),
     RecordId(String),
     SequenceRecordId(String),
     SequenceAccession(String),
@@ -20,7 +19,7 @@ pub struct Specimen(SpecimenDetails, SpecimenQuery);
 impl Specimen {
     pub async fn new(db: &Database, by: &SpecimenBy) -> Result<Specimen, Error> {
         let specimen = match by {
-            SpecimenBy::Id(id) => db.specimens.find_by_id(&id).await?,
+            SpecimenBy::EntityId(id) => db.specimens.find_by_id(&id).await?,
             SpecimenBy::RecordId(id) => db.specimens.find_by_record_id(&id).await?,
             SpecimenBy::SequenceRecordId(id) => db.specimens.find_by_sequence_record_id(&id).await?,
             SpecimenBy::SequenceAccession(id) => db.specimens.find_by_sequence_accession(&id).await?,
@@ -33,7 +32,7 @@ impl Specimen {
 
 
 struct SpecimenQuery {
-    specimen: models::SpecimenOld,
+    specimen: models::Specimen,
 }
 
 #[Object]
@@ -47,8 +46,9 @@ impl SpecimenQuery {
     #[instrument(skip(self, ctx))]
     async fn events(&self, ctx: &Context<'_>) -> Result<SpecimenEvents, Error> {
         let state = ctx.data::<State>()?;
-        let collections = state.database.specimens.collection_events(&self.specimen.id).await?;
-        let accessions = state.database.specimens.accession_events(&self.specimen.id).await?;
+        let specimen_id = &self.specimen.entity_id;
+        let collections = state.database.specimens.collection_events(specimen_id).await?;
+        let accessions = state.database.specimens.accession_events(specimen_id).await?;
 
         Ok(SpecimenEvents {
             collections: collections.into_iter().map(|r| r.into()).collect(),
@@ -61,71 +61,15 @@ impl SpecimenQuery {
 /// A specimen from a specific species.
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SpecimenDetails {
-    pub id: Uuid,
-    pub entity_id: Option<String>,
-
-    pub record_id: String,
-    pub material_sample_id: Option<String>,
-    pub organism_id: Option<String>,
-
-    pub institution_name: Option<String>,
-    pub institution_code: Option<String>,
-    pub collection_code: Option<String>,
-    pub recorded_by: Option<String>,
-    pub identified_by: Option<String>,
-    pub identified_date: Option<String>,
-
-    pub type_status: Option<String>,
-    pub locality: Option<String>,
-    pub country: Option<String>,
-    pub country_code: Option<String>,
-    pub state_province: Option<String>,
-    pub county: Option<String>,
-    pub municipality: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-    pub elevation: Option<f64>,
-    pub depth: Option<f64>,
-    pub elevation_accuracy: Option<f64>,
-    pub depth_accuracy: Option<f64>,
-    pub location_source: Option<String>,
-
-    pub details: Option<String>,
-    pub remarks: Option<String>,
-    pub identification_remarks: Option<String>,
+    pub entity_id: String,
+    pub organism_id: String,
 }
 
-impl From<models::SpecimenOld> for SpecimenDetails {
-    fn from(value: models::SpecimenOld) -> Self {
+impl From<models::Specimen> for SpecimenDetails {
+    fn from(value: models::Specimen) -> Self {
         Self {
-            id: value.id,
             entity_id: value.entity_id,
-            record_id: value.record_id,
-            material_sample_id: value.material_sample_id,
             organism_id: value.organism_id,
-            institution_name: value.institution_name,
-            institution_code: value.institution_code,
-            collection_code: value.collection_code,
-            recorded_by: value.recorded_by,
-            identified_by: value.identified_by,
-            identified_date: value.identified_date,
-            type_status: value.type_status,
-            locality: value.locality,
-            country: value.country,
-            country_code: value.country_code,
-            state_province: value.state_province,
-            county: value.county,
-            municipality: value.municipality,
-            latitude: value.latitude,
-            longitude: value.longitude,
-            elevation: value.elevation,
-            depth: value.depth,
-            elevation_accuracy: value.elevation_accuracy,
-            depth_accuracy: value.depth_accuracy,
-            location_source: value.location_source,
-            details: value.details,
-            remarks: value.remarks,
-            identification_remarks: value.identification_remarks,
         }
     }
 }

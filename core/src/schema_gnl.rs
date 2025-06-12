@@ -220,6 +220,7 @@ diesel::table! {
 use super::schema::{
     accession_events,
     assembly_events,
+    collection_events,
     datasets,
     deposition_events,
     name_attributes,
@@ -264,6 +265,7 @@ diesel::allow_tables_to_appear_in_same_query!(species, deposition_events);
 diesel::allow_tables_to_appear_in_same_query!(species, sequences);
 diesel::allow_tables_to_appear_in_same_query!(specimen_stats, specimens);
 diesel::allow_tables_to_appear_in_same_query!(specimen_stats, accession_events);
+diesel::allow_tables_to_appear_in_same_query!(specimen_stats, collection_events);
 
 diesel::allow_tables_to_appear_in_same_query!(name_attributes, species);
 diesel::allow_tables_to_appear_in_same_query!(name_attributes, taxa_tree_stats);

@@ -3,8 +3,8 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use super::{schema, Error, PgPool};
-use crate::database::models::{Sequence, SequencingEvent};
+use super::{Error, PgPool, schema};
+use crate::database::models::{Sequence, SequencingEvent, entity_hash};
 
 
 #[derive(Clone)]
@@ -53,15 +53,14 @@ impl SequenceProvider {
     }
 
     pub async fn find_by_specimen_record_id(&self, record_id: &str) -> Result<Vec<Sequence>, Error> {
-        use schema::{dna_extracts, sequences, specimens_old as specimens, subsamples};
+        use schema::{dna_extracts, sequences, subsamples};
         let mut conn = self.pool.get().await?;
 
-        let sequences = specimens::table
-            .inner_join(subsamples::table)
-            .inner_join(dna_extracts::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
-            .inner_join(sequences::table.on(dna_extracts::id.eq(sequences::dna_extract_id)))
+        let sequences = sequences::table
+            .inner_join(dna_extracts::table)
+            .inner_join(subsamples::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
             .select(sequences::all_columns)
-            .filter(specimens::record_id.eq(record_id))
+            .filter(subsamples::specimen_id.eq(entity_hash(record_id)))
             .load::<Sequence>(&mut conn)
             .await?;
 

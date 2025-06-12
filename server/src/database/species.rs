@@ -1,6 +1,6 @@
 use arga_core::models::Species;
-use diesel::Queryable;
 use diesel::prelude::*;
+use diesel::Queryable;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -19,7 +19,7 @@ use super::models::{
     VernacularName,
     WholeGenome,
 };
-use super::{Error, PageResult, PgPool, schema, schema_gnl};
+use super::{schema, schema_gnl, Error, PageResult, PgPool};
 use crate::database::extensions::whole_genome_filters;
 
 
@@ -45,11 +45,9 @@ pub struct MarkerSummary {
 
 #[derive(Debug, Queryable)]
 pub struct SpecimenSummary {
-    pub id: Uuid,
-    pub dataset_name: String,
-    pub record_id: String,
-    pub entity_id: Option<String>,
-    pub accession: Option<String>,
+    pub entity_id: String,
+    pub collection_repository_id: Option<String>,
+    pub collection_repository_code: Option<String>,
     pub institution_code: Option<String>,
     pub institution_name: Option<String>,
     pub type_status: Option<String>,
@@ -154,43 +152,39 @@ impl SpeciesProvider {
     }
 
     pub async fn specimens(&self, names: &Vec<Name>, page: i64, page_size: i64) -> PageResult<SpecimenSummary> {
-        use schema::{accession_events, datasets, specimens_old as specimens};
+        use schema::{accession_events, collection_events, specimens};
         use schema_gnl::specimen_stats;
         let mut conn = self.pool.get().await?;
 
         let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
 
-        Err(Error::NotFound("not implemented".to_string()))
+        let records = specimens::table
+            .inner_join(specimen_stats::table)
+            .left_join(collection_events::table)
+            .left_join(accession_events::table)
+            .select((
+                specimens::entity_id,
+                accession_events::collection_repository_id.nullable(),
+                accession_events::collection_repository_code.nullable(),
+                accession_events::institution_code.nullable(),
+                accession_events::institution_name.nullable(),
+                accession_events::type_status.nullable(),
+                collection_events::locality.nullable(),
+                collection_events::country.nullable(),
+                collection_events::latitude.nullable(),
+                collection_events::longitude.nullable(),
+                specimen_stats::sequences,
+                specimen_stats::whole_genomes,
+                specimen_stats::markers,
+            ))
+            .filter(specimens::name_id.eq_any(name_ids))
+            .order((accession_events::type_status.asc(), specimen_stats::sequences.desc()))
+            .paginate(page)
+            .per_page(page_size)
+            .load::<(SpecimenSummary, i64)>(&mut conn)
+            .await?;
 
-        // let records = specimens::table
-        //     .inner_join(datasets::table)
-        //     .inner_join(specimen_stats::table)
-        //     .left_join(accession_events::table)
-        //     .select((
-        //         specimens::id,
-        //         datasets::name,
-        //         specimens::record_id,
-        //         specimens::entity_id,
-        //         accession_events::accession.nullable(),
-        //         specimens::institution_code,
-        //         specimens::institution_name,
-        //         specimens::type_status,
-        //         specimens::locality,
-        //         specimens::country,
-        //         specimens::latitude,
-        //         specimens::longitude,
-        //         specimen_stats::sequences,
-        //         specimen_stats::whole_genomes,
-        //         specimen_stats::markers,
-        //     ))
-        //     .filter(specimens::name_id.eq_any(name_ids))
-        //     .order((specimens::type_status.asc(), specimen_stats::sequences.desc()))
-        //     .paginate(page)
-        //     .per_page(page_size)
-        //     .load::<(SpecimenSummary, i64)>(&mut conn)
-        //     .await?;
-
-        // Ok(records.into())
+        Ok(records.into())
     }
 
     pub async fn whole_genomes(

@@ -5,6 +5,7 @@ pub mod specimens;
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable};
+pub use logs::entity_hash;
 pub use logs::specimens::*;
 pub use operation_logs::*;
 use serde::{Deserialize, Serialize};
@@ -894,52 +895,13 @@ pub struct TaxonPhoto {
     pub priority: i32,
 }
 
-#[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::specimens_old)]
-pub struct SpecimenOld {
-    pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
-
-    pub record_id: String,
-    pub material_sample_id: Option<String>,
-    pub organism_id: Option<String>,
-
-    pub institution_name: Option<String>,
-    pub institution_code: Option<String>,
-    pub collection_code: Option<String>,
-    pub recorded_by: Option<String>,
-    pub identified_by: Option<String>,
-    pub identified_date: Option<String>,
-
-    pub type_status: Option<String>,
-    pub locality: Option<String>,
-    pub country: Option<String>,
-    pub country_code: Option<String>,
-    pub state_province: Option<String>,
-    pub county: Option<String>,
-    pub municipality: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-    pub elevation: Option<f64>,
-    pub depth: Option<f64>,
-    pub elevation_accuracy: Option<f64>,
-    pub depth_accuracy: Option<f64>,
-    pub location_source: Option<String>,
-
-    pub details: Option<String>,
-    pub remarks: Option<String>,
-    pub identification_remarks: Option<String>,
-    pub entity_id: Option<String>,
-}
-
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::subsamples)]
 pub struct Subsample {
     pub id: Uuid,
     pub dataset_id: Uuid,
     pub name_id: Uuid,
-    pub specimen_id: Uuid,
+    pub specimen_id: String,
 
     pub record_id: String,
     pub material_sample_id: Option<String>,

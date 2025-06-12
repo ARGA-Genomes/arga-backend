@@ -424,11 +424,9 @@ impl From<models::GenomicComponent> for GenomicComponent {
 /// A specimen from a specific species.
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SpecimenSummary {
-    pub id: Uuid,
-    pub dataset_name: String,
-    pub record_id: String,
-    pub entity_id: Option<String>,
-    pub accession: Option<String>,
+    pub entity_id: String,
+    pub collection_repository_id: Option<String>,
+    pub collection_repository_code: Option<String>,
     pub institution_code: Option<String>,
     pub institution_name: Option<String>,
     pub type_status: Option<String>,
@@ -445,11 +443,9 @@ pub struct SpecimenSummary {
 impl From<species::SpecimenSummary> for SpecimenSummary {
     fn from(value: species::SpecimenSummary) -> Self {
         Self {
-            id: value.id,
-            dataset_name: value.dataset_name,
-            record_id: value.record_id,
             entity_id: value.entity_id,
-            accession: value.accession,
+            collection_repository_id: value.collection_repository_id,
+            collection_repository_code: value.collection_repository_code,
             institution_code: value.institution_code,
             institution_name: value.institution_name,
             type_status: value.type_status,
