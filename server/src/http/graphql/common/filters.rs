@@ -1,8 +1,6 @@
-use arga_core::search::SearchFilter;
 use async_graphql::{Enum, InputObject, Value, from_value};
 use serde::{Deserialize, Serialize};
 
-use super::search::SearchDataType;
 use super::species::DataType;
 use super::taxonomy::TaxonomicVernacularGroup;
 use super::whole_genomes::{AssemblyLevel, GenomeRepresentation, ReleaseType};
@@ -262,44 +260,6 @@ impl TryFrom<WholeGenomeFilterItem> for WholeGenomeFilter {
 
 
 pub fn convert_whole_genome_filters(items: Vec<WholeGenomeFilterItem>) -> Result<Vec<WholeGenomeFilter>, Error> {
-    let mut filters = Vec::new();
-    for item in items {
-        filters.push(item.try_into()?);
-    }
-    Ok(filters)
-}
-
-
-/// An all purpose filter to apply to search queries.
-#[derive(Clone, Debug, Serialize, Deserialize, InputObject)]
-pub struct SearchFilterItem {
-    filter: SearchFilterType,
-    action: FilterAction,
-    value: String,
-}
-
-#[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
-pub enum SearchFilterType {
-    DataType,
-}
-
-/// Converts a graphql search filter into the search filter enum
-impl TryFrom<SearchFilterItem> for SearchFilter {
-    type Error = Error;
-
-    fn try_from(source: SearchFilterItem) -> Result<Self, Self::Error> {
-        use SearchFilterType as Type;
-
-        let kind = match source.filter {
-            Type::DataType => SearchFilter::DataType(from_value::<SearchDataType>(Value::String(source.value))?.into()),
-        };
-
-        Ok(kind)
-    }
-}
-
-
-pub fn convert_search_filters(items: Vec<SearchFilterItem>) -> Result<Vec<SearchFilter>, Error> {
     let mut filters = Vec::new();
     for item in items {
         filters.push(item.try_into()?);

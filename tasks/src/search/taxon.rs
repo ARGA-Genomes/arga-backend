@@ -1,9 +1,9 @@
 use anyhow::Error;
-use arga_core::models::{TaxonomicStatus, ACCEPTED_NAMES};
+use arga_core::models::{ACCEPTED_NAMES, TaxonomicStatus};
 use arga_core::schema::datasets;
 use arga_core::schema_gnl;
 use diesel::r2d2::{ConnectionManager, Pool};
-use diesel::sql_types::{Nullable, Varchar};
+use diesel::sql_types::{Nullable, Text, Varchar};
 use diesel::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -20,6 +20,7 @@ pub struct SpeciesDoc {
     pub status: TaxonomicStatus,
 
     pub canonical_name: String,
+    pub rank: String,
     // pub subspecies: Option<Vec<String>>,
     // pub synonyms: Option<Vec<String>>,
     pub vernacular_names: Option<Vec<String>>,
@@ -51,6 +52,7 @@ pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
             species::id,
             species::status,
             species::canonical_name,
+            sql::<Text>("species.rank::text"), // FIXME - change so this doesn't throw type checking to the wind
             // species::subspecies,
             // synonyms::names.nullable(),
             species::vernacular_names,
