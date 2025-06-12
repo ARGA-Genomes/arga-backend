@@ -52,7 +52,7 @@ pub fn get_species(pool: &PgPool) -> Result<Vec<SpeciesDoc>, Error> {
             species::id,
             species::status,
             species::canonical_name,
-            sql::<Text>("species.rank::text"),
+            sql::<Text>("species.rank::text"), // FIXME - change so this doesn't throw type checking to the wind
             // species::subspecies,
             // synonyms::names.nullable(),
             species::vernacular_names,
