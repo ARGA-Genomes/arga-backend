@@ -1,5 +1,4 @@
 use arga_core::models;
-use arga_core::models::IndigenousKnowledge;
 use async_graphql::*;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
@@ -29,33 +28,6 @@ pub struct Species {
     pub name: ArgaName,
     pub names: Vec<Name>,
 }
-
-#[derive(Clone, Debug, SimpleObject)]
-pub struct IndigenousEcologicalTrait {
-    pub id: String,
-    pub name: String,
-    pub dataset_name: String,
-    pub food_use: bool,
-    pub medicinal_use: bool,
-    pub cultural_connection: bool,
-    pub source_url: Option<String>,
-}
-
-impl From<(IndigenousKnowledge, String)> for IndigenousEcologicalTrait {
-    fn from(source: (IndigenousKnowledge, String)) -> Self {
-        let (value, dataset_name) = source;
-        Self {
-            id: value.id.to_string(),
-            name: value.name,
-            dataset_name,
-            food_use: value.food_use,
-            medicinal_use: value.medicinal_use,
-            cultural_connection: value.cultural_connection,
-            source_url: value.source_url,
-        }
-    }
-}
-
 
 #[Object]
 impl Species {
@@ -222,17 +194,6 @@ impl Species {
         let genome = state.database.species.reference_genome(&self.names).await?;
         let genome = genome.map(|g| g.into());
         Ok(genome)
-    }
-
-    async fn indigenous_ecological_knowledge(
-        &self,
-        ctx: &Context<'_>,
-    ) -> Result<Vec<IndigenousEcologicalTrait>, Error> {
-        let state = ctx.data::<State>()?;
-        let name_ids: Vec<Uuid> = self.names.iter().map(|name| name.id.clone()).collect();
-        let records = state.database.species.indigenous_knowledge(&name_ids).await?;
-        let traits = records.into_iter().map(|r| r.into()).collect();
-        Ok(traits)
     }
 
     async fn attributes(&self, ctx: &Context<'_>) -> Result<Vec<NameAttribute>, Error> {
