@@ -65,12 +65,11 @@ impl Statistics {
     #[instrument(skip(self, ctx))]
     async fn dataset(&self, ctx: &Context<'_>, name: String) -> Result<DatasetStatistics> {
         let state = ctx.data::<State>()?;
-        let stats = state.database.stats.dataset(&name).await?;
         let breakdown = state.database.stats.dataset_breakdown(&name).await?;
 
         Ok(DatasetStatistics {
-            total_species: stats.total_species,
-            species_with_data: stats.total_species_with_data,
+            total_species: 0,
+            species_with_data: 0,
             breakdown: breakdown.species,
         })
     }

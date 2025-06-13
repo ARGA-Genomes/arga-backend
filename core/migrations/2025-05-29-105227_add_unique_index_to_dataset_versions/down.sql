@@ -1,0 +1,1 @@
+DROP INDEX dataset_versions_dataset_id_created_at;

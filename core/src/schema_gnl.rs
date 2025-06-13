@@ -73,8 +73,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    specimen_stats (id) {
-        id -> Uuid,
+    specimen_stats (entity_id) {
+        entity_id -> Varchar,
         sequences -> BigInt,
         whole_genomes -> BigInt,
         markers -> BigInt,
@@ -192,9 +192,35 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    collection_event_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
+diesel::table! {
+    specimen_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
+diesel::table! {
+    organism_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
+diesel::table! {
+    accession_event_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
+
 use super::schema::{
     accession_events,
     assembly_events,
+    collection_events,
     datasets,
     deposition_events,
     name_attributes,
@@ -212,7 +238,7 @@ diesel::joinable!(whole_genomes -> deposition_events (sequence_id));
 diesel::joinable!(markers -> datasets (dataset_id));
 diesel::joinable!(markers -> names (name_id));
 diesel::joinable!(markers -> taxa (name_id));
-diesel::joinable!(specimen_stats -> specimens (id));
+diesel::joinable!(specimen_stats -> specimens (entity_id));
 diesel::joinable!(name_data_summaries -> names (name_id));
 diesel::joinable!(taxon_names -> species (taxon_id));
 diesel::joinable!(taxa_tree_stats -> taxa (taxon_id));
@@ -240,6 +266,7 @@ diesel::allow_tables_to_appear_in_same_query!(species, deposition_events);
 diesel::allow_tables_to_appear_in_same_query!(species, sequences);
 diesel::allow_tables_to_appear_in_same_query!(specimen_stats, specimens);
 diesel::allow_tables_to_appear_in_same_query!(specimen_stats, accession_events);
+diesel::allow_tables_to_appear_in_same_query!(specimen_stats, collection_events);
 
 diesel::allow_tables_to_appear_in_same_query!(name_attributes, species);
 diesel::allow_tables_to_appear_in_same_query!(name_attributes, taxa_tree_stats);

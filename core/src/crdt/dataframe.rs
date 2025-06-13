@@ -2,7 +2,7 @@ use bigdecimal::BigDecimal;
 use uuid::Uuid;
 
 use super::Version;
-use crate::models::Action;
+use crate::models::logs::Action;
 
 
 #[derive(Debug, Clone)]
@@ -30,19 +30,19 @@ impl<Atom: Default> DataFrame<Atom> {
         let next = last_version.next();
         let current = last_version;
 
-        let creation_op = DataFrameOperation {
-            operation_id: next.into(),
-            parent_id: current.into(),
-            dataset_version_id,
-            entity_id: entity_id.clone(),
-            action: Action::Create,
-            atom: Atom::default(),
-        };
+        // let creation_op = DataFrameOperation {
+        //     operation_id: next.into(),
+        //     parent_id: current.into(),
+        //     dataset_version_id,
+        //     entity_id: entity_id.clone(),
+        //     action: Action::Create,
+        //     atom: Atom::default(),
+        // };
 
         DataFrame {
             entity_id,
             dataset_version_id,
-            operations: vec![creation_op],
+            operations: vec![],
             next: last_version.next(),
             current: last_version,
         }
