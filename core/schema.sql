@@ -263,6 +263,8 @@ CREATE TABLE dataset_versions (
     imported_at timestamp WITH time zone NOT NULL
 );
 
+CREATE UNIQUE INDEX dataset_version_dataset_id_created_at ON dataset_versions (dataset_id, created_at);
+
 
 -- The central names table. Most tables link to this
 CREATE TABLE names (
