@@ -1,3 +1,4 @@
+use arga_core::models::Organism;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
@@ -90,6 +91,20 @@ impl SpecimenProvider {
         }
 
         Ok(specimen?)
+    }
+
+    pub async fn organism(&self, specimen_id: &str) -> Result<Organism, Error> {
+        use schema::{organisms, specimens};
+        let mut conn = self.pool.get().await?;
+
+        let organism = organisms::table
+            .inner_join(specimens::table)
+            .filter(specimens::entity_id.eq(specimen_id))
+            .select(Organism::as_select())
+            .get_result::<Organism>(&mut conn)
+            .await?;
+
+        Ok(organism)
     }
 
     pub async fn collection_events(&self, specimen_id: &str) -> Result<Vec<CollectionEvent>, Error> {

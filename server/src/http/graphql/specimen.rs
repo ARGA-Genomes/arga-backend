@@ -43,6 +43,12 @@ impl SpecimenQuery {
         Ok(name.canonical_name)
     }
 
+    async fn organism(&self, ctx: &Context<'_>) -> Result<Organism, Error> {
+        let state = ctx.data::<State>()?;
+        let organism = state.database.specimens.organism(&self.specimen.entity_id).await?;
+        Ok(organism.into())
+    }
+
     #[instrument(skip(self, ctx))]
     async fn events(&self, ctx: &Context<'_>) -> Result<SpecimenEvents, Error> {
         let state = ctx.data::<State>()?;
@@ -83,23 +89,115 @@ pub struct SpecimenEvents {
 
 
 #[derive(Clone, Debug, SimpleObject)]
+pub struct Organism {
+    pub entity_id: String,
+    pub organism_id: String,
+    pub sex: Option<String>,
+    pub genotypic_sex: Option<String>,
+    pub phenotypic_sex: Option<String>,
+    pub life_stage: Option<String>,
+    pub reproductive_condition: Option<String>,
+    pub behavior: Option<String>,
+}
+
+impl From<models::Organism> for Organism {
+    fn from(value: models::Organism) -> Self {
+        Organism {
+            entity_id: value.entity_id,
+            organism_id: value.organism_id,
+            sex: value.sex,
+            genotypic_sex: value.genotypic_sex,
+            phenotypic_sex: value.phenotypic_sex,
+            life_stage: value.life_stage,
+            reproductive_condition: value.reproductive_condition,
+            behavior: value.behavior,
+        }
+    }
+}
+
+#[derive(Clone, Debug, SimpleObject)]
 pub struct CollectionEvent {
     pub entity_id: String,
+    pub specimen_id: String,
+    pub organism_id: String,
+    pub field_collecting_id: Option<String>,
 
     pub event_date: Option<chrono::NaiveDate>,
     pub event_time: Option<chrono::NaiveTime>,
     pub collected_by: Option<String>,
     pub collection_remarks: Option<String>,
+    pub identified_by: Option<String>,
+    pub identified_date: Option<chrono::NaiveDate>,
+    pub identification_remarks: Option<String>,
+
+    pub locality: Option<String>,
+    pub country: Option<String>,
+    pub country_code: Option<String>,
+    pub state_province: Option<String>,
+    pub county: Option<String>,
+    pub municipality: Option<String>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub elevation: Option<f64>,
+    pub depth: Option<f64>,
+    pub elevation_accuracy: Option<f64>,
+    pub depth_accuracy: Option<f64>,
+    pub location_source: Option<String>,
+
+    pub preparation: Option<String>,
+    pub environment_broad_scale: Option<String>,
+    pub environment_local_scale: Option<String>,
+    pub environment_medium: Option<String>,
+    pub habitat: Option<String>,
+    pub specific_host: Option<String>,
+    pub individual_count: Option<String>,
+    pub organism_quantity: Option<String>,
+    pub organism_quantity_type: Option<String>,
+
+    pub strain: Option<String>,
+    pub isolate: Option<String>,
+    pub field_notes: Option<String>,
 }
 
 impl From<models::CollectionEvent> for CollectionEvent {
     fn from(value: models::CollectionEvent) -> Self {
         Self {
             entity_id: value.entity_id,
+            specimen_id: value.specimen_id,
+            organism_id: value.organism_id,
+            field_collecting_id: value.field_collecting_id,
             event_date: value.event_date,
             event_time: value.event_time,
             collected_by: value.collected_by,
             collection_remarks: value.collection_remarks,
+            identified_by: value.identified_by,
+            identified_date: value.identified_date,
+            identification_remarks: value.identification_remarks,
+            locality: value.locality,
+            country: value.country,
+            country_code: value.country_code,
+            state_province: value.state_province,
+            county: value.county,
+            municipality: value.municipality,
+            latitude: value.latitude,
+            longitude: value.longitude,
+            elevation: value.elevation,
+            depth: value.depth,
+            elevation_accuracy: value.elevation_accuracy,
+            depth_accuracy: value.depth_accuracy,
+            location_source: value.location_source,
+            preparation: value.preparation,
+            environment_broad_scale: value.environment_broad_scale,
+            environment_local_scale: value.environment_local_scale,
+            environment_medium: value.environment_medium,
+            habitat: value.habitat,
+            specific_host: value.specific_host,
+            individual_count: value.individual_count,
+            organism_quantity: value.organism_quantity,
+            organism_quantity_type: value.organism_quantity_type,
+            strain: value.strain,
+            isolate: value.isolate,
+            field_notes: value.field_notes,
         }
     }
 }
