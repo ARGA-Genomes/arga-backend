@@ -24,7 +24,21 @@ pub struct SpecimenDoc {
     pub event_date: Option<String>,
 }
 
-pub fn get_specimens(pool: &PgPool) -> Result<Vec<SpecimenDoc>, Error> {
+pub fn get_specimen_total(pool: &PgPool) -> Result<u64, Error> {
+    use schema::{collection_events, datasets, names, specimens};
+    let mut conn = pool.get()?;
+
+    let total = specimens::table
+        .inner_join(datasets::table)
+        .inner_join(collection_events::table)
+        .inner_join(names::table)
+        .count()
+        .get_result::<i64>(&mut conn)?;
+
+    Ok(total as u64)
+}
+
+pub fn get_specimens(pool: &PgPool, page: i64, page_size: i64) -> Result<Vec<SpecimenDoc>, Error> {
     use schema::{collection_events, datasets, names, specimens};
     let mut conn = pool.get()?;
 
@@ -47,6 +61,8 @@ pub fn get_specimens(pool: &PgPool) -> Result<Vec<SpecimenDoc>, Error> {
             specimens::identified_by,
             collection_events::event_date,
         ))
+        .offset((page - 1) * page_size)
+        .limit(page_size)
         // .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Hybrid, TaxonomicStatus::Undescribed]))
         .load::<SpecimenDoc>(&mut conn)?;
 

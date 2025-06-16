@@ -298,12 +298,18 @@ fn index_specimens(schema: &Schema, index: &Index) -> Result<(), Error> {
     let identified_by = get_field(schema, "identified_by")?;
     let event_date = get_field(schema, "event_date")?;
 
-    info!("Loading specimens from database");
-    let records = specimen::get_specimens(&pool)?;
-    info!(total = records.len(), "Loaded");
+    info!("Getting total amount of specimens");
+    let page_size: u64 = 10_000;
+    let total = specimen::get_specimen_total(&pool)?;
+    let pages = total.div_ceil(page_size);
 
-    for chunk in records.chunks(1_000_000) {
-        for specimen in chunk {
+    info!(total, pages, "Loading specimens from database");
+
+    for page in 1..pages {
+        let records = specimen::get_specimens(&pool, page as i64, page_size as i64)?;
+        info!(total = records.len(), "Loaded");
+
+        for specimen in records {
             let mut doc = doc!(
                 canonical_name => specimen.canonical_name.clone(),
                 data_type => DataType::Specimen.to_string(),
