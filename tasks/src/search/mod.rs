@@ -299,7 +299,7 @@ fn index_specimens(schema: &Schema, index: &Index) -> Result<(), Error> {
     let event_date = get_field(schema, "event_date")?;
 
     info!("Getting total amount of specimens");
-    let page_size: u64 = 10_000;
+    let page_size: u64 = 500_000;
     let total = specimen::get_specimen_total(&pool)?;
     let pages = total.div_ceil(page_size);
 
@@ -307,7 +307,7 @@ fn index_specimens(schema: &Schema, index: &Index) -> Result<(), Error> {
 
     for page in 1..pages {
         let records = specimen::get_specimens(&pool, page as i64, page_size as i64)?;
-        info!(total = records.len(), "Loaded");
+        info!(page, total = pages, "Loaded");
 
         for specimen in records {
             let mut doc = doc!(
