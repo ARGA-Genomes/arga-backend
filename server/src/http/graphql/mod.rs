@@ -28,7 +28,7 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Extension, Router};
 
-use self::common::{FilterItem, SearchFilterItem};
+use self::common::FilterItem;
 use self::dataset::Dataset;
 use self::dna_extract::DnaExtract;
 use self::extensions::ErrorLogging;
@@ -62,8 +62,8 @@ impl Query {
         Overview {}
     }
 
-    async fn search(&self, filters: Vec<SearchFilterItem>) -> Result<Search, Error> {
-        Search::new(filters)
+    async fn search(&self) -> Search {
+        Search {}
     }
 
     async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<Species, Error> {

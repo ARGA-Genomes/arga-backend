@@ -343,7 +343,7 @@ impl TaxaProvider {
             .filter(taxa::rank.eq(rank))
             .select((
                 count_star(),
-                sum_if(stats::genomes.gt(BigDecimal::zero())),
+                sum_if(stats::full_genomes.gt(BigDecimal::zero())),
                 sum_if(stats::total_genomic.gt(BigDecimal::zero())),
             ))
             .get_result::<(i64, i64, i64)>(&mut conn)

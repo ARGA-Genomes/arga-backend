@@ -234,6 +234,7 @@ use super::schema::{
 diesel::joinable!(species -> taxa (id));
 diesel::joinable!(whole_genomes -> datasets (dataset_id));
 diesel::joinable!(whole_genomes -> names (name_id));
+diesel::joinable!(whole_genomes -> deposition_events (sequence_id));
 diesel::joinable!(markers -> datasets (dataset_id));
 diesel::joinable!(markers -> names (name_id));
 diesel::joinable!(markers -> taxa (name_id));
@@ -282,3 +283,5 @@ diesel::allow_tables_to_appear_in_same_query!(taxon_names, taxa_tree_stats);
 
 diesel::allow_tables_to_appear_in_same_query!(sequence_milestones, taxon_names);
 diesel::allow_tables_to_appear_in_same_query!(sequence_milestones, datasets);
+
+diesel::allow_tables_to_appear_in_same_query!(whole_genomes, deposition_events);

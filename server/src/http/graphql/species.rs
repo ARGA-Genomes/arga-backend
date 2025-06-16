@@ -8,7 +8,6 @@ use tracing::instrument;
 use uuid::Uuid;
 
 use super::common::attributes::AttributeValueType;
-use super::common::taxonomy::sort_taxa_priority;
 use super::common::{
     DatasetDetails,
     Page,
@@ -18,7 +17,6 @@ use super::common::{
     convert_whole_genome_filters,
 };
 use super::markers::SpeciesMarker;
-use super::taxon::{TaxonNode, TaxonRank, into_classification};
 use crate::database::models::{Name as ArgaName, Name};
 use crate::database::sources::ALA_DATASET_ID;
 use crate::database::{Database, schema, species};

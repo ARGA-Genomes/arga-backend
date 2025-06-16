@@ -1,7 +1,7 @@
 use chrono::{NaiveDate, NaiveDateTime};
 use tantivy::collector::{Count, TopDocs};
 use tantivy::query::QueryParser;
-use tantivy::schema::{Field, Schema, SchemaBuilder, STORED, STRING, TEXT};
+use tantivy::schema::{Field, STORED, STRING, Schema, SchemaBuilder, TEXT};
 use tantivy::{Document, Index, IndexReader, ReloadPolicy, TantivyError};
 use tracing::error;
 use uuid::Uuid;
@@ -22,12 +22,6 @@ pub enum Error {
 
     #[error("Parse error: {0}")]
     ParseError(String),
-}
-
-
-#[derive(Debug, Clone)]
-pub enum SearchFilter {
-    DataType(DataType),
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +48,7 @@ pub struct SpeciesItem {
     pub score: f32,
 
     pub canonical_name: Option<String>,
+    pub rank: Option<String>,
     pub subspecies: Vec<String>,
     pub synonyms: Vec<String>,
     pub common_names: Vec<String>,
@@ -86,6 +81,7 @@ pub struct GenomeItem {
     pub assembly_type: Option<String>,
     pub reference_genome: bool,
     pub release_date: Option<NaiveDate>,
+    pub source_uri: Option<String>,
 }
 
 #[derive(Debug)]
@@ -131,6 +127,7 @@ struct CommonFields {
 
 #[derive(Debug, Clone)]
 struct TaxonFields {
+    rank: Field,
     subspecies: Field,
     synonyms: Field,
     common_names: Field,
@@ -156,6 +153,7 @@ struct GenomeFields {
     assembly_type: Field,
     reference_genome: Field,
     release_date: Field,
+    source_uri: Field,
 }
 
 #[derive(Debug, Clone)]
@@ -236,6 +234,7 @@ impl SearchIndex {
             canonical_name: get_field(&schema, "canonical_name")?,
         };
         let taxon = TaxonFields {
+            rank: get_field(&schema, "rank")?,
             subspecies: get_field(&schema, "subspecies")?,
             synonyms: get_field(&schema, "synonyms")?,
             common_names: get_field(&schema, "common_names")?,
@@ -259,6 +258,7 @@ impl SearchIndex {
             assembly_type: get_field(&schema, "assembly_type")?,
             reference_genome: get_field(&schema, "reference_genome")?,
             release_date: get_field(&schema, "release_date")?,
+            source_uri: get_field(&schema, "source_uri")?,
         };
         let locus = LocusFields {
             accession: get_field(&schema, "accession")?,
@@ -315,6 +315,7 @@ impl SearchIndex {
     }
 
     pub fn taxon_schema(schema_builder: &mut SchemaBuilder) {
+        schema_builder.add_text_field("rank", TEXT | STORED);
         schema_builder.add_text_field("subspecies", TEXT | STORED);
         schema_builder.add_text_field("synonyms", TEXT | STORED);
         schema_builder.add_text_field("common_names", TEXT | STORED);
@@ -339,6 +340,7 @@ impl SearchIndex {
         schema_builder.add_text_field("assembly_type", TEXT | STORED);
         schema_builder.add_bool_field("reference_genome", STORED);
         schema_builder.add_date_field("release_date", STORED);
+        schema_builder.add_text_field("source_uri", STRING | STORED);
     }
 
     pub fn locus_schema(schema_builder: &mut SchemaBuilder) {
@@ -373,25 +375,6 @@ impl SearchIndex {
     pub fn specimens(&self, query: &str, page: usize, per_page: usize) -> SearchResult {
         let query = format!("data_type:{} {query}", DataType::Specimen);
         self.all(&query, page, per_page)
-    }
-
-    pub fn filtered(&self, query: &str, page: usize, per_page: usize, filters: &Vec<SearchFilter>) -> SearchResult {
-        let mut data_types = Vec::new();
-
-        for filter in filters {
-            match filter {
-                SearchFilter::DataType(data_type) => data_types.push(format!("data_type:{}", data_type)),
-            }
-        }
-
-        let mut filtered_query = query.to_string();
-
-        if data_types.len() > 0 {
-            let types = data_types.join(" OR ");
-            filtered_query = format!("({}) {}", &types, &filtered_query);
-        }
-
-        self.all(&filtered_query, page, per_page)
     }
 
     pub fn all(&self, query: &str, page: usize, per_page: usize) -> SearchResult {
@@ -468,6 +451,7 @@ impl SearchIndex {
                         status,
                         score,
                         canonical_name: get_text(&doc, self.common.canonical_name),
+                        rank: get_text(&doc, self.taxon.rank),
                         subspecies: get_all_text(&doc, self.taxon.subspecies),
                         synonyms: get_all_text(&doc, self.taxon.synonyms),
                         common_names: get_all_text(&doc, self.taxon.common_names),
@@ -495,6 +479,7 @@ impl SearchIndex {
                         assembly_type: get_text(&doc, self.genome.assembly_type),
                         reference_genome: get_bool(&doc, self.genome.reference_genome).unwrap_or(false),
                         release_date: get_date(&doc, self.genome.release_date),
+                        source_uri: get_text(&doc, self.genome.source_uri),
                     }),
                     DataType::Locus => SearchItem::Locus(LocusItem {
                         name_id,

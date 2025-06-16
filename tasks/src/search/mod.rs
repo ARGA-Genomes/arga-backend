@@ -9,7 +9,7 @@ use chrono::NaiveTime;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::*;
 use tantivy::schema::{Field, Schema};
-use tantivy::{doc, DateTime, Index};
+use tantivy::{DateTime, Index, doc};
 use tracing::info;
 
 
@@ -73,6 +73,7 @@ fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
     let name_id = get_field(schema, "name_id")?;
     let status = get_field(schema, "status")?;
     let canonical_name = get_field(schema, "canonical_name")?;
+    let rank = get_field(schema, "rank")?;
 
     // let subspecies = get_field(schema, "subspecies")?;
     // let synonyms = get_field(schema, "synonyms")?;
@@ -103,6 +104,7 @@ fn index_names(schema: &Schema, index: &Index) -> Result<(), Error> {
         for species in chunk {
             let mut doc = doc!(
                 canonical_name => species.canonical_name.clone(),
+                rank => species.rank.clone(),
                 data_type => DataType::Taxon.to_string(),
                 name_id => species.name_id.to_string(),
                 status => serde_json::to_string(&species.status)?,
@@ -184,6 +186,7 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
     let level = get_field(schema, "level")?;
     let assembly_type = get_field(schema, "assembly_type")?;
     let release_date = get_field(schema, "release_date")?;
+    let source_uri = get_field(schema, "source_uri")?;
 
     info!("Loading assemblies from database");
     let records = genome::get_genomes(&pool)?;
@@ -217,6 +220,9 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
                         DateTime::from_timestamp_secs(date.and_time(NaiveTime::default()).and_utc().timestamp());
                     doc.add_date(release_date, timestamp);
                 }
+            }
+            if let Some(value) = &genome.source_uri {
+                doc.add_text(source_uri, value);
             }
 
             index_writer.add_document(doc)?;
@@ -292,12 +298,18 @@ fn index_specimens(schema: &Schema, index: &Index) -> Result<(), Error> {
     let identified_by = get_field(schema, "identified_by")?;
     let event_date = get_field(schema, "event_date")?;
 
-    info!("Loading specimens from database");
-    let records = specimen::get_specimens(&pool)?;
-    info!(total = records.len(), "Loaded");
+    info!("Getting total amount of specimens");
+    let page_size: u64 = 500_000;
+    let total = specimen::get_specimen_total(&pool)?;
+    let pages = total.div_ceil(page_size);
 
-    for chunk in records.chunks(1_000_000) {
-        for specimen in chunk {
+    info!(total, pages, "Loading specimens from database");
+
+    for page in 1..pages {
+        let records = specimen::get_specimens(&pool, page as i64, page_size as i64)?;
+        info!(page, total = pages, "Loaded");
+
+        for specimen in records {
             let mut doc = doc!(
                 canonical_name => specimen.canonical_name.clone(),
                 data_type => DataType::Specimen.to_string(),
