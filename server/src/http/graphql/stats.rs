@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use super::common::taxonomy::TaxonomicRank;
+use super::helpers;
 use crate::database::stats::{BreakdownItem, TaxonStatNode, TaxonomicRankStat};
 use crate::http::{Context as State, Error};
 
@@ -80,6 +81,7 @@ impl Statistics {
         taxon_rank: TaxonomicRank,
         taxon_canonical_name: String,
         ranks: Vec<TaxonomicRank>,
+        filters: Vec<StatsFilter>,
     ) -> Result<Vec<TaxonomicRankStatistic>, Error> {
         let state = ctx.data::<State>()?;
         let classification = taxon_rank.to_classification(taxon_canonical_name);
@@ -94,6 +96,7 @@ impl Statistics {
         ctx: &Context<'_>,
         taxon_rank: TaxonomicRank,
         taxon_canonical_name: String,
+        filters: Vec<StatsFilter>,
     ) -> Result<Vec<CompleteGenomesByYearStatistic>, Error> {
         let state = ctx.data::<State>()?;
         let classification = taxon_rank.to_classification(taxon_canonical_name);
@@ -110,6 +113,13 @@ impl Statistics {
         state.database.stats.test_filter().await?;
         Ok("done".to_string())
     }
+}
+
+
+#[derive(OneofObject)]
+pub enum StatsFilter {
+    Classification(helpers::ClassificationFilter),
+    NameAttribute(helpers::NameAttributeFilter),
 }
 
 
