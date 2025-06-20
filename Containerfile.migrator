@@ -1,13 +1,10 @@
-FROM rust:1.82
+FROM arigaio/atlas:0.35.0-community
 LABEL org.opencontainers.image.source="https://github.com/ARGA-Genomes/arga-backend"
 LABEL org.opencontainers.image.description="A container image for running migration jobs"
 LABEL org.opencontainers.image.licenses="AGPL-3.0"
 
-WORKDIR /usr/src/arga-backend
+WORKDIR /migrations
 ENV DATABASE_URL=postgres://localhost/arga
-CMD ["diesel", "migration", "run"]
+CMD ["atlas", "migrate", "apply", "--env", "arga"]
 
-COPY ./core/migrations ./migrations
-COPY ./core/diesel.toml .
-
-RUN cargo install diesel_cli --no-default-features --features "postgres" --locked
+COPY ./core/migrations /migrations
