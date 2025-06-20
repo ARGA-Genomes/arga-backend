@@ -3,9 +3,9 @@ LABEL org.opencontainers.image.source="https://github.com/ARGA-Genomes/arga-back
 LABEL org.opencontainers.image.description="A container image for running migration jobs"
 LABEL org.opencontainers.image.licenses="AGPL-3.0"
 
-WORKDIR /migrations
+WORKDIR /
 ENV DATABASE_URL=postgres://localhost/arga
 CMD ["migrate", "apply", "--env", "arga"]
 
-COPY ./core/atlas.hcl /migrations
+COPY ./core/atlas.hcl /
 COPY ./core/migrations /migrations
