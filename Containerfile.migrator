@@ -5,6 +5,6 @@ LABEL org.opencontainers.image.licenses="AGPL-3.0"
 
 WORKDIR /migrations
 ENV DATABASE_URL=postgres://localhost/arga
-CMD ["atlas", "migrate", "apply", "--env", "arga"]
+CMD ["migrate", "apply", "--env", "arga"]
 
 COPY ./core/migrations /migrations
