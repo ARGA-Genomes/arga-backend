@@ -1,10 +1,10 @@
-use arga_core::models::{SequencingRunEvent, AssemblyEvent, DepositionEvent, AnnotationEvent, TraceData};
+use arga_core::models::{AnnotationEvent, AssemblyEvent, DepositionEvent, SequencingRunEvent, TraceData};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use crate::database::models::{Sequence, SequencingEvent};
-use super::{schema, Error, PgPool};
+use super::{Error, PgPool, schema};
+use crate::database::models::{Sequence, SequencingEvent, entity_hash};
 
 
 #[derive(Clone)]
@@ -27,7 +27,7 @@ impl SequenceProvider {
     }
 
     pub async fn find_by_accession(&self, accession: &str) -> Result<Vec<Sequence>, Error> {
-        use schema::{sequences, deposition_events};
+        use schema::{deposition_events, sequences};
         let mut conn = self.pool.get().await?;
 
         let sequence = sequences::table
@@ -53,21 +53,19 @@ impl SequenceProvider {
     }
 
     pub async fn find_by_specimen_record_id(&self, record_id: &str) -> Result<Vec<Sequence>, Error> {
-        use schema::{specimens, subsamples, dna_extracts, sequences};
+        use schema::{dna_extracts, sequences, subsamples};
         let mut conn = self.pool.get().await?;
 
-        let sequences = specimens::table
-            .inner_join(subsamples::table)
-            .inner_join(dna_extracts::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
-            .inner_join(sequences::table.on(dna_extracts::id.eq(sequences::dna_extract_id)))
+        let sequences = sequences::table
+            .inner_join(dna_extracts::table)
+            .inner_join(subsamples::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
             .select(sequences::all_columns)
-            .filter(specimens::record_id.eq(record_id))
+            .filter(subsamples::specimen_id.eq(entity_hash(record_id)))
             .load::<Sequence>(&mut conn)
             .await?;
 
         Ok(sequences)
     }
-
 
     pub async fn sequencing_events(&self, sequence_id: &Uuid) -> Result<Vec<SequencingEvent>, Error> {
         use schema::sequencing_events;
@@ -132,7 +130,7 @@ impl SequenceProvider {
     }
 
     pub async fn trace_data(&self, sequence_run_event_id: &Uuid) -> Result<TraceData, Error> {
-        use schema::{sequencing_run_events, sequencing_events, deposition_events};
+        use schema::{deposition_events, sequencing_events, sequencing_run_events};
         let mut conn = self.pool.get().await?;
 
         let trace = sequencing_run_events::table

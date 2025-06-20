@@ -5,12 +5,11 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::common::datasets::DatasetDetails;
 use super::common::species::{SortDirection, SpeciesSort};
-use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank, TaxonomicStatus};
+use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank};
 use super::common::{FilterItem, NameDetails, Page, SpeciesCard, convert_filters};
 use super::helpers::{self, SpeciesHelper, csv};
-use super::specimen::SpecimenDetails;
+use super::specimen::AccessionEvent;
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::extensions::filters::{Filter, FilterKind};
 use crate::database::extensions::species_filters::{self};
@@ -450,14 +449,14 @@ impl From<taxa::RankSummary> for RankSummary {
 
 #[derive(Clone, Debug, SimpleObject)]
 pub struct TypeSpecimen {
-    pub specimen: SpecimenDetails,
+    pub accession: AccessionEvent,
     pub name: NameDetails,
 }
 
 impl From<taxa::TypeSpecimen> for TypeSpecimen {
     fn from(value: taxa::TypeSpecimen) -> Self {
         TypeSpecimen {
-            specimen: value.specimen.into(),
+            accession: value.accession.into(),
             name: value.name.into(),
         }
     }

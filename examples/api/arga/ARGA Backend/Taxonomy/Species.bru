@@ -1,0 +1,44 @@
+meta {
+  name: Species
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    # Curvularia trifolii
+    # Aspergillus fumigatus
+    # Dacelo (Dacelo) leachii
+    taxon(
+      by: {
+        classification: {
+          rank: FAMILY
+          canonicalName: "Macropodidae"
+          datasetId: "add01cb4-cc00-47fb-b4e0-cdc8d7ed564d"
+        }
+      }
+    ) {
+  
+      species(page:1, pageSize:10) {
+        total
+        records {
+          taxonomy {
+            canonicalName
+          }
+        }
+      }
+  
+    }
+  }
+  
+}

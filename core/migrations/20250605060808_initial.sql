@@ -1,4 +1,6 @@
-CREATE EXTENSION postgis;
+CREATE SCHEMA IF NOT EXISTS "public";
+
+CREATE EXTENSION IF NOT EXISTS postgis SCHEMA "public";
 
 -- Create enum type "source_content_type"
 CREATE TYPE "public"."source_content_type" AS ENUM ('taxonomic_backbone', 'ecological_traits', 'genomic_data', 'specimens', 'nongenomic_data', 'morphological_traits', 'biochemical_traits', 'mixed_datatypes', 'functional_traits', 'ethnobiology');

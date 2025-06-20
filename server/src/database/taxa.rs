@@ -1,5 +1,6 @@
 use arga_core::models::{
     ACCEPTED_NAMES,
+    AccessionEvent,
     Dataset,
     Name,
     NomenclaturalActType,
@@ -127,10 +128,10 @@ pub struct TaxonomicAct {
 }
 
 #[derive(Debug, Selectable, Queryable)]
-#[diesel(table_name = schema::specimens)]
+#[diesel(table_name = schema::accession_events)]
 pub struct TypeSpecimen {
     #[diesel(embed)]
-    pub specimen: Specimen,
+    pub accession: AccessionEvent,
     #[diesel(embed)]
     pub name: Name,
 }
@@ -577,16 +578,16 @@ impl TaxaProvider {
     }
 
     pub async fn type_specimens(&self, taxon_id: &Uuid) -> Result<Vec<TypeSpecimen>, Error> {
-        use schema::{names, specimens};
+        use schema::{accession_events, names};
         let mut conn = self.pool.get().await?;
 
         let name_ids = self.all_associated_names(taxon_id).await?;
 
-        let specimens = specimens::table
-            .inner_join(names::table.on(names::id.eq(specimens::name_id)))
-            .select((Specimen::as_select(), Name::as_select()))
-            .filter(specimens::name_id.eq_any(name_ids))
-            .filter(specimens::type_status.is_not_null())
+        let specimens = accession_events::table
+            .inner_join(names::table.on(names::id.eq(accession_events::name_id)))
+            .select((AccessionEvent::as_select(), Name::as_select()))
+            .filter(accession_events::name_id.eq_any(name_ids))
+            .filter(accession_events::type_status.is_not_null())
             .limit(10)
             .load::<TypeSpecimen>(&mut conn)
             .await?;

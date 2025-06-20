@@ -1,6 +1,5 @@
 use async_graphql::*;
 use tracing::instrument;
-use uuid::Uuid;
 
 use crate::database::{models, Database};
 use crate::http::{Context as State, Error};
@@ -8,7 +7,7 @@ use crate::http::{Context as State, Error};
 
 #[derive(OneofObject)]
 pub enum SpecimenBy {
-    Id(Uuid),
+    EntityId(String),
     RecordId(String),
     SequenceRecordId(String),
     SequenceAccession(String),
@@ -20,7 +19,7 @@ pub struct Specimen(SpecimenDetails, SpecimenQuery);
 impl Specimen {
     pub async fn new(db: &Database, by: &SpecimenBy) -> Result<Specimen, Error> {
         let specimen = match by {
-            SpecimenBy::Id(id) => db.specimens.find_by_id(&id).await?,
+            SpecimenBy::EntityId(id) => db.specimens.find_by_id(&id).await?,
             SpecimenBy::RecordId(id) => db.specimens.find_by_record_id(&id).await?,
             SpecimenBy::SequenceRecordId(id) => db.specimens.find_by_sequence_record_id(&id).await?,
             SpecimenBy::SequenceAccession(id) => db.specimens.find_by_sequence_accession(&id).await?,
@@ -44,11 +43,32 @@ impl SpecimenQuery {
         Ok(name.canonical_name)
     }
 
+    async fn organism(&self, ctx: &Context<'_>) -> Result<Organism, Error> {
+        let state = ctx.data::<State>()?;
+        let organism = state.database.specimens.organism(&self.specimen.entity_id).await?;
+        Ok(organism.into())
+    }
+
+    async fn collections(&self, ctx: &Context<'_>) -> Result<Vec<CollectionEvent>, Error> {
+        let state = ctx.data::<State>()?;
+        let specimen_id = &self.specimen.entity_id;
+        let collections = state.database.specimens.collection_events(specimen_id).await?;
+        Ok(collections.into_iter().map(|r| r.into()).collect())
+    }
+
+    async fn accessions(&self, ctx: &Context<'_>) -> Result<Vec<AccessionEvent>, Error> {
+        let state = ctx.data::<State>()?;
+        let specimen_id = &self.specimen.entity_id;
+        let accessions = state.database.specimens.accession_events(specimen_id).await?;
+        Ok(accessions.into_iter().map(|r| r.into()).collect())
+    }
+
     #[instrument(skip(self, ctx))]
     async fn events(&self, ctx: &Context<'_>) -> Result<SpecimenEvents, Error> {
         let state = ctx.data::<State>()?;
-        let collections = state.database.specimens.collection_events(&self.specimen.id).await?;
-        let accessions = state.database.specimens.accession_events(&self.specimen.id).await?;
+        let specimen_id = &self.specimen.entity_id;
+        let collections = state.database.specimens.collection_events(specimen_id).await?;
+        let accessions = state.database.specimens.accession_events(specimen_id).await?;
 
         Ok(SpecimenEvents {
             collections: collections.into_iter().map(|r| r.into()).collect(),
@@ -61,21 +81,69 @@ impl SpecimenQuery {
 /// A specimen from a specific species.
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SpecimenDetails {
-    pub id: Uuid,
-    pub entity_id: Option<String>,
+    pub entity_id: String,
+    pub organism_id: String,
+}
 
-    pub record_id: String,
-    pub material_sample_id: Option<String>,
-    pub organism_id: Option<String>,
+impl From<models::Specimen> for SpecimenDetails {
+    fn from(value: models::Specimen) -> Self {
+        Self {
+            entity_id: value.entity_id,
+            organism_id: value.organism_id,
+        }
+    }
+}
 
-    pub institution_name: Option<String>,
-    pub institution_code: Option<String>,
-    pub collection_code: Option<String>,
-    pub recorded_by: Option<String>,
+
+#[derive(SimpleObject)]
+pub struct SpecimenEvents {
+    collections: Vec<CollectionEvent>,
+    accessions: Vec<AccessionEvent>,
+}
+
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct Organism {
+    pub entity_id: String,
+    pub organism_id: String,
+    pub sex: Option<String>,
+    pub genotypic_sex: Option<String>,
+    pub phenotypic_sex: Option<String>,
+    pub life_stage: Option<String>,
+    pub reproductive_condition: Option<String>,
+    pub behavior: Option<String>,
+}
+
+impl From<models::Organism> for Organism {
+    fn from(value: models::Organism) -> Self {
+        Organism {
+            entity_id: value.entity_id,
+            organism_id: value.organism_id,
+            sex: value.sex,
+            genotypic_sex: value.genotypic_sex,
+            phenotypic_sex: value.phenotypic_sex,
+            life_stage: value.life_stage,
+            reproductive_condition: value.reproductive_condition,
+            behavior: value.behavior,
+        }
+    }
+}
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct CollectionEvent {
+    pub entity_id: String,
+    pub specimen_id: String,
+    pub organism_id: String,
+    pub field_collecting_id: Option<String>,
+
+    pub event_date: Option<chrono::NaiveDate>,
+    pub event_time: Option<chrono::NaiveTime>,
+    pub collected_by: Option<String>,
+    pub collection_remarks: Option<String>,
     pub identified_by: Option<String>,
-    pub identified_date: Option<String>,
+    pub identified_date: Option<chrono::NaiveDate>,
+    pub identification_remarks: Option<String>,
 
-    pub type_status: Option<String>,
     pub locality: Option<String>,
     pub country: Option<String>,
     pub country_code: Option<String>,
@@ -90,26 +158,35 @@ pub struct SpecimenDetails {
     pub depth_accuracy: Option<f64>,
     pub location_source: Option<String>,
 
-    pub details: Option<String>,
-    pub remarks: Option<String>,
-    pub identification_remarks: Option<String>,
+    pub preparation: Option<String>,
+    pub environment_broad_scale: Option<String>,
+    pub environment_local_scale: Option<String>,
+    pub environment_medium: Option<String>,
+    pub habitat: Option<String>,
+    pub specific_host: Option<String>,
+    pub individual_count: Option<String>,
+    pub organism_quantity: Option<String>,
+    pub organism_quantity_type: Option<String>,
+
+    pub strain: Option<String>,
+    pub isolate: Option<String>,
+    pub field_notes: Option<String>,
 }
 
-impl From<models::Specimen> for SpecimenDetails {
-    fn from(value: models::Specimen) -> Self {
+impl From<models::CollectionEvent> for CollectionEvent {
+    fn from(value: models::CollectionEvent) -> Self {
         Self {
-            id: value.id,
             entity_id: value.entity_id,
-            record_id: value.record_id,
-            material_sample_id: value.material_sample_id,
+            specimen_id: value.specimen_id,
             organism_id: value.organism_id,
-            institution_name: value.institution_name,
-            institution_code: value.institution_code,
-            collection_code: value.collection_code,
-            recorded_by: value.recorded_by,
+            field_collecting_id: value.field_collecting_id,
+            event_date: value.event_date,
+            event_time: value.event_time,
+            collected_by: value.collected_by,
+            collection_remarks: value.collection_remarks,
             identified_by: value.identified_by,
             identified_date: value.identified_date,
-            type_status: value.type_status,
+            identification_remarks: value.identification_remarks,
             locality: value.locality,
             country: value.country,
             country_code: value.country_code,
@@ -123,129 +200,63 @@ impl From<models::Specimen> for SpecimenDetails {
             elevation_accuracy: value.elevation_accuracy,
             depth_accuracy: value.depth_accuracy,
             location_source: value.location_source,
-            details: value.details,
-            remarks: value.remarks,
-            identification_remarks: value.identification_remarks,
-        }
-    }
-}
-
-
-#[derive(SimpleObject)]
-pub struct SpecimenEvents {
-    collections: Vec<CollectionEvent>,
-    accessions: Vec<AccessionEvent>,
-}
-
-
-#[derive(Clone, Debug, SimpleObject)]
-pub struct CollectionEvent {
-    pub id: Uuid,
-    pub entity_id: Option<String>,
-
-    pub event_date: Option<String>,
-    pub event_time: Option<String>,
-    pub collected_by: Option<String>,
-
-    pub field_number: Option<String>,
-    pub catalog_number: Option<String>,
-    pub record_number: Option<String>,
-    pub individual_count: Option<String>,
-    pub organism_quantity: Option<String>,
-    pub organism_quantity_type: Option<String>,
-    pub sex: Option<String>,
-    pub genotypic_sex: Option<String>,
-    pub phenotypic_sex: Option<String>,
-    pub life_stage: Option<String>,
-    pub reproductive_condition: Option<String>,
-    pub behavior: Option<String>,
-    pub establishment_means: Option<String>,
-    pub degree_of_establishment: Option<String>,
-    pub pathway: Option<String>,
-    pub occurrence_status: Option<String>,
-    pub preparation: Option<String>,
-    pub other_catalog_numbers: Option<String>,
-
-    pub env_broad_scale: Option<String>,
-    pub env_local_scale: Option<String>,
-    pub env_medium: Option<String>,
-    pub habitat: Option<String>,
-    pub ref_biomaterial: Option<String>,
-    pub source_mat_id: Option<String>,
-    pub specific_host: Option<String>,
-    pub strain: Option<String>,
-    pub isolate: Option<String>,
-
-    pub field_notes: Option<String>,
-    pub remarks: Option<String>,
-}
-
-impl From<models::CollectionEvent> for CollectionEvent {
-    fn from(value: models::CollectionEvent) -> Self {
-        Self {
-            id: value.id,
-            entity_id: value.entity_id,
-            event_date: value.event_date,
-            event_time: value.event_time,
-            collected_by: value.collected_by,
-            field_number: value.field_number,
-            catalog_number: value.catalog_number,
-            record_number: value.record_number,
+            preparation: value.preparation,
+            environment_broad_scale: value.environment_broad_scale,
+            environment_local_scale: value.environment_local_scale,
+            environment_medium: value.environment_medium,
+            habitat: value.habitat,
+            specific_host: value.specific_host,
             individual_count: value.individual_count,
             organism_quantity: value.organism_quantity,
             organism_quantity_type: value.organism_quantity_type,
-            sex: value.sex,
-            genotypic_sex: value.genotypic_sex,
-            phenotypic_sex: value.phenotypic_sex,
-            life_stage: value.life_stage,
-            reproductive_condition: value.reproductive_condition,
-            behavior: value.behavior,
-            establishment_means: value.establishment_means,
-            degree_of_establishment: value.degree_of_establishment,
-            pathway: value.pathway,
-            occurrence_status: value.occurrence_status,
-            preparation: value.preparation,
-            other_catalog_numbers: value.other_catalog_numbers,
-            env_broad_scale: value.env_broad_scale,
-            env_local_scale: value.env_local_scale,
-            env_medium: value.env_medium,
-            habitat: value.habitat,
-            ref_biomaterial: value.ref_biomaterial,
-            source_mat_id: value.source_mat_id,
-            specific_host: value.specific_host,
             strain: value.strain,
             isolate: value.isolate,
             field_notes: value.field_notes,
-            remarks: value.remarks,
         }
     }
 }
 
 #[derive(Clone, Debug, SimpleObject)]
 pub struct AccessionEvent {
-    pub id: Uuid,
-    pub event_date: Option<String>,
-    pub event_time: Option<String>,
-    pub accession: String,
-    pub accessioned_by: Option<String>,
-    pub material_sample_id: Option<String>,
+    pub entity_id: String,
+    pub specimen_id: String,
+    pub type_status: Option<String>,
+    pub event_date: Option<chrono::NaiveDate>,
+    pub event_time: Option<chrono::NaiveTime>,
+    pub collection_repository_id: Option<String>,
+    pub collection_repository_code: Option<String>,
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
-    pub type_status: Option<String>,
+    pub disposition: Option<String>,
+    pub preparation: Option<String>,
+    pub accessioned_by: Option<String>,
+    pub prepared_by: Option<String>,
+    pub identified_by: Option<String>,
+    pub identified_date: Option<chrono::NaiveDate>,
+    pub identification_remarks: Option<String>,
+    pub other_catalog_numbers: Option<String>,
 }
 
 impl From<models::AccessionEvent> for AccessionEvent {
     fn from(value: models::AccessionEvent) -> Self {
         Self {
-            id: value.id,
+            entity_id: value.entity_id,
+            specimen_id: value.specimen_id,
+            type_status: value.type_status,
             event_date: value.event_date,
             event_time: value.event_time,
-            accession: value.accession,
-            accessioned_by: value.accessioned_by,
-            material_sample_id: value.material_sample_id,
             institution_name: value.institution_name,
             institution_code: value.institution_code,
-            type_status: value.type_status,
+            collection_repository_id: value.collection_repository_id,
+            collection_repository_code: value.collection_repository_code,
+            disposition: value.disposition,
+            preparation: value.preparation,
+            accessioned_by: value.accessioned_by,
+            prepared_by: value.prepared_by,
+            identified_by: value.identified_by,
+            identified_date: value.identified_date,
+            identification_remarks: value.identification_remarks,
+            other_catalog_numbers: value.other_catalog_numbers,
         }
     }
 }

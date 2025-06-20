@@ -1,16 +1,12 @@
 use arga_core::models::{Name, Taxon};
 use diesel::prelude::*;
-use diesel::sql_types::Text;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use super::PgPool;
+use crate::database::extensions::lower;
 use crate::database::schema;
 use crate::http::Error;
-
-
-sql_function!(fn lower(x: Text) -> Text);
-
 
 #[derive(Clone)]
 pub struct NameProvider {

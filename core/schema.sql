@@ -263,6 +263,8 @@ CREATE TABLE dataset_versions (
     imported_at timestamp WITH time zone NOT NULL
 );
 
+CREATE UNIQUE INDEX dataset_version_dataset_id_created_at ON dataset_versions (dataset_id, created_at);
+
 
 -- The central names table. Most tables link to this
 CREATE TABLE names (
@@ -277,46 +279,32 @@ CREATE UNIQUE INDEX names_scientific_name ON names (scientific_name);
 CREATE INDEX names_canonical_name ON names (canonical_name);
 
 
--- Specimen data
-CREATE TABLE specimens (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
-    name_id uuid REFERENCES names NOT NULL,
 
-    record_id varchar NOT NULL,
-    material_sample_id varchar,
-    organism_id varchar,
-
-    institution_name varchar,
-    institution_code varchar,
-    collection_code varchar,
-    recorded_by varchar,
-    identified_by varchar,
-    identified_date varchar,
-
-    type_status varchar,
-    locality varchar,
-    country varchar,
-    country_code varchar,
-    state_province varchar,
-    county varchar,
-    municipality varchar,
-    latitude float,
-    longitude float,
-    elevation float,
-    depth float,
-    elevation_accuracy float,
-    depth_accuracy float,
-    location_source varchar,
-
-    details varchar,
-    remarks varchar,
-    identification_remarks varchar,
-    entity_id varchar
+-- Organism data. Referenced by specimens and collection events to determine the 'thing' that has
+-- been sampled/collected at a specific instant in time. The organisms table represents the latest version
+-- of the record. Should the associated record want an older version of the record then it will also contain
+-- an organism_at timestamp as necessary for the operation log facility.
+CREATE TABLE organisms (
+    entity_id varchar PRIMARY KEY NOT NULL,
+    name_id uuid REFERENCES names ON DELETE CASCADE NOT NULL,
+    organism_id varchar NOT NULL,
+    sex varchar,
+    genotypic_sex varchar,
+    phenotypic_sex varchar,
+    life_stage varchar,
+    reproductive_condition varchar,
+    behavior varchar
 );
 
-CREATE INDEX specimens_dataset_id ON specimens (dataset_id);
-CREATE INDEX specimens_name_id ON specimens (name_id);
+
+-- Specimens. A stub table to hang specimen events off. A specimen is anything collected so
+-- which in turn is anything registered. A specimen always comes from an organism so it's a mandatory
+-- reference. A name is also associated for convenience and performance when searching for specimens.
+CREATE TABLE specimens (
+    entity_id varchar PRIMARY KEY NOT NULL,
+    organism_id varchar REFERENCES organisms ON DELETE CASCADE NOT NULL,
+    name_id uuid REFERENCES names ON DELETE CASCADE NOT NULL
+);
 
 
 -- Subsample data
@@ -324,7 +312,7 @@ CREATE TABLE subsamples (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
     name_id uuid REFERENCES names NOT NULL,
-    specimen_id uuid REFERENCES specimens ON DELETE CASCADE NOT NULL,
+    specimen_id varchar REFERENCES specimens ON DELETE CASCADE NOT NULL,
 
     record_id varchar NOT NULL,
     material_sample_id varchar,
@@ -596,70 +584,86 @@ CREATE TABLE admin_media (
 
 -- Collection events
 CREATE TABLE collection_events (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
-    specimen_id uuid REFERENCES specimens ON DELETE CASCADE NOT NULL,
+    entity_id varchar PRIMARY KEY NOT NULL,
+    specimen_id varchar REFERENCES specimens ON DELETE CASCADE NOT NULL,
 
-    event_date varchar,
-    event_time varchar,
+    name_id uuid REFERENCES names ON DELETE CASCADE NOT NULL,
+    organism_id varchar REFERENCES organisms ON DELETE CASCADE NOT NULL,
+    field_collecting_id varchar,
+
+    event_date date,
+    event_time time without time zone,
     collected_by varchar,
+    collection_remarks varchar,
+    identified_by varchar,
+    identified_date date,
+    identification_remarks varchar,
 
-    field_number varchar,
-    catalog_number varchar,
-    record_number varchar,
+    locality varchar,
+    country varchar,
+    country_code varchar,
+    state_province varchar,
+    county varchar,
+    municipality varchar,
+    latitude float,
+    longitude float,
+    elevation float,
+    depth float,
+    elevation_accuracy float,
+    depth_accuracy float,
+    location_source varchar,
+
+    preparation varchar,
+    environment_broad_scale varchar,
+    environment_local_scale varchar,
+    environment_medium varchar,
+    habitat varchar,
+    specific_host varchar,
     individual_count varchar,
     organism_quantity varchar,
     organism_quantity_type varchar,
-    sex varchar,
-    genotypic_sex varchar,
-    phenotypic_sex varchar,
-    life_stage varchar,
-    reproductive_condition varchar,
-    behavior varchar,
-    establishment_means varchar,
-    degree_of_establishment varchar,
-    pathway varchar,
-    occurrence_status varchar,
-    preparation varchar,
-    other_catalog_numbers varchar,
 
-    env_broad_scale varchar,
-    env_local_scale varchar,
-    env_medium varchar,
-    habitat varchar,
-    ref_biomaterial varchar,
-    source_mat_id varchar,
-    specific_host varchar,
     strain varchar,
     isolate varchar,
-
-    field_notes varchar,
-    remarks varchar,
-    entity_id varchar
+    field_notes varchar
 );
 
 CREATE INDEX collection_events_specimen_id ON collection_events (specimen_id);
+CREATE INDEX collection_events_name_id ON collection_events (name_id);
+CREATE INDEX collection_events_organism_id ON collection_events (organism_id);
+CREATE INDEX collection_events_field_collecting_id ON collection_events (field_collecting_id);
 
 
 -- Accession events
 CREATE TABLE accession_events (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
-    specimen_id uuid REFERENCES specimens ON DELETE CASCADE NOT NULL,
+    entity_id varchar PRIMARY KEY NOT NULL,
+    specimen_id varchar REFERENCES specimens ON DELETE CASCADE NOT NULL,
 
-    event_date varchar,
-    event_time varchar,
-    accession varchar NOT NULL,
-    accessioned_by varchar,
+    name_id uuid REFERENCES names ON DELETE CASCADE NOT NULL,
 
-    material_sample_id varchar,
+    type_status varchar,
+    event_date date,
+    event_time time without time zone,
+
+    collection_repository_id varchar,
+    collection_repository_code varchar,
     institution_name varchar,
     institution_code varchar,
-    type_status varchar,
-    entity_id varchar
+
+    disposition varchar,
+    preparation varchar,
+
+    accessioned_by varchar,
+    prepared_by varchar,
+    identified_by varchar,
+    identified_date date,
+    identification_remarks varchar,
+
+    other_catalog_numbers varchar
 );
 
 CREATE INDEX accession_events_specimen_id ON accession_events (specimen_id);
+CREATE INDEX accession_events_name_id ON accession_events (name_id);
 
 
 -- Subsample events
@@ -852,6 +856,20 @@ CREATE INDEX nomenclatural_act_logs_entity_id ON nomenclatural_act_logs (entity_
 CREATE INDEX nomenclatural_act_logs_dataset_version_id ON nomenclatural_act_logs (dataset_version_id);
 
 
+CREATE TABLE organism_logs (
+    operation_id numeric PRIMARY KEY NOT NULL,
+    parent_id numeric NOT NULL,
+    entity_id varchar NOT NULL,
+    dataset_version_id uuid REFERENCES dataset_versions ON DELETE CASCADE NOT NULL,
+    action operation_action NOT NULL,
+    atom jsonb DEFAULT '{}' NOT NULL
+);
+
+CREATE INDEX organism_logs_parent_id ON organism_logs (parent_id);
+CREATE INDEX organism_logs_entity_id ON organism_logs (entity_id);
+CREATE INDEX organism_logs_dataset_version_id ON organism_logs (dataset_version_id);
+
+
 CREATE TABLE specimen_logs (
     operation_id numeric PRIMARY KEY NOT NULL,
     parent_id numeric NOT NULL,
@@ -878,6 +896,20 @@ CREATE TABLE collection_event_logs (
 CREATE INDEX collection_event_logs_parent_id ON collection_event_logs (parent_id);
 CREATE INDEX collection_event_logs_entity_id ON collection_event_logs (entity_id);
 CREATE INDEX collection_event_logs_dataset_version_id ON collection_event_logs (dataset_version_id);
+
+
+CREATE TABLE accession_event_logs (
+    operation_id numeric PRIMARY KEY NOT NULL,
+    parent_id numeric NOT NULL,
+    entity_id varchar NOT NULL,
+    dataset_version_id uuid REFERENCES dataset_versions ON DELETE CASCADE NOT NULL,
+    action operation_action NOT NULL,
+    atom jsonb DEFAULT '{}' NOT NULL
+);
+
+CREATE INDEX accession_event_logs_parent_id ON accession_event_logs (parent_id);
+CREATE INDEX accession_event_logs_entity_id ON accession_event_logs (entity_id);
+CREATE INDEX accession_event_logs_dataset_version_id ON accession_event_logs (dataset_version_id);
 
 
 CREATE TABLE taxa_logs (
@@ -1000,8 +1032,8 @@ SELECT
     sequences.dna_extract_id,
     datasets.name AS dataset_name,
     sequences.record_id,
-    specimens.latitude,
-    specimens.longitude,
+    collection_events.latitude,
+    collection_events.longitude,
     deposition_events.accession,
     sequencing_events.sequenced_by,
     sequencing_events.material_sample_id,
@@ -1027,7 +1059,8 @@ JOIN annotation_events ON sequences.id = annotation_events.sequence_id
 JOIN deposition_events ON sequences.id = deposition_events.sequence_id
 LEFT JOIN dna_extracts ON sequences.dna_extract_id = dna_extracts.id
 LEFT JOIN subsamples ON dna_extracts.subsample_id = subsamples.id
-LEFT JOIN specimens ON subsamples.specimen_id = specimens.id;
+LEFT JOIN specimens ON subsamples.specimen_id = specimens.entity_id
+LEFT JOIN collection_events ON specimens.entity_id = collection_events.specimen_id;
 
 
 -- All loci data
@@ -1039,8 +1072,8 @@ SELECT DISTINCT
     sequences.dna_extract_id,
     datasets.name AS dataset_name,
     sequences.record_id,
-    specimens.latitude,
-    specimens.longitude,
+    collection_events.latitude,
+    collection_events.longitude,
     deposition_events.accession,
     sequencing_events.sequenced_by,
     sequencing_events.material_sample_id,
@@ -1052,7 +1085,8 @@ JOIN sequencing_events ON sequences.id = sequencing_events.sequence_id
 LEFT JOIN deposition_events ON sequences.id = deposition_events.sequence_id
 LEFT JOIN dna_extracts ON sequences.dna_extract_id = dna_extracts.id
 LEFT JOIN subsamples ON dna_extracts.subsample_id = subsamples.id
-LEFT JOIN specimens ON subsamples.specimen_id = specimens.id
+LEFT JOIN specimens ON subsamples.specimen_id = specimens.entity_id
+LEFT JOIN collection_events ON specimens.entity_id = collection_events.specimen_id
 WHERE sequencing_events.target_gene IS NOT NULL;
 
 
@@ -1065,8 +1099,8 @@ SELECT DISTINCT
     sequences.dna_extract_id,
     datasets.name AS dataset_name,
     sequences.record_id,
-    specimens.latitude,
-    specimens.longitude,
+    collection_events.latitude,
+    collection_events.longitude,
     deposition_events.accession,
     sequencing_events.sequenced_by,
     sequencing_events.material_sample_id,
@@ -1087,7 +1121,8 @@ JOIN deposition_events ON sequences.id = deposition_events.sequence_id
 LEFT JOIN assembly_events on sequences.id = assembly_events.sequence_id
 LEFT JOIN dna_extracts ON sequences.dna_extract_id = dna_extracts.id
 LEFT JOIN subsamples ON dna_extracts.subsample_id = subsamples.id
-LEFT JOIN specimens ON subsamples.specimen_id = specimens.id
+LEFT JOIN specimens ON subsamples.specimen_id = specimens.entity_id
+LEFT JOIN collection_events ON specimens.entity_id = collection_events.specimen_id
 WHERE assembly_events.id IS NULL AND target_gene IS NULL;
 
 
@@ -1559,12 +1594,12 @@ CREATE UNIQUE INDEX taxon_classification_taxon_id ON taxon_classification (taxon
 -- Statistics for all specimens
 CREATE MATERIALIZED VIEW specimen_stats AS
 SELECT DISTINCT
-    specimens.id,
-    SUM(CASE WHEN sequences.record_id IS NOT NULL THEN 1 ELSE 0 END) over (partition BY specimens.record_id ORDER BY specimens.record_id DESC) AS sequences,
-    SUM(CASE WHEN annotation_events.representation IN ('Full', 'Partial') THEN 1 ELSE 0 END) over (partition BY specimens.record_id ORDER BY specimens.record_id DESC) AS whole_genomes,
-    SUM(CASE WHEN sequencing_events.target_gene IS NOT NULL THEN 1 ELSE 0 END) over (partition BY specimens.record_id ORDER BY specimens.record_id DESC) AS markers
+    specimens.entity_id,
+    SUM(CASE WHEN sequences.record_id IS NOT NULL THEN 1 ELSE 0 END) over (partition BY specimens.entity_id ORDER BY specimens.entity_id DESC) AS sequences,
+    SUM(CASE WHEN annotation_events.representation IN ('Full', 'Partial') THEN 1 ELSE 0 END) over (partition BY specimens.entity_id ORDER BY specimens.entity_id DESC) AS whole_genomes,
+    SUM(CASE WHEN sequencing_events.target_gene IS NOT NULL THEN 1 ELSE 0 END) over (partition BY specimens.entity_id ORDER BY specimens.entity_id DESC) AS markers
 FROM specimens
-LEFT JOIN subsamples ON subsamples.specimen_id = specimens.id
+LEFT JOIN subsamples ON subsamples.specimen_id = specimens.entity_id
 LEFT JOIN dna_extracts ON dna_extracts.subsample_id = subsamples.id
 LEFT JOIN sequences ON sequences.dna_extract_id = dna_extracts.id
 LEFT JOIN sequencing_events ON sequencing_events.sequence_id = sequences.id
@@ -1590,4 +1625,22 @@ UNION ALL
 SELECT 'dataset' AS category, datasets.name, count(*) AS total FROM name_attributes
 JOIN datasets ON name_attributes.dataset_id = datasets.id
 WHERE name_attributes.name = 'last_updated'
-GROUP BY datasets.name
+GROUP BY datasets.name;
+
+
+
+--------------------------------------
+-- Operation log materialised views
+--------------------------------------
+
+CREATE MATERIALIZED VIEW collection_event_entities AS
+SELECT entity_id FROM collection_event_logs GROUP BY entity_id ORDER BY entity_id;
+CREATE UNIQUE INDEX collection_event_entities_entity_id ON collection_event_entities (entity_id);
+
+CREATE MATERIALIZED VIEW organism_entities AS
+SELECT entity_id FROM organism_logs GROUP BY entity_id ORDER BY entity_id;
+CREATE UNIQUE INDEX organism_entities_entity_id ON organism_entities (entity_id);
+
+CREATE MATERIALIZED VIEW accession_event_entities AS
+SELECT entity_id FROM accession_event_logs GROUP BY entity_id ORDER BY entity_id;
+CREATE UNIQUE INDEX accession_event_entities_entity_id ON accession_event_entities (entity_id);

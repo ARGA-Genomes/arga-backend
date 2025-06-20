@@ -1,4 +1,5 @@
-use arga_core::models::{Dataset, DatasetVersion, NomenclaturalActOperation, SpecimenOperation, TaxonOperation};
+use arga_core::models::logs::SpecimenOperation;
+use arga_core::models::{Dataset, DatasetVersion, NomenclaturalActOperation, TaxonOperation};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 

@@ -1,7 +1,7 @@
 use async_graphql::*;
 use uuid::Uuid;
 
-use crate::database::{models, Database};
+use crate::database::{Database, models};
 use crate::http::{Context as State, Error};
 
 
@@ -56,7 +56,7 @@ impl SubsampleQuery {
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SubsampleDetails {
     pub id: Uuid,
-    pub specimen_id: Uuid,
+    pub specimen_id: String,
 
     pub record_id: String,
     pub material_sample_id: Option<String>,

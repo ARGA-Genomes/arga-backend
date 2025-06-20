@@ -1,6 +1,7 @@
 use arga_core::models::Species;
-use diesel::Queryable;
+use diesel::dsl::sql;
 use diesel::prelude::*;
+use diesel::Queryable;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -19,12 +20,10 @@ use super::models::{
     VernacularName,
     WholeGenome,
 };
-use super::{Error, PageResult, PgPool, schema, schema_gnl};
-use crate::database::extensions::whole_genome_filters;
-
+use super::{schema, schema_gnl, Error, PageResult, PgPool};
+use crate::database::extensions::{date_part, lower_opt, sum_if, whole_genome_filters};
 
 const NCBI_REFSEQ_DATASET_ID: &str = "ARGA:TL:0002002";
-
 
 #[derive(Debug, Clone, Default, Queryable, Serialize, Deserialize)]
 pub struct Summary {
@@ -42,14 +41,11 @@ pub struct MarkerSummary {
     pub barcodes: i64,
 }
 
-
 #[derive(Debug, Queryable)]
 pub struct SpecimenSummary {
-    pub id: Uuid,
-    pub dataset_name: String,
-    pub record_id: String,
-    pub entity_id: Option<String>,
-    pub accession: Option<String>,
+    pub entity_id: String,
+    pub collection_repository_id: Option<String>,
+    pub collection_repository_code: Option<String>,
     pub institution_code: Option<String>,
     pub institution_name: Option<String>,
     pub type_status: Option<String>,
@@ -72,6 +68,19 @@ pub struct DataSummary {
     pub total_genomic: Option<i64>,
 }
 
+#[derive(Debug, Clone, Default, Queryable, Serialize, Deserialize)]
+pub struct SpecimensOverview {
+    pub total: i64,
+    pub major_collections: Vec<String>,
+    pub holotype: Option<String>,
+    pub other_types: i64,
+    pub formal_vouchers: i64,
+    pub tissues: i64,
+    pub genomic_dna: i64,
+    pub australian_material: i64,
+    pub non_australian_material: i64,
+    pub collection_years: Vec<(i64, i64)>,
+}
 
 #[derive(Clone)]
 pub struct SpeciesProvider {
@@ -154,35 +163,33 @@ impl SpeciesProvider {
     }
 
     pub async fn specimens(&self, names: &Vec<Name>, page: i64, page_size: i64) -> PageResult<SpecimenSummary> {
-        use schema::{accession_events, datasets, specimens};
+        use schema::{accession_events, collection_events, specimens};
         use schema_gnl::specimen_stats;
         let mut conn = self.pool.get().await?;
 
         let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
 
         let records = specimens::table
-            .inner_join(datasets::table)
             .inner_join(specimen_stats::table)
+            .left_join(collection_events::table)
             .left_join(accession_events::table)
             .select((
-                specimens::id,
-                datasets::name,
-                specimens::record_id,
                 specimens::entity_id,
-                accession_events::accession.nullable(),
-                specimens::institution_code,
-                specimens::institution_name,
-                specimens::type_status,
-                specimens::locality,
-                specimens::country,
-                specimens::latitude,
-                specimens::longitude,
+                accession_events::collection_repository_id.nullable(),
+                accession_events::collection_repository_code.nullable(),
+                accession_events::institution_code.nullable(),
+                accession_events::institution_name.nullable(),
+                accession_events::type_status.nullable(),
+                collection_events::locality.nullable(),
+                collection_events::country.nullable(),
+                collection_events::latitude.nullable(),
+                collection_events::longitude.nullable(),
                 specimen_stats::sequences,
                 specimen_stats::whole_genomes,
                 specimen_stats::markers,
             ))
             .filter(specimens::name_id.eq_any(name_ids))
-            .order((specimens::type_status.asc(), specimen_stats::sequences.desc()))
+            .order((accession_events::type_status.asc(), specimen_stats::sequences.desc()))
             .paginate(page)
             .per_page(page_size)
             .load::<(SpecimenSummary, i64)>(&mut conn)
@@ -365,6 +372,114 @@ impl SpeciesProvider {
             total_genomic,
         })
     }
+
+    pub async fn specimens_overview(&self, name_ids: &Vec<Uuid>) -> Result<SpecimensOverview, Error> {
+        use diesel::dsl::{count_distinct, count_star};
+        use schema::{accession_events, collection_events, specimens};
+
+        let mut conn = self.pool.get().await?;
+
+        let (institution, id) = accession_events::table
+            .inner_join(specimens::table)
+            .filter(specimens::name_id.eq_any(name_ids))
+            .filter(lower_opt(accession_events::type_status.nullable()).eq("holotype"))
+            .select((accession_events::institution_code, accession_events::collection_repository_id))
+            .get_result::<(Option<String>, Option<String>)>(&mut conn)
+            .await?;
+
+        let holotype = match (institution, id) {
+            (Some(institution), Some(id)) => Some(format!("{institution} {id}")),
+            (None, Some(id)) => Some(format!("{id}")),
+            _ => None,
+        };
+
+        // we can get the stats for a small amount of names without requiring a materialized view as it
+        // is fast enough. importantly note that we don't check for null for columns that don't match
+        // a value; this is because a null compared with a value is always false, so they aren't counted
+        // in the sum_if helper
+        let (total, other_types, formal_vouchers, australian_material, non_australian_material) = specimens::table
+            .left_join(accession_events::table)
+            .left_join(collection_events::table)
+            .filter(specimens::name_id.eq_any(name_ids))
+            .select((
+                count_distinct(specimens::entity_id),
+                sum_if(lower_opt(accession_events::type_status).nullable().ne("holotype")),
+                sum_if(accession_events::collection_repository_id.nullable().is_not_null()),
+                sum_if(lower_opt(collection_events::country).nullable().eq("australia")),
+                sum_if(lower_opt(collection_events::country).nullable().ne("australia")),
+            ))
+            .get_result::<(i64, i64, i64, i64, i64)>(&mut conn)
+            .await?;
+
+        let major_collections = specimens::table
+            .inner_join(accession_events::table)
+            .filter(specimens::name_id.eq_any(name_ids))
+            .filter(accession_events::institution_code.is_not_null())
+            .group_by(accession_events::institution_code)
+            .select(accession_events::institution_code.assume_not_null())
+            .order(count_star().desc())
+            .limit(4)
+            .load::<String>(&mut conn)
+            .await?;
+
+        // NOTE: This is not ideal but diesel doesn't have support for aliased expressions yet
+        // so we can't group by an extracted date and then select it
+        let event_date_year =
+            sql::<diesel::sql_types::BigInt>(r#"extract(YEAR FROM event_date)::bigint AS event_date_year"#);
+
+        let collection_years = specimens::table
+            .inner_join(collection_events::table)
+            .filter(specimens::name_id.eq_any(name_ids))
+            .filter(collection_events::event_date.is_not_null())
+            .group_by(sql::<diesel::sql_types::BigInt>("event_date_year"))
+            .select((event_date_year, count_star()))
+            .load::<(i64, i64)>(&mut conn)
+            .await?;
+
+        Ok(SpecimensOverview {
+            total,
+            major_collections,
+            holotype,
+            other_types,
+            formal_vouchers,
+            tissues: 0,
+            genomic_dna: 0,
+            australian_material,
+            non_australian_material,
+            collection_years,
+        })
+    }
+
+    pub async fn specimens_map_markers(&self, name_ids: &Vec<Uuid>) -> Result<Vec<SpecimenMapMarker>, Error> {
+        use schema::{accession_events, collection_events, specimens};
+
+        let mut conn = self.pool.get().await?;
+
+        let records = specimens::table
+            .inner_join(collection_events::table)
+            .inner_join(accession_events::table)
+            .filter(specimens::name_id.eq_any(name_ids))
+            .filter(collection_events::latitude.is_not_null())
+            .filter(collection_events::longitude.is_not_null())
+            .select((
+                accession_events::collection_repository_id,
+                accession_events::type_status,
+                collection_events::latitude.assume_not_null(),
+                collection_events::longitude.assume_not_null(),
+            ))
+            .load::<SpecimenMapMarker>(&mut conn)
+            .await?;
+
+        Ok(records)
+    }
+}
+
+#[derive(Debug, Queryable)]
+pub struct SpecimenMapMarker {
+    pub collection_repository_id: Option<String>,
+    pub type_status: Option<String>,
+    pub latitude: f64,
+    pub longitude: f64,
 }
 
 
@@ -388,7 +503,6 @@ impl SpeciesProvider {
 //         }
 //     }
 // }
-
 
 // #[async_trait]
 // impl GetRegions for Database {
