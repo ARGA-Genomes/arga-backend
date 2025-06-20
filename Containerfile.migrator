@@ -7,4 +7,5 @@ WORKDIR /migrations
 ENV DATABASE_URL=postgres://localhost/arga
 CMD ["migrate", "apply", "--env", "arga"]
 
+COPY ./core/atlas.hcl /migrations
 COPY ./core/migrations /migrations
