@@ -9,19 +9,18 @@ use uuid::Uuid;
 
 use super::common::attributes::AttributeValueType;
 use super::common::{
+    convert_whole_genome_filters,
     DatasetDetails,
     Page,
     SpeciesPhoto,
     Taxonomy,
     WholeGenomeFilterItem,
-    convert_whole_genome_filters,
 };
 use super::markers::SpeciesMarker;
 use crate::database::models::{Name as ArgaName, Name};
 use crate::database::sources::ALA_DATASET_ID;
-use crate::database::{Database, schema, species};
+use crate::database::{schema, species, Database};
 use crate::http::{Context as State, Error};
-
 
 pub struct Species {
     pub canonical_name: String,
@@ -209,6 +208,118 @@ impl Species {
         let summary = state.database.species.data_summary(&name_ids).await?;
         Ok(summary.into())
     }
+
+    async fn overview(&self) -> Result<SpeciesOverview, Error> {
+        Ok(SpeciesOverview {
+            names: self.names.clone(),
+        })
+    }
+
+    async fn mapping(&self) -> Result<SpeciesMapping, Error> {
+        Ok(SpeciesMapping {
+            names: self.names.clone(),
+        })
+    }
+}
+
+
+struct SpeciesOverview {
+    names: Vec<Name>,
+}
+
+#[Object]
+impl SpeciesOverview {
+    async fn specimens(&self, ctx: &Context<'_>) -> Result<SpecimensOverview, Error> {
+        let state = ctx.data::<State>()?;
+        let name_ids: Vec<Uuid> = self.names.iter().map(|name| name.id.clone()).collect();
+        let overview = state.database.species.specimens_overview(&name_ids).await?;
+        Ok(overview.into())
+    }
+}
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct SpecimensOverview {
+    /// The total amount of specimens associated with the species
+    pub total: i64,
+    /// A list of the collections that have the most specimens for the species
+    pub major_collections: Vec<String>,
+    /// The accession of the holotype, if any
+    pub holotype: Option<String>,
+    /// The total amount of type specimens that are not the holotype
+    pub other_types: i64,
+    /// The total amount of specimen registrations
+    pub formal_vouchers: i64,
+    /// The total amount of tissue subsamples
+    pub tissues: i64,
+    /// The total amount of genomic DNA resulting from a specimen
+    pub genomic_dna: i64,
+    /// The total amount of material located in an Australian institution
+    pub australian_material: i64,
+    /// The total amount of material located elsewhere
+    pub non_australian_material: i64,
+    /// An array of total specimens collected for each year
+    pub collection_years: Vec<YearValue<i64>>,
+}
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct YearValue<T: Sync + Send + Serialize + Clone + std::fmt::Debug + async_graphql::OutputType> {
+    pub year: i64,
+    pub value: T,
+}
+
+impl From<species::SpecimensOverview> for SpecimensOverview {
+    fn from(value: species::SpecimensOverview) -> Self {
+        SpecimensOverview {
+            total: value.total,
+            major_collections: value.major_collections,
+            holotype: value.holotype,
+            other_types: value.other_types,
+            formal_vouchers: value.formal_vouchers,
+            tissues: value.tissues,
+            genomic_dna: value.genomic_dna,
+            australian_material: value.australian_material,
+            non_australian_material: value.non_australian_material,
+            collection_years: value
+                .collection_years
+                .into_iter()
+                .map(|(year, value)| YearValue { year, value })
+                .collect(),
+        }
+    }
+}
+
+
+struct SpeciesMapping {
+    names: Vec<Name>,
+}
+
+#[Object]
+impl SpeciesMapping {
+    async fn specimens(&self, ctx: &Context<'_>) -> Result<Vec<SpecimenMapMarker>, Error> {
+        let state = ctx.data::<State>()?;
+        let name_ids: Vec<Uuid> = self.names.iter().map(|name| name.id.clone()).collect();
+        let map_markers = state.database.species.specimens_map_markers(&name_ids).await?;
+        Ok(map_markers.into_iter().map(|m| m.into()).collect())
+    }
+}
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct SpecimenMapMarker {
+    collection_repository_id: Option<String>,
+    type_status: Option<String>,
+    latitude: f64,
+    longitude: f64,
+}
+
+impl From<species::SpecimenMapMarker> for SpecimenMapMarker {
+    fn from(value: species::SpecimenMapMarker) -> Self {
+        SpecimenMapMarker {
+            collection_repository_id: value.collection_repository_id,
+            type_status: value.type_status,
+            latitude: value.latitude,
+            longitude: value.longitude,
+        }
+    }
 }
 
 
@@ -238,7 +349,6 @@ impl From<species::DataSummary> for SpeciesGenomicDataSummary {
     }
 }
 
-
 pub struct Regions {
     names: Vec<Name>,
 }
@@ -260,7 +370,6 @@ impl Regions {
     }
 }
 
-
 #[derive(MergedObject)]
 pub struct RegionDistribution(RegionDetails, RegionQuery);
 
@@ -280,7 +389,6 @@ impl RegionDistribution {
 pub struct RegionDetails {
     pub names: Vec<String>,
 }
-
 
 pub struct RegionQuery {
     regions: models::Regions,
@@ -302,7 +410,6 @@ impl From<models::Regions> for RegionDetails {
         }
     }
 }
-
 
 #[derive(Clone, Debug, SimpleObject)]
 pub struct WholeGenome {
@@ -365,7 +472,6 @@ impl From<models::WholeGenome> for WholeGenome {
     }
 }
 
-
 #[derive(Clone, Debug, SimpleObject)]
 pub struct GenomicComponent {
     pub sequence_id: Uuid,
@@ -418,7 +524,6 @@ impl From<models::GenomicComponent> for GenomicComponent {
     }
 }
 
-
 /// A specimen from a specific species.
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SpecimenSummary {
@@ -457,7 +562,6 @@ impl From<species::SpecimenSummary> for SpecimenSummary {
         }
     }
 }
-
 
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[graphql(remote = "models::AttributeCategory")]
@@ -498,7 +602,6 @@ impl From<models::NameAttribute> for NameAttribute {
     }
 }
 
-
 /// Common vernacular names for a specific species
 #[derive(Clone, Debug, SimpleObject)]
 pub struct VernacularName {
@@ -518,7 +621,6 @@ impl From<models::VernacularName> for VernacularName {
         }
     }
 }
-
 
 #[derive(Clone, Debug, SimpleObject)]
 pub struct Synonym {

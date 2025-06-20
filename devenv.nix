@@ -29,6 +29,7 @@
     ];
     toolchain = {
       rustfmt = inputs.fenix.packages.${pkgs.system}.latest.rustfmt;
+      rust-analyzer = inputs.fenix.packages.${pkgs.system}.latest.rust-analyzer;
     };
   };
 
@@ -47,7 +48,13 @@
   env.LOG_DATABASE = 1;
   env.ATLAS_NO_ANON_TELEMETRY = true;
 
-  pre-commit.hooks = {
-    clippy.enable = false;
-  };
+  #  git-hooks.hooks = {
+  #    clippy.enable = false;
+  #  };
+
+  enterShell = ''
+    echo "Rust version: $(rustc --version)"
+    echo "Cargo version: $(cargo --version)"
+    echo "RUST_SRC_PATH: $RUST_SRC_PATH"
+  '';
 }

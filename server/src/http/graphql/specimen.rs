@@ -1,7 +1,7 @@
 use async_graphql::*;
 use tracing::instrument;
 
-use crate::database::{Database, models};
+use crate::database::{models, Database};
 use crate::http::{Context as State, Error};
 
 
@@ -47,6 +47,20 @@ impl SpecimenQuery {
         let state = ctx.data::<State>()?;
         let organism = state.database.specimens.organism(&self.specimen.entity_id).await?;
         Ok(organism.into())
+    }
+
+    async fn collections(&self, ctx: &Context<'_>) -> Result<Vec<CollectionEvent>, Error> {
+        let state = ctx.data::<State>()?;
+        let specimen_id = &self.specimen.entity_id;
+        let collections = state.database.specimens.collection_events(specimen_id).await?;
+        Ok(collections.into_iter().map(|r| r.into()).collect())
+    }
+
+    async fn accessions(&self, ctx: &Context<'_>) -> Result<Vec<AccessionEvent>, Error> {
+        let state = ctx.data::<State>()?;
+        let specimen_id = &self.specimen.entity_id;
+        let accessions = state.database.specimens.accession_events(specimen_id).await?;
+        Ok(accessions.into_iter().map(|r| r.into()).collect())
     }
 
     #[instrument(skip(self, ctx))]

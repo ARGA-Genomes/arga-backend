@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: localhost:5000/api
+  url: http://localhost:5000/api
   body: graphql
   auth: none
 }
@@ -16,25 +16,53 @@ headers {
 
 body:graphql {
   {
-  	species(canonicalName: "Felis catus") {
-  		specimens(page: 1, pageSize: 5) {
-  			total
-  			records {
-  				id
-  				recordId
-  				accession
-  				datasetName
-  				typeStatus
-  				locality
-  				country
-  				latitude,
-  				longitude,
-  				sequences
-  				wholeGenomes
-  				markers
-  			}
-  		}
-  	}
+    species(canonicalName: "Dendrolagus lumholtzi") {
+      mapping {
+        specimens {
+          collectionRepositoryId
+          typeStatus
+          latitude
+          longitude
+        }
+      }
+      
+      overview {
+        specimens {
+          total
+          majorCollections
+          holotype
+          otherTypes
+          formalVouchers
+          tissues
+          genomicDna
+          australianMaterial
+          nonAustralianMaterial
+          collectionYears {
+            year
+            value
+          }
+        }
+      }
+      
+      specimens(page: 1, pageSize: 20) {
+        total
+        records {
+          entityId
+          collectionRepositoryId
+          collectionRepositoryCode
+          institutionCode
+          institutionName
+          typeStatus
+          locality
+          country
+          latitude
+          longitude
+          sequences
+          wholeGenomes
+          markers
+        }
+      }
+    }
   }
   
 }
