@@ -37,21 +37,32 @@ body:graphql {
       sourceUrl
       entityId
   
-      # typeSpecimens {
-      #   typeStatus
-      #   recordId
-      #   materialSampleId
-      #   collectionCode
-      #   institutionCode
-      #   institutionName
-      #   recordedBy
-      #   identifiedBy
-      #   locality
-      #   country
-      #   stateProvince
-      #   latitude
-      #   longitude
-      # }
+      typeSpecimens {
+        name {
+          scientificName
+          canonicalName
+          authorship
+        }
+        accession {
+          entityId
+          specimenId
+          typeStatus
+          eventDate
+          eventTime
+          collectionRepositoryId
+          collectionRepositoryCode
+          institutionName
+          institutionCode
+          disposition
+          preparation
+          accessionedBy
+          preparedBy
+          identifiedBy
+          identifiedDate
+          identificationRemarks
+          otherCatalogNumbers
+        }
+      }
   
       taxonomicActs {
         entityId
@@ -107,29 +118,29 @@ body:graphql {
         }
       }
   
-      history {
-        scientificName
-        canonicalName
-        authorship
-        rank
-        status
-        citation
-        sourceUrl
-        publication {
-          publishedYear
-          citation
-          sourceUrl
-          typeCitation
-        }
-        dataset {
-          name
-          shortName
-          url
-          license
-          rightsHolder
-          citation
-        }
-      }
+      # history {
+      #   scientificName
+      #   canonicalName
+      #   authorship
+      #   rank
+      #   status
+      #   citation
+      #   sourceUrl
+      #   publication {
+      #     publishedYear
+      #     citation
+      #     sourceUrl
+      #     typeCitation
+      #   }
+      #   dataset {
+      #     name
+      #     shortName
+      #     url
+      #     license
+      #     rightsHolder
+      #     citation
+      #   }
+      # }
   
       summary(rank:SPECIES) {
         total

@@ -1,16 +1,17 @@
 use arga_core::models::{
-    ACCEPTED_NAMES,
     AccessionEvent,
+    CollectionEvent,
     Dataset,
     Name,
     NomenclaturalActType,
     Publication,
-    SPECIES_RANKS,
     Specimen,
     Taxon,
     TaxonTreeNode,
     TaxonWithDataset,
     TaxonomicRank,
+    ACCEPTED_NAMES,
+    SPECIES_RANKS,
 };
 use bigdecimal::{BigDecimal, Zero};
 use chrono::{DateTime, Utc};
@@ -21,14 +22,14 @@ use uuid::Uuid;
 
 use super::extensions::species_filters::{SortDirection, SpeciesSort};
 use super::extensions::taxa_filters::TaxaFilter;
-use super::extensions::{Paginate, sum_if};
+use super::extensions::{sum_if, Paginate};
 use super::models::Species;
-use super::{Error, PageResult, PgPool, schema, schema_gnl};
+use super::{schema, schema_gnl, Error, PageResult, PgPool};
 use crate::database::extensions::classification_filters::{
-    Classification as ClassificationFilter,
     with_classification,
+    Classification as ClassificationFilter,
 };
-use crate::database::extensions::filters::{Filter, with_filters};
+use crate::database::extensions::filters::{with_filters, Filter};
 use crate::database::extensions::species_filters::{
     with_accepted_classification,
     with_classification as with_species_classification,
@@ -132,6 +133,8 @@ pub struct TaxonomicAct {
 pub struct TypeSpecimen {
     #[diesel(embed)]
     pub accession: AccessionEvent,
+    #[diesel(embed)]
+    pub collection: CollectionEvent,
     #[diesel(embed)]
     pub name: Name,
 }
@@ -578,17 +581,21 @@ impl TaxaProvider {
     }
 
     pub async fn type_specimens(&self, taxon_id: &Uuid) -> Result<Vec<TypeSpecimen>, Error> {
-        use schema::{accession_events, names};
+        use schema::{accession_events, collection_events, names, specimens};
         let mut conn = self.pool.get().await?;
 
         let name_ids = self.all_associated_names(taxon_id).await?;
 
-        let specimens = accession_events::table
+        // get the specimen and associated events for any record that has a
+        // registration and an appropriate type status. we want the name associated
+        // with the accession as that is the 'official' name in a way
+        let specimens = specimens::table
+            .inner_join(accession_events::table)
+            .inner_join(collection_events::table)
             .inner_join(names::table.on(names::id.eq(accession_events::name_id)))
-            .select((AccessionEvent::as_select(), Name::as_select()))
+            .select((AccessionEvent::as_select(), CollectionEvent::as_select(), Name::as_select()))
             .filter(accession_events::name_id.eq_any(name_ids))
             .filter(accession_events::type_status.is_not_null())
-            .limit(10)
             .load::<TypeSpecimen>(&mut conn)
             .await?;
 
