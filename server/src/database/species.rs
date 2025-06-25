@@ -189,7 +189,13 @@ impl SpeciesProvider {
                 specimen_stats::markers,
             ))
             .filter(specimens::name_id.eq_any(name_ids))
-            .order((accession_events::type_status.asc(), specimen_stats::sequences.desc()))
+            .order((
+                accession_events::type_status.asc(),
+                specimen_stats::sequences.desc(),
+                accession_events::institution_code.asc(),
+                accession_events::collection_repository_id.asc(),
+                specimens::entity_id.asc(),
+            ))
             .paginate(page)
             .per_page(page_size)
             .load::<(SpecimenSummary, i64)>(&mut conn)
