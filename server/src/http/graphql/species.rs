@@ -1,6 +1,6 @@
 use arga_core::models;
 use async_graphql::*;
-use chrono::NaiveDateTime;
+use chrono::{NaiveDate, NaiveDateTime};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
@@ -533,14 +533,20 @@ pub struct SpecimenSummary {
     pub institution_code: Option<String>,
     pub institution_name: Option<String>,
     pub type_status: Option<String>,
-    pub locality: Option<String>,
     pub country: Option<String>,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub collected_at: Option<NaiveDate>,
 
     pub sequences: i64,
-    pub whole_genomes: i64,
-    pub markers: i64,
+    pub loci: i64,
+    pub other_genomic: i64,
+    pub full_genomes: i64,
+    pub partial_genomes: i64,
+    pub complete_genomes: i64,
+    pub assembly_chromosomes: i64,
+    pub assembly_scaffolds: i64,
+    pub assembly_contigs: i64,
 }
 
 impl From<species::SpecimenSummary> for SpecimenSummary {
@@ -552,13 +558,19 @@ impl From<species::SpecimenSummary> for SpecimenSummary {
             institution_code: value.institution_code,
             institution_name: value.institution_name,
             type_status: value.type_status,
-            locality: value.locality,
             country: value.country,
             latitude: value.latitude,
             longitude: value.longitude,
+            collected_at: value.collected_at,
             sequences: value.sequences,
-            whole_genomes: value.whole_genomes,
-            markers: value.markers,
+            loci: value.loci,
+            other_genomic: value.other_genomic,
+            full_genomes: value.full_genomes,
+            partial_genomes: value.partial_genomes,
+            complete_genomes: value.complete_genomes,
+            assembly_chromosomes: value.assembly_chromosomes,
+            assembly_scaffolds: value.assembly_scaffolds,
+            assembly_contigs: value.assembly_contigs,
         }
     }
 }

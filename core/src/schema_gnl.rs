@@ -77,7 +77,14 @@ diesel::table! {
         entity_id -> Varchar,
         sequences -> BigInt,
         whole_genomes -> BigInt,
-        markers -> BigInt,
+        loci -> BigInt,
+        other_genomic -> BigInt,
+        full_genomes -> BigInt,
+        partial_genomes -> BigInt,
+        complete_genomes -> BigInt,
+        assembly_chromosomes -> BigInt,
+        assembly_scaffolds -> BigInt,
+        assembly_contigs -> BigInt,
     }
 }
 

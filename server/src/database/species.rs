@@ -21,7 +21,7 @@ use super::models::{
     WholeGenome,
 };
 use super::{schema, schema_gnl, Error, PageResult, PgPool};
-use crate::database::extensions::{date_part, lower_opt, sum_if, whole_genome_filters};
+use crate::database::extensions::{lower_opt, sum_if, whole_genome_filters};
 
 const NCBI_REFSEQ_DATASET_ID: &str = "ARGA:TL:0002002";
 
@@ -49,14 +49,20 @@ pub struct SpecimenSummary {
     pub institution_code: Option<String>,
     pub institution_name: Option<String>,
     pub type_status: Option<String>,
-    pub locality: Option<String>,
     pub country: Option<String>,
     pub latitude: Option<f64>,
     pub longitude: Option<f64>,
+    pub collected_at: Option<chrono::NaiveDate>,
 
     pub sequences: i64,
-    pub whole_genomes: i64,
-    pub markers: i64,
+    pub loci: i64,
+    pub other_genomic: i64,
+    pub full_genomes: i64,
+    pub partial_genomes: i64,
+    pub complete_genomes: i64,
+    pub assembly_chromosomes: i64,
+    pub assembly_scaffolds: i64,
+    pub assembly_contigs: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -180,13 +186,19 @@ impl SpeciesProvider {
                 accession_events::institution_code.nullable(),
                 accession_events::institution_name.nullable(),
                 accession_events::type_status.nullable(),
-                collection_events::locality.nullable(),
                 collection_events::country.nullable(),
                 collection_events::latitude.nullable(),
                 collection_events::longitude.nullable(),
+                collection_events::event_date.nullable(),
                 specimen_stats::sequences,
-                specimen_stats::whole_genomes,
-                specimen_stats::markers,
+                specimen_stats::loci,
+                specimen_stats::other_genomic,
+                specimen_stats::full_genomes,
+                specimen_stats::partial_genomes,
+                specimen_stats::complete_genomes,
+                specimen_stats::assembly_chromosomes,
+                specimen_stats::assembly_scaffolds,
+                specimen_stats::assembly_contigs,
             ))
             .filter(specimens::name_id.eq_any(name_ids))
             .order((
