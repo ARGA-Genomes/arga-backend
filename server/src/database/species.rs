@@ -79,6 +79,7 @@ pub struct SpecimensOverview {
     pub total: i64,
     pub major_collections: Vec<String>,
     pub holotype: Option<String>,
+    pub holotype_entity_id: Option<String>,
     pub other_types: i64,
     pub formal_vouchers: i64,
     pub tissues: i64,
@@ -86,6 +87,16 @@ pub struct SpecimensOverview {
     pub australian_material: i64,
     pub non_australian_material: i64,
     pub collection_years: Vec<(i64, i64)>,
+}
+
+#[derive(Debug, Queryable)]
+pub struct SpecimenMapMarker {
+    pub entity_id: String,
+    pub collection_repository_id: Option<String>,
+    pub institution_code: Option<String>,
+    pub type_status: Option<String>,
+    pub latitude: f64,
+    pub longitude: f64,
 }
 
 #[derive(Clone)]
@@ -397,12 +408,16 @@ impl SpeciesProvider {
 
         let mut conn = self.pool.get().await?;
 
-        let (institution, id) = accession_events::table
+        let (holotype_entity_id, institution, id) = accession_events::table
             .inner_join(specimens::table)
             .filter(specimens::name_id.eq_any(name_ids))
             .filter(lower_opt(accession_events::type_status.nullable()).eq("holotype"))
-            .select((accession_events::institution_code, accession_events::collection_repository_id))
-            .get_result::<(Option<String>, Option<String>)>(&mut conn)
+            .select((
+                specimens::entity_id,
+                accession_events::institution_code,
+                accession_events::collection_repository_id,
+            ))
+            .get_result::<(String, Option<String>, Option<String>)>(&mut conn)
             .await?;
 
         let holotype = match (institution, id) {
@@ -458,6 +473,7 @@ impl SpeciesProvider {
             total,
             major_collections,
             holotype,
+            holotype_entity_id: Some(holotype_entity_id),
             other_types,
             formal_vouchers,
             tissues: 0,
@@ -480,7 +496,9 @@ impl SpeciesProvider {
             .filter(collection_events::latitude.is_not_null())
             .filter(collection_events::longitude.is_not_null())
             .select((
+                specimens::entity_id,
                 accession_events::collection_repository_id,
+                accession_events::institution_code,
                 accession_events::type_status,
                 collection_events::latitude.assume_not_null(),
                 collection_events::longitude.assume_not_null(),
@@ -490,14 +508,6 @@ impl SpeciesProvider {
 
         Ok(records)
     }
-}
-
-#[derive(Debug, Queryable)]
-pub struct SpecimenMapMarker {
-    pub collection_repository_id: Option<String>,
-    pub type_status: Option<String>,
-    pub latitude: f64,
-    pub longitude: f64,
 }
 
 

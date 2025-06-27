@@ -245,6 +245,8 @@ pub struct SpecimensOverview {
     pub major_collections: Vec<String>,
     /// The accession of the holotype, if any
     pub holotype: Option<String>,
+    /// The entity_id of the holotype, if any
+    pub holotype_entity_id: Option<String>,
     /// The total amount of type specimens that are not the holotype
     pub other_types: i64,
     /// The total amount of specimen registrations
@@ -273,6 +275,7 @@ impl From<species::SpecimensOverview> for SpecimensOverview {
             total: value.total,
             major_collections: value.major_collections,
             holotype: value.holotype,
+            holotype_entity_id: value.holotype_entity_id,
             other_types: value.other_types,
             formal_vouchers: value.formal_vouchers,
             tissues: value.tissues,
@@ -305,7 +308,9 @@ impl SpeciesMapping {
 
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SpecimenMapMarker {
+    entity_id: String,
     collection_repository_id: Option<String>,
+    institution_code: Option<String>,
     type_status: Option<String>,
     latitude: f64,
     longitude: f64,
@@ -314,7 +319,9 @@ pub struct SpecimenMapMarker {
 impl From<species::SpecimenMapMarker> for SpecimenMapMarker {
     fn from(value: species::SpecimenMapMarker) -> Self {
         SpecimenMapMarker {
+            entity_id: value.entity_id,
             collection_repository_id: value.collection_repository_id,
+            institution_code: value.institution_code,
             type_status: value.type_status,
             latitude: value.latitude,
             longitude: value.longitude,

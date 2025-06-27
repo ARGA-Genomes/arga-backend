@@ -19,7 +19,9 @@ body:graphql {
     species(canonicalName: "Dendrolagus lumholtzi") {
       mapping {
         specimens {
+          entityId
           collectionRepositoryId
+          institutionCode
           typeStatus
           latitude
           longitude
@@ -31,6 +33,7 @@ body:graphql {
           total
           majorCollections
           holotype
+          holotypeEntityId
           otherTypes
           formalVouchers
           tissues
@@ -53,13 +56,11 @@ body:graphql {
           institutionCode
           institutionName
           typeStatus
-          locality
           country
           latitude
           longitude
           sequences
-          wholeGenomes
-          markers
+          loci
         }
       }
     }
