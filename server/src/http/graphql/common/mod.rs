@@ -4,21 +4,23 @@ pub mod filters;
 pub mod operation_logs;
 pub mod search;
 pub mod species;
+pub mod specimens;
 pub mod taxonomy;
 pub mod whole_genomes;
 
 use async_graphql::{OutputType, SimpleObject};
 pub use datasets::{DatasetDetails, DatasetVersion};
 pub use filters::{
+    convert_filters,
+    convert_whole_genome_filters,
     FilterAction,
     FilterItem,
     FilterType,
     WholeGenomeFilterItem,
     WholeGenomeFilterType,
-    convert_filters,
-    convert_whole_genome_filters,
 };
 pub use species::{SpeciesCard, SpeciesDataSummary, SpeciesPhoto};
+pub use specimens::{AccessionEvent, CollectionEvent, OrganismDetails};
 pub use taxonomy::{NameDetails, Taxonomy};
 
 use super::markers::SpeciesMarker;

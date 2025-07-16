@@ -1,0 +1,51 @@
+meta {
+  name: Details
+  type: graphql
+  seq: 1
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    organism(by: { entityId: "3954723964711069130" }) {
+      entityId
+      organismId
+      sex
+      genotypicSex
+      phenotypicSex
+      lifeStage
+      reproductiveCondition
+      behavior
+  
+      collections {
+        entityId
+        fieldCollectingId
+        eventDate
+        collectedBy
+        country
+      }
+  
+      accessions {
+        entityId
+        typeStatus
+        eventDate
+        collectionRepositoryId
+        collectionRepositoryCode
+        institutionName
+        institutionCode
+        disposition
+        preparation
+      }
+    }
+  }
+  
+}

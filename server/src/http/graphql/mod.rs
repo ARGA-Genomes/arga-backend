@@ -8,6 +8,7 @@ pub mod maps;
 pub mod marker;
 pub mod markers;
 pub mod names;
+pub mod organism;
 pub mod overview;
 pub mod provenance;
 pub mod search;
@@ -35,6 +36,7 @@ use self::extensions::ErrorLogging;
 use self::maps::Maps;
 use self::marker::Marker;
 use self::markers::Markers;
+use self::organism::Organism;
 use self::overview::Overview;
 use self::provenance::Provenance;
 use self::search::Search;
@@ -97,6 +99,11 @@ impl Query {
     async fn dataset(&self, ctx: &Context<'_>, by: dataset::DatasetBy) -> Result<Dataset, Error> {
         let state = ctx.data::<State>()?;
         Dataset::new(&state.database, &by).await
+    }
+
+    async fn organism(&self, ctx: &Context<'_>, by: organism::OrganismBy) -> Result<Organism, Error> {
+        let state = ctx.data::<State>()?;
+        Organism::new(&state.database, &by).await
     }
 
     async fn specimen(&self, ctx: &Context<'_>, by: specimen::SpecimenBy) -> Result<Specimen, Error> {

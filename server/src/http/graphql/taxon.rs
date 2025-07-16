@@ -7,9 +7,8 @@ use uuid::Uuid;
 
 use super::common::species::{SortDirection, SpeciesSort};
 use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank};
-use super::common::{convert_filters, FilterItem, NameDetails, Page, SpeciesCard};
+use super::common::{convert_filters, AccessionEvent, CollectionEvent, FilterItem, NameDetails, Page, SpeciesCard};
 use super::helpers::{self, csv, SpeciesHelper};
-use super::specimen::{AccessionEvent, CollectionEvent};
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::extensions::filters::{Filter, FilterKind};
 use crate::database::extensions::species_filters::{self};
