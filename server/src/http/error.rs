@@ -1,5 +1,5 @@
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use hyper::StatusCode;
 use tracing::error;
 
 #[derive(thiserror::Error, Debug)]

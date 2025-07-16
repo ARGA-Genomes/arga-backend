@@ -551,11 +551,11 @@ CREATE TABLE jobs (
 -- User table for admin backend
 CREATE TABLE users (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    name varchar(255) NOT NULL,
-    email varchar(255) NOT NULL UNIQUE,
-    user_role varchar(255) NOT NULL,
-    password_hash varchar(255) NOT NULL,
-    password_salt varchar(255) NOT NULL
+    name varchar NOT NULL,
+    email varchar NOT NULL UNIQUE,
+    user_role varchar NOT NULL,
+    password_hash varchar NOT NULL,
+    session_id varchar
 );
 
 

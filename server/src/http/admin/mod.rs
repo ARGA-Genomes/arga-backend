@@ -1,97 +1,74 @@
+// mod attributes;
 mod common;
-// mod taxa;
-mod sources;
-mod datasets;
-mod attributes;
-mod csv_upload;
+// mod csv_upload;
+// mod datasets;
 mod media;
+// mod sources;
+mod taxa;
 
-use argon2::{PasswordHash, Argon2, PasswordVerifier};
-use axum::extract::State;
-use axum::{Router, Json};
 use axum::routing::{get, post};
-use axum_login::axum_sessions::SessionLayer;
-use axum_login::axum_sessions::async_session::MemoryStore;
-
-use axum_login::secrecy::ExposeSecret;
-use serde::Deserialize;
-use diesel::prelude::*;
-use diesel_async::RunQueryDsl;
+use axum::{Json, Router};
+use axum_login::AuthManagerLayerBuilder;
+use axum_login::tower_sessions::{Expiry, MemoryStore, SessionManagerLayer};
+use tower_sessions::cookie::Key;
 use tracing::instrument;
 
-use crate::http::{Context, error};
-use crate::database::{schema, models, Database};
-
-use super::auth::{AuthContext, AuthLayer, DatabaseUserStore, User, RequireAuth};
+use crate::database::models;
+use crate::http::auth::{AuthSession, Credentials, DatabaseUserStore};
+use crate::http::{Context, Error};
 
 
 /// The REST gateway for the admin backend for basic CRUD operations
 pub(crate) fn router(context: Context) -> Router<Context> {
-    let secret = [0; 64];
+    // for cookie signing
+    let key = Key::generate();
 
-    let session_store = MemoryStore::new();
-    let session_layer = SessionLayer::new(session_store, &secret[..]);
+    // auth session management. we use a memory store because it's an admin backend and
+    // requiring a login every production deploy is easier to manage
+    let session_store = MemoryStore::default();
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(false)
+        .with_expiry(Expiry::OnInactivity(time::Duration::days(7)))
+        .with_signed(key);
+    // .with_same_site(tower_sessions::cookie::SameSite::Lax);
 
-    let user_store = DatabaseUserStore::new(context.database.pool.clone());
-    let auth_layer = AuthLayer::new(user_store, &secret[..]);
+    let auth_backend = DatabaseUserStore::new(context.database.pool);
+    let auth_layer = AuthManagerLayerBuilder::new(auth_backend, session_layer).build();
 
-
+    // unlike tower services the layers in the axum router is applied outside in like an onion.
+    // so the layer and routes at the bottom will be applied before the ones at the top, which means
+    // that protected routes have to be added ABOVE the login_required! route layer
     Router::new()
-        .route("/api/admin/logout", get(logout_handler))
-        // .merge(taxa::router())
-        .merge(sources::router())
-        .merge(datasets::router())
-        .merge(attributes::router())
-        .merge(csv_upload::router())
         .merge(media::router())
-        .route_layer(RequireAuth::login())
-        .route("/api/admin/login", post(login_handler))
+        .merge(taxa::router())
+        .route_layer(axum_login::login_required!(DatabaseUserStore))
+        .route("/logout", get(logout_handler))
+        .route("/login", post(login_handler))
         .layer(auth_layer)
-        .layer(session_layer)
 }
 
-
-#[derive(Deserialize)]
-struct LoginForm {
-    email: String,
-    password: String,
-}
 
 #[instrument(skip_all)]
 async fn login_handler(
-    mut auth: AuthContext,
-    State(db_provider): State<Database>,
-    Json(form): Json<LoginForm>,
-) -> Result<Json<models::User>, super::error::Error>
-{
-    use schema::users::dsl::*;
-    tracing::debug!(form.email, "Attempting login");
+    mut auth_session: AuthSession,
+    Json(creds): Json<Credentials>,
+) -> Result<Json<models::User>, Error> {
+    tracing::debug!(creds.email, "Attempting login");
 
-    let mut conn = db_provider.pool.get().await.unwrap();
-    let record: User = users.filter(email.eq(form.email)).get_result(&mut conn).await.unwrap();
-    tracing::debug!(?record);
+    let user = match auth_session.authenticate(creds).await? {
+        Some(user) => user,
+        None => {
+            tracing::error!("Login failed. Invalid credentials");
+            Err(Error::Authentication)?
+        }
+    };
 
-    let argon2 = Argon2::default();
-    let parsed_hash = PasswordHash::new(&record.password_hash.expose_secret()).unwrap();
-
-    match argon2.verify_password(form.password.as_bytes(), &parsed_hash) {
-        Ok(_) => {
-            auth.login(&record).await.unwrap();
-
-            Ok(Json(models::User {
-                id: uuid::Uuid::parse_str(&record.id).unwrap(),
-                name: record.name,
-                email: record.email,
-            }))
-        },
-        Err(err) => {
-            tracing::error!(?err, "Login failed");
-            Err(error::Error::Authentication)
-        },
-    }
+    auth_session.login(&user).await?;
+    Ok(Json(user.into()))
 }
 
-async fn logout_handler(mut auth: AuthContext) {
-    tracing::debug!(user=?auth.current_user, "Logging out user");
-    auth.logout().await;
+async fn logout_handler(mut auth_session: AuthSession) -> Result<(), Error> {
+    tracing::debug!(user=?auth_session.user, "Logging out user");
+    auth_session.logout().await?;
+    Ok(())
 }
