@@ -30,7 +30,7 @@
 
         # build the container image
         oci = pkgs.dockerTools.buildLayeredImage {
-          name = "arga-backend";
+          name = "backend";
           tag = "latest";
 
           contents = [ backend ];
@@ -58,6 +58,57 @@
             };
           };
         };
+
+        # build the database migrator image
+        migrator =
+          let
+            schema = pkgs.lib.fileset.toSource {
+              root = ./core;
+              fileset = ./core/schema.sql;
+            };
+            atlasConfig = pkgs.lib.fileset.toSource {
+              root = ./core;
+              fileset = ./core/atlas.hcl;
+            };
+            migrations = pkgs.lib.fileset.toSource {
+              root = ./core;
+              fileset = ./core/migrations;
+            };
+          in
+          pkgs.dockerTools.buildLayeredImage {
+            name = "backend-migrator";
+            tag = "latest";
+
+            contents = [
+              pkgs.atlas
+              atlasConfig
+              schema
+              migrations
+            ];
+
+            config = {
+              WorkingDir = "/";
+              Env = [
+                "DATABASE_URL=postgres://arga@localhost/arga"
+              ];
+              Cmd = [
+                "/bin/atlas"
+                "migrate"
+                "apply"
+                "--env"
+                "arga"
+                "--baseline"
+                "20250605060808"
+              ];
+              Labels = {
+                "org.opencontainers.image.source" = "https://github.com/ARGA-Genomes/arga-backend";
+                "org.opencontainers.image.url" = "https://github.com/ARGA-Genomes/arga-backend";
+                "org.opencontainers.image.description" = "A container image for running migration jobs";
+                "org.opencontainers.image.licenses" = "AGPL-3.0-or-later";
+                "org.opencontainers.image.authors" = "ARGA Team <support@arga.org.au>";
+              };
+            };
+          };
 
         default = backend;
       };

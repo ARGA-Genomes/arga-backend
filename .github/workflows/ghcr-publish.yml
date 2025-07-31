@@ -34,115 +34,115 @@ jobs:
       - name: Load image into podamn store
         run: |
           podman load -i ./result
-          podman tag arga-backend ${{ github.sha }}
+          podman tag backend ${{ github.sha }}
 
       - name: Push to GitHub container registry
         id: push-to-ghcr
         uses: redhat-actions/push-to-registry@v2
         with:
-          image: arga-backend
+          image: backend
           tags: latest
           registry: ${{ env.REGISTRY }}
 
 
-  # build_migrator:
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: read
-  #     packages: write
+  build_migrator:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
-  #   env:
-  #     REGISTRY: ghcr.io/arga-genomes
-  #     IMAGE_NAME: backend-migrator
-  #     CARGO_TERM_COLOR: always
+    env:
+      REGISTRY: ghcr.io/arga-genomes
 
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v3
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  #     - name: Log in to the GitHub container registry
-  #       uses: redhat-actions/podman-login@v1
-  #       with:
-  #         registry: ${{ env.REGISTRY }}
-  #         username: ${{ github.actor }}
-  #         password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install nix
+        uses: cachix/install-nix-action@v31
 
-  #     - name: Build container image
-  #       id: build-image
-  #       uses: redhat-actions/buildah-build@v2
-  #       with:
-  #         image: ${{ env.IMAGE_NAME }}
-  #         tags: latest ${{ github.sha }}
-  #         containerfiles: |
-  #           ./Containerfile.migrator
+      - name: Log in to the GitHub container registry
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-  #     - name: Push to GitHub container registry
-  #       id: push-to-ghcr
-  #       uses: redhat-actions/push-to-registry@v2
-  #       with:
-  #         image: ${{ steps.build-image.outputs.image }}
-  #         tags: ${{ steps.build-image.outputs.tags }}
-  #         registry: ${{ env.REGISTRY }}
+      - name: Build migrator image
+        run: nix build .#migrator
+
+      - name: Load migrator into podamn store
+        run: |
+          podman load -i ./result
+          podman tag backend-migrator ${{ github.sha }}
+
+      - name: Push to GitHub container registry
+        id: push-to-ghcr
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: backend-migrator
+          tags: latest
+          registry: ${{ env.REGISTRY }}
 
 
-  # notify-arga-ops-migrator:
-  #   needs: [build_migrator]
-  #   runs-on: ubuntu-latest
+  notify-arga-ops-migrator:
+    needs: [build_migrator]
+    runs-on: ubuntu-latest
 
-  #   env:
-  #     registry: ghcr.io/arga-genomes
-  #     image_name: backend-migrator
-  #     image_tag: ${{ github.sha }}
-  #     actor: ${{ github.triggering_actor }}
-  #     repository: ${{ github.repository }}
-  #     ref: ${{ github.ref }}
-  #     sha: ${{ github.sha }}
-  #     workflow: ${{ github.workflow }}
-  #     workflow_ref: ${{ github.workflow_ref }}
-  #     workflow_sha: ${{ github.workflow_sha }}
-  #     run_id: ${{ github.run_id }}
-  #     run_number: ${{ github.run_number }}
-  #     run_attempt: ${{ github.run_attempt }}
+    env:
+      registry: ghcr.io/arga-genomes
+      image_name: backend-migrator
+      image_tag: ${{ github.sha }}
+      actor: ${{ github.triggering_actor }}
+      repository: ${{ github.repository }}
+      ref: ${{ github.ref }}
+      sha: ${{ github.sha }}
+      workflow: ${{ github.workflow }}
+      workflow_ref: ${{ github.workflow_ref }}
+      workflow_sha: ${{ github.workflow_sha }}
+      run_id: ${{ github.run_id }}
+      run_number: ${{ github.run_number }}
+      run_attempt: ${{ github.run_attempt }}
 
-  #   steps:
-  #     - name: Dump payload data
-  #       run: echo '${{ toJson(env) }}'
+    steps:
+      - name: Dump payload data
+        run: echo '${{ toJson(env) }}'
 
-  #     - name: Notify arga-ops about the new version
-  #       uses: peter-evans/repository-dispatch@v2
-  #       with:
-  #         token: ${{ secrets.ARGA_OPS_PERSONAL_TOKEN }}
-  #         repository: arga-genomes/arga-ops
-  #         event-type: published
-  #         client-payload: '{"data" : ${{ toJson(env) }} }'
+      - name: Notify arga-ops about the new version
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.ARGA_OPS_PERSONAL_TOKEN }}
+          repository: arga-genomes/arga-ops
+          event-type: published
+          client-payload: '{"data" : ${{ toJson(env) }} }'
 
-  # notify-arga-ops:
-  #   needs: [build, build_migrator, notify-arga-ops-migrator]
-  #   runs-on: ubuntu-latest
+  notify-arga-ops:
+    needs: [build, build_migrator, notify-arga-ops-migrator]
+    runs-on: ubuntu-latest
 
-  #   env:
-  #     registry: ghcr.io/arga-genomes
-  #     image_name: backend
-  #     image_tag: ${{ github.sha }}
-  #     actor: ${{ github.triggering_actor }}
-  #     repository: ${{ github.repository }}
-  #     ref: ${{ github.ref }}
-  #     sha: ${{ github.sha }}
-  #     workflow: ${{ github.workflow }}
-  #     workflow_ref: ${{ github.workflow_ref }}
-  #     workflow_sha: ${{ github.workflow_sha }}
-  #     run_id: ${{ github.run_id }}
-  #     run_number: ${{ github.run_number }}
-  #     run_attempt: ${{ github.run_attempt }}
+    env:
+      registry: ghcr.io/arga-genomes
+      image_name: backend
+      image_tag: ${{ github.sha }}
+      actor: ${{ github.triggering_actor }}
+      repository: ${{ github.repository }}
+      ref: ${{ github.ref }}
+      sha: ${{ github.sha }}
+      workflow: ${{ github.workflow }}
+      workflow_ref: ${{ github.workflow_ref }}
+      workflow_sha: ${{ github.workflow_sha }}
+      run_id: ${{ github.run_id }}
+      run_number: ${{ github.run_number }}
+      run_attempt: ${{ github.run_attempt }}
 
-  #   steps:
-  #     - name: Dump payload data
-  #       run: echo '${{ toJson(env) }}'
+    steps:
+      - name: Dump payload data
+        run: echo '${{ toJson(env) }}'
 
-  #     - name: Notify arga-ops about the new version
-  #       uses: peter-evans/repository-dispatch@v2
-  #       with:
-  #         token: ${{ secrets.ARGA_OPS_PERSONAL_TOKEN }}
-  #         repository: arga-genomes/arga-ops
-  #         event-type: published
-  #         client-payload: '{"data" : ${{ toJson(env) }} }'
+      - name: Notify arga-ops about the new version
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.ARGA_OPS_PERSONAL_TOKEN }}
+          repository: arga-genomes/arga-ops
+          event-type: published
+          client-payload: '{"data" : ${{ toJson(env) }} }'
