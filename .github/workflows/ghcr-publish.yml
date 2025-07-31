@@ -32,7 +32,7 @@ jobs:
         run: nix build .#oci
 
       - name: Load image into podamn store
-      - run: |
+        run: |
           podman tag arga-backend ${{ github.sha }}
           podman load -i ./result
 
