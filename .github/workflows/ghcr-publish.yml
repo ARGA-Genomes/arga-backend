@@ -31,8 +31,10 @@ jobs:
       - name: Build container image
         run: nix build .#oci
 
-      - uses: gacts/install-podman@v1
-      - run: podman load -i ./result
+      - name: Load image into podamn store
+      - run: |
+          podman tag arga-backend ${{ github.sha }}
+          podman load -i ./result
 
       - name: Push to GitHub container registry
         id: push-to-ghcr
