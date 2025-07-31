@@ -507,6 +507,7 @@ pub struct TaxonTreeNode {
 
 #[derive(Identifiable, Queryable, Selectable, Insertable, Debug, Clone, Serialize, Deserialize)]
 #[diesel(table_name = schema::taxa)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Taxon {
     pub id: Uuid,
     pub dataset_id: Uuid,

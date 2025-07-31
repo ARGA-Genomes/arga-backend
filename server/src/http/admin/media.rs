@@ -15,12 +15,12 @@ use tokio::io::BufWriter;
 use tokio_util::io::StreamReader;
 use uuid::Uuid;
 
-use super::common::{parse_int_param, PageResult};
+use super::common::{PageResult, parse_int_param};
 use crate::database::extensions::Paginate;
 use crate::database::models::{AdminMedia, Taxon, TaxonPhoto};
-use crate::database::{schema, Database};
-use crate::http::error::{Error, InternalError};
+use crate::database::{Database, schema};
 use crate::http::Context;
+use crate::http::error::{Error, InternalError};
 
 
 async fn media(
@@ -50,23 +50,25 @@ async fn media(
 }
 
 
-async fn main_media(
-    Query(params): Query<HashMap<String, String>>,
-    State(db_provider): State<Database>,
-) -> Result<Json<TaxonPhoto>, InternalError> {
-    let mut conn = db_provider.pool.get().await?;
+#[derive(Deserialize)]
+struct NameParams {
+    scientific_name: String,
+}
 
-    let name = params
-        .get("scientific_name")
-        .expect("must provide a scientific name parameter");
+async fn main_media(
+    Query(params): Query<NameParams>,
+    State(db_provider): State<Database>,
+) -> Result<Json<Option<TaxonPhoto>>, InternalError> {
+    let mut conn = db_provider.pool.get().await?;
 
     use schema::{taxa, taxon_photos};
     let photo = taxon_photos::table
         .select(taxon_photos::all_columns)
         .inner_join(taxa::table)
-        .filter(taxa::scientific_name.eq(name))
+        .filter(taxa::scientific_name.eq(params.scientific_name))
         .get_result::<TaxonPhoto>(&mut conn)
-        .await?;
+        .await
+        .optional()?;
 
     Ok(Json(photo))
 }
@@ -75,7 +77,6 @@ async fn main_media(
 #[derive(Deserialize, Debug)]
 struct SetMainMedia {
     url: String,
-    scientific_name: String,
     source: Option<String>,
     publisher: Option<String>,
     license: Option<String>,
@@ -83,15 +84,16 @@ struct SetMainMedia {
 }
 
 async fn upsert_main_media(
+    Query(params): Query<NameParams>,
     State(db_provider): State<Database>,
     Json(form): Json<SetMainMedia>,
-) -> Result<(), InternalError> {
+) -> Result<Json<TaxonPhoto>, InternalError> {
     // link the main photo as an attribute against the taxa
     use schema::{taxa, taxon_photos};
     let mut conn = db_provider.pool.get().await?;
 
     let taxon: Taxon = taxa::table
-        .filter(taxa::scientific_name.eq(form.scientific_name))
+        .filter(taxa::scientific_name.eq(params.scientific_name))
         .get_result(&mut conn)
         .await?;
 
@@ -118,7 +120,7 @@ async fn upsert_main_media(
         .execute(&mut conn)
         .await?;
 
-    Ok(())
+    Ok(Json(photo))
 }
 
 
@@ -240,9 +242,9 @@ fn valid_path(path: &str) -> bool {
 /// The REST gateway for the admin backend for basic CRUD operations
 pub(crate) fn router() -> Router<Context> {
     Router::new()
-        .route("/api/admin/media", get(media))
-        .route("/api/admin/media/main", get(main_media))
-        .route("/api/admin/media/main", post(upsert_main_media))
-        .route("/api/admin/media/upload", post(accept_image))
-        .route("/api/admin/media/upload_main_image", post(upload_main_image))
+        .route("/media", get(media))
+        .route("/media/main", get(main_media))
+        .route("/media/main", post(upsert_main_media))
+        .route("/media/upload", post(accept_image))
+        .route("/media/upload_main_image", post(upload_main_image))
 }

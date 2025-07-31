@@ -1,8 +1,25 @@
 inputs:
   nixpkgs:
     url: github:NixOS/nixpkgs/nixpkgs-unstable
+
+  # for nightly rustfmt
   fenix:
     url: github:nix-community/fenix
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
+
+  # for newer versions of rustc and friends
+  rust-overlay:
+    url: github:oxalica/rust-overlay
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
+
+  # used to build a deterministic and reproducible container image
+  # and only including the needed dependencies from a system
+  naersk:
+    url: "github:nix-community/naersk"
     inputs:
       nixpkgs:
         follows: nixpkgs
