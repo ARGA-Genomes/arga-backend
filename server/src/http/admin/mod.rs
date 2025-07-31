@@ -42,6 +42,7 @@ pub(crate) fn router(context: Context) -> Router<Context> {
         .merge(media::router())
         .merge(taxa::router())
         .route_layer(axum_login::login_required!(DatabaseUserStore))
+        .route("/me", get(logged_in_user))
         .route("/logout", get(logout_handler))
         .route("/login", post(login_handler))
         .layer(auth_layer)
@@ -71,4 +72,8 @@ async fn logout_handler(mut auth_session: AuthSession) -> Result<(), Error> {
     tracing::debug!(user=?auth_session.user, "Logging out user");
     auth_session.logout().await?;
     Ok(())
+}
+
+async fn logged_in_user(auth_session: AuthSession) -> Result<Json<Option<models::User>>, Error> {
+    Ok(Json(auth_session.user.map(|user| user.into())))
 }

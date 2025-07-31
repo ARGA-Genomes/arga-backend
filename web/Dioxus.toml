@@ -4,6 +4,7 @@
 
 # HTML title tag content
 title = "web"
+base_path = "admin"
 
 # include `assets` in web platform
 [web.resource]

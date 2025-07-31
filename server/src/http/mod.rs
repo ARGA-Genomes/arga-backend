@@ -5,7 +5,7 @@ use anyhow::Context as ErrorContext;
 use arga_core::search::SearchIndex;
 use axum::Router;
 use axum::extract::FromRef;
-use axum::http::{HeaderValue, Method, header};
+use axum::http::{HeaderValue, Uri, header};
 use tower_http::CompressionLevel;
 use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
@@ -22,6 +22,7 @@ pub mod auth;
 pub mod error;
 pub mod graphql;
 pub mod health;
+pub mod proxy;
 
 pub use error::Error;
 
@@ -37,6 +38,8 @@ pub struct Config {
     /// in the CORS layer to allow cross site requests from specific
     /// origins
     pub frontend_host: String,
+
+    pub admin_proxy: Option<Uri>,
 }
 
 
@@ -46,6 +49,7 @@ pub(crate) struct Context {
     pub config: Config,
     pub database: Database,
     pub search: SearchIndex,
+    pub proxy: Option<proxy::Proxy>,
 }
 
 impl FromRef<Context> for Database {
@@ -61,10 +65,13 @@ impl FromRef<Context> for Database {
 pub async fn serve(config: Config, database: Database) -> anyhow::Result<()> {
     let addr = config.bind_address.clone();
 
+    let proxy = config.admin_proxy.as_ref().map(|uri| proxy::build_proxy(uri.clone()));
+
     let context = Context {
         config,
         database,
         search: SearchIndex::open()?,
+        proxy,
     };
 
     let app = router(context)?;
@@ -103,17 +110,12 @@ fn router(context: Context) -> Result<Router, Error> {
         .layer(TraceLayer::new_for_http())
         // limit the payload size of the request. it does this by looking at the Content-Length
         // header but hyper will also bail at this limit if the payload is actually bigger
-        // that what the header declares
-        .layer(RequestBodyLimitLayer::new(4096))
-        // add request compression support for gzip and brotli compression
-        .layer(
-            CompressionLayer::new()
-                .gzip(true)
-                .br(true)
-                .quality(CompressionLevel::Best),
-        )
-        // allow compressed requests to be made with gzip and brotli
-        .layer(DecompressionLayer::new().gzip(true).br(true))
+        // that what the header declares. 4mb limit
+        .layer(RequestBodyLimitLayer::new(4194304))
+        // add request compression support with default quality level
+        .layer(CompressionLayer::new())
+        // allow compressed requests to be made
+        .layer(DecompressionLayer::new())
         // hard timeout for requests that take to long to complete
         .layer(TimeoutLayer::new(std::time::Duration::from_secs(30)))
         // mark sensitive headers. do it at the end for response headers to avoid
@@ -133,6 +135,7 @@ fn router(context: Context) -> Result<Router, Error> {
         .merge(health::router())
         .merge(graphql::router(context.clone()))
         .nest("/api/admin", admin::router(context.clone()))
+        .nest("/admin", proxy::admin_web_router(context.clone()))
         .layer(service)
         .with_state(context);
 

@@ -24,8 +24,6 @@ geo-types = "0.7.9"
 geojson = "0.24.0"
 geozero = { version = "0.9.9", features = ["with-postgis-diesel", "with-geojson", "postgres-types", "with-postgis-postgres"] }
 hyper = "0.14.23"
-opentelemetry = { version = "0.18.0", features = ["metrics", "rt-tokio"] }
-opentelemetry-otlp = { version = "0.11.0", features = ["metrics"] }
 reqwest = { version = "0.11.14", default-features = false, features = ["json", "rustls-tls"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -33,9 +31,8 @@ tantivy = "0.19.2"
 thiserror = "1.0.38"
 tokio = { version = "1.24.2", features = ["full"] }
 tokio-util = { version = "0.7.7", features = ["io"] }
-tower-http = { version = "0.6.6", features = ["cors", "trace", "limit", "timeout", "sensitive-headers", "compression-gzip", "compression-br", "decompression-gzip", "decompression-br"] }
+tower-http = { version = "0.6.6", features = ["fs", "cors", "trace", "limit", "timeout", "sensitive-headers", "compression-full", "decompression-full"] }
 tracing = "0.1.37"
-tracing-opentelemetry = { version = "0.18.0", features = ["metrics"] }
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 url = "2.3.1"
 uuid = { version = "1.2.2", features = ["serde", "v4"] }
@@ -48,3 +45,4 @@ secrecy = "0.10.3"
 password-auth = "1.0.0"
 time = "0.3.41"
 tower = "0.5.2"
+hyper-util = { version = "0.1.16", features = ["client", "client-legacy"] }

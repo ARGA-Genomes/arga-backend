@@ -5,7 +5,23 @@ use serde::{Deserialize, Serialize};
 const MAIN_CSS: Asset = asset!("/assets/main.css");
 
 
+#[derive(Debug)]
+enum Error {
+    NoFile,
+    FileNotReadable,
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+impl std::error::Error for Error {}
+
+
 fn main() {
+    tracing::info!("Launching");
     dioxus::launch(App);
 }
 
@@ -29,7 +45,19 @@ struct User {
 #[component]
 fn App() -> Element {
     use_context_provider(|| Signal::<Option<User>>::new(None));
-    let logged_in_user = use_context::<Signal<Option<User>>>();
+    let mut logged_in_user = use_context::<Signal<Option<User>>>();
+
+    tracing::info!(?logged_in_user);
+
+    let _user_resource = use_resource(move || async move {
+        let user = match get_user().await {
+            Ok(Some(user)) => Some(user),
+            _ => None,
+        };
+
+        logged_in_user.set(user.clone());
+        user
+    });
 
     rsx! {
         document::Stylesheet { href: MAIN_CSS }
@@ -38,10 +66,13 @@ fn App() -> Element {
         div { class: "m-8",
             match &*logged_in_user.read() {
                 Some(_user) => rsx! { ImageSetter {} },
-                None => rsx! { ImageSetter {} },
+                _ => rsx! {
+                    div { class: "m-auto",
+                        Login {}
+                    }
+                },
             }
         }
-        Login {}
     }
 }
 
@@ -76,6 +107,12 @@ async fn login(form: LoginForm) -> Result<User, reqwest::Error> {
         .await?
         .json::<User>()
         .await
+}
+
+
+async fn get_user() -> Result<Option<User>, reqwest::Error> {
+    let client = reqwest::Client::new();
+    client.get(admin_api("me")).send().await?.json::<Option<User>>().await
 }
 
 
@@ -126,6 +163,58 @@ async fn get_taxa(rank: &str, scientific_name: Option<&str>) -> Result<Vec<Taxon
         None => format!("taxa/{next_rank}"),
     };
     reqwest::get(admin_api(&url)).await?.json::<Vec<TaxonName>>().await
+}
+
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+struct MediaForm {
+    scientific_name: String,
+    source: Option<String>,
+    publisher: Option<String>,
+    license: Option<String>,
+    rights_holder: Option<String>,
+    file: Option<String>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+struct FileDetails {
+    filename: String,
+    bytes: Vec<u8>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+struct MediaFileAcceptForm {
+    file_name: String,
+}
+
+async fn upload_media(file: FileDetails, mut media_form: MediaForm) -> Result<Photo, reqwest::Error> {
+    let client = reqwest::Client::new();
+
+    let file_part = reqwest::multipart::Part::bytes(file.bytes)
+        .file_name(file.filename)
+        .mime_str("application/octet-stream")?;
+
+    let file_form = reqwest::multipart::Form::new().part("file", file_part);
+
+    let image_id = client
+        .post(admin_api("media/upload"))
+        .multipart(file_form)
+        .send()
+        .await?
+        .text()
+        .await?;
+
+    // set the file uuid from the upload. this will commit the uploaded file
+    // as the main image for the species
+    media_form.file = Some(image_id);
+
+    client
+        .post(admin_api("media/upload_main_image"))
+        .json(&media_form)
+        .send()
+        .await?
+        .json::<Photo>()
+        .await
 }
 
 
@@ -251,7 +340,7 @@ fn Login() -> Element {
             // login attempted and failed
             Some(Some(Err(err))) => rsx! { "Error: {err:#?}" },
             // no login attempted
-            Some(None) => rsx! { "No login info" },
+            Some(None) => rsx! { "" },
             // in-flight
             None => rsx! { "Attempting" },
         } }
@@ -277,7 +366,7 @@ fn UserDetails() -> Element {
             Some(user) => rsx! {
                 p { "Welcome {user.name}" }
             },
-            None => rsx! { p { "" } },
+            None => rsx! { "" },
         }
     }
 }
@@ -285,36 +374,38 @@ fn UserDetails() -> Element {
 
 #[component]
 fn ImageSetter() -> Element {
-    let mut selected_species = use_signal(|| {
-        Some(TaxonName {
-            scientific_name: "Vombatus ursinus (Shaw, 1800)".to_string(),
-            canonical_name: "Vombatus ursinus".to_string(),
-            authorship: Some("(Shaw, 1800)".to_string()),
-            rank: "species".to_string(),
-        })
-    });
-    let mut selected_photo = use_signal(|| None);
+    use_context_provider(|| Signal::<Option<Photo>>::new(None));
+    let mut selected_species = use_signal(|| None);
 
     rsx! {
         div { class: "grid grid-cols-1 md:grid-cols-6 gap-4",
             div { TaxaList { rank: "classes", onspecies: move |name| selected_species.set(Some(name)) } }
             div { class: "md:col-span-2",
-                if let Some(name) = selected_species() { MainImage { species: name, new_photo: selected_photo() } }
+                if let Some(name) = selected_species() {
+                    MainImage { species: name.clone() }
+                }
             }
-            div { class: "md:col-span-3 md:col-start-4", ImageBrowser {
-                species: selected_species(),
-                onselected: move |photo| selected_photo.set(Some(photo)),
-            } }
+            div { class: "md:col-span-3 md:col-start-4",
+                ImageBrowser { species: selected_species() }
+            }
         }
     }
 }
 
 #[component]
-fn ImageBrowser(species: Option<TaxonName>, onselected: EventHandler<Photo>) -> Element {
+fn ImageBrowser(species: ReadOnlySignal<Option<TaxonName>>) -> Element {
+    let mut selected_photo: Signal<Option<Photo>> = use_context();
     let mut load_inat = use_signal(|| false);
 
     rsx! {
         div { class: "tabs tabs-box",
+            input { type: "radio", checked: "checked", name: "photos", class: "tab", aria_label: "Upload photos" }
+            div { class: "tab-content bg-base-100 border-base-300 p-6",
+                if let Some(name) = species().clone() {
+                    UploadImage { species: name }
+                }
+            }
+
             input { type: "radio", name: "photos", class: "tab", aria_label: "Imported photos" }
             div { class: "tab-content bg-base-100 border-base-300 p-6",
                 "ARGA loaded"
@@ -322,12 +413,11 @@ fn ImageBrowser(species: Option<TaxonName>, onselected: EventHandler<Photo>) -> 
 
             input { type: "radio", name: "photos", class: "tab", aria_label: "iNaturalist photos" }
             div { class: "tab-content bg-base-100 border-base-300 p-6",
-                if let Some(name) = species {
+                if let Some(name) = species() {
                     match load_inat() {
                         true => rsx! { INaturalistMedia {
                             species: name.clone(),
-                            onselected: move |photo: Photo| onselected.call(photo)
-                            // move |photo| spawn(async move {set_main_image(&name.scientific_name, photo).await}),
+                            onselected: move |photo: Photo| selected_photo.set(Some(photo)),
                         } },
                         false => rsx! { button { class: "btn btn-block", onclick: move |_| load_inat.set(true), "Load photos" } },
                     }
@@ -339,29 +429,52 @@ fn ImageBrowser(species: Option<TaxonName>, onselected: EventHandler<Photo>) -> 
 
 
 #[component]
-fn MainImage(species: ReadOnlySignal<TaxonName>, new_photo: ReadOnlySignal<Option<Photo>>) -> Element {
-    let main_image = use_resource(move || async move { get_main_image(&*species.read().scientific_name).await });
+fn MainImage(species: ReadOnlySignal<TaxonName>) -> Element {
+    let mut main_image = use_resource(move || async move { get_main_image(&*species.read().scientific_name).await });
+    let mut selected_photo: Signal<Option<Photo>> = use_context();
 
-    // let photo = photo.clone();
-    // let name = name.clone();
-    // spawn(async move {
-    //     set_main_image(&name.scientific_name, &photo).await.unwrap();
-    // });
+    let mut save_image = async move |photo| match set_main_image(&species().scientific_name, &photo).await {
+        Ok(photo) => {
+            tracing::info!(?photo);
+            selected_photo.set(None);
+            main_image.restart();
+        }
+        Err(err) => tracing::error!(?err),
+    };
 
     rsx! {
         h1 { class: "text-center", "Current hero photo" }
         match &*main_image.read() {
-            Some(Ok(Some(photo))) => rsx! {
-                div { class: "stack stack-top m-10",
-                    if let Some(new_photo) = new_photo() {
-                        img { class: "object-cover rotate-5 rounded-box shadow-md border border-base-content card", src: new_photo.url.clone() }
-                    }
-                    img { class: "object-cover rounded-box outline-4 shadow-xl border border-base-content card", src: photo.url.clone() }
-                }
+            Some(Ok(main)) => rsx! {
+                MainImageStack { main: main.clone(), selected: selected_photo, onsave: move |photo| {
+                    async move { save_image(photo).await; }
+                } }
             },
-            Some(Ok(None)) => rsx! { p { "No hero photo" } },
             Some(Err(err)) => rsx! { p { "Failed: {err:#?}" } },
             None => rsx! { p { "Loading..." } },
+        }
+    }
+}
+
+
+#[component]
+fn MainImageStack(
+    main: ReadOnlySignal<Option<Photo>>,
+    selected: ReadOnlySignal<Option<Photo>>,
+    onsave: EventHandler<Photo>,
+) -> Element {
+    rsx! {
+        div { class: "stack stack-top m-10",
+            if let Some(selected) = selected() {
+                img { class: "object-cover rotate-5 rounded-box shadow-md border border-base-content card", src: selected.url.clone() }
+            }
+            if let Some(main) = main() {
+                img { class: "object-cover rounded-box outline-4 shadow-xl border border-base-content card", src: main.url.clone() }
+            }
+        }
+
+        if let Some(selected) = selected() {
+            button { class: "btn btn-primary btn-block", onclick: move |_| onsave.call(selected.clone()), "Save" }
         }
     }
 }
@@ -500,6 +613,70 @@ fn TaxaFilter(onchange: EventHandler<String>) -> Element {
         label { class: "input",
             IconSearch {}
             input { type: "search", class: "grow", placeholder: "Filter", oninput: move |ev| onchange.call(ev.value()) }
+        }
+    }
+}
+
+
+#[component]
+fn UploadImage(species: TaxonName) -> Element {
+    let mut file = use_signal::<Option<FileDetails>>(|| None);
+
+    let read_file = async |ev: FormEvent| -> Result<FileDetails, Error> {
+        let engine = ev.files().ok_or(Error::NoFile)?;
+        let filename = engine.files().first().ok_or(Error::NoFile)?.clone();
+        let bytes = engine.read_file(&filename).await.ok_or(Error::FileNotReadable)?;
+
+        Ok(FileDetails { filename, bytes })
+    };
+
+
+    rsx! {
+        form {
+            onsubmit: move |ev| async move {
+                if let Some(details) = file() {
+                    let media_form = MediaForm {
+                        scientific_name: ev.values()["scientific_name"].as_value(),
+                        source: ev.values().get("source").map(|v| v.as_value()),
+                        publisher: ev.values().get("publisher").map(|v| v.as_value()),
+                        license: ev.values().get("license").map(|v| v.as_value()),
+                        rights_holder: ev.values().get("rights_holder").map(|v| v.as_value()),
+                        file: None,
+                    };
+
+                    upload_media(details, media_form).await.unwrap();
+                }
+            },
+
+            input { class: "file-input my-4", name: "file", r#type: "file", onchange: move |ev| async move {
+                match read_file(ev).await {
+                    Ok(details) => file.set(Some(details)),
+                    Err(err) => {
+                        tracing::error!(?err);
+                        file.set(None)
+                    }
+                }
+            }}
+
+            fieldset { class: "fieldset bg-base-200 border-base-300 rounded-box border p-4 w-xs",
+                legend { class: "fieldset-legend", "Media details" }
+
+                label { class: "label", "Source" }
+                input { class: "input", name: "source", placeholder: "Source" }
+
+                label { class: "label", "Publisher" }
+                input { class: "input", name: "publisher", placeholder: "Publisher" }
+
+                label { class: "label", "License" }
+                input { class: "input", name: "license", placeholder: "License" }
+
+                label { class: "label", "Rights holder" }
+                input { class: "input", name: "rights_holder", placeholder: "Rights holder" }
+
+                input { name: "scientific_name", r#type: "hidden", value: "{species.scientific_name}" }
+
+                input { r#type: "submit", value: "Upload" }
+            }
         }
     }
 }

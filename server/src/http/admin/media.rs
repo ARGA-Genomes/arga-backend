@@ -87,7 +87,7 @@ async fn upsert_main_media(
     Query(params): Query<NameParams>,
     State(db_provider): State<Database>,
     Json(form): Json<SetMainMedia>,
-) -> Result<(), InternalError> {
+) -> Result<Json<TaxonPhoto>, InternalError> {
     // link the main photo as an attribute against the taxa
     use schema::{taxa, taxon_photos};
     let mut conn = db_provider.pool.get().await?;
@@ -120,7 +120,7 @@ async fn upsert_main_media(
         .execute(&mut conn)
         .await?;
 
-    Ok(())
+    Ok(Json(photo))
 }
 
 
