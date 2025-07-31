@@ -1,6 +1,5 @@
 {
   inputs = {
-    flake-utils.url = "github:numtide/flake-utils";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     naersk = {
       url = "github:nix-community/naersk";
@@ -11,30 +10,30 @@
   outputs =
     {
       self,
-      flake-utils,
       nixpkgs,
       naersk,
-    }:
-    flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = import nixpkgs { inherit system; };
-        naersk' = pkgs.callPackage naersk { };
-      in
-      rec {
+    }@inputs:
+    let
+      system = "x86_64-linux";
+      pkgs = import nixpkgs { inherit system; };
+      naersk' = pkgs.callPackage naersk { };
+    in
+    rec {
+      packages.${system} = rec {
         # build the backend executable
-        packages.backend = naersk'.buildPackage {
+        backend = naersk'.buildPackage {
           name = "arga-backend";
           pname = "arga-backend";
           src = ./.;
           nativeBuildInputs = [ pkgs.postgresql ];
         };
 
-        packages.oci = pkgs.dockerTools.buildLayeredImage {
+        # build the container image
+        oci = pkgs.dockerTools.buildLayeredImage {
           name = "arga-backend";
           tag = "latest";
 
-          contents = [ packages.backend ];
+          contents = [ backend ];
 
           config = {
             WorkingDir = "/";
@@ -60,7 +59,7 @@
           };
         };
 
-        defaultPackage = packages.backend;
-      }
-    );
+        default = backend;
+      };
+    };
 }

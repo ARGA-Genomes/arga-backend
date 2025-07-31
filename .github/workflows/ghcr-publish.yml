@@ -5,35 +5,6 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # check:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v3
-
-  #     - name: Install rust toolchain
-  #       uses: actions-rs/toolchain@v1
-  #       with:
-  #         toolchain: stable
-
-  #     - name: Install Protoc
-  #       uses: arduino/setup-protoc@v1
-
-  #     - name: Install rust-cache
-  #       uses: Swatinem/rust-cache@v2
-
-  #     - name: Test
-  #       uses: actions-rs/cargo@v1
-  #       with:
-  #         command: test
-
-  #     - name: Build
-  #       uses: actions-rs/cargo@v1
-  #       with:
-  #         command: build
-  #         args: --release
-
-
   build:
     runs-on: ubuntu-latest
     permissions:
@@ -47,7 +18,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Install nix
+      - uses: cachix/install-nix-action@v31
 
       - name: Log in to the GitHub container registry
         uses: redhat-actions/podman-login@v1
@@ -58,120 +32,115 @@ jobs:
 
       - name: Build container image
         id: build-image
-        uses: redhat-actions/buildah-build@v2
-        with:
-          image: ${{ env.IMAGE_NAME }}
-          tags: latest ${{ github.sha }}
-          containerfiles: |
-            ./Containerfile
+        run: nix build .#oci
 
       - name: Push to GitHub container registry
         id: push-to-ghcr
         uses: redhat-actions/push-to-registry@v2
         with:
-          image: ${{ steps.build-image.outputs.image }}
-          tags: ${{ steps.build-image.outputs.tags }}
-          registry: ${{ env.REGISTRY }}
-
-
-  build_migrator:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    env:
-      REGISTRY: ghcr.io/arga-genomes
-      IMAGE_NAME: backend-migrator
-      CARGO_TERM_COLOR: always
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Log in to the GitHub container registry
-        uses: redhat-actions/podman-login@v1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build container image
-        id: build-image
-        uses: redhat-actions/buildah-build@v2
-        with:
-          image: ${{ env.IMAGE_NAME }}
+          image: ./result
           tags: latest ${{ github.sha }}
-          containerfiles: |
-            ./Containerfile.migrator
-
-      - name: Push to GitHub container registry
-        id: push-to-ghcr
-        uses: redhat-actions/push-to-registry@v2
-        with:
-          image: ${{ steps.build-image.outputs.image }}
-          tags: ${{ steps.build-image.outputs.tags }}
           registry: ${{ env.REGISTRY }}
 
 
-  notify-arga-ops-migrator:
-    needs: [build_migrator]
-    runs-on: ubuntu-latest
+  # build_migrator:
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: read
+  #     packages: write
 
-    env:
-      registry: ghcr.io/arga-genomes
-      image_name: backend-migrator
-      image_tag: ${{ github.sha }}
-      actor: ${{ github.triggering_actor }}
-      repository: ${{ github.repository }}
-      ref: ${{ github.ref }}
-      sha: ${{ github.sha }}
-      workflow: ${{ github.workflow }}
-      workflow_ref: ${{ github.workflow_ref }}
-      workflow_sha: ${{ github.workflow_sha }}
-      run_id: ${{ github.run_id }}
-      run_number: ${{ github.run_number }}
-      run_attempt: ${{ github.run_attempt }}
+  #   env:
+  #     REGISTRY: ghcr.io/arga-genomes
+  #     IMAGE_NAME: backend-migrator
+  #     CARGO_TERM_COLOR: always
 
-    steps:
-      - name: Dump payload data
-        run: echo '${{ toJson(env) }}'
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3
 
-      - name: Notify arga-ops about the new version
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.ARGA_OPS_PERSONAL_TOKEN }}
-          repository: arga-genomes/arga-ops
-          event-type: published
-          client-payload: '{"data" : ${{ toJson(env) }} }'
+  #     - name: Log in to the GitHub container registry
+  #       uses: redhat-actions/podman-login@v1
+  #       with:
+  #         registry: ${{ env.REGISTRY }}
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
 
-  notify-arga-ops:
-    needs: [build, build_migrator, notify-arga-ops-migrator]
-    runs-on: ubuntu-latest
+  #     - name: Build container image
+  #       id: build-image
+  #       uses: redhat-actions/buildah-build@v2
+  #       with:
+  #         image: ${{ env.IMAGE_NAME }}
+  #         tags: latest ${{ github.sha }}
+  #         containerfiles: |
+  #           ./Containerfile.migrator
 
-    env:
-      registry: ghcr.io/arga-genomes
-      image_name: backend
-      image_tag: ${{ github.sha }}
-      actor: ${{ github.triggering_actor }}
-      repository: ${{ github.repository }}
-      ref: ${{ github.ref }}
-      sha: ${{ github.sha }}
-      workflow: ${{ github.workflow }}
-      workflow_ref: ${{ github.workflow_ref }}
-      workflow_sha: ${{ github.workflow_sha }}
-      run_id: ${{ github.run_id }}
-      run_number: ${{ github.run_number }}
-      run_attempt: ${{ github.run_attempt }}
+  #     - name: Push to GitHub container registry
+  #       id: push-to-ghcr
+  #       uses: redhat-actions/push-to-registry@v2
+  #       with:
+  #         image: ${{ steps.build-image.outputs.image }}
+  #         tags: ${{ steps.build-image.outputs.tags }}
+  #         registry: ${{ env.REGISTRY }}
 
-    steps:
-      - name: Dump payload data
-        run: echo '${{ toJson(env) }}'
 
-      - name: Notify arga-ops about the new version
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.ARGA_OPS_PERSONAL_TOKEN }}
-          repository: arga-genomes/arga-ops
-          event-type: published
-          client-payload: '{"data" : ${{ toJson(env) }} }'
+  # notify-arga-ops-migrator:
+  #   needs: [build_migrator]
+  #   runs-on: ubuntu-latest
+
+  #   env:
+  #     registry: ghcr.io/arga-genomes
+  #     image_name: backend-migrator
+  #     image_tag: ${{ github.sha }}
+  #     actor: ${{ github.triggering_actor }}
+  #     repository: ${{ github.repository }}
+  #     ref: ${{ github.ref }}
+  #     sha: ${{ github.sha }}
+  #     workflow: ${{ github.workflow }}
+  #     workflow_ref: ${{ github.workflow_ref }}
+  #     workflow_sha: ${{ github.workflow_sha }}
+  #     run_id: ${{ github.run_id }}
+  #     run_number: ${{ github.run_number }}
+  #     run_attempt: ${{ github.run_attempt }}
+
+  #   steps:
+  #     - name: Dump payload data
+  #       run: echo '${{ toJson(env) }}'
+
+  #     - name: Notify arga-ops about the new version
+  #       uses: peter-evans/repository-dispatch@v2
+  #       with:
+  #         token: ${{ secrets.ARGA_OPS_PERSONAL_TOKEN }}
+  #         repository: arga-genomes/arga-ops
+  #         event-type: published
+  #         client-payload: '{"data" : ${{ toJson(env) }} }'
+
+  # notify-arga-ops:
+  #   needs: [build, build_migrator, notify-arga-ops-migrator]
+  #   runs-on: ubuntu-latest
+
+  #   env:
+  #     registry: ghcr.io/arga-genomes
+  #     image_name: backend
+  #     image_tag: ${{ github.sha }}
+  #     actor: ${{ github.triggering_actor }}
+  #     repository: ${{ github.repository }}
+  #     ref: ${{ github.ref }}
+  #     sha: ${{ github.sha }}
+  #     workflow: ${{ github.workflow }}
+  #     workflow_ref: ${{ github.workflow_ref }}
+  #     workflow_sha: ${{ github.workflow_sha }}
+  #     run_id: ${{ github.run_id }}
+  #     run_number: ${{ github.run_number }}
+  #     run_attempt: ${{ github.run_attempt }}
+
+  #   steps:
+  #     - name: Dump payload data
+  #       run: echo '${{ toJson(env) }}'
+
+  #     - name: Notify arga-ops about the new version
+  #       uses: peter-evans/repository-dispatch@v2
+  #       with:
+  #         token: ${{ secrets.ARGA_OPS_PERSONAL_TOKEN }}
+  #         repository: arga-genomes/arga-ops
+  #         event-type: published
+  #         client-payload: '{"data" : ${{ toJson(env) }} }'
