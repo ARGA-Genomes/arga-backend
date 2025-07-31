@@ -12,9 +12,13 @@
       postgresql.lib
       atlas
 
-      dioxus-cli
       wasm-bindgen-cli
       tailwindcss_4
+
+      # openssl needed when compiling dioxus-cli from the main branch
+      # cargo install --git https://github.com/DioxusLabs/dioxus dioxus-cli
+      openssl
+      # dioxus-cli
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       pkgs.darwin.apple_sdk.frameworks.CoreFoundation
@@ -48,51 +52,14 @@
     };
   };
 
-  # dev proxy server to redirect requests between frontend and backend
-  # servers. this allows us to avoid CORS and cookie issues since all
-  # requests are sent to the same domain and port
-  services.nginx = {
-    enable = true;
-
-    # upstream for the backend api and the admin web dev server
-    # we also add websocket support to enable live reload
-    httpConfig = ''
-      map $http_upgrade $connection_upgrade {
-        default upgrade;
-        `` close;
-      }
-
-      upstream api {
-        server localhost:5000;
-      }
-      upstream web {
-        server localhost:8080;
-      }
-
-      server {
-        listen 8000;
-        server_name _;
-
-        location /api {
-          proxy_pass http://api;
-        }
-
-        location / {
-          proxy_pass http://web;
-          proxy_http_version 1.1;
-          proxy_set_header Upgrade $http_upgrade;
-          proxy_set_header Connection $connection_upgrade;
-          proxy_set_header Host $host;
-        }
-      }
-    '';
-  };
-
   dotenv.enable = true;
 
   # debug logging
   env.LOG_DATABASE = 1;
   env.ATLAS_NO_ANON_TELEMETRY = true;
+  env.ADMIN_ASSETS = "target/web-dist/public";
+  # env.ADMIN_PROXY = "http://127.0.0.1:8080";
+  env.ADMIN_PROXY = "file://./target/web-dist/public/";
 
   #  git-hooks.hooks = {
   #    clippy.enable = false;
@@ -102,5 +69,17 @@
     echo "Rust version: $(rustc --version)"
     echo "Cargo version: $(cargo --version)"
     echo "RUST_SRC_PATH: $RUST_SRC_PATH"
+  '';
+
+  scripts.dist-admin-web.exec = ''
+    cd web
+    cargo install --git https://github.com/DioxusLabs/dioxus dioxus-cli
+    dx bundle --locked --release --platform web
+  '';
+
+  scripts.build-image.exec = ''
+    cargo build --release --bin arga-backend
+    dx bundle --locked --release --platform web --package web --out-dir target/web-dist
+    nix build #oci
   '';
 }
