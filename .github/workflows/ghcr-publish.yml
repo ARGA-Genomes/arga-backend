@@ -33,8 +33,8 @@ jobs:
 
       - name: Load image into podamn store
         run: |
-          podman tag arga-backend ${{ github.sha }}
           podman load -i ./result
+          podman tag arga-backend ${{ github.sha }}
 
       - name: Push to GitHub container registry
         id: push-to-ghcr
