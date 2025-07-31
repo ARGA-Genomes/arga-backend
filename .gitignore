@@ -5,12 +5,10 @@
 .devenv*
 devenv.local.nix
 
-
-
-# Added by cargo
-
+# build artifacts
+/dist
+/result
 /target
 
-
-# Mac garbage
+.vscode
 .DS_Store

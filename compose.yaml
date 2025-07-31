@@ -1,8 +1,0 @@
-services:
-  backend:
-    image: arga-backend
-    ports: ["5000:5000"]
-    environment:
-      - SOLR_URL=https://nectar-arga-dev-4.ala.org.au/api
-      - FRONTEND_URL=https://nectar-arga-dev-2.ala.org.au
-      - BIND_ADDRESS=0.0.0.0:5000
