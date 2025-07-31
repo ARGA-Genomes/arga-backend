@@ -31,11 +31,14 @@ jobs:
       - name: Build container image
         run: nix build .#oci
 
+      - uses: gacts/install-podman@v1
+      - run: podman load -i ./result
+
       - name: Push to GitHub container registry
         id: push-to-ghcr
         uses: redhat-actions/push-to-registry@v2
         with:
-          image: ./result
+          image: arga-backend
           tags: latest ${{ github.sha }}
           registry: ${{ env.REGISTRY }}
 
