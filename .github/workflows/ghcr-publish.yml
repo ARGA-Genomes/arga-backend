@@ -39,7 +39,7 @@ jobs:
         uses: redhat-actions/push-to-registry@v2
         with:
           image: arga-backend
-          tags: latest ${{ github.sha }}
+          tags: latest
           registry: ${{ env.REGISTRY }}
 
 
