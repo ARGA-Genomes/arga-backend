@@ -13,15 +13,13 @@ jobs:
 
     env:
       REGISTRY: ghcr.io/arga-genomes
-      IMAGE_NAME: backend
-      CARGO_TERM_COLOR: always
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install nix
-      - uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@v31
 
       - name: Log in to the GitHub container registry
         uses: redhat-actions/podman-login@v1
@@ -31,7 +29,6 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build container image
-        id: build-image
         run: nix build .#oci
 
       - name: Push to GitHub container registry
