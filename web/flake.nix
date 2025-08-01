@@ -33,7 +33,7 @@
           ];
 
           buildPhase = ''
-            dx bundle --frozen --release --platform web --package web --verbose --trace --out-dir target/web-dist
+            dx bundle --frozen --release --platform web --package web --out-dir target/web-dist
           '';
           installPhase = ''
             mkdir -p $out

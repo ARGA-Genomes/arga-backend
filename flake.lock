@@ -108,12 +108,12 @@
       },
       "locked": {
         "lastModified": 1,
-        "narHash": "sha256-kM4XfCDWcDbD7TNbRgoanuQHANyug5kprf8NpjR9Qvw=",
-        "path": "./web",
+        "narHash": "sha256-B5w32WDIX/LN3ovbDQevcyVW+OS9L48QWKRCWbltxEI=",
+        "path": "/nix/store/2m4hsizw3611slpyjbfznnlnl53f7f7x-source/web",
         "type": "path"
       },
       "original": {
-        "path": "./web",
+        "path": "/nix/store/2m4hsizw3611slpyjbfznnlnl53f7f7x-source/web",
         "type": "path"
       }
     }

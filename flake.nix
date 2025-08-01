@@ -6,7 +6,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     web = {
-      url = "path:./web";
+      url = "./web";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
