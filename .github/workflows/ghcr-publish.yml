@@ -56,7 +56,7 @@ jobs:
         run: podman load -i ./result
 
       - name: Tag image with git sha
-        run: podman tag backend ${{ github.sha }}
+        run: podman tag backend backend:${{ github.sha }}
 
       - name: Push to GitHub container registry
         id: push-to-ghcr
@@ -109,7 +109,7 @@ jobs:
         run: podman load -i ./result
 
       - name: Tag image with git sha
-        run: podman tag backend-migrator ${{ github.sha }}
+        run: podman tag backend-migrator backend-migrator:${{ github.sha }}
 
       - name: Push to GitHub container registry
         id: push-to-ghcr
