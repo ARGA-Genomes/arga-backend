@@ -19,7 +19,12 @@ inputs:
   # used to build a deterministic and reproducible container image
   # and only including the needed dependencies from a system
   naersk:
-    url: "github:nix-community/naersk"
+    url: github:nix-community/naersk
     inputs:
       nixpkgs:
         follows: nixpkgs
+
+  # use the alpha version of dioxus for the ability to
+  # bundle the admin web wasm
+  dioxus-alpha:
+    url: github:CathalMullan/nixpkgs/dioxus-cli-v0.7.0

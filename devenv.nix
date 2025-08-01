@@ -1,5 +1,8 @@
 { pkgs, inputs, ... }:
 
+let
+  dioxus-alpha = import inputs.dioxus-alpha { system = pkgs.stdenv.system; };
+in
 {
   packages =
     with pkgs;
@@ -14,11 +17,7 @@
 
       wasm-bindgen-cli
       tailwindcss_4
-
-      # openssl needed when compiling dioxus-cli from the main branch
-      # cargo install --git https://github.com/DioxusLabs/dioxus dioxus-cli
-      openssl
-      # dioxus-cli
+      dioxus-alpha.dioxus-cli
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       pkgs.darwin.apple_sdk.frameworks.CoreFoundation

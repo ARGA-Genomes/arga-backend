@@ -4,9 +4,13 @@ resolver = "2"
 members = [
   "core",
   "core/core-derive",
-  "server", "web",
+  "server",
   # "workers",
   "tasks",
+]
+
+exclude = [
+  "web"
 ]
 
 [profile.wasm-dev]

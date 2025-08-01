@@ -5,6 +5,10 @@
       url = "github:nix-community/naersk";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    web = {
+      url = "path:./web";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -12,6 +16,7 @@
       self,
       nixpkgs,
       naersk,
+      web,
     }@inputs:
     let
       system = "x86_64-linux";
@@ -25,15 +30,21 @@
           name = "arga-backend";
           pname = "arga-backend";
           src = ./.;
-          nativeBuildInputs = [ pkgs.postgresql ];
+          nativeBuildInputs = [ pkgs.postgresql.lib ];
         };
+
+        # build the admin frontend web assembly
+        admin = web.packages.${system}.admin;
 
         # build the container image
         oci = pkgs.dockerTools.buildLayeredImage {
           name = "backend";
           tag = "latest";
 
-          contents = [ backend ];
+          contents = [
+            backend
+            admin
+          ];
 
           config = {
             WorkingDir = "/";
@@ -41,6 +52,7 @@
               "BIND_ADDRESS=0.0.0.0:5000"
               "FRONTEND_URL=http://localhost:3000"
               "DATABASE_URL=postgres://arga@localhost/arga"
+              "ADMIN_PROXY=/public"
             ];
             ExposedPorts = {
               "5000/tcp" = { };
