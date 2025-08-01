@@ -53,9 +53,10 @@ jobs:
         run: nix build .#oci
 
       - name: Load image into podamn store
-        run: |
-          podman load -i ./result
-          podman tag backend ${{ github.sha }}
+        run: podman load -i ./result
+
+      - name: Tag image with git sha
+        run: podman tag backend ${{ github.sha }}
 
       - name: Push to GitHub container registry
         id: push-to-ghcr
@@ -105,9 +106,10 @@ jobs:
         run: nix build .#migrator
 
       - name: Load migrator into podamn store
-        run: |
-          podman load -i ./result
-          podman tag backend-migrator ${{ github.sha }}
+        run: podman load -i ./result
+
+      - name: Tag image with git sha
+        run: podman tag backend-migrator ${{ github.sha }}
 
       - name: Push to GitHub container registry
         id: push-to-ghcr
