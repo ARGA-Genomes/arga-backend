@@ -21,7 +21,6 @@ impl std::error::Error for Error {}
 
 
 fn main() {
-    tracing::info!("Launching");
     dioxus::launch(App);
 }
 
@@ -46,8 +45,6 @@ struct User {
 fn App() -> Element {
     use_context_provider(|| Signal::<Option<User>>::new(None));
     let mut logged_in_user = use_context::<Signal<Option<User>>>();
-
-    tracing::info!(?logged_in_user);
 
     let _user_resource = use_resource(move || async move {
         let user = match get_user().await {
@@ -346,10 +343,14 @@ fn Login() -> Element {
         } }
 
         form {
-            onsubmit: move |ev| login_form.set(Some(LoginForm {
-                email: ev.values()["email"].as_value(),
-                password: ev.values()["password"].as_value(),
-            })),
+            onsubmit: move |ev| {
+                ev.prevent_default();
+
+                login_form.set(Some(LoginForm {
+                    email: ev.values()["email"].as_value(),
+                    password: ev.values()["password"].as_value(),
+                }));
+            },
             div { input { name: "email", placeholder: "Email", r#type: "text", class: "input" } }
             div { input { name: "password", placeholder: "Password", r#type: "password", class: "input" } }
             button { r#type: "submit", class: "btn btn-primary btn-wide btn-soft", "Login" }
@@ -435,7 +436,6 @@ fn MainImage(species: ReadOnlySignal<TaxonName>) -> Element {
 
     let mut save_image = async move |photo| match set_main_image(&species().scientific_name, &photo).await {
         Ok(photo) => {
-            tracing::info!(?photo);
             selected_photo.set(None);
             main_image.restart();
         }
@@ -634,6 +634,8 @@ fn UploadImage(species: TaxonName) -> Element {
     rsx! {
         form {
             onsubmit: move |ev| async move {
+                ev.prevent_default();
+
                 if let Some(details) = file() {
                     let media_form = MediaForm {
                         scientific_name: ev.values()["scientific_name"].as_value(),
