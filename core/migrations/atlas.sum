@@ -1,4 +1,4 @@
-h1:X2T4F1P+fKCv490uYrqXNljM03VhTc6EN43rOtmbW2o=
+h1:CRzyNIYxU2i2xLaVWWHLTJACH5g0cZPvQMtns4wCqBo=
 20250605060808_initial.sql h1:hN3eGaQNsqm+ws4akS+D+e+TqDUHZkZwPaFGW/Gyor4=
 20250605084357_drop_legacy_tables.sql h1:M0SD3ETeanSyo3GDWanw1xpGCJIQg7U11EE5IQ617EU=
 20250606063639_create_baseline_views.sql h1:bjh8zumpl5MFPRc1OAIB9jidVWxu1GPXAu5yGorDjFo=
@@ -8,3 +8,4 @@ h1:X2T4F1P+fKCv490uYrqXNljM03VhTc6EN43rOtmbW2o=
 20250613034828_add_uniqueness_constraint_to_dataset_versions.sql h1:W5tbUkb5/YUHAAOZwikXhHUOWNK+CmG8byrpp0TWxPM=
 20250613054532_add_specimen_entities_views.sql h1:n8LsT1iEfXYGTsy6a4EBDchWm7PAN6cJmL/TjGIQXGM=
 20250625114457_add-breakdown-stats-to-specimen-stats.sql h1:e8xmcQ0fO4XlLVffDC6qNbXUNQjszFmINPR71522rY8=
+20250709034536_add-session-id-to-users.sql h1:+yyV/ss2/ZLr9yJ2Wjwb2LGhJyx47bQ8ty5I3QMS0h0=

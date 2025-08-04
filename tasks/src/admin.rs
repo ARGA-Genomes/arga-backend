@@ -1,12 +1,6 @@
-use argon2::{Argon2, PasswordHasher};
-use argon2::password_hash::SaltString;
-use argon2::password_hash::rand_core::OsRng;
-
-use diesel::*;
-use diesel::RunQueryDsl;
-use diesel::r2d2::{ConnectionManager, Pool};
-
 use arga_core::schema;
+use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::{RunQueryDsl, *};
 
 
 /// Create a new admin user
@@ -15,24 +9,21 @@ use arga_core::schema;
 /// its not used within the rest of the backend since the vast majority is
 /// open access
 pub fn create_admin(name: &str, email: &str, password: &str) {
-    use schema::users::dsl as dsl;
+    use schema::users;
 
     let url = arga_core::get_database_url();
     let manager = ConnectionManager::<PgConnection>::new(url);
     let pool = Pool::builder().build(manager).expect("Could not build connection pool");
     let mut conn = pool.get().expect("Could not checkout connection");
 
-    let argon2 = Argon2::default();
-    let salt = SaltString::generate(&mut OsRng);
-    let hash = argon2.hash_password(&password.as_bytes(), &salt).unwrap().to_string();
+    let hash = password_auth::generate_hash(password.as_bytes());
 
-    diesel::insert_into(dsl::users)
+    diesel::insert_into(users::table)
         .values((
-            dsl::name.eq(name),
-            dsl::email.eq(email),
-            dsl::password_hash.eq(hash),
-            dsl::password_salt.eq(salt.to_string()),
-            dsl::user_role.eq("admin"),
+            users::name.eq(name),
+            users::email.eq(email),
+            users::password_hash.eq(hash),
+            users::user_role.eq("admin"),
         ))
         .execute(&mut conn)
         .expect("Failed to insert admin user");

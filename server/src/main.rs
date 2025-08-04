@@ -1,5 +1,5 @@
 use arga_backend::database::Database;
-use arga_backend::{http, telemetry};
+use arga_backend::http;
 use diesel::connection::set_default_instrumentation;
 use dotenvy::dotenv;
 use tracing_subscriber::prelude::*;
@@ -14,33 +14,16 @@ async fn main() {
 
 
 fn start_tracing() {
-    // setup tracing with opentelemetry support. this allows us to use tracing macros
-    // for both logging and metrics
     let subscriber = Registry::default();
 
-    if let Ok(endpoint) = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT") {
-        println!("Starting trace logger with telemetry collector at: {}", endpoint);
+    println!("Starting debug trace logger for stdout");
 
-        let controller = telemetry::init_metrics().expect("Failed to initialise telemetry metrics");
-        let metrics = tracing_opentelemetry::MetricsLayer::new(controller);
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("info,arga_backend=debug"));
 
-        let tracer = telemetry::init_tracer().expect("Failed to initialise telemetry tracer");
-        let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-
-        let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("info"));
-
-        subscriber.with(env_filter).with(opentelemetry).with(metrics).init();
-    }
-    else {
-        println!("Starting debug trace logger for stdout");
-
-        let env_filter = EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("info,arga_backend=debug"));
-
-        subscriber
-            .with(env_filter)
-            .with(tracing_subscriber::fmt::layer().pretty())
-            .init();
-    }
+    subscriber
+        .with(env_filter)
+        .with(tracing_subscriber::fmt::layer().pretty())
+        .init();
 }
 
 
@@ -54,6 +37,10 @@ async fn serve() {
 
     // used for cors
     let frontend_host = std::env::var("FRONTEND_URL").expect("No frontend URL specified");
+
+    // path to the admin frontend
+    let admin_proxy = std::env::var("ADMIN_PROXY").ok();
+    let admin_proxy = admin_proxy.map(|proxy| proxy.parse::<axum::http::Uri>().expect("Invalid admin proxy"));
 
     // show database logging if enabled
     if std::env::var("LOG_DATABASE").is_ok() {
@@ -71,9 +58,8 @@ async fn serve() {
     let config = http::Config {
         bind_address,
         frontend_host,
+        admin_proxy,
     };
 
     http::serve(config, database).await.expect("Failed to start server");
-
-    telemetry::shutdown();
 }

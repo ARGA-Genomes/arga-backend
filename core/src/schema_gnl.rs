@@ -266,6 +266,7 @@ diesel::allow_tables_to_appear_in_same_query!(datasets, whole_genomes);
 diesel::allow_tables_to_appear_in_same_query!(datasets, markers);
 diesel::allow_tables_to_appear_in_same_query!(datasets, species);
 diesel::allow_tables_to_appear_in_same_query!(datasets, specimen_stats);
+diesel::allow_tables_to_appear_in_same_query!(datasets, taxa_dag);
 
 diesel::allow_tables_to_appear_in_same_query!(species, taxon_names);
 diesel::allow_tables_to_appear_in_same_query!(species, assembly_events);

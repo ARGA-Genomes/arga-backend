@@ -4,50 +4,43 @@ on:
   push:
     branches: [ "main" ]
 
+
+env:
+  REGISTRY: ghcr.io/arga-genomes
+
+  nix_conf: |
+    substituters = https://cache.nixos.org/ https://nix-community.cachix.org
+    trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs=
+    keep-env-derivations = true
+    keep-outputs = true
+
+
 jobs:
-  # check:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v3
-
-  #     - name: Install rust toolchain
-  #       uses: actions-rs/toolchain@v1
-  #       with:
-  #         toolchain: stable
-
-  #     - name: Install Protoc
-  #       uses: arduino/setup-protoc@v1
-
-  #     - name: Install rust-cache
-  #       uses: Swatinem/rust-cache@v2
-
-  #     - name: Test
-  #       uses: actions-rs/cargo@v1
-  #       with:
-  #         command: test
-
-  #     - name: Build
-  #       uses: actions-rs/cargo@v1
-  #       with:
-  #         command: build
-  #         args: --release
-
-
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
 
-    env:
-      REGISTRY: ghcr.io/arga-genomes
-      IMAGE_NAME: backend
-      CARGO_TERM_COLOR: always
-
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Install nix
+        uses: nixbuild/nix-quick-install-action@v30
+        with:
+          nix_conf: ${{ env.nix_conf }}
+
+      - name: Restore and save Nix store
+        uses: nix-community/cache-nix-action@v6
+        with:
+          primary-key: build-${{ runner.os }}-${{ hashFiles('**/flake.nix', '**/flake.lock') }}
+          purge: true
+          purge-prefixes: build-${{ runner.os }}-
+          purge-created: 0
+          purge-primary-key: never
+          gc-max-store-size: 0
+
 
       - name: Log in to the GitHub container registry
         uses: redhat-actions/podman-login@v1
@@ -57,20 +50,20 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build container image
-        id: build-image
-        uses: redhat-actions/buildah-build@v2
-        with:
-          image: ${{ env.IMAGE_NAME }}
-          tags: latest ${{ github.sha }}
-          containerfiles: |
-            ./Containerfile
+        run: nix build .#oci
+
+      - name: Load image into podamn store
+        run: podman load -i ./result
+
+      - name: Tag image with git sha
+        run: podman tag backend backend:${{ github.sha }}
 
       - name: Push to GitHub container registry
         id: push-to-ghcr
         uses: redhat-actions/push-to-registry@v2
         with:
-          image: ${{ steps.build-image.outputs.image }}
-          tags: ${{ steps.build-image.outputs.tags }}
+          image: backend
+          tags: latest ${{ github.sha }}
           registry: ${{ env.REGISTRY }}
 
 
@@ -82,12 +75,25 @@ jobs:
 
     env:
       REGISTRY: ghcr.io/arga-genomes
-      IMAGE_NAME: backend-migrator
-      CARGO_TERM_COLOR: always
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+
+      - name: Install nix
+        uses: nixbuild/nix-quick-install-action@v30
+        with:
+          nix_conf: ${{ env.nix_conf }}
+
+      - name: Restore and save Nix store
+        uses: nix-community/cache-nix-action@v6
+        with:
+          primary-key: build-migrator-${{ runner.os }}-${{ hashFiles('**/flake.nix', '**/flake.lock') }}
+          purge: true
+          purge-prefixes: build-migrator-${{ runner.os }}-
+          purge-created: 0
+          purge-primary-key: never
+          gc-max-store-size: 0
 
       - name: Log in to the GitHub container registry
         uses: redhat-actions/podman-login@v1
@@ -96,21 +102,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build container image
-        id: build-image
-        uses: redhat-actions/buildah-build@v2
-        with:
-          image: ${{ env.IMAGE_NAME }}
-          tags: latest ${{ github.sha }}
-          containerfiles: |
-            ./Containerfile.migrator
+      - name: Build migrator image
+        run: nix build .#migrator
+
+      - name: Load migrator into podamn store
+        run: podman load -i ./result
+
+      - name: Tag image with git sha
+        run: podman tag backend-migrator backend-migrator:${{ github.sha }}
 
       - name: Push to GitHub container registry
         id: push-to-ghcr
         uses: redhat-actions/push-to-registry@v2
         with:
-          image: ${{ steps.build-image.outputs.image }}
-          tags: ${{ steps.build-image.outputs.tags }}
+          image: backend-migrator
+          tags: latest ${{ github.sha }}
           registry: ${{ env.REGISTRY }}
 
 

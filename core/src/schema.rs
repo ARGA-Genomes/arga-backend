@@ -730,16 +730,11 @@ diesel::table! {
 diesel::table! {
     users (id) {
         id -> Uuid,
-        #[max_length = 255]
         name -> Varchar,
-        #[max_length = 255]
         email -> Varchar,
-        #[max_length = 255]
         user_role -> Varchar,
-        #[max_length = 255]
         password_hash -> Varchar,
-        #[max_length = 255]
-        password_salt -> Varchar,
+        session_id -> Nullable<Varchar>,
     }
 }
 

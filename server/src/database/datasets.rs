@@ -2,9 +2,11 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
+use super::extensions::Paginate;
 use super::models::{Dataset, Taxon};
-use super::{schema, PageResult, PgPool};
+use super::{PageResult, PgPool, schema};
 use crate::database::Error;
+use crate::database::sources::ALA_DATASET_ID;
 
 
 #[derive(Clone)]
@@ -45,23 +47,22 @@ impl DatasetProvider {
         Ok(dataset?)
     }
 
-    pub async fn species(&self, _dataset: &Dataset, _page: i64) -> PageResult<Taxon> {
-        // use schema::{indigenous_knowledge as iek, taxa};
-        // let mut conn = self.pool.get().await?;
+    pub async fn species(&self, dataset: &Dataset, page: i64) -> PageResult<Taxon> {
+        use schema::{datasets, name_attributes, names, taxa, taxon_names};
+        let mut conn = self.pool.get().await?;
 
-        // join the taxa table with all dataset tables to filter get taxonomy
-        // of species that appear in a dataset.
-        // FIXME: find new pathway linking name_attributes to taxa via taxon_names
-        let species = vec![];
-        // let species = taxa::table
-        //     .left_join(iek::table.on(taxa::name_id.eq(iek::name_id)))
-        //     .filter(iek::dataset_id.eq(dataset.id))
-        //     .filter(taxa::status.eq_any(&[TaxonomicStatus::Accepted, TaxonomicStatus::Undescribed, TaxonomicStatus::Hybrid]))
-        //     .select(taxa::all_columns)
-        //     .order_by(taxa::scientific_name)
-        //     .paginate(page)
-        //     .load::<(Taxon, i64)>(&mut conn)
-        //     .await?;
+        let species = name_attributes::table
+            .inner_join(names::table)
+            .inner_join(taxon_names::table.on(taxon_names::name_id.eq(names::id)))
+            .inner_join(taxa::table.on(taxa::id.eq(taxon_names::taxon_id)))
+            .inner_join(datasets::table.on(datasets::id.eq(taxa::dataset_id)))
+            .filter(name_attributes::dataset_id.eq(dataset.id))
+            .filter(datasets::global_id.eq(ALA_DATASET_ID))
+            .select(taxa::all_columns)
+            .order_by(taxa::scientific_name)
+            .paginate(page)
+            .load::<(Taxon, i64)>(&mut conn)
+            .await?;
 
         Ok(species.into())
     }

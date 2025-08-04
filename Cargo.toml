@@ -1,12 +1,27 @@
 [workspace]
+resolver = "2"
 
 members = [
   "core",
   "core/core-derive",
   "server",
   # "workers",
-  # "tasks",
+  "tasks",
 ]
+
+exclude = [
+  "web"
+]
+
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+
+[profile.server-dev]
+inherits = "dev"
+
+[profile.android-dev]
+inherits = "dev"
 
 
 #[profile.dev]
