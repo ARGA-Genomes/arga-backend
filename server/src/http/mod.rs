@@ -6,10 +6,7 @@ use arga_core::search::SearchIndex;
 use axum::Router;
 use axum::extract::FromRef;
 use axum::http::{HeaderValue, Uri, header};
-use tower_http::CompressionLevel;
-use tower_http::compression::CompressionLayer;
 use tower_http::cors::CorsLayer;
-use tower_http::decompression::DecompressionLayer;
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::sensitive_headers::{SetSensitiveRequestHeadersLayer, SetSensitiveResponseHeadersLayer};
 use tower_http::timeout::TimeoutLayer;
@@ -112,10 +109,6 @@ fn router(context: Context) -> Result<Router, Error> {
         // header but hyper will also bail at this limit if the payload is actually bigger
         // that what the header declares. 4mb limit
         .layer(RequestBodyLimitLayer::new(4194304))
-        // add request compression support with default quality level
-        .layer(CompressionLayer::new())
-        // allow compressed requests to be made
-        .layer(DecompressionLayer::new())
         // hard timeout for requests that take to long to complete
         .layer(TimeoutLayer::new(std::time::Duration::from_secs(30)))
         // mark sensitive headers. do it at the end for response headers to avoid
