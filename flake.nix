@@ -50,8 +50,7 @@
             WorkingDir = "/";
             Env = [
               "BIND_ADDRESS=0.0.0.0:5000"
-              "FRONTEND_URL=http://localhost:3000"
-              "DATABASE_URL=postgres://arga@localhost/arga"
+              "FRONTEND_URL=http://arga.org.au"
               "ADMIN_PROXY=/public"
             ];
             ExposedPorts = {
