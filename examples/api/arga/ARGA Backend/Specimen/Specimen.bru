@@ -16,71 +16,88 @@ headers {
 
 body:graphql {
   {
-  	specimen(specimenId: "2005b16a-aad2-4ba8-9db2-36d244794bb8") {
-  		id
-  		typeStatus
-  		collectionCode
-  		institutionName
-  		institutionCode
-  		organismId
-  		latitude
-  		longitude
-  		recordedBy
-  		remarks
-  		
-  		events {
-  			id
-  			eventDate
-  			eventRemarks
-  			fieldNotes
-  			fieldNumber
-  			habitat
-  			samplingEffort
-  			samplingProtocol
-  			samplingSizeUnit
-  			samplingSizeValue
-  			
-  			events {
-  				... on CollectionEvent {
-  					id
-  					behavior
-  					catalogNumber
-  					degreeOfEstablishment
-  					establishmentMeans
-  					individualCount
-  					lifeStage
-  					occurrenceStatus
-  					organismQuantity
-  					organismQuantityType
-  					otherCatalogNumbers
-  					pathway
-  					preparation
-  					recordNumber
-  					reproductiveCondition
-  					sex
-  				}
-  				... on SequencingEvent {
-  					id
-  					targetGene
-  					dnaSequence
-  					runs {
-  						id
-  						direction
-  						pcrPrimerNameForward
-  						pcrPrimerNameReverse
-  						sequencePrimerForwardName
-  						sequencePrimerReverseName
-  						sequencingCenter
-  						sequencingDate
-  						targetGene
-  						traceId
-  						traceName
-  						traceLink
-  					}
-  				}
-  			}
-  		}
-  	}
+    specimen(by: { recordId: "SAMA M2012" }) {
+      entityId
+      organismId
+      canonicalName
+      
+      organism {
+        organismId
+        sex
+        genotypicSex
+        phenotypicSex
+        lifeStage
+        reproductiveCondition
+        behavior
+      }
+      
+      collections {
+        fieldCollectingId
+        eventDate
+        eventTime
+        collectedBy
+        collectionRemarks
+        identifiedBy
+        identifiedDate
+        identificationRemarks
+        locality
+        country
+        countryCode
+        stateProvince
+        county
+        municipality
+        latitude
+        longitude
+        elevation
+        depth
+        elevationAccuracy
+        depthAccuracy
+        locationSource
+        preparation
+        environmentBroadScale
+        environmentLocalScale
+        environmentMedium
+        habitat
+        specificHost
+        individualCount
+        organismQuantity
+        organismQuantityType
+        strain
+        isolate
+        fieldNotes
+      }
+      
+      accessions {
+        typeStatus
+        eventDate
+        eventTime
+        collectionRepositoryId
+        collectionRepositoryCode
+        institutionName
+        institutionCode
+        disposition
+        preparation
+        accessionedBy
+        preparedBy
+        identifiedBy
+        identifiedDate
+        identificationRemarks
+        otherCatalogNumbers
+      }
+      
+      stats {
+        sequences
+        wholeGenomes
+        loci
+        otherGenomic
+        fullGenomes
+        partialGenomes
+        completeGenomes
+        assemblyChromosomes
+        assemblyScaffolds
+        assemblyContigs
+      }
+    }
   }
   
 }

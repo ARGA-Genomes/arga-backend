@@ -2,7 +2,7 @@ use diesel::{Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use super::schema;
+use super::{schema, schema_gnl};
 
 
 #[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
@@ -105,4 +105,21 @@ pub struct AccessionEvent {
     pub identification_remarks: Option<String>,
 
     pub other_catalog_numbers: Option<String>,
+}
+
+#[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema_gnl::specimen_stats)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct SpecimenStats {
+    pub entity_id: String,
+    pub sequences: i64,
+    pub whole_genomes: i64,
+    pub loci: i64,
+    pub other_genomic: i64,
+    pub full_genomes: i64,
+    pub partial_genomes: i64,
+    pub complete_genomes: i64,
+    pub assembly_chromosomes: i64,
+    pub assembly_scaffolds: i64,
+    pub assembly_contigs: i64,
 }

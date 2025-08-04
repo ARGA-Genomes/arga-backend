@@ -2,7 +2,7 @@ use async_graphql::*;
 use tracing::instrument;
 
 use super::common::{AccessionEvent, CollectionEvent, OrganismDetails};
-use crate::database::{models, Database};
+use crate::database::{Database, models};
 use crate::http::{Context as State, Error};
 
 
@@ -64,6 +64,13 @@ impl SpecimenQuery {
         Ok(accessions.into_iter().map(|r| r.into()).collect())
     }
 
+    async fn stats(&self, ctx: &Context<'_>) -> Result<SpecimenStats, Error> {
+        let state = ctx.data::<State>()?;
+        let specimen_id = &self.specimen.entity_id;
+        let stats = state.database.specimens.stats(specimen_id).await?;
+        Ok(stats.into())
+    }
+
     #[instrument(skip(self, ctx))]
     async fn events(&self, ctx: &Context<'_>) -> Result<SpecimenEvents, Error> {
         let state = ctx.data::<State>()?;
@@ -100,4 +107,38 @@ impl From<models::Specimen> for SpecimenDetails {
 pub struct SpecimenEvents {
     collections: Vec<CollectionEvent>,
     accessions: Vec<AccessionEvent>,
+}
+
+
+#[derive(SimpleObject)]
+pub struct SpecimenStats {
+    pub entity_id: String,
+    pub sequences: i64,
+    pub whole_genomes: i64,
+    pub loci: i64,
+    pub other_genomic: i64,
+    pub full_genomes: i64,
+    pub partial_genomes: i64,
+    pub complete_genomes: i64,
+    pub assembly_chromosomes: i64,
+    pub assembly_scaffolds: i64,
+    pub assembly_contigs: i64,
+}
+
+impl From<models::SpecimenStats> for SpecimenStats {
+    fn from(value: models::SpecimenStats) -> Self {
+        Self {
+            entity_id: value.entity_id,
+            sequences: value.sequences,
+            whole_genomes: value.whole_genomes,
+            loci: value.loci,
+            other_genomic: value.other_genomic,
+            full_genomes: value.full_genomes,
+            partial_genomes: value.partial_genomes,
+            complete_genomes: value.complete_genomes,
+            assembly_chromosomes: value.assembly_chromosomes,
+            assembly_scaffolds: value.assembly_scaffolds,
+            assembly_contigs: value.assembly_contigs,
+        }
+    }
 }

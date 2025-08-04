@@ -1,4 +1,5 @@
-use arga_core::models::Organism;
+use arga_core::models::{Organism, SpecimenStats};
+use arga_core::schema_gnl;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
@@ -131,5 +132,18 @@ impl SpecimenProvider {
             .await?;
 
         Ok(accessions)
+    }
+
+    pub async fn stats(&self, specimen_id: &str) -> Result<SpecimenStats, Error> {
+        use schema_gnl::specimen_stats;
+        let mut conn = self.pool.get().await?;
+
+        let stats = specimen_stats::table
+            .filter(specimen_stats::entity_id.eq(specimen_id))
+            .select(SpecimenStats::as_select())
+            .get_result::<SpecimenStats>(&mut conn)
+            .await?;
+
+        Ok(stats)
     }
 }
