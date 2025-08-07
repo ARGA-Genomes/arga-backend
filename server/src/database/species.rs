@@ -1,7 +1,7 @@
 use arga_core::models::Species;
+use diesel::Queryable;
 use diesel::dsl::sql;
 use diesel::prelude::*;
-use diesel::Queryable;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -20,8 +20,10 @@ use super::models::{
     VernacularName,
     WholeGenome,
 };
-use super::{schema, schema_gnl, Error, PageResult, PgPool};
-use crate::database::extensions::{lower_opt, sum_if, whole_genome_filters};
+use super::{Error, PageResult, PgPool, schema, schema_gnl};
+use crate::database::extensions::filters_new::specimens::DynamicFilters;
+use crate::database::extensions::{filters_new, lower_opt, sum_if, whole_genome_filters};
+
 
 const NCBI_REFSEQ_DATASET_ID: &str = "ARGA:TL:0002002";
 
@@ -179,17 +181,21 @@ impl SpeciesProvider {
         Ok(summaries)
     }
 
-    pub async fn specimens(&self, names: &Vec<Name>, page: i64, page_size: i64) -> PageResult<SpecimenSummary> {
+    pub async fn specimens(
+        &self,
+        names: &Vec<Name>,
+        filters: Vec<filters_new::specimens::Filter>,
+        page: i64,
+        page_size: i64,
+    ) -> PageResult<SpecimenSummary> {
         use schema::{accession_events, collection_events, specimens};
         use schema_gnl::specimen_stats;
+
         let mut conn = self.pool.get().await?;
 
         let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
 
-        let records = specimens::table
-            .inner_join(specimen_stats::table)
-            .left_join(collection_events::table)
-            .left_join(accession_events::table)
+        let records = filters_new::specimens::with_filter_tables()
             .select((
                 specimens::entity_id,
                 accession_events::collection_repository_id.nullable(),
@@ -211,7 +217,6 @@ impl SpeciesProvider {
                 specimen_stats::assembly_scaffolds,
                 specimen_stats::assembly_contigs,
             ))
-            .filter(specimens::name_id.eq_any(name_ids))
             .order((
                 accession_events::type_status.asc(),
                 specimen_stats::sequences.desc(),
@@ -219,6 +224,8 @@ impl SpeciesProvider {
                 accession_events::collection_repository_id.asc(),
                 specimens::entity_id.asc(),
             ))
+            .filter(specimens::name_id.eq_any(name_ids))
+            .dynamic_filters(filters)
             .paginate(page)
             .per_page(page_size)
             .load::<(SpecimenSummary, i64)>(&mut conn)

@@ -27,7 +27,7 @@ body:graphql {
           longitude
         }
       }
-      
+  
       overview {
         specimens {
           total
@@ -46,8 +46,15 @@ body:graphql {
           }
         }
       }
-      
-      specimens(page: 1, pageSize: 20) {
+  
+      specimens(
+        page: 1
+        pageSize: 20
+        filters: [
+          { country: "Australia" },
+          { data: GENOMIC_DATA },
+        ]
+      ) {
         total
         records {
           entityId

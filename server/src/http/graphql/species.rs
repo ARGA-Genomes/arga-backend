@@ -9,17 +9,17 @@ use uuid::Uuid;
 
 use super::common::attributes::AttributeValueType;
 use super::common::{
-    convert_whole_genome_filters,
     DatasetDetails,
     Page,
     SpeciesPhoto,
     Taxonomy,
     WholeGenomeFilterItem,
+    convert_whole_genome_filters,
 };
 use super::markers::SpeciesMarker;
 use crate::database::models::{Name as ArgaName, Name};
 use crate::database::sources::ALA_DATASET_ID;
-use crate::database::{schema, species, Database};
+use crate::database::{Database, schema, species};
 use crate::http::{Context as State, Error};
 
 pub struct Species {
@@ -127,9 +127,20 @@ impl Species {
     }
 
     #[instrument(skip(self, ctx))]
-    async fn specimens(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<SpecimenSummary>, Error> {
+    async fn specimens(
+        &self,
+        ctx: &Context<'_>,
+        filters: Vec<SpecimenFilterItem>,
+        page: i64,
+        page_size: i64,
+    ) -> Result<Page<SpecimenSummary>, Error> {
         let state = ctx.data::<State>()?;
-        let page = state.database.species.specimens(&self.names, page, page_size).await?;
+        let filters = filters.into_iter().map(|f| f.into()).collect();
+        let page = state
+            .database
+            .species
+            .specimens(&self.names, filters, page, page_size)
+            .await?;
         let specimens = page.records.into_iter().map(|r| r.into()).collect();
         Ok(Page {
             records: specimens,
@@ -654,6 +665,37 @@ impl From<models::Name> for Synonym {
             scientific_name: value.scientific_name,
             canonical_name: value.canonical_name,
             authorship: value.authorship,
+        }
+    }
+}
+
+
+#[derive(OneofObject, Debug)]
+pub enum SpecimenFilterItem {
+    Institution(Vec<String>),
+    Country(Vec<String>),
+    Data(Vec<HasData>),
+}
+
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "crate::database::extensions::filters_new::specimens::HasData")]
+pub enum HasData {
+    Genomes,
+    Loci,
+    GenomicData,
+}
+
+
+impl From<SpecimenFilterItem> for crate::database::extensions::filters_new::specimens::Filter {
+    fn from(item: SpecimenFilterItem) -> Self {
+        use SpecimenFilterItem::*;
+
+        use crate::database::extensions::filters_new::specimens::Filter;
+
+        match item {
+            Institution(value) => Filter::Institution(value),
+            Country(value) => Filter::Country(value),
+            Data(value) => Filter::Data(value.into_iter().map(|v| v.into()).collect()),
         }
     }
 }
