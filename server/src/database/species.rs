@@ -21,7 +21,7 @@ use super::models::{
     VernacularName,
     WholeGenome,
 };
-use super::{Error, PageResult, PgPool, schema, schema_gnl};
+use super::{Error, FilteredPage, FilteredPageResult, PageResult, PgPool, schema, schema_gnl};
 use crate::database::extensions::filters_new::specimens::DynamicFilters;
 use crate::database::extensions::filters_new::specimens::sorting::Sortable;
 use crate::database::extensions::{filters_new, lower_opt, sum_if, whole_genome_filters};
@@ -187,18 +187,21 @@ impl SpeciesProvider {
     pub async fn specimens(
         &self,
         names: &Vec<Name>,
-        filters: Vec<filters_new::specimens::Filter>,
+        mut filters: Vec<filters_new::specimens::Filter>,
         sorting: Sort<Sortable>,
         page: i64,
         page_size: i64,
-    ) -> PageResult<SpecimenSummary> {
+    ) -> FilteredPageResult<SpecimenSummary, filters_new::specimens::Options> {
         use filters_new::specimens::sorting::*;
         use schema::{accession_events, collection_events, specimens};
         use schema_gnl::specimen_stats;
 
         let mut conn = self.pool.get().await?;
 
+        // we inject the name id filter into the filter set so that the options
+        // queries and others can reuse it and properly scope down
         let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
+        filters.push(filters_new::specimens::Filter::Names(name_ids));
 
         let mut query = filters_new::specimens::with_filter_tables()
             .select((
@@ -222,8 +225,7 @@ impl SpeciesProvider {
                 specimen_stats::assembly_scaffolds,
                 specimen_stats::assembly_contigs,
             ))
-            .filter(specimens::name_id.eq_any(name_ids))
-            .dynamic_filters(filters)
+            .dynamic_filters(&filters)
             .into_boxed();
 
         query = match sorting.sortable {
@@ -245,7 +247,9 @@ impl SpeciesProvider {
             .load::<(SpecimenSummary, i64)>(&mut conn)
             .await?;
 
-        Ok(records.into())
+        let options = filters_new::specimens::Options::load(&mut conn, &filters).await?;
+
+        Ok(FilteredPage::new(records, options))
     }
 
     pub async fn whole_genomes(

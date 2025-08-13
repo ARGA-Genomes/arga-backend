@@ -21,6 +21,7 @@ use crate::database::extensions::filters_new::{self, Sort};
 use crate::database::models::{Name as ArgaName, Name};
 use crate::database::sources::ALA_DATASET_ID;
 use crate::database::{Database, schema, species};
+use crate::http::graphql::common::FilteredPage;
 use crate::http::{Context as State, Error};
 
 pub struct Species {
@@ -135,7 +136,7 @@ impl Species {
         sorting: SpecimenSorting,
         page: i64,
         page_size: i64,
-    ) -> Result<Page<SpecimenSummary>, Error> {
+    ) -> Result<FilteredPage<SpecimenSummary, SpecimenOptions>, Error> {
         let state = ctx.data::<State>()?;
         let filters = filters.into_iter().map(|f| f.into()).collect();
         let page = state
@@ -144,9 +145,10 @@ impl Species {
             .specimens(&self.names, filters, sorting.into(), page, page_size)
             .await?;
         let specimens = page.records.into_iter().map(|r| r.into()).collect();
-        Ok(Page {
+        Ok(FilteredPage {
             records: specimens,
             total: page.total,
+            options: page.options.into(),
         })
     }
 
@@ -735,6 +737,22 @@ impl From<SpecimenSorting> for Sort<filters_new::specimens::sorting::Sortable> {
         Self {
             sortable: value.sortable.into(),
             order: value.order.into(),
+        }
+    }
+}
+
+
+#[derive(Debug, SimpleObject)]
+pub struct SpecimenOptions {
+    institutions: Vec<String>,
+    countries: Vec<String>,
+}
+
+impl From<filters_new::specimens::Options> for SpecimenOptions {
+    fn from(value: filters_new::specimens::Options) -> Self {
+        Self {
+            institutions: value.institutions,
+            countries: value.countries,
         }
     }
 }

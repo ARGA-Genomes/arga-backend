@@ -4,8 +4,10 @@ use diesel::dsl::{InnerJoinQuerySource, LeftJoinQuerySource};
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Nullable};
+use diesel_async::RunQueryDsl;
 
 use super::{Sort, SortOrder};
+use crate::database::Error;
 
 
 type FilterableQuerySource = LeftJoinQuerySource<
@@ -13,10 +15,11 @@ type FilterableQuerySource = LeftJoinQuerySource<
     accession_events::table,
 >;
 
-type FilterExpression = Box<dyn BoxableExpression<FilterableQuerySource, Pg, SqlType = Nullable<Bool>>>;
+type FilterExpression<'a> = Box<dyn BoxableExpression<FilterableQuerySource, Pg, SqlType = Nullable<Bool>> + 'a>;
 
 
 pub enum Filter {
+    Names(Vec<uuid::Uuid>),
     Institution(Vec<String>),
     Country(Vec<String>),
     Data(Vec<HasData>),
@@ -39,16 +42,21 @@ pub fn with_filter_tables() -> _ {
 
 
 #[diesel::dsl::auto_type(no_type_alias)]
-pub fn with_any_institution(names: Vec<String>) -> _ {
+pub fn with_names(ids: &Vec<uuid::Uuid>) -> _ {
+    specimens::name_id.eq_any(ids)
+}
+
+#[diesel::dsl::auto_type(no_type_alias)]
+pub fn with_any_institution(names: &Vec<String>) -> _ {
     accession_events::institution_name.eq_any(names)
 }
 
 #[diesel::dsl::auto_type(no_type_alias)]
-pub fn with_any_country(names: Vec<String>) -> _ {
+pub fn with_any_country(names: &Vec<String>) -> _ {
     collection_events::country.eq_any(names)
 }
 
-pub fn with_data(data_type: HasData) -> FilterExpression {
+pub fn with_data(data_type: &HasData) -> FilterExpression {
     match data_type {
         HasData::Genomes => Box::new(specimen_stats::full_genomes.nullable().gt(0)),
         HasData::Loci => Box::new(specimen_stats::loci.nullable().gt(0)),
@@ -56,8 +64,9 @@ pub fn with_data(data_type: HasData) -> FilterExpression {
     }
 }
 
-pub fn with_filter(filter: Filter) -> FilterExpression {
+pub fn with_filter<'a>(filter: &'a Filter) -> FilterExpression<'a> {
     match filter {
+        Filter::Names(values) => Box::new(with_names(values).nullable()),
         Filter::Institution(values) => Box::new(with_any_institution(values).nullable()),
         Filter::Country(values) => Box::new(with_any_country(values).nullable()),
         Filter::Data(values) => {
@@ -77,7 +86,7 @@ pub fn with_filter(filter: Filter) -> FilterExpression {
     }
 }
 
-pub fn with_filters(filters: Vec<Filter>) -> Option<FilterExpression> {
+pub fn with_filters(filters: &Vec<Filter>) -> Option<FilterExpression> {
     let mut predicates = None;
 
     // builds a 'where .. and ..' expression
@@ -94,19 +103,76 @@ pub fn with_filters(filters: Vec<Filter>) -> Option<FilterExpression> {
 }
 
 
-pub trait DynamicFilters: Sized {
-    fn dynamic_filters(self, filters: Vec<Filter>) -> diesel::helper_types::Filter<Self, FilterExpression>
+pub trait DynamicFilters<'a>: Sized {
+    fn dynamic_filters(self, filters: &'a Vec<Filter>) -> diesel::helper_types::Filter<Self, FilterExpression<'a>>
     where
-        Self: diesel::query_dsl::methods::FilterDsl<FilterExpression>,
+        Self: diesel::query_dsl::methods::FilterDsl<FilterExpression<'a>>,
     {
-        match with_filters(filters) {
+        match with_filters(&filters) {
             Some(predicates) => self.filter(predicates),
             None => self.filter(Box::new(diesel::dsl::sql::<Nullable<Bool>>("1=1"))),
         }
     }
 }
 
-impl<T> DynamicFilters for T {}
+impl<'a, T> DynamicFilters<'a> for T {}
+
+
+pub struct Options {
+    pub institutions: Vec<String>,
+    pub countries: Vec<String>,
+}
+
+impl Options {
+    pub async fn all_options(
+        conn: &mut diesel_async::AsyncPgConnection,
+        filters: &Vec<Filter>,
+    ) -> Result<Options, Error> {
+        let institutions = with_filter_tables()
+            .group_by(accession_events::institution_code)
+            .select(accession_events::institution_code.assume_not_null())
+            .filter(accession_events::institution_code.is_not_null())
+            .dynamic_filters(filters)
+            .load::<String>(conn)
+            .await?;
+
+        let countries = with_filter_tables()
+            .group_by(collection_events::country)
+            .select(collection_events::country.assume_not_null())
+            .filter(collection_events::country.is_not_null())
+            .dynamic_filters(filters)
+            .load::<String>(conn)
+            .await?;
+
+        Ok(Options {
+            institutions,
+            countries,
+        })
+    }
+
+    pub async fn load(conn: &mut diesel_async::AsyncPgConnection, filters: &Vec<Filter>) -> Result<Options, Error> {
+        let institutions = with_filter_tables()
+            .group_by(accession_events::institution_code)
+            .select(accession_events::institution_code.assume_not_null())
+            .filter(accession_events::institution_code.is_not_null())
+            .dynamic_filters(filters)
+            .load::<String>(conn)
+            .await?;
+
+        let countries = with_filter_tables()
+            .group_by(collection_events::country)
+            .select(collection_events::country.assume_not_null())
+            .filter(collection_events::country.is_not_null())
+            .dynamic_filters(filters)
+            .load::<String>(conn)
+            .await?;
+
+        Ok(Options {
+            institutions,
+            countries,
+        })
+    }
+}
 
 
 pub mod sorting {

@@ -19,12 +19,12 @@ pub mod taxa;
 
 pub use arga_core::{get_database_url, models, schema, schema_gnl};
 use diesel::connection::{Instrumentation, InstrumentationEvent};
-use diesel_async::pooled_connection::bb8::Pool;
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::AsyncPgConnection;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use diesel_async::pooled_connection::bb8::Pool;
 use thiserror::Error;
 
-use self::extensions::pagination::Page;
+use self::extensions::pagination::{FilteredPage, Page};
 use crate::http::Error as HttpError;
 
 
@@ -65,6 +65,7 @@ impl From<diesel_async::pooled_connection::bb8::RunError> for HttpError {
 }
 
 pub type PageResult<T> = Result<Page<T>, Error>;
+pub type FilteredPageResult<T, Options> = Result<FilteredPage<T, Options>, Error>;
 
 #[derive(Clone)]
 pub struct Database {

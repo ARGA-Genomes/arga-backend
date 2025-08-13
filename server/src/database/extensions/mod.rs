@@ -9,10 +9,9 @@ pub mod taxa_filters;
 pub mod whole_genome_filters;
 
 pub use column_sum::sum_if;
-pub use pagination::Paginate;
-
 use diesel::expression::functions::define_sql_function;
 use diesel::sql_types::{Date, Double, Nullable, Text};
+pub use pagination::{FilteredPage, Page, Paginate};
 
 define_sql_function! {
     /// Returns a lowercase version of the text

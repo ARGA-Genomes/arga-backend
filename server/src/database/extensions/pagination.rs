@@ -1,10 +1,27 @@
 /// Implements a pagination extension for diesel.
-/// This is taken pretty mush as is from the diesel guides at: https://diesel.rs/guides/extending-diesel.html
-
+/// This is taken pretty much as is from the diesel guides at: https://diesel.rs/guides/extending-diesel.html
 use diesel::pg::Pg;
-use diesel::query_builder::{QueryFragment, AstPass, QueryId, Query};
+use diesel::query_builder::{AstPass, Query, QueryFragment, QueryId};
 use diesel::sql_types::BigInt;
-use diesel::{QueryResult, RunQueryDsl, PgConnection};
+use diesel::{PgConnection, QueryResult, RunQueryDsl};
+
+
+pub struct FilteredPage<T, Options> {
+    pub records: Vec<T>,
+    pub total: i64,
+    pub options: Options,
+}
+
+impl<T, Options> FilteredPage<T, Options> {
+    pub fn new(records: Vec<(T, i64)>, options: Options) -> FilteredPage<T, Options> {
+        let page = Page::from(records);
+        FilteredPage {
+            records: page.records,
+            total: page.total,
+            options,
+        }
+    }
+}
 
 
 pub struct Page<T> {
