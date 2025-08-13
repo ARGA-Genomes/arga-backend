@@ -91,6 +91,7 @@ pub struct SpecimensOverview {
     pub australian_material: i64,
     pub non_australian_material: i64,
     pub collection_years: Vec<(i64, i64)>,
+    pub top_countries: Vec<(String, i64)>,
 }
 
 #[derive(Debug, Queryable)]
@@ -494,6 +495,18 @@ impl SpeciesProvider {
             .load::<(i64, i64)>(&mut conn)
             .await?;
 
+        let top_countries = specimens::table
+            .inner_join(collection_events::table)
+            .filter(specimens::name_id.eq_any(name_ids))
+            .filter(collection_events::country.is_not_null())
+            .group_by(collection_events::country)
+            .select((collection_events::country.assume_not_null(), count_star()))
+            .order(count_star().desc())
+            .limit(5)
+            .load::<(String, i64)>(&mut conn)
+            .await?;
+
+
         Ok(SpecimensOverview {
             total,
             major_collections,
@@ -506,6 +519,7 @@ impl SpeciesProvider {
             australian_material,
             non_australian_material,
             collection_years,
+            top_countries,
         })
     }
 

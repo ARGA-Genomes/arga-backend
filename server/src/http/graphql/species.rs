@@ -276,11 +276,19 @@ pub struct SpecimensOverview {
     pub non_australian_material: i64,
     /// An array of total specimens collected for each year
     pub collection_years: Vec<YearValue<i64>>,
+    /// The top 5 countries of collected specimens
+    pub top_countries: Vec<StringValue<i64>>,
 }
 
 #[derive(Clone, Debug, SimpleObject)]
 pub struct YearValue<T: Sync + Send + Serialize + Clone + std::fmt::Debug + async_graphql::OutputType> {
     pub year: i64,
+    pub value: T,
+}
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct StringValue<T: Sync + Send + Serialize + Clone + std::fmt::Debug + async_graphql::OutputType> {
+    pub label: String,
     pub value: T,
 }
 
@@ -301,6 +309,11 @@ impl From<species::SpecimensOverview> for SpecimensOverview {
                 .collection_years
                 .into_iter()
                 .map(|(year, value)| YearValue { year, value })
+                .collect(),
+            top_countries: value
+                .top_countries
+                .into_iter()
+                .map(|(label, value)| StringValue { label, value })
                 .collect(),
         }
     }

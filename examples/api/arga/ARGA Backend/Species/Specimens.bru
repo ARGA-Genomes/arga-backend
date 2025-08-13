@@ -17,17 +17,6 @@ headers {
 body:graphql {
   {
     species(canonicalName: "Dendrolagus lumholtzi") {
-      mapping {
-        specimens {
-          entityId
-          collectionRepositoryId
-          institutionCode
-          typeStatus
-          latitude
-          longitude
-        }
-      }
-  
       overview {
         specimens {
           total
@@ -44,6 +33,10 @@ body:graphql {
             year
             value
           }
+          topCountries {
+            label
+            value
+          }
         }
       }
   
@@ -54,6 +47,7 @@ body:graphql {
           { country: "Australia" },
           { data: GENOMIC_DATA },
         ]
+        sorting: { sortable:VOUCHER, order:ASCENDING}
       ) {
         total
         options {
@@ -72,6 +66,17 @@ body:graphql {
           longitude
           sequences
           loci
+        }
+      }
+      
+          mapping {
+        specimens {
+          entityId
+          collectionRepositoryId
+          institutionCode
+          typeStatus
+          latitude
+          longitude
         }
       }
     }
