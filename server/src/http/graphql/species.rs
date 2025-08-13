@@ -17,6 +17,7 @@ use super::common::{
     convert_whole_genome_filters,
 };
 use super::markers::SpeciesMarker;
+use crate::database::extensions::filters_new::{self, Sort};
 use crate::database::models::{Name as ArgaName, Name};
 use crate::database::sources::ALA_DATASET_ID;
 use crate::database::{Database, schema, species};
@@ -131,6 +132,7 @@ impl Species {
         &self,
         ctx: &Context<'_>,
         filters: Vec<SpecimenFilterItem>,
+        sorting: SpecimenSorting,
         page: i64,
         page_size: i64,
     ) -> Result<Page<SpecimenSummary>, Error> {
@@ -139,7 +141,7 @@ impl Species {
         let page = state
             .database
             .species
-            .specimens(&self.names, filters, page, page_size)
+            .specimens(&self.names, filters, sorting.into(), page, page_size)
             .await?;
         let specimens = page.records.into_iter().map(|r| r.into()).collect();
         Ok(Page {
@@ -696,6 +698,43 @@ impl From<SpecimenFilterItem> for crate::database::extensions::filters_new::spec
             Institution(value) => Filter::Institution(value),
             Country(value) => Filter::Country(value),
             Data(value) => Filter::Data(value.into_iter().map(|v| v.into()).collect()),
+        }
+    }
+}
+
+
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "crate::database::extensions::filters_new::SortOrder")]
+pub enum SortOrder {
+    Ascending,
+    Descending,
+}
+
+#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[graphql(remote = "crate::database::extensions::filters_new::specimens::sorting::Sortable")]
+pub enum SpecimenSortable {
+    Status,
+    Voucher,
+    Institution,
+    Country,
+    CollectionDate,
+    MetadataScore,
+    Genomes,
+    Loci,
+    GenomicData,
+}
+
+#[derive(Debug, InputObject)]
+pub struct SpecimenSorting {
+    sortable: SpecimenSortable,
+    order: SortOrder,
+}
+
+impl From<SpecimenSorting> for Sort<filters_new::specimens::sorting::Sortable> {
+    fn from(value: SpecimenSorting) -> Self {
+        Self {
+            sortable: value.sortable.into(),
+            order: value.order.into(),
         }
     }
 }

@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::extensions::Paginate;
+use super::extensions::filters_new::Sort;
 use super::models::{
     GenomicComponent,
     Marker,
@@ -22,6 +23,7 @@ use super::models::{
 };
 use super::{Error, PageResult, PgPool, schema, schema_gnl};
 use crate::database::extensions::filters_new::specimens::DynamicFilters;
+use crate::database::extensions::filters_new::specimens::sorting::Sortable;
 use crate::database::extensions::{filters_new, lower_opt, sum_if, whole_genome_filters};
 
 
@@ -100,6 +102,7 @@ pub struct SpecimenMapMarker {
     pub latitude: f64,
     pub longitude: f64,
 }
+
 
 #[derive(Clone)]
 pub struct SpeciesProvider {
@@ -185,9 +188,11 @@ impl SpeciesProvider {
         &self,
         names: &Vec<Name>,
         filters: Vec<filters_new::specimens::Filter>,
+        sorting: Sort<Sortable>,
         page: i64,
         page_size: i64,
     ) -> PageResult<SpecimenSummary> {
+        use filters_new::specimens::sorting::*;
         use schema::{accession_events, collection_events, specimens};
         use schema_gnl::specimen_stats;
 
@@ -195,7 +200,7 @@ impl SpeciesProvider {
 
         let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
 
-        let records = filters_new::specimens::with_filter_tables()
+        let mut query = filters_new::specimens::with_filter_tables()
             .select((
                 specimens::entity_id,
                 accession_events::collection_repository_id.nullable(),
@@ -217,15 +222,24 @@ impl SpeciesProvider {
                 specimen_stats::assembly_scaffolds,
                 specimen_stats::assembly_contigs,
             ))
-            .order((
-                accession_events::type_status.asc(),
-                specimen_stats::sequences.desc(),
-                accession_events::institution_code.asc(),
-                accession_events::collection_repository_id.asc(),
-                specimens::entity_id.asc(),
-            ))
             .filter(specimens::name_id.eq_any(name_ids))
             .dynamic_filters(filters)
+            .into_boxed();
+
+        query = match sorting.sortable {
+            Sortable::Status => query.order(by_status(sorting.order)),
+            Sortable::Voucher => query.order(by_voucher(sorting.order)),
+            Sortable::Institution => query.order(by_institution(sorting.order)),
+            Sortable::Country => query.order(by_country(sorting.order)),
+            Sortable::CollectionDate => query.order(by_collection_date(sorting.order)),
+            Sortable::MetadataScore => query.order(by_metadata_score(sorting.order)),
+            Sortable::Genomes => query.order(by_genomes(sorting.order)),
+            Sortable::Loci => query.order(by_loci(sorting.order)),
+            Sortable::GenomicData => query.order(by_genomic_data(sorting.order)),
+        };
+
+        let records = query
+            .then_order_by(specimens::entity_id.asc())
             .paginate(page)
             .per_page(page_size)
             .load::<(SpecimenSummary, i64)>(&mut conn)

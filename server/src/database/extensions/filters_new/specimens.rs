@@ -5,6 +5,8 @@ use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::{Bool, Nullable};
 
+use super::{Sort, SortOrder};
+
 
 type FilterableQuerySource = LeftJoinQuerySource<
     LeftJoinQuerySource<InnerJoinQuerySource<specimens::table, specimen_stats::table>, collection_events::table>,
@@ -98,13 +100,166 @@ pub trait DynamicFilters: Sized {
         Self: diesel::query_dsl::methods::FilterDsl<FilterExpression>,
     {
         match with_filters(filters) {
-            Some(predicates) => diesel::query_dsl::methods::FilterDsl::<FilterExpression>::filter(self, predicates),
-            None => diesel::query_dsl::methods::FilterDsl::<FilterExpression>::filter(
-                self,
-                Box::new(diesel::dsl::sql::<Nullable<Bool>>("1=1")),
-            ),
+            Some(predicates) => self.filter(predicates),
+            None => self.filter(Box::new(diesel::dsl::sql::<Nullable<Bool>>("1=1"))),
         }
     }
 }
 
 impl<T> DynamicFilters for T {}
+
+
+pub mod sorting {
+    use arga_core::schema::{accession_events, collection_events};
+    use arga_core::schema_gnl::specimen_stats;
+    use diesel::expression::expression_types::NotSelectable;
+    use diesel::pg::Pg;
+    use diesel::prelude::*;
+
+    use super::{FilterableQuerySource, Sort, SortOrder};
+
+
+    type SortExpression = Box<dyn BoxableExpression<FilterableQuerySource, Pg, SqlType = NotSelectable>>;
+    type Sort2Expression =
+        Box<dyn BoxableExpression<FilterableQuerySource, Pg, SqlType = (NotSelectable, NotSelectable)>>;
+    type Sort3Expression =
+        Box<dyn BoxableExpression<FilterableQuerySource, Pg, SqlType = (NotSelectable, NotSelectable, NotSelectable)>>;
+
+
+    pub enum Sortable {
+        Status,
+        Voucher,
+        Institution,
+        Country,
+        CollectionDate,
+        MetadataScore,
+        Genomes,
+        Loci,
+        GenomicData,
+    }
+
+
+    pub fn by_status(order: SortOrder) -> SortExpression {
+        match order {
+            SortOrder::Ascending => Box::new(accession_events::type_status.nullable().asc().nulls_last()),
+            SortOrder::Descending => Box::new(accession_events::type_status.nullable().desc().nulls_last()),
+        }
+    }
+
+    pub fn by_voucher(order: SortOrder) -> Sort2Expression {
+        match order {
+            SortOrder::Ascending => Box::new((
+                accession_events::collection_repository_id.nullable().asc().nulls_last(),
+                accession_events::collection_repository_code
+                    .nullable()
+                    .asc()
+                    .nulls_last(),
+            )),
+            SortOrder::Descending => Box::new((
+                accession_events::collection_repository_id
+                    .nullable()
+                    .desc()
+                    .nulls_last(),
+                accession_events::collection_repository_code
+                    .nullable()
+                    .desc()
+                    .nulls_last(),
+            )),
+        }
+    }
+
+    pub fn by_institution(order: SortOrder) -> Sort2Expression {
+        match order {
+            SortOrder::Ascending => Box::new((
+                accession_events::institution_name.nullable().asc().nulls_last(),
+                accession_events::institution_code.nullable().asc().nulls_last(),
+            )),
+            SortOrder::Descending => Box::new((
+                accession_events::institution_name.nullable().desc().nulls_last(),
+                accession_events::institution_code.nullable().desc().nulls_last(),
+            )),
+        }
+    }
+
+    pub fn by_country(order: SortOrder) -> SortExpression {
+        match order {
+            SortOrder::Ascending => Box::new(collection_events::country.nullable().asc().nulls_last()),
+            SortOrder::Descending => Box::new(collection_events::country.nullable().desc().nulls_last()),
+        }
+    }
+
+    pub fn by_collection_date(order: SortOrder) -> SortExpression {
+        match order {
+            SortOrder::Ascending => Box::new(collection_events::event_date.nullable().asc().nulls_last()),
+            SortOrder::Descending => Box::new(collection_events::event_date.nullable().desc().nulls_last()),
+        }
+    }
+
+    pub fn by_genomes(order: SortOrder) -> SortExpression {
+        match order {
+            SortOrder::Ascending => Box::new(specimen_stats::full_genomes.nullable().asc()),
+            SortOrder::Descending => Box::new(specimen_stats::full_genomes.nullable().desc()),
+        }
+    }
+
+    pub fn by_loci(order: SortOrder) -> SortExpression {
+        match order {
+            SortOrder::Ascending => Box::new(specimen_stats::loci.nullable().asc()),
+            SortOrder::Descending => Box::new(specimen_stats::loci.nullable().desc()),
+        }
+    }
+
+    pub fn by_genomic_data(order: SortOrder) -> SortExpression {
+        match order {
+            SortOrder::Ascending => Box::new(specimen_stats::other_genomic.nullable().asc()),
+            SortOrder::Descending => Box::new(specimen_stats::other_genomic.nullable().desc()),
+        }
+    }
+
+    /// The score of all metadata associated with the specimen
+    /// 1. The specimen is registered
+    /// 2. The specimen has collection data
+    /// 3. The specimen has genomic data
+    pub fn by_metadata_score(order: SortOrder) -> Sort3Expression {
+        match order {
+            SortOrder::Ascending => Box::new((
+                accession_events::collection_repository_id
+                    .nullable()
+                    .asc()
+                    .nulls_first(),
+                collection_events::event_date.nullable().asc().nulls_first(),
+                specimen_stats::other_genomic.nullable().asc().nulls_first(),
+            )),
+            SortOrder::Descending => Box::new((
+                accession_events::collection_repository_id
+                    .nullable()
+                    .desc()
+                    .nulls_last(),
+                collection_events::event_date.nullable().desc().nulls_last(),
+                specimen_stats::other_genomic.nullable().desc().nulls_last(),
+            )),
+        }
+    }
+
+
+    pub trait DynamicSort: Sized {
+        fn dynamic_sort(self, sorting: Sort<Sortable>) -> diesel::helper_types::Order<Self, SortExpression>
+        where
+            Self: diesel::query_dsl::methods::OrderDsl<SortExpression>,
+        {
+            match sorting.sortable {
+                Sortable::Status => self.order(by_status(sorting.order)),
+                Sortable::Voucher => todo!(),
+                Sortable::Institution => todo!(),
+                Sortable::Country => self.order(by_country(sorting.order)),
+                Sortable::CollectionDate => self.order(by_collection_date(sorting.order)),
+                Sortable::MetadataScore => todo!(),
+                Sortable::Genomes => self.order(by_genomes(sorting.order)),
+                Sortable::Loci => self.order(by_loci(sorting.order)),
+                Sortable::GenomicData => self.order(by_genomic_data(sorting.order)),
+            }
+        }
+    }
+
+    impl<T> DynamicSort for T {}
+}
