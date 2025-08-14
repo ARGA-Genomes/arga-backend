@@ -687,11 +687,18 @@ impl From<models::Name> for Synonym {
 }
 
 
+#[derive(InputObject, Debug)]
+pub struct DateRange {
+    after: NaiveDate,
+    before: NaiveDate,
+}
+
 #[derive(OneofObject, Debug)]
 pub enum SpecimenFilterItem {
     Institution(Vec<String>),
     Country(Vec<String>),
     Data(Vec<HasData>),
+    CollectedBetween(DateRange),
 }
 
 #[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -713,6 +720,10 @@ impl From<SpecimenFilterItem> for crate::database::extensions::filters_new::spec
             Institution(value) => Filter::Institution(value),
             Country(value) => Filter::Country(value),
             Data(value) => Filter::Data(value.into_iter().map(|v| v.into()).collect()),
+            CollectedBetween(range) => Filter::CollectedBetween {
+                after: range.after,
+                before: range.before,
+            },
         }
     }
 }

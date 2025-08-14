@@ -1,5 +1,6 @@
 use arga_core::schema::{accession_events, collection_events, specimens};
 use arga_core::schema_gnl::specimen_stats;
+use chrono::NaiveDate;
 use diesel::dsl::{InnerJoinQuerySource, LeftJoinQuerySource};
 use diesel::pg::Pg;
 use diesel::prelude::*;
@@ -23,6 +24,7 @@ pub enum Filter {
     Institution(Vec<String>),
     Country(Vec<String>),
     Data(Vec<HasData>),
+    CollectedBetween { after: NaiveDate, before: NaiveDate },
 }
 
 pub enum HasData {
@@ -58,6 +60,12 @@ pub fn with_any_country(names: &Vec<String>) -> _ {
     collection_events::country.eq_any(names)
 }
 
+#[diesel::dsl::auto_type(no_type_alias)]
+pub fn with_collection_date_between<'a>(after: &'a NaiveDate, before: &'a NaiveDate) -> _ {
+    collection_events::event_date.between(after, before)
+}
+
+
 pub fn with_data(data_type: &HasData) -> FilterExpression {
     match data_type {
         HasData::Genomes => Box::new(specimen_stats::full_genomes.nullable().gt(0)),
@@ -71,6 +79,7 @@ pub fn with_filter<'a>(filter: &'a Filter) -> FilterExpression<'a> {
         Filter::Names(values) => Box::new(with_names(values).nullable()),
         Filter::Institution(values) => Box::new(with_any_institution(values).nullable()),
         Filter::Country(values) => Box::new(with_any_country(values).nullable()),
+        Filter::CollectedBetween { after, before } => Box::new(with_collection_date_between(after, before).nullable()),
         Filter::Data(values) => {
             let mut predicates = None;
 
@@ -126,32 +135,6 @@ pub struct Options {
 }
 
 impl Options {
-    pub async fn all_options(
-        conn: &mut diesel_async::AsyncPgConnection,
-        filters: &Vec<Filter>,
-    ) -> Result<Options, Error> {
-        let institutions = with_filter_tables()
-            .group_by(accession_events::institution_code)
-            .select(accession_events::institution_code.assume_not_null())
-            .filter(accession_events::institution_code.is_not_null())
-            .dynamic_filters(filters)
-            .load::<String>(conn)
-            .await?;
-
-        let countries = with_filter_tables()
-            .group_by(collection_events::country)
-            .select(collection_events::country.assume_not_null())
-            .filter(collection_events::country.is_not_null())
-            .dynamic_filters(filters)
-            .load::<String>(conn)
-            .await?;
-
-        Ok(Options {
-            institutions,
-            countries,
-        })
-    }
-
     pub async fn load(conn: &mut diesel_async::AsyncPgConnection, filters: &Vec<Filter>) -> Result<Options, Error> {
         let institutions = with_filter_tables()
             .group_by(accession_events::institution_code)
