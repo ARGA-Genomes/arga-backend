@@ -188,7 +188,7 @@ impl SpeciesProvider {
     pub async fn specimens(
         &self,
         names: &Vec<Name>,
-        mut filters: Vec<filters_new::specimens::Filter>,
+        filters: Vec<filters_new::specimens::Filter>,
         sorting: Sort<Sortable>,
         page: i64,
         page_size: i64,
@@ -199,10 +199,8 @@ impl SpeciesProvider {
 
         let mut conn = self.pool.get().await?;
 
-        // we inject the name id filter into the filter set so that the options
-        // queries and others can reuse it and properly scope down
+        // get specimens for all associated names
         let name_ids: Vec<Uuid> = names.iter().map(|n| n.id).collect();
-        filters.push(filters_new::specimens::Filter::Names(name_ids));
 
         let mut query = filters_new::specimens::with_filter_tables()
             .select((
@@ -226,6 +224,7 @@ impl SpeciesProvider {
                 specimen_stats::assembly_scaffolds,
                 specimen_stats::assembly_contigs,
             ))
+            .filter(specimens::name_id.eq_any(&name_ids))
             .dynamic_filters(&filters)
             .into_boxed();
 
@@ -248,7 +247,10 @@ impl SpeciesProvider {
             .load::<(SpecimenSummary, i64)>(&mut conn)
             .await?;
 
-        let options = filters_new::specimens::Options::load(&mut conn, &filters).await?;
+        // it becomes too confusing when the filter affects itself so we make
+        // sure that it only filters the options by the the name and nothing else
+        let name_filter = filters_new::specimens::Filter::Names(name_ids);
+        let options = filters_new::specimens::Options::load(&mut conn, &vec![name_filter]).await?;
 
         Ok(FilteredPage::new(records, options))
     }

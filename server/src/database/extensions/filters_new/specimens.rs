@@ -48,7 +48,9 @@ pub fn with_names(ids: &Vec<uuid::Uuid>) -> _ {
 
 #[diesel::dsl::auto_type(no_type_alias)]
 pub fn with_any_institution(names: &Vec<String>) -> _ {
-    accession_events::institution_name.eq_any(names)
+    accession_events::institution_name
+        .eq_any(names)
+        .or(accession_events::institution_code.eq_any(names))
 }
 
 #[diesel::dsl::auto_type(no_type_alias)]
