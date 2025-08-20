@@ -5,7 +5,8 @@ use uuid::Uuid;
 
 use super::common::species::{SortDirection, SpeciesSort};
 use super::common::{DatasetDetails, FilterItem, Page, SpeciesCard, convert_filters};
-use super::helpers::{self, SpeciesHelper};
+use super::helpers::{self, SpeciesHelper, csv};
+use super::taxon::{DataBreakdown, RankSummary};
 use crate::database::Database;
 use crate::database::extensions::filters::Filter;
 use crate::database::extensions::species_filters::{self};
@@ -122,6 +123,73 @@ impl SourceQuery {
 
         let csv = helpers::csv::species(page.records).await?;
 
+        Ok(csv)
+    }
+
+    async fn species_genomic_data_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
+        let state = ctx.data::<State>()?;
+        let summaries = state
+            .database
+            .sources
+            .species_genomic_data_summary(&self.source)
+            .await?;
+        let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
+        Ok(summaries)
+    }
+
+    async fn species_genomic_data_summary_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        let state = ctx.data::<State>()?;
+        let summaries = state
+            .database
+            .sources
+            .species_genomic_data_summary(&self.source)
+            .await?;
+        let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
+        let csv = helpers::csv::generic(summaries).await?;
+        Ok(csv)
+    }
+
+    async fn species_genomes_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
+        let state = ctx.data::<State>()?;
+        let summaries = state.database.sources.species_genomes_summary(&self.source).await?;
+        let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
+        Ok(summaries)
+    }
+
+    async fn species_genomes_summary_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        let state = ctx.data::<State>()?;
+        let summaries = state.database.sources.species_genomes_summary(&self.source).await?;
+        let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
+        let csv = helpers::csv::generic(summaries).await?;
+        Ok(csv)
+    }
+
+    async fn species_loci_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
+        let state = ctx.data::<State>()?;
+        let summaries = state.database.sources.species_loci_summary(&self.source).await?;
+        let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
+        Ok(summaries)
+    }
+
+    async fn species_loci_summary_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        let state = ctx.data::<State>()?;
+        let summaries = state.database.sources.species_loci_summary(&self.source).await?;
+        let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
+        let csv = helpers::csv::generic(summaries).await?;
+        Ok(csv)
+    }
+
+    async fn summary(&self, ctx: &Context<'_>) -> Result<RankSummary, Error> {
+        let state = ctx.data::<State>()?;
+        let summary = state.database.sources.summary(&self.source).await?;
+        Ok(summary.into())
+    }
+
+    async fn summary_csv(&self, ctx: &Context<'_>) -> Result<String, async_graphql::Error> {
+        let state = ctx.data::<State>()?;
+        let summary = state.database.sources.summary(&self.source).await?;
+        let out: Vec<RankSummary> = vec![summary.into()];
+        let csv = csv::generic(out).await?;
         Ok(csv)
     }
 }

@@ -138,6 +138,37 @@ impl Statistics {
 
         csv::generic(stats).await
     }
+
+    async fn complete_genomes_by_year_for_source(
+        &self,
+        ctx: &Context<'_>,
+        name: String,
+    ) -> Result<Vec<CompleteGenomesByYearStatistic>> {
+        let state = ctx.data::<State>()?;
+
+        let stats = state.database.stats.complete_genomes_by_year_for_source(&name).await?;
+
+        let stats: Vec<CompleteGenomesByYearStatistic> = stats
+            .into_iter()
+            .map(|(year, total)| CompleteGenomesByYearStatistic { year, total })
+            .collect();
+
+        Ok(stats)
+    }
+
+    async fn complete_genomes_by_year_for_source_csv(&self, ctx: &Context<'_>, name: String) -> Result<String> {
+        let state = ctx.data::<State>()?;
+
+        let stats = state.database.stats.complete_genomes_by_year_for_source(&name).await?;
+
+        let stats: Vec<CompleteGenomesByYearStatistic> = stats
+            .into_iter()
+            .map(|(year, total)| CompleteGenomesByYearStatistic { year, total })
+            .collect();
+
+        let csv = csv::generic(stats).await?;
+        Ok(csv)
+    }
 }
 
 

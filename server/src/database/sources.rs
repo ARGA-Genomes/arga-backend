@@ -1,4 +1,5 @@
 use arga_core::models::Species;
+use bigdecimal::{BigDecimal, Zero};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
@@ -9,6 +10,8 @@ use super::{PageResult, PgPool, schema, schema_gnl};
 use crate::database::Error;
 use crate::database::extensions::filters::{Filter, with_filters};
 use crate::database::extensions::species_filters::{SortDirection, SpeciesSort, with_sorting};
+use crate::database::extensions::sum_if;
+use crate::database::taxa::RankSummary;
 
 pub const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
 
@@ -108,5 +111,207 @@ impl SourceProvider {
             .await?;
 
         Ok(records.into())
+    }
+
+    // the top 10 species that have the most genomic data for this source
+    pub async fn species_genomic_data_summary(&self, source: &Source) -> Result<Vec<super::taxa::Summary>, Error> {
+        use schema::{datasets, name_attributes as attrs, taxa, taxon_names};
+        use schema_gnl::{species, taxa_tree_stats as stats};
+        let mut conn = self.pool.get().await?;
+
+        // Use the same join pattern as the species() method to find species for this source
+        let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
+
+        let source_species: Vec<uuid::Uuid> = species::table
+            .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
+            .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
+            .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
+            .inner_join(taxa_datasets.on(taxa_datasets.field(datasets::id).eq(species::dataset_id)))
+            .select(species::id)
+            .distinct()
+            .filter(datasets::source_id.eq(source.id))
+            .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
+            .load::<uuid::Uuid>(&mut conn)
+            .await?;
+
+        if source_species.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Then get stats for those species from the taxa tree stats (no cross-schema join needed)
+        let summaries = stats::table
+            .inner_join(taxa::table.on(taxa::id.eq(stats::id)))
+            .select((
+                taxa::scientific_name,
+                taxa::canonical_name,
+                stats::genomes,
+                stats::loci,
+                stats::specimens,
+                stats::other,
+                stats::total_genomic,
+            ))
+            .filter(stats::id.eq_any(source_species))
+            .filter(taxa::rank.eq(arga_core::models::TaxonomicRank::Species))
+            .distinct()
+            .order(stats::total_genomic.desc())
+            .limit(10)
+            .load::<super::taxa::Summary>(&mut conn)
+            .await?;
+
+        Ok(summaries)
+    }
+
+    // the top 10 species that have the most genomes for this source
+    pub async fn species_genomes_summary(&self, source: &Source) -> Result<Vec<super::taxa::Summary>, Error> {
+        use schema::{datasets, name_attributes as attrs, taxa, taxon_names};
+        use schema_gnl::{species, taxa_tree_stats as stats};
+        let mut conn = self.pool.get().await?;
+
+        // Use the same join pattern as the species() method to find species for this source
+        let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
+
+        let source_species: Vec<uuid::Uuid> = species::table
+            .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
+            .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
+            .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
+            .inner_join(taxa_datasets.on(taxa_datasets.field(datasets::id).eq(species::dataset_id)))
+            .select(species::id)
+            .distinct()
+            .filter(datasets::source_id.eq(source.id))
+            .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
+            .load::<uuid::Uuid>(&mut conn)
+            .await?;
+
+        if source_species.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Then get stats for those species from the taxa tree stats (no cross-schema join needed)
+        let summaries = stats::table
+            .inner_join(taxa::table.on(taxa::id.eq(stats::id)))
+            .select((
+                taxa::scientific_name,
+                taxa::canonical_name,
+                stats::genomes,
+                stats::loci,
+                stats::specimens,
+                stats::other,
+                stats::total_genomic,
+            ))
+            .filter(stats::id.eq_any(source_species))
+            .filter(taxa::rank.eq(arga_core::models::TaxonomicRank::Species))
+            .distinct()
+            .order(stats::genomes.desc())
+            .limit(10)
+            .load::<super::taxa::Summary>(&mut conn)
+            .await?;
+
+        Ok(summaries)
+    }
+
+    // the top 10 species that have the most genomes for this source
+    pub async fn species_loci_summary(&self, source: &Source) -> Result<Vec<super::taxa::Summary>, Error> {
+        use schema::{datasets, name_attributes as attrs, taxa, taxon_names};
+        use schema_gnl::{species, taxa_tree_stats as stats};
+        let mut conn = self.pool.get().await?;
+
+        // Use the same join pattern as the species() method to find species for this source
+        let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
+
+        let source_species: Vec<uuid::Uuid> = species::table
+            .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
+            .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
+            .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
+            .inner_join(taxa_datasets.on(taxa_datasets.field(datasets::id).eq(species::dataset_id)))
+            .select(species::id)
+            .distinct()
+            .filter(datasets::source_id.eq(source.id))
+            .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
+            .load::<uuid::Uuid>(&mut conn)
+            .await?;
+
+        if source_species.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Then get stats for those species from the taxa tree stats (no cross-schema join needed)
+        let summaries = stats::table
+            .inner_join(taxa::table.on(taxa::id.eq(stats::id)))
+            .select((
+                taxa::scientific_name,
+                taxa::canonical_name,
+                stats::genomes,
+                stats::loci,
+                stats::specimens,
+                stats::other,
+                stats::total_genomic,
+            ))
+            .filter(stats::id.eq_any(source_species))
+            .filter(taxa::rank.eq(arga_core::models::TaxonomicRank::Species))
+            .distinct()
+            .order(stats::loci.desc())
+            .limit(10)
+            .load::<super::taxa::Summary>(&mut conn)
+            .await?;
+
+        Ok(summaries)
+    }
+
+    /// Summary statistics for a specific rank for species in this source
+    pub async fn summary(&self, source: &Source) -> Result<super::taxa::RankSummary, Error> {
+        use schema::{datasets, name_attributes as attrs, taxa, taxon_names};
+        use schema_gnl::{species, taxa_tree_stats as stats};
+
+        let mut conn = self.pool.get().await?;
+
+        // Use the exact same join pattern and logic as the species() method to ensure consistency
+        let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
+
+        // Get the species IDs using the same query pattern as species() method
+        let source_species: Vec<uuid::Uuid> = species::table
+            .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
+            .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
+            .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
+            .inner_join(taxa_datasets.on(taxa_datasets.field(datasets::id).eq(species::dataset_id)))
+            .select(species::id)
+            .distinct()
+            .filter(datasets::source_id.eq(source.id))
+            .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
+            .load::<uuid::Uuid>(&mut conn)
+            .await?;
+
+        let total_count = source_species.len() as i64;
+
+        if total_count == 0 {
+            return Ok(RankSummary {
+                total: 0,
+                loci: 0,
+                genomes: 0,
+                genomic_data: 0,
+            });
+        }
+
+        // the taxa_tree_stats view summarises the total amount of data linked to descendants
+        // of the supplied taxon. since we want the number of species that have data we instead
+        // filter the taxa tree to species level nodes and count how many of them have a record
+        // greater than zero. to get multiple values from one query we leverage the sum_if extension.
+        let (genomes, loci, genomic_data) = stats::table
+            .inner_join(taxa::table.on(taxa::id.eq(stats::id)))
+            .filter(stats::taxon_id.eq_any(source_species))
+            .filter(taxa::rank.eq(arga_core::models::TaxonomicRank::Species))
+            .select((
+                sum_if(stats::full_genomes.gt(BigDecimal::zero())).nullable(),
+                sum_if(stats::loci.gt(BigDecimal::zero())).nullable(),
+                sum_if(stats::total_genomic.gt(BigDecimal::zero())).nullable(),
+            ))
+            .get_result::<(Option<i64>, Option<i64>, Option<i64>)>(&mut conn)
+            .await?;
+
+        Ok(RankSummary {
+            total: total_count,
+            genomes: genomes.unwrap_or(0),
+            loci: loci.unwrap_or(0),
+            genomic_data: genomic_data.unwrap_or(0),
+        })
     }
 }

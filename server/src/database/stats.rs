@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use arga_core::models::{self, Dataset, TaxonomicRank};
+use arga_core::models::{self, TaxonomicRank};
 use arga_core::schema_gnl;
 use async_graphql::SimpleObject;
 use bigdecimal::BigDecimal;
@@ -227,6 +227,59 @@ impl StatsProvider {
             .filter(taxon_names::taxon_id.eq_any(filtered_species))
             .filter(sequence_milestones::representation.eq("Full"))
             .filter(datasets::global_id.eq(ALA_DATASET_ID))
+            .select((
+                sql::<Integer>("date_part('year', to_date(deposition_date, 'YYYY/MM/DD'))::integer"),
+                count_star(),
+            ))
+            .group_by(sql::<Integer>("1"))
+            .order_by(sql::<Integer>("1"))
+            .load::<(i32, i64)>(&mut conn)
+            .await?;
+
+        Ok(complete_genomes)
+    }
+
+    pub async fn complete_genomes_by_year_for_source(&self, name: &str) -> Result<Vec<(i32, i64)>, Error> {
+        use diesel::dsl::{count_star, sql};
+        use diesel::sql_types::Integer;
+        use schema::{datasets, name_attributes as attrs, sources, taxon_names};
+        use schema_gnl::{sequence_milestones, species};
+
+        let mut conn = self.pool.get().await?;
+
+        // First get the source ID by name
+        let source_id = sources::table
+            .filter(sources::name.eq(name))
+            .select(sources::id)
+            .first::<uuid::Uuid>(&mut conn)
+            .await?;
+
+        // Use the same join pattern as the species() method to find species for this source
+        let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
+
+        let source_species: Vec<uuid::Uuid> = species::table
+            .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
+            .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
+            .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
+            .inner_join(taxa_datasets.on(taxa_datasets.field(datasets::id).eq(species::dataset_id)))
+            .select(species::id)
+            .distinct()
+            .filter(datasets::source_id.eq(source_id))
+            .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
+            .load::<uuid::Uuid>(&mut conn)
+            .await?;
+
+        if source_species.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // FIXME: we are skipping lots of type checks here instead of adding a date extraction utility
+        // extension or an extra derived field in the whole_genomes table
+        let complete_genomes = sequence_milestones::table
+            .inner_join(taxon_names::table.on(taxon_names::name_id.eq(sequence_milestones::name_id)))
+            .inner_join(species::table.on(species::id.eq(taxon_names::taxon_id)))
+            .filter(taxon_names::taxon_id.eq_any(source_species))
+            .filter(sequence_milestones::representation.eq("Full"))
             .select((
                 sql::<Integer>("date_part('year', to_date(deposition_date, 'YYYY/MM/DD'))::integer"),
                 count_star(),
