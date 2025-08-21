@@ -1,10 +1,11 @@
 use arga_core::models::Species;
 use bigdecimal::{BigDecimal, Zero};
+use chrono::NaiveDate;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use super::extensions::Paginate;
+use super::extensions::{Paginate, date_utils::DateParser};
 use super::models::{Dataset, Source};
 use super::{PageResult, PgPool, schema, schema_gnl};
 use crate::database::Error;
@@ -18,6 +19,13 @@ pub const ALA_DATASET_ID: &str = "ARGA:TL:0001013";
 #[derive(Clone)]
 pub struct SourceProvider {
     pub pool: PgPool,
+}
+
+#[derive(Clone)]
+pub struct GenomeRelease {
+    pub scientific_name: String,
+    pub canonical_name: String,
+    pub release_date: Option<NaiveDate>,
 }
 
 
@@ -313,5 +321,63 @@ impl SourceProvider {
             loci: loci.unwrap_or(0),
             genomic_data: genomic_data.unwrap_or(0),
         })
+    }
+
+    // the top 10 latest genome releases for this source
+    pub async fn latest_genome_releases(&self, source: &Source) -> Result<Vec<GenomeRelease>, Error> {
+        use schema::{datasets, deposition_events, name_attributes as attrs, taxa, taxon_names};
+        use schema_gnl::species;
+        let mut conn = self.pool.get().await?;
+
+        // Use the same join pattern as the species() method to find species for this source
+        let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
+
+        let source_species: Vec<uuid::Uuid> = species::table
+            .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
+            .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
+            .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
+            .inner_join(taxa_datasets.on(taxa_datasets.field(datasets::id).eq(species::dataset_id)))
+            .select(species::id)
+            .distinct()
+            .filter(datasets::source_id.eq(source.id))
+            .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
+            .load::<uuid::Uuid>(&mut conn)
+            .await?;
+
+        if source_species.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Step 2: Get deposition events for these species, ordered by event_date converted to proper date
+        // Handle mixed date formats: DD/MM/YYYY, YYYY/MM/DD, D/M/YY, D/M/YYYY, D/MM/YY
+        let genome_results = taxa::table
+            .inner_join(taxon_names::table.on(taxa::id.eq(taxon_names::taxon_id)))
+            .inner_join(schema::sequences::table.on(taxon_names::name_id.eq(schema::sequences::name_id)))
+            .inner_join(deposition_events::table.on(schema::sequences::id.eq(deposition_events::sequence_id)))
+            .select((taxa::scientific_name, taxa::canonical_name, deposition_events::event_date))
+            .filter(taxa::id.eq_any(&source_species))
+            .filter(taxa::rank.eq(arga_core::models::TaxonomicRank::Species))
+            .filter(deposition_events::event_date.is_not_null())
+            .order(DateParser::sql_date_order_converter().desc().nulls_last())
+            .limit(10)
+            .load::<(String, String, Option<String>)>(&mut conn)
+            .await?;
+
+        // Step 3: Parse the date strings into actual dates
+        let summaries = genome_results
+            .into_iter()
+            .map(|(scientific_name, canonical_name, event_date)| {
+                let parsed_date = event_date
+                    .and_then(|date_str| DateParser::parse_flexible_date(&date_str).ok());
+                
+                GenomeRelease {
+                    scientific_name,
+                    canonical_name,
+                    release_date: parsed_date,
+                }
+            })
+            .collect();
+
+        Ok(summaries)
     }
 }

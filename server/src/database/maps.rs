@@ -5,15 +5,15 @@ use diesel::sql_types::{Bool, Float, Nullable};
 use diesel::{AsExpression, FromSqlRow, Queryable};
 use diesel_async::RunQueryDsl;
 use geojson::ser::serialize_geometry;
-use geozero::wkb::Ewkb;
 use geozero::ToGeo;
+use geozero::wkb::Ewkb;
 use serde::Serialize;
 
 use super::schema::sql_types::Geometry;
-use super::{schema, Error, PgPool};
+use super::{Error, PgPool, schema};
 
 // geometry ST_Simplify(geometry geomA, float tolerance, boolean preserveCollapsed);
-sql_function! { fn st_simplify(geom: Nullable<Geometry>, tolerance: Float, preserve: Bool) -> Nullable<Geometry> }
+define_sql_function! { fn st_simplify(geom: Nullable<Geometry>, tolerance: Float, preserve: Bool) -> Nullable<Geometry> }
 
 
 #[derive(Debug, Serialize)]

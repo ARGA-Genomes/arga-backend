@@ -1,5 +1,6 @@
 use arga_core::models;
 use async_graphql::{SimpleObject, *};
+use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -7,9 +8,9 @@ use super::common::species::{SortDirection, SpeciesSort};
 use super::common::{DatasetDetails, FilterItem, Page, SpeciesCard, convert_filters};
 use super::helpers::{self, SpeciesHelper, csv};
 use super::taxon::{DataBreakdown, RankSummary};
-use crate::database::Database;
 use crate::database::extensions::filters::Filter;
 use crate::database::extensions::species_filters::{self};
+use crate::database::{Database, sources};
 use crate::http::graphql::common::datasets::{AccessRightsStatus, DataReuseStatus, SourceContentType};
 use crate::http::{Context as State, Error};
 
@@ -17,6 +18,23 @@ use crate::http::{Context as State, Error};
 pub enum SourceBy {
     Id(Uuid),
     Name(String),
+}
+
+#[derive(SimpleObject, Serialize)]
+pub struct GenomeRelease {
+    pub scientific_name: String,
+    pub canonical_name: String,
+    pub release_date: Option<NaiveDate>,
+}
+
+impl From<sources::GenomeRelease> for GenomeRelease {
+    fn from(value: sources::GenomeRelease) -> Self {
+        Self {
+            scientific_name: value.scientific_name,
+            canonical_name: value.canonical_name,
+            release_date: value.release_date,
+        }
+    }
 }
 
 #[derive(MergedObject)]
@@ -175,6 +193,21 @@ impl SourceQuery {
         let state = ctx.data::<State>()?;
         let summaries = state.database.sources.species_loci_summary(&self.source).await?;
         let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
+        let csv = helpers::csv::generic(summaries).await?;
+        Ok(csv)
+    }
+
+    async fn latest_genome_releases(&self, ctx: &Context<'_>) -> Result<Vec<GenomeRelease>, Error> {
+        let state = ctx.data::<State>()?;
+        let summaries = state.database.sources.latest_genome_releases(&self.source).await?;
+        let summaries: Vec<GenomeRelease> = summaries.into_iter().map(|r| r.into()).collect();
+        Ok(summaries)
+    }
+
+    async fn latest_genome_releases_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        let state = ctx.data::<State>()?;
+        let summaries = state.database.sources.latest_genome_releases(&self.source).await?;
+        let summaries: Vec<GenomeRelease> = summaries.into_iter().map(|r| r.into()).collect();
         let csv = helpers::csv::generic(summaries).await?;
         Ok(csv)
     }
