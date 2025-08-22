@@ -9,10 +9,11 @@ use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 
 use super::extensions::classification_filters::Classification;
+use super::extensions::filters::Filter;
 use super::extensions::filters_new::name_attributes::Attribute;
 use super::{Error, PgPool, schema};
 use crate::database::extensions::classification_filters::with_classification;
-use crate::database::extensions::filters::with_classification as with_species_classification;
+use crate::database::extensions::filters::{with_classification as with_species_classification, with_filters};
 use crate::database::extensions::filters_new::stats;
 use crate::database::extensions::sum_if;
 use crate::database::sources::ALA_DATASET_ID;
@@ -239,7 +240,11 @@ impl StatsProvider {
         Ok(complete_genomes)
     }
 
-    pub async fn complete_genomes_by_year_for_source(&self, name: &str) -> Result<Vec<(i32, i64)>, Error> {
+    pub async fn complete_genomes_by_year_for_source(
+        &self,
+        name: &str,
+        filters: &Option<Vec<Filter>>,
+    ) -> Result<Vec<(i32, i64)>, Error> {
         use diesel::dsl::{count_star, sql};
         use diesel::sql_types::Integer;
         use schema::{datasets, name_attributes as attrs, sources, taxon_names};
@@ -257,7 +262,12 @@ impl StatsProvider {
         // Use the same join pattern as the species() method to find species for this source
         let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
 
-        let source_species: Vec<uuid::Uuid> = species::table
+        let query = match filters.as_ref().and_then(|f| with_filters(f)) {
+            Some(predicates) => species::table.filter(predicates).into_boxed(),
+            None => species::table.into_boxed(),
+        };
+
+        let source_species: Vec<uuid::Uuid> = query
             .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
             .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
             .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))

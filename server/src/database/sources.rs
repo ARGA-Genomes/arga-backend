@@ -5,7 +5,8 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
-use super::extensions::{Paginate, date_utils::DateParser};
+use super::extensions::Paginate;
+use super::extensions::date_utils::DateParser;
 use super::models::{Dataset, Source};
 use super::{PageResult, PgPool, schema, schema_gnl};
 use crate::database::Error;
@@ -122,7 +123,11 @@ impl SourceProvider {
     }
 
     // the top 10 species that have the most genomic data for this source
-    pub async fn species_genomic_data_summary(&self, source: &Source) -> Result<Vec<super::taxa::Summary>, Error> {
+    pub async fn species_genomic_data_summary(
+        &self,
+        source: &Source,
+        filters: &Option<Vec<Filter>>,
+    ) -> Result<Vec<super::taxa::Summary>, Error> {
         use schema::{datasets, name_attributes as attrs, taxa, taxon_names};
         use schema_gnl::{species, taxa_tree_stats as stats};
         let mut conn = self.pool.get().await?;
@@ -130,7 +135,12 @@ impl SourceProvider {
         // Use the same join pattern as the species() method to find species for this source
         let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
 
-        let source_species: Vec<uuid::Uuid> = species::table
+        let query = match filters.as_ref().and_then(|f| with_filters(f)) {
+            Some(predicates) => species::table.filter(predicates).into_boxed(),
+            None => species::table.into_boxed(),
+        };
+
+        let source_species: Vec<uuid::Uuid> = query
             .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
             .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
             .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
@@ -170,7 +180,11 @@ impl SourceProvider {
     }
 
     // the top 10 species that have the most genomes for this source
-    pub async fn species_genomes_summary(&self, source: &Source) -> Result<Vec<super::taxa::Summary>, Error> {
+    pub async fn species_genomes_summary(
+        &self,
+        source: &Source,
+        filters: &Option<Vec<Filter>>,
+    ) -> Result<Vec<super::taxa::Summary>, Error> {
         use schema::{datasets, name_attributes as attrs, taxa, taxon_names};
         use schema_gnl::{species, taxa_tree_stats as stats};
         let mut conn = self.pool.get().await?;
@@ -178,7 +192,12 @@ impl SourceProvider {
         // Use the same join pattern as the species() method to find species for this source
         let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
 
-        let source_species: Vec<uuid::Uuid> = species::table
+        let query = match filters.as_ref().and_then(|f| with_filters(f)) {
+            Some(predicates) => species::table.filter(predicates).into_boxed(),
+            None => species::table.into_boxed(),
+        };
+
+        let source_species: Vec<uuid::Uuid> = query
             .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
             .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
             .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
@@ -218,7 +237,11 @@ impl SourceProvider {
     }
 
     // the top 10 species that have the most genomes for this source
-    pub async fn species_loci_summary(&self, source: &Source) -> Result<Vec<super::taxa::Summary>, Error> {
+    pub async fn species_loci_summary(
+        &self,
+        source: &Source,
+        filters: &Option<Vec<Filter>>,
+    ) -> Result<Vec<super::taxa::Summary>, Error> {
         use schema::{datasets, name_attributes as attrs, taxa, taxon_names};
         use schema_gnl::{species, taxa_tree_stats as stats};
         let mut conn = self.pool.get().await?;
@@ -226,7 +249,12 @@ impl SourceProvider {
         // Use the same join pattern as the species() method to find species for this source
         let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
 
-        let source_species: Vec<uuid::Uuid> = species::table
+        let query = match filters.as_ref().and_then(|f| with_filters(f)) {
+            Some(predicates) => species::table.filter(predicates).into_boxed(),
+            None => species::table.into_boxed(),
+        };
+
+        let source_species: Vec<uuid::Uuid> = query
             .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
             .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
             .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
@@ -266,7 +294,11 @@ impl SourceProvider {
     }
 
     /// Summary statistics for a specific rank for species in this source
-    pub async fn summary(&self, source: &Source) -> Result<super::taxa::RankSummary, Error> {
+    pub async fn summary(
+        &self,
+        source: &Source,
+        filters: &Option<Vec<Filter>>,
+    ) -> Result<super::taxa::RankSummary, Error> {
         use schema::{datasets, name_attributes as attrs, taxa, taxon_names};
         use schema_gnl::{species, taxa_tree_stats as stats};
 
@@ -275,8 +307,13 @@ impl SourceProvider {
         // Use the exact same join pattern and logic as the species() method to ensure consistency
         let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
 
+        let query = match filters.as_ref().and_then(|f| with_filters(f)) {
+            Some(predicates) => species::table.filter(predicates).into_boxed(),
+            None => species::table.into_boxed(),
+        };
+
         // Get the species IDs using the same query pattern as species() method
-        let source_species: Vec<uuid::Uuid> = species::table
+        let source_species: Vec<uuid::Uuid> = query
             .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
             .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
             .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
@@ -324,7 +361,11 @@ impl SourceProvider {
     }
 
     // the top 10 latest genome releases for this source
-    pub async fn latest_genome_releases(&self, source: &Source) -> Result<Vec<GenomeRelease>, Error> {
+    pub async fn latest_genome_releases(
+        &self,
+        source: &Source,
+        filters: &Option<Vec<Filter>>,
+    ) -> Result<Vec<GenomeRelease>, Error> {
         use schema::{datasets, deposition_events, name_attributes as attrs, taxa, taxon_names};
         use schema_gnl::species;
         let mut conn = self.pool.get().await?;
@@ -332,7 +373,12 @@ impl SourceProvider {
         // Use the same join pattern as the species() method to find species for this source
         let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
 
-        let source_species: Vec<uuid::Uuid> = species::table
+        let query = match filters.as_ref().and_then(|f| with_filters(f)) {
+            Some(predicates) => species::table.filter(predicates).into_boxed(),
+            None => species::table.into_boxed(),
+        };
+
+        let source_species: Vec<uuid::Uuid> = query
             .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
             .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
             .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
@@ -367,9 +413,8 @@ impl SourceProvider {
         let summaries = genome_results
             .into_iter()
             .map(|(scientific_name, canonical_name, event_date)| {
-                let parsed_date = event_date
-                    .and_then(|date_str| DateParser::parse_flexible_date(&date_str).ok());
-                
+                let parsed_date = event_date.and_then(|date_str| DateParser::parse_flexible_date(&date_str).ok());
+
                 GenomeRelease {
                     scientific_name,
                     canonical_name,

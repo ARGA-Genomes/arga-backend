@@ -146,10 +146,11 @@ impl SourceQuery {
 
     async fn species_genomic_data_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>()?;
+        let filters_option = (!self.filters.is_empty()).then(|| self.filters.clone());
         let summaries = state
             .database
             .sources
-            .species_genomic_data_summary(&self.source)
+            .species_genomic_data_summary(&self.source, &filters_option)
             .await?;
         let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
@@ -157,10 +158,11 @@ impl SourceQuery {
 
     async fn species_genomic_data_summary_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let state = ctx.data::<State>()?;
+        let filters_option = (!self.filters.is_empty()).then(|| self.filters.clone());
         let summaries = state
             .database
             .sources
-            .species_genomic_data_summary(&self.source)
+            .species_genomic_data_summary(&self.source, &filters_option)
             .await?;
         let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
         let csv = helpers::csv::generic(summaries).await?;
@@ -169,14 +171,24 @@ impl SourceQuery {
 
     async fn species_genomes_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>()?;
-        let summaries = state.database.sources.species_genomes_summary(&self.source).await?;
+        let filters_option = (!self.filters.is_empty()).then(|| self.filters.clone());
+        let summaries = state
+            .database
+            .sources
+            .species_genomes_summary(&self.source, &filters_option)
+            .await?;
         let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
 
     async fn species_genomes_summary_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let state = ctx.data::<State>()?;
-        let summaries = state.database.sources.species_genomes_summary(&self.source).await?;
+        let filters_option = (!self.filters.is_empty()).then(|| self.filters.clone());
+        let summaries = state
+            .database
+            .sources
+            .species_genomes_summary(&self.source, &filters_option)
+            .await?;
         let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
         let csv = helpers::csv::generic(summaries).await?;
         Ok(csv)
@@ -184,14 +196,24 @@ impl SourceQuery {
 
     async fn species_loci_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
         let state = ctx.data::<State>()?;
-        let summaries = state.database.sources.species_loci_summary(&self.source).await?;
+        let filters_option = (!self.filters.is_empty()).then(|| self.filters.clone());
+        let summaries = state
+            .database
+            .sources
+            .species_loci_summary(&self.source, &filters_option)
+            .await?;
         let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
 
     async fn species_loci_summary_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let state = ctx.data::<State>()?;
-        let summaries = state.database.sources.species_loci_summary(&self.source).await?;
+        let filters_option = (!self.filters.is_empty()).then(|| self.filters.clone());
+        let summaries = state
+            .database
+            .sources
+            .species_loci_summary(&self.source, &filters_option)
+            .await?;
         let summaries: Vec<DataBreakdown> = summaries.into_iter().map(|r| r.into()).collect();
         let csv = helpers::csv::generic(summaries).await?;
         Ok(csv)
@@ -199,14 +221,24 @@ impl SourceQuery {
 
     async fn latest_genome_releases(&self, ctx: &Context<'_>) -> Result<Vec<GenomeRelease>, Error> {
         let state = ctx.data::<State>()?;
-        let summaries = state.database.sources.latest_genome_releases(&self.source).await?;
+        let filters_option = (!self.filters.is_empty()).then(|| self.filters.clone());
+        let summaries = state
+            .database
+            .sources
+            .latest_genome_releases(&self.source, &filters_option)
+            .await?;
         let summaries: Vec<GenomeRelease> = summaries.into_iter().map(|r| r.into()).collect();
         Ok(summaries)
     }
 
     async fn latest_genome_releases_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let state = ctx.data::<State>()?;
-        let summaries = state.database.sources.latest_genome_releases(&self.source).await?;
+        let filters_option = (!self.filters.is_empty()).then(|| self.filters.clone());
+        let summaries = state
+            .database
+            .sources
+            .latest_genome_releases(&self.source, &filters_option)
+            .await?;
         let summaries: Vec<GenomeRelease> = summaries.into_iter().map(|r| r.into()).collect();
         let csv = helpers::csv::generic(summaries).await?;
         Ok(csv)
@@ -214,13 +246,15 @@ impl SourceQuery {
 
     async fn summary(&self, ctx: &Context<'_>) -> Result<RankSummary, Error> {
         let state = ctx.data::<State>()?;
-        let summary = state.database.sources.summary(&self.source).await?;
+        let filters_option = (!self.filters.is_empty()).then(|| self.filters.clone());
+        let summary = state.database.sources.summary(&self.source, &filters_option).await?;
         Ok(summary.into())
     }
 
     async fn summary_csv(&self, ctx: &Context<'_>) -> Result<String, async_graphql::Error> {
         let state = ctx.data::<State>()?;
-        let summary = state.database.sources.summary(&self.source).await?;
+        let filters_option = (!self.filters.is_empty()).then(|| self.filters.clone());
+        let summary = state.database.sources.summary(&self.source, &filters_option).await?;
         let out: Vec<RankSummary> = vec![summary.into()];
         let csv = csv::generic(out).await?;
         Ok(csv)
