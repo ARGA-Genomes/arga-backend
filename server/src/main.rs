@@ -42,7 +42,17 @@ async fn serve() {
     let admin_proxy = std::env::var("ADMIN_PROXY").ok();
     let admin_proxy = admin_proxy.map(|proxy| proxy.parse::<axum::http::Uri>().expect("Invalid admin proxy"));
 
-    // show database logging if enabled
+    // cache configuration
+    let cache_url = std::env::var("CACHE_URL").ok();
+    let cache_ttl = std::env::var("CACHE_TTL")
+        .unwrap_or_else(|_| "300".to_string())
+        .parse::<u64>()
+        .expect("Invalid CACHE_TTL value");
+
+    // cache skip pattern from environment
+    let cache_skip_pattern = std::env::var("CACHE_SKIP_PATTERN")
+        .ok()
+        .filter(|s| !s.trim().is_empty()); // show database logging if enabled
     if std::env::var("LOG_DATABASE").is_ok() {
         set_default_instrumentation(Database::simple_logger).expect("Failed to setup database instrumentation");
     }
@@ -59,6 +69,9 @@ async fn serve() {
         bind_address,
         frontend_host,
         admin_proxy,
+        cache_url,
+        cache_ttl,
+        cache_skip_pattern,
     };
 
     http::serve(config, database).await.expect("Failed to start server");

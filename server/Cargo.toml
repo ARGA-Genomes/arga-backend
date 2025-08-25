@@ -46,3 +46,6 @@ password-auth = "1.0.0"
 time = "0.3.41"
 tower = "0.5.2"
 hyper-util = { version = "0.1.16", features = ["client", "client-legacy"] }
+redis = { version = "0.32.5", features = ["tokio-comp", "connection-manager"] }
+regex = "1.11.2"
+sha2 = "0.10"

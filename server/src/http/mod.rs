@@ -16,6 +16,7 @@ use crate::database::Database;
 
 pub mod admin;
 pub mod auth;
+pub mod cache;
 pub mod error;
 pub mod graphql;
 pub mod health;
@@ -37,6 +38,15 @@ pub struct Config {
     pub frontend_host: String,
 
     pub admin_proxy: Option<Uri>,
+
+    /// Cache connection URL for caching (Redis, etc.)
+    pub cache_url: Option<String>,
+
+    /// Cache TTL in seconds (default: 300 seconds = 5 minutes)
+    pub cache_ttl: u64,
+
+    /// Regex pattern to skip caching for matching GraphQL queries/operations
+    pub cache_skip_pattern: Option<String>,
 }
 
 

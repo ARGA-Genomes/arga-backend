@@ -48,6 +48,7 @@ use self::stats::Statistics;
 use self::subsample::Subsample;
 use self::taxa::Taxa;
 use self::taxon::Taxon;
+use super::cache::CacheLayer;
 use super::error::Error;
 use crate::http::Context as State;
 
@@ -181,8 +182,29 @@ async fn graphql_ide() -> impl IntoResponse {
 /// The router enabling the graphql extension and passes
 /// requests to the handler.
 pub(crate) fn router(state: State) -> Router<State> {
-    let schema = schema(state);
-    Router::new()
+    let schema = schema(state.clone());
+
+    let mut router = Router::new()
         .route("/api", get(graphql_ide).post(graphql_handler))
-        .layer(Extension(schema))
+        .layer(Extension(schema));
+
+    // Add caching middleware if cache URL is configured
+    if let Some(cache_url) = &state.config.cache_url {
+        match CacheLayer::new(cache_url, state.config.cache_ttl, state.config.cache_skip_pattern.clone()) {
+            Ok(cache_layer) => {
+                match &state.config.cache_skip_pattern {
+                    Some(pattern) => tracing::info!("Caching enabled for GraphQL API with skip pattern: {}", pattern),
+                    None => tracing::info!("Caching enabled for GraphQL API with no skip pattern"),
+                }
+                router = router.layer(cache_layer);
+            }
+            Err(e) => {
+                tracing::warn!("Failed to initialize cache: {}", e);
+            }
+        }
+    } else {
+        tracing::info!("Caching disabled - no cache URL configured");
+    }
+
+    router
 }
