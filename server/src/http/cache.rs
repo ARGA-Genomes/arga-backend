@@ -227,14 +227,12 @@ fn should_skip_caching(query: &str, operation_name: &Value, skip_pattern: &Optio
         // Check operation name first if it exists
         if let Some(op_name) = operation_name.as_str() {
             if pattern.is_match(op_name) {
-                println!("Skipping {} based on opName", op_name);
                 return true;
             }
         }
 
         // Check for pattern matching in the query
         if pattern.is_match(query) {
-            println!("Skipping based on query");
             return true;
         }
     }
