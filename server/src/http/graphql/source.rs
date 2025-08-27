@@ -37,6 +37,23 @@ impl From<sources::GenomeRelease> for GenomeRelease {
     }
 }
 
+#[derive(SimpleObject, Serialize)]
+pub struct KingdomPhylumCount {
+    pub kingdom: String,
+    pub phylum: String,
+    pub count: i64,
+}
+
+impl From<sources::KingdomPhylumCount> for KingdomPhylumCount {
+    fn from(value: sources::KingdomPhylumCount) -> Self {
+        Self {
+            kingdom: value.kingdom,
+            phylum: value.phylum,
+            count: value.count,
+        }
+    }
+}
+
 #[derive(MergedObject)]
 pub struct Source(SourceDetails, SourceQuery);
 
@@ -257,6 +274,31 @@ impl SourceQuery {
         let summary = state.database.sources.summary(&self.source, &filters_option).await?;
         let out: Vec<RankSummary> = vec![summary.into()];
         let csv = csv::generic(out).await?;
+        Ok(csv)
+    }
+
+    async fn taxonomic_diversity(&self, ctx: &Context<'_>) -> Result<Vec<KingdomPhylumCount>, Error> {
+        let state = ctx.data::<State>()?;
+        let filters_option = (!self.filters.is_empty()).then(|| self.filters.clone());
+        let diversity = state
+            .database
+            .sources
+            .taxonomic_diversity(&self.source, &filters_option)
+            .await?;
+        let diversity: Vec<KingdomPhylumCount> = diversity.into_iter().map(|r| r.into()).collect();
+        Ok(diversity)
+    }
+
+    async fn taxonomic_diversity_csv(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        let state = ctx.data::<State>()?;
+        let filters_option = (!self.filters.is_empty()).then(|| self.filters.clone());
+        let diversity = state
+            .database
+            .sources
+            .taxonomic_diversity(&self.source, &filters_option)
+            .await?;
+        let diversity: Vec<KingdomPhylumCount> = diversity.into_iter().map(|r| r.into()).collect();
+        let csv = helpers::csv::generic(diversity).await?;
         Ok(csv)
     }
 }

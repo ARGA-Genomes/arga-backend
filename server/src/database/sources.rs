@@ -36,6 +36,13 @@ pub struct GenomeRelease {
     pub release_date: Option<NaiveDate>,
 }
 
+#[derive(Clone, Debug)]
+pub struct KingdomPhylumCount {
+    pub kingdom: String,
+    pub phylum: String,
+    pub count: i64,
+}
+
 
 impl SourceProvider {
     // Helper method to handle NotFound errors
@@ -380,5 +387,74 @@ impl SourceProvider {
             .collect();
 
         Ok(summaries)
+    }
+
+    pub async fn taxonomic_diversity(
+        &self,
+        source: &Source,
+        filters: &Option<Vec<Filter>>,
+    ) -> Result<Vec<KingdomPhylumCount>, Error> {
+        use std::collections::HashMap;
+
+        use schema::{datasets, name_attributes as attrs, taxon_names};
+        use schema_gnl::species;
+
+        let mut conn = self.pool.get().await?;
+
+        let query = match filters.as_ref().and_then(|f| with_filters(f)) {
+            Some(predicates) => species::table.filter(predicates).into_boxed(),
+            None => species::table.into_boxed(),
+        };
+
+        let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
+
+        let source_species = query
+            .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
+            .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
+            .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
+            .inner_join(taxa_datasets.on(taxa_datasets.field(datasets::id).eq(species::dataset_id)))
+            .select(species::classification)
+            .distinct()
+            .filter(datasets::source_id.eq(source.id))
+            .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
+            .load::<serde_json::Value>(&mut conn)
+            .await?;
+
+        // Group by kingdom and count unique phylums
+        let mut kingdom_phylum_counts: HashMap<String, HashMap<String, i64>> = HashMap::new();
+
+        for classification in source_species {
+            if let (Some(kingdom), Some(phylum)) = (
+                classification.get("kingdom").and_then(|v| v.as_str()),
+                classification.get("phylum").and_then(|v| v.as_str()),
+            ) {
+                let kingdom_str = kingdom.to_string();
+                let phylum_str = phylum.to_string();
+
+                kingdom_phylum_counts
+                    .entry(kingdom_str)
+                    .or_insert_with(HashMap::new)
+                    .entry(phylum_str)
+                    .and_modify(|count| *count += 1)
+                    .or_insert(1);
+            }
+        }
+
+        // Convert to result format
+        let mut results = Vec::new();
+        for (kingdom, phylum_counts) in kingdom_phylum_counts {
+            for (phylum, count) in phylum_counts {
+                results.push(KingdomPhylumCount {
+                    kingdom: kingdom.clone(),
+                    phylum,
+                    count,
+                });
+            }
+        }
+
+        // Sort by kingdom, then by phylum for consistent ordering
+        results.sort_by(|a, b| a.kingdom.cmp(&b.kingdom).then_with(|| a.phylum.cmp(&b.phylum)));
+
+        Ok(results)
     }
 }
