@@ -108,8 +108,7 @@ impl SourceProvider {
                         stats::other,
                         stats::total_genomic,
                     ))
-                    .filter(stats::id.eq_any(&source_species))
-                    .filter(taxa::rank.eq(arga_core::models::TaxonomicRank::Species))
+                    .filter(stats::taxon_id.eq_any(&source_species))
                     .distinct()
                     .order(stats::total_genomic.desc())
                     .limit(limit)
@@ -128,8 +127,7 @@ impl SourceProvider {
                         stats::other,
                         stats::total_genomic,
                     ))
-                    .filter(stats::id.eq_any(&source_species))
-                    .filter(taxa::rank.eq(arga_core::models::TaxonomicRank::Species))
+                    .filter(stats::taxon_id.eq_any(&source_species))
                     .distinct()
                     .order(stats::genomes.desc())
                     .limit(limit)
@@ -149,7 +147,6 @@ impl SourceProvider {
                         stats::total_genomic,
                     ))
                     .filter(stats::id.eq_any(&source_species))
-                    .filter(taxa::rank.eq(arga_core::models::TaxonomicRank::Species))
                     .distinct()
                     .order(stats::loci.desc())
                     .limit(limit)
@@ -327,25 +324,41 @@ impl SourceProvider {
         source: &Source,
         filters: &Option<Vec<Filter>>,
     ) -> Result<Vec<GenomeRelease>, Error> {
-        use schema::{deposition_events, taxa, taxon_names};
-
-        let source_species = self.get_source_species_ids(source, filters).await?;
-
-        if source_species.is_empty() {
-            return Ok(vec![]);
-        }
+        use schema::{datasets, deposition_events, name_attributes as attrs, names, sequences, taxon_names};
+        use schema_gnl::species;
 
         let mut conn = self.pool.get().await?;
 
+        let query = match filters.as_ref().and_then(|f| with_filters(f)) {
+            Some(predicates) => species::table.filter(predicates).into_boxed(),
+            None => species::table.into_boxed(),
+        };
+
+        let taxa_datasets = diesel::alias!(datasets as taxa_datasets);
+
+        let source_names = query
+            .inner_join(taxon_names::table.on(species::id.eq(taxon_names::taxon_id)))
+            .inner_join(attrs::table.on(attrs::name_id.eq(taxon_names::name_id)))
+            .inner_join(datasets::table.on(datasets::id.eq(attrs::dataset_id)))
+            .inner_join(taxa_datasets.on(taxa_datasets.field(datasets::id).eq(species::dataset_id)))
+            .select(attrs::name_id)
+            .distinct()
+            .filter(datasets::source_id.eq(source.id))
+            .filter(taxa_datasets.field(datasets::global_id).eq(ALA_DATASET_ID))
+            .load::<Uuid>(&mut conn)
+            .await?;
+
+        if source_names.is_empty() {
+            return Ok(vec![]);
+        }
+
         // Get deposition events for these species, ordered by event_date converted to proper date
         // Handle mixed date formats: DD/MM/YYYY, YYYY/MM/DD, D/M/YY, D/M/YYYY, D/MM/YY
-        let genome_results = taxa::table
-            .inner_join(taxon_names::table.on(taxa::id.eq(taxon_names::taxon_id)))
-            .inner_join(schema::sequences::table.on(taxon_names::name_id.eq(schema::sequences::name_id)))
-            .inner_join(deposition_events::table.on(schema::sequences::id.eq(deposition_events::sequence_id)))
-            .select((taxa::scientific_name, taxa::canonical_name, deposition_events::event_date))
-            .filter(taxa::id.eq_any(&source_species))
-            .filter(taxa::rank.eq(arga_core::models::TaxonomicRank::Species))
+        let genome_results = sequences::table
+            .inner_join(deposition_events::table.on(sequences::id.eq(deposition_events::sequence_id)))
+            .inner_join(names::table.on(names::id.eq(sequences::name_id)))
+            .select((names::scientific_name, names::canonical_name, deposition_events::event_date))
+            .filter(names::id.eq_any(source_names))
             .filter(deposition_events::event_date.is_not_null())
             .order(DateParser::sql_date_order_converter().desc().nulls_last())
             .limit(10)
