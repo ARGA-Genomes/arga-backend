@@ -1,5 +1,6 @@
 use async_graphql::{Enum, InputObject, Value, from_value};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use super::species::DataType;
 use super::taxonomy::TaxonomicVernacularGroup;
@@ -17,6 +18,7 @@ use crate::http::Error;
 pub enum FilterType {
     VernacularGroup,
     HasData,
+    Dataset,
     Attribute,
     // Ecology,
     // Ibra,
@@ -99,9 +101,14 @@ impl TryFrom<FilterItem> for Filter {
                 from_value::<TaxonomicVernacularGroup>(Value::String(filter_value_string(source.value).to_string()))?
                     .into(),
             ),
-
             FilterType::HasData => {
                 FilterKind::HasData(from_value::<DataType>(Value::String(filter_value_string(source.value)))?.into())
+            }
+            FilterType::Dataset => {
+                let uuid_str = filter_value_string(source.value);
+                let uuid = Uuid::parse_str(&uuid_str)
+                    .map_err(|_| Error::Internal(anyhow::anyhow!("Invalid UUID format: {}", uuid_str)))?;
+                FilterKind::Dataset(uuid)
             }
             FilterType::Attribute => FilterKind::Attribute(source.value),
 

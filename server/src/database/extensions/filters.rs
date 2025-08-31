@@ -1,9 +1,11 @@
 use arga_core::models::{TaxonomicStatus, TaxonomicVernacularGroup};
 // use arga_core::schema::{taxa, ecology, names};
+use arga_core::schema::{name_attributes, names, taxon_names};
 use arga_core::schema_gnl::species;
 use diesel::pg::Pg;
 use diesel::prelude::*;
 use diesel::sql_types::Bool;
+use uuid::Uuid;
 
 use super::classification_filters::{Classification, decompose_classification};
 use super::species_filters::{with_attribute, without_attribute};
@@ -13,6 +15,7 @@ pub enum FilterKind {
     Classification(Classification),
     VernacularGroup(TaxonomicVernacularGroup),
     HasData(DataType),
+    Dataset(Uuid),
     Attribute(serde_json::Value),
     // Ecology(String),
     // Ibra(String),
@@ -66,6 +69,7 @@ pub fn with_filter(filter: &Filter) -> BoxedExpression {
             FilterKind::Classification(classification) => with_classification(classification),
             FilterKind::VernacularGroup(group) => with_vernacular_group(group),
             FilterKind::HasData(data_type) => with_data(data_type),
+            FilterKind::Dataset(dataset_id) => with_dataset(dataset_id),
             FilterKind::Attribute(attribute) => with_attribute(attribute),
             // FilterKind::Ecology(ecology) => with_ecology(ecology),
             // FilterKind::Ibra(ibra) => with_ibra(ibra),
@@ -78,6 +82,7 @@ pub fn with_filter(filter: &Filter) -> BoxedExpression {
             FilterKind::Classification(classification) => without_classification(classification),
             FilterKind::VernacularGroup(group) => without_vernacular_group(group),
             FilterKind::HasData(data_type) => without_data(data_type),
+            FilterKind::Dataset(dataset_id) => without_dataset(dataset_id),
             FilterKind::Attribute(attribute) => without_attribute(attribute),
             // FilterKind::Ecology(ecology) => without_ecology(ecology),
             // FilterKind::Ibra(ibra) => without_ibra(ibra),
@@ -351,4 +356,28 @@ pub fn without_data(data_type: &DataType) -> BoxedExpression {
         DataType::Specimen => Box::new(species::specimens.eq(0)),
         DataType::Other => Box::new(species::other.eq(0)),
     }
+}
+
+
+pub fn with_dataset(dataset_id: &Uuid) -> BoxedExpression {
+    Box::new(diesel::dsl::exists(
+        taxon_names::table
+            .inner_join(names::table.on(taxon_names::name_id.eq(names::id)))
+            .inner_join(name_attributes::table.on(names::id.eq(name_attributes::name_id)))
+            .filter(taxon_names::taxon_id.eq(species::id))
+            .filter(name_attributes::dataset_id.eq(dataset_id))
+            .select(taxon_names::taxon_id),
+    ))
+}
+
+
+pub fn without_dataset(dataset_id: &Uuid) -> BoxedExpression {
+    Box::new(diesel::dsl::not(diesel::dsl::exists(
+        taxon_names::table
+            .inner_join(names::table.on(taxon_names::name_id.eq(names::id)))
+            .inner_join(name_attributes::table.on(names::id.eq(name_attributes::name_id)))
+            .filter(taxon_names::taxon_id.eq(species::id))
+            .filter(name_attributes::dataset_id.eq(dataset_id))
+            .select(taxon_names::taxon_id),
+    )))
 }
