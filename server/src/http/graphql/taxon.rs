@@ -7,12 +7,12 @@ use uuid::Uuid;
 
 use super::common::species::{SortDirection, SpeciesSort};
 use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank};
-use super::common::{convert_filters, AccessionEvent, CollectionEvent, FilterItem, NameDetails, Page, SpeciesCard};
-use super::helpers::{self, csv, SpeciesHelper};
+use super::common::{AccessionEvent, CollectionEvent, FilterItem, NameDetails, Page, SpeciesCard, convert_filters};
+use super::helpers::{self, SpeciesHelper, csv};
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::extensions::filters::{Filter, FilterKind};
 use crate::database::extensions::species_filters::{self};
-use crate::database::{taxa, Database};
+use crate::database::{Database, taxa};
 use crate::http::{Context as State, Error};
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Enum, Serialize, Deserialize)]
@@ -425,12 +425,14 @@ impl From<models::TaxonTreeNode> for TaxonNode {
     }
 }
 
-#[derive(SimpleObject)]
+#[derive(SimpleObject, Serialize)]
 pub struct RankSummary {
     /// Total amount of taxa in the rank
     pub total: i64,
     /// Total amount of taxa in the rank with genomes
     pub genomes: i64,
+    /// Total amount of taxa in the rank with loci
+    pub loci: i64,
     /// Total amount of taxa in the rank with any genomic data
     pub genomic_data: i64,
 }
@@ -440,6 +442,7 @@ impl From<taxa::RankSummary> for RankSummary {
         Self {
             total: value.total,
             genomes: value.genomes,
+            loci: value.loci,
             genomic_data: value.genomic_data,
         }
     }

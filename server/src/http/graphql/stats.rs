@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use super::common::taxonomy::TaxonomicRank;
+use super::common::{FilterItem, convert_filters};
 use super::helpers::csv;
 use crate::database::stats::{BreakdownItem, TaxonStatNode, TaxonomicRankStat};
 use crate::http::Context as State;
@@ -137,6 +138,55 @@ impl Statistics {
             .collect();
 
         csv::generic(stats).await
+    }
+
+    async fn complete_genomes_by_year_for_source(
+        &self,
+        ctx: &Context<'_>,
+        name: String,
+        filters: Option<Vec<FilterItem>>,
+    ) -> Result<Vec<CompleteGenomesByYearStatistic>> {
+        let state = ctx.data::<State>()?;
+        let filters = convert_filters(filters.unwrap_or_default())?;
+        let filters_option = (!filters.is_empty()).then(|| filters);
+
+        let stats = state
+            .database
+            .stats
+            .complete_genomes_by_year_for_source(&name, &filters_option)
+            .await?;
+
+        let stats: Vec<CompleteGenomesByYearStatistic> = stats
+            .into_iter()
+            .map(|(year, total)| CompleteGenomesByYearStatistic { year, total })
+            .collect();
+
+        Ok(stats)
+    }
+
+    async fn complete_genomes_by_year_for_source_csv(
+        &self,
+        ctx: &Context<'_>,
+        name: String,
+        filters: Option<Vec<FilterItem>>,
+    ) -> Result<String> {
+        let state = ctx.data::<State>()?;
+        let filters = convert_filters(filters.unwrap_or_default())?;
+        let filters_option = (!filters.is_empty()).then(|| filters);
+
+        let stats = state
+            .database
+            .stats
+            .complete_genomes_by_year_for_source(&name, &filters_option)
+            .await?;
+
+        let stats: Vec<CompleteGenomesByYearStatistic> = stats
+            .into_iter()
+            .map(|(year, total)| CompleteGenomesByYearStatistic { year, total })
+            .collect();
+
+        let csv = csv::generic(stats).await?;
+        Ok(csv)
     }
 }
 

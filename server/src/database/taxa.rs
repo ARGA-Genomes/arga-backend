@@ -1,17 +1,16 @@
 use arga_core::models::{
+    ACCEPTED_NAMES,
     AccessionEvent,
     CollectionEvent,
     Dataset,
     Name,
     NomenclaturalActType,
     Publication,
-    Specimen,
+    SPECIES_RANKS,
     Taxon,
     TaxonTreeNode,
     TaxonWithDataset,
     TaxonomicRank,
-    ACCEPTED_NAMES,
-    SPECIES_RANKS,
 };
 use bigdecimal::{BigDecimal, Zero};
 use chrono::{DateTime, Utc};
@@ -22,14 +21,14 @@ use uuid::Uuid;
 
 use super::extensions::species_filters::{SortDirection, SpeciesSort};
 use super::extensions::taxa_filters::TaxaFilter;
-use super::extensions::{sum_if, Paginate};
+use super::extensions::{Paginate, sum_if};
 use super::models::Species;
-use super::{schema, schema_gnl, Error, PageResult, PgPool};
+use super::{Error, PageResult, PgPool, schema, schema_gnl};
 use crate::database::extensions::classification_filters::{
-    with_classification,
     Classification as ClassificationFilter,
+    with_classification,
 };
-use crate::database::extensions::filters::{with_filters, Filter};
+use crate::database::extensions::filters::{Filter, with_filters};
 use crate::database::extensions::species_filters::{
     with_accepted_classification,
     with_classification as with_species_classification,
@@ -37,7 +36,7 @@ use crate::database::extensions::species_filters::{
 };
 use crate::database::extensions::taxa_filters::with_taxa_filters;
 
-sql_function!(fn unnest(x: Nullable<Array<Text>>) -> Text);
+define_sql_function!(fn unnest(x: Nullable<Array<Text>>) -> Text);
 
 
 #[derive(Debug, Queryable)]
@@ -96,6 +95,8 @@ pub struct RankSummary {
     pub total: i64,
     /// Total amount of taxa in the rank with genomes
     pub genomes: i64,
+    /// Total amount of taxa in the rank with loci
+    pub loci: i64,
     /// Total amount of taxa in the rank with any genomic data
     pub genomic_data: i64,
 }
@@ -340,22 +341,24 @@ impl TaxaProvider {
         // of the supplied taxon. since we want the number of species that have data we instead
         // filter the taxa tree to species level nodes and count how many of them have a record
         // greater than zero. to get multiple values from one query we leverage the sum_if extension.
-        let (total, genomes, genomic_data) = stats::table
+        let (total, genomes, loci, genomic_data) = stats::table
             .inner_join(taxa::table.on(taxa::id.eq(stats::id)))
             .filter(stats::taxon_id.eq(taxon_id))
             .filter(taxa::rank.eq(rank))
             .select((
                 count_star(),
-                sum_if(stats::full_genomes.gt(BigDecimal::zero())),
-                sum_if(stats::total_genomic.gt(BigDecimal::zero())),
+                sum_if(stats::full_genomes.gt(BigDecimal::zero())).nullable(),
+                sum_if(stats::loci.gt(BigDecimal::zero())).nullable(),
+                sum_if(stats::total_genomic.gt(BigDecimal::zero())).nullable(),
             ))
-            .get_result::<(i64, i64, i64)>(&mut conn)
+            .get_result::<(i64, Option<i64>, Option<i64>, Option<i64>)>(&mut conn)
             .await?;
 
         Ok(RankSummary {
             total,
-            genomes,
-            genomic_data,
+            loci: loci.unwrap_or(0),
+            genomes: genomes.unwrap_or(0),
+            genomic_data: genomic_data.unwrap_or(0),
         })
     }
 
@@ -431,6 +434,9 @@ impl TaxaProvider {
         let species_genomes_query = species::table
             .filter(with_accepted_classification(classification))
             .into_boxed();
+        let species_loci_query = species::table
+            .filter(with_accepted_classification(classification))
+            .into_boxed();
         let species_data_query = species::table
             .filter(with_accepted_classification(classification))
             .into_boxed();
@@ -444,6 +450,12 @@ impl TaxaProvider {
             .get_result::<i64>(&mut conn)
             .await?;
 
+        let species_loci = species_loci_query
+            .filter(species::loci.gt(0))
+            .count()
+            .get_result::<i64>(&mut conn)
+            .await?;
+
         let species_data = species_data_query
             .filter(species::total_genomic.gt(0))
             .count()
@@ -452,6 +464,7 @@ impl TaxaProvider {
 
         Ok(RankSummary {
             total: species,
+            loci: species_loci,
             genomes: species_genomes,
             genomic_data: species_data,
         })

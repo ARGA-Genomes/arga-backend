@@ -287,7 +287,14 @@ diesel::allow_tables_to_appear_in_same_query!(taxa, markers);
 diesel::allow_tables_to_appear_in_same_query!(taxa, whole_genomes);
 diesel::allow_tables_to_appear_in_same_query!(taxa, name_data_summaries);
 
+diesel::allow_tables_to_appear_in_same_query!(taxa_tree_stats, deposition_events);
+
+diesel::allow_tables_to_appear_in_same_query!(taxa_tree_stats, sequences);
+
+
 diesel::allow_tables_to_appear_in_same_query!(taxon_names, taxa_tree_stats);
+
+diesel::allow_tables_to_appear_in_same_query!(taxon_names, whole_genomes);
 
 diesel::allow_tables_to_appear_in_same_query!(sequence_milestones, taxon_names);
 diesel::allow_tables_to_appear_in_same_query!(sequence_milestones, datasets);

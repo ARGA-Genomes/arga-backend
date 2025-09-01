@@ -2,6 +2,7 @@ pub mod filters_new;
 
 pub mod classification_filters;
 pub mod column_sum;
+pub mod date_utils;
 pub mod filters;
 pub mod pagination;
 pub mod species_filters;
@@ -10,7 +11,7 @@ pub mod whole_genome_filters;
 
 pub use column_sum::sum_if;
 use diesel::expression::functions::define_sql_function;
-use diesel::sql_types::{Date, Double, Nullable, Text};
+use diesel::sql_types::{Date, Nullable, Text};
 pub use pagination::{FilteredPage, Page, Paginate};
 
 define_sql_function! {
