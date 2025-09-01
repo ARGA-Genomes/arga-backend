@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arga-core = { path = "../core" }
+arga-core = { path = "../core", features = ["telemetry"] }
 
 anyhow = "1.0.68"
 async-graphql = { version = "7.0.17", features = ["tracing", "tokio", "uuid", "chrono", "graphiql"] }
@@ -33,13 +33,6 @@ tokio = { version = "1.24.2", features = ["full"] }
 tokio-util = { version = "0.7.7", features = ["io"] }
 tower-http = { version = "0.6.6", features = ["fs", "cors", "trace", "limit", "timeout", "sensitive-headers"] }
 tracing = "0.1.37"
-tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
-# OpenTelemetry dependencies for telemetry
-opentelemetry = "0.30"
-opentelemetry-otlp = { version = "0.30", features = ["trace", "grpc-tonic"] }
-opentelemetry-semantic-conventions = "0.30"
-tracing-opentelemetry = "0.31"
-opentelemetry_sdk = { version = "0.30", features = ["rt-tokio"] }
 url = "2.3.1"
 uuid = { version = "1.2.2", features = ["serde", "v4"] }
 bigdecimal = { version = "0.4.1", features = ["serde"] }

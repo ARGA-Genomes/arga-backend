@@ -4,6 +4,9 @@ pub mod schema;
 pub mod schema_gnl;
 pub mod search;
 
+#[cfg(feature = "telemetry")]
+pub mod telemetry;
+
 pub fn get_database_url() -> String {
     match std::env::var("DATABASE_URL") {
         Ok(url) => url.to_string(),

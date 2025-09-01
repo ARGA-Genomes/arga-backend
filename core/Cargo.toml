@@ -5,6 +5,17 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+telemetry = [
+    "opentelemetry",
+    "opentelemetry-otlp",
+    "opentelemetry-semantic-conventions", 
+    "tracing-opentelemetry",
+    "opentelemetry_sdk",
+    "tracing-subscriber"
+]
+
 [dependencies]
 chrono = { version = "0.4.38", features = ["serde"] }
 diesel = { version = "2.1.4", features = ["uuid", "numeric", "serde_json", "chrono", "postgres", "64-column-tables", "r2d2"] }
@@ -21,3 +32,11 @@ bigdecimal = { version = "0.4.1", features = ["serde"] }
 strum = { version = "0.26.3", features = ["derive"] }
 core-derive = { version = "0.1.0", path = "core-derive" }
 xxhash-rust = { version = "0.8.15", features = ["xxh3"] }
+
+# OpenTelemetry dependencies for shared telemetry
+opentelemetry = { version = "0.30", optional = true }
+opentelemetry-otlp = { version = "0.30", features = ["trace", "grpc-tonic"], optional = true }
+opentelemetry-semantic-conventions = { version = "0.30", optional = true }
+tracing-opentelemetry = { version = "0.31", optional = true }
+opentelemetry_sdk = { version = "0.30", features = ["rt-tokio"], optional = true }
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"], optional = true }
