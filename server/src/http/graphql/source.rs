@@ -1,6 +1,7 @@
 use arga_core::models;
 use async_graphql::{SimpleObject, *};
 use serde::{Deserialize, Serialize};
+use tracing::{instrument, info};
 use uuid::Uuid;
 
 use super::common::species::{SortDirection, SpeciesSort};
@@ -12,7 +13,7 @@ use crate::database::extensions::species_filters::{self};
 use crate::http::graphql::common::datasets::{AccessRightsStatus, DataReuseStatus, SourceContentType};
 use crate::http::{Context as State, Error};
 
-#[derive(OneofObject)]
+#[derive(OneofObject, Debug)]
 pub enum SourceBy {
     Id(Uuid),
     Name(String),
@@ -22,7 +23,9 @@ pub enum SourceBy {
 pub struct Source(SourceDetails, SourceQuery);
 
 impl Source {
+    #[instrument(skip(db, filters), fields(source_by = ?by))]
     pub async fn new(db: &Database, by: &SourceBy, filters: Vec<FilterItem>) -> Result<Source, Error> {
+        info!("Creating new source query");
         let source = match by {
             SourceBy::Id(id) => db.sources.find_by_id(id).await?,
             SourceBy::Name(name) => db.sources.find_by_name(name).await?,

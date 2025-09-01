@@ -1,5 +1,6 @@
 use arga_core::models;
 use async_graphql::*;
+use tracing::{instrument, info};
 use uuid::Uuid;
 
 use super::common::taxonomy::{NameDetails, TaxonDetails};
@@ -23,7 +24,9 @@ pub struct NameQuery {
 
 #[Object]
 impl NameQuery {
+    #[instrument(skip(self, ctx), fields(name_id = %self.name_id))]
     async fn taxa(&self, ctx: &Context<'_>) -> Result<Vec<TaxonDetails>, Error> {
+        info!("Fetching taxa for name");
         let state = ctx.data::<State>()?;
         let taxa = state.database.names.taxa(&self.name_id).await?;
         let taxa = taxa.into_iter().map(|t| t.into()).collect();

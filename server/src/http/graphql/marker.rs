@@ -1,5 +1,6 @@
 use async_graphql::*;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::database::{models, Database};
@@ -10,6 +11,7 @@ use crate::http::{Context as State, Error};
 pub struct Marker(MarkerDetails, MarkerQuery);
 
 impl Marker {
+    #[instrument(skip(db), fields(accession = %accession))]
     pub async fn new(db: &Database, accession: &str) -> Result<Marker, Error> {
         let marker = db.markers.find_by_accession(accession).await?;
         let details = marker.clone().into();

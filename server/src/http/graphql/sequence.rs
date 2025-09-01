@@ -1,12 +1,13 @@
 use async_graphql::*;
 use chrono::{NaiveDate, NaiveDateTime};
+use tracing::{instrument, info};
 use uuid::Uuid;
 
 use crate::database::{models, Database};
 use crate::http::{Context as State, Error};
 
 
-#[derive(OneofObject)]
+#[derive(OneofObject, Debug)]
 pub enum SequenceBy {
     Id(Uuid),
     Accession(String),
@@ -18,7 +19,9 @@ pub enum SequenceBy {
 pub struct Sequence(SequenceDetails, SequenceQuery);
 
 impl Sequence {
+    #[instrument(skip(db), fields(sequence_by = ?by))]
     pub async fn new(db: &Database, by: &SequenceBy) -> Result<Vec<Sequence>, Error> {
+        info!("Creating new sequence queries");
         let sequences = match by {
             SequenceBy::Id(id) => Vec::from_iter(db.sequences.find_by_id(&id).await?),
             SequenceBy::Accession(id) => db.sequences.find_by_accession(&id).await?,
@@ -44,7 +47,9 @@ struct SequenceQuery {
 
 #[Object]
 impl SequenceQuery {
+    #[instrument(skip(self, ctx))]
     async fn dataset_name(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        info!("Fetching sequence dataset name");
         let state = ctx.data::<State>()?;
         let dataset = state.database.datasets.find_by_id(&self.sequence.dataset_id).await?;
         Ok(dataset.name)

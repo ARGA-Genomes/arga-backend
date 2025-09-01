@@ -1,6 +1,7 @@
 use axum::{Json, Router};
 use axum::routing::get;
 use serde::Serialize;
+use tracing::instrument;
 
 use crate::http::Context;
 use super::error::Error;
@@ -17,6 +18,7 @@ pub(crate) fn router() -> Router<Context> {
 }
 
 
+#[instrument]
 async fn health() -> Result<Json<Health>, Error> {
     let health = Health {
         healthy: true,

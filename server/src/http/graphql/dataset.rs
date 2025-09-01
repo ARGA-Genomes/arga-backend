@@ -9,7 +9,7 @@ use super::helpers::SpeciesHelper;
 use crate::database::Database;
 use crate::http::{Context as State, Error};
 
-#[derive(OneofObject)]
+#[derive(OneofObject, Debug)]
 pub enum DatasetBy {
     Id(Uuid),
     Name(String),
@@ -19,6 +19,7 @@ pub enum DatasetBy {
 pub struct Dataset(DatasetDetails, DatasetQuery);
 
 impl Dataset {
+    #[instrument(skip(db), fields(dataset_by = ?by))]
     pub async fn new(db: &Database, by: &DatasetBy) -> Result<Dataset, Error> {
         let dataset = match by {
             DatasetBy::Id(id) => db.datasets.find_by_id(id).await?,

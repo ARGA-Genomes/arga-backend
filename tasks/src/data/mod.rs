@@ -4,6 +4,8 @@ pub mod ncbi;
 // pub mod oplogger;
 // pub mod plazi;
 
+use tracing::{instrument, info};
+
 #[derive(clap::Subcommand)]
 pub enum Command {
     /// Extra processing for NCBI datasets
@@ -21,12 +23,20 @@ pub enum Command {
     // Oplog(oplogger::Command),
 }
 
+#[instrument(skip_all)]
 pub fn process_command(command: &Command) {
     tracing_subscriber::fmt().init();
+    info!("Processing data command");
 
     match command {
-        Command::Ncbi(cmd) => ncbi::process_command(cmd),
-        Command::Bpa(cmd) => bpa::process_command(cmd),
+        Command::Ncbi(cmd) => {
+            info!("Processing NCBI command");
+            ncbi::process_command(cmd)
+        },
+        Command::Bpa(cmd) => {
+            info!("Processing BPA command");
+            bpa::process_command(cmd)
+        },
         // Command::Bold(cmd) => bold::process_command(cmd),
         // Command::Plazi(cmd) => plazi::process_command(cmd),
         // Command::Oplog(cmd) => oplogger::process_command(cmd),

@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use arga_core::search::SearchItem;
 use async_graphql::*;
 use serde::Deserialize;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::http::{Context as State, Error};
@@ -20,6 +21,7 @@ pub struct Search {}
 
 #[Object]
 impl Search {
+    #[instrument(skip(self, ctx), fields(query = %query, page = page, per_page = per_page))]
     async fn full_text(
         &self,
         ctx: &Context<'_>,

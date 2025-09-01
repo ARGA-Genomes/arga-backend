@@ -68,12 +68,15 @@ async fn login_handler(
     Ok(Json(user.into()))
 }
 
+#[instrument(skip_all)]
 async fn logout_handler(mut auth_session: AuthSession) -> Result<(), Error> {
     tracing::debug!(user=?auth_session.user, "Logging out user");
     auth_session.logout().await?;
     Ok(())
 }
 
+#[instrument(skip_all)]
 async fn logged_in_user(auth_session: AuthSession) -> Result<Json<Option<models::User>>, Error> {
+    tracing::debug!("Getting logged in user info");
     Ok(Json(auth_session.user.map(|user| user.into())))
 }

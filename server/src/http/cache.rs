@@ -9,6 +9,7 @@ use regex::Regex;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use tower::{Layer, Service, ServiceExt};
+use tracing::{Instrument, debug, info_span, instrument, warn};
 
 /// Redis cache layer for GraphQL requests
 #[derive(Clone)]
@@ -113,31 +114,53 @@ where
 
             // Try to get cached response
             let mut cache_conn = match cache_client.get_multiplexed_async_connection().await {
-                Ok(conn) => conn,
-                Err(_) => {
+                Ok(conn) => {
+                    debug!("Connected to Redis cache");
+                    conn
+                }
+                Err(e) => {
+                    warn!(error = %e, "Failed to connect to Redis cache, skipping caching");
                     // If Redis connection fails, skip caching and forward the request
                     let req = Request::from_parts(parts, Body::from(body_bytes));
                     return inner.oneshot(req).await;
                 }
             };
 
-            // Check cache
-            if let Ok(cached_response) = cache_conn.get::<_, String>(&cache_key).await {
-                if let Ok(_response_data) = serde_json::from_str::<Value>(&cached_response) {
-                    // Return cached response
-                    let response = Response::builder()
-                        .status(200)
-                        .header("content-type", "application/json")
-                        .header("x-cache", "HIT")
-                        .body(Body::from(cached_response))
-                        .unwrap();
-                    return Ok(response);
+            // Check cache with instrumentation
+            let cache_lookup_span = info_span!("cache_lookup", cache_key = %cache_key);
+            let cache_result = async {
+                match cache_conn.get::<_, String>(&cache_key).await {
+                    Ok(cached_response) => {
+                        debug!("Cache hit for key: {}", cache_key);
+                        if let Ok(_response_data) = serde_json::from_str::<Value>(&cached_response) {
+                            debug!("Returning cached response");
+                            // Return cached response
+                            let response = Response::builder()
+                                .status(200)
+                                .header("content-type", "application/json")
+                                .header("x-cache", "HIT")
+                                .body(Body::from(cached_response))
+                                .unwrap();
+                            return Some(response);
+                        }
+                    }
+                    Err(_) => {
+                        debug!("Cache miss for key: {}", cache_key);
+                    }
                 }
+                None
+            }
+            .instrument(cache_lookup_span)
+            .await;
+
+            if let Some(cached_response) = cache_result {
+                return Ok(cached_response);
             }
 
             // Cache miss - forward request to GraphQL handler
             let req = Request::from_parts(parts, Body::from(body_bytes));
-            let response = inner.oneshot(req).await?;
+            let graphql_span = info_span!("graphql_request");
+            let response = inner.oneshot(req).instrument(graphql_span).await?;
 
             // Cache successful GraphQL responses
             if response.status().is_success() {
@@ -151,10 +174,27 @@ where
                         // Only cache if it's a valid JSON response without errors
                         if let Ok(json_response) = serde_json::from_str::<Value>(&response_str) {
                             if !check_has_errors(&json_response) {
-                                // Cache the response
-                                let _: Result<(), redis::RedisError> =
-                                    cache_conn.set_ex(&cache_key, response_str.as_ref(), ttl_seconds).await;
+                                // Cache the response with instrumentation
+                                let cache_store_span =
+                                    info_span!("cache_store", cache_key = %cache_key, ttl_seconds = ttl_seconds);
+                                let _cache_result = async {
+                                    match cache_conn
+                                        .set_ex::<&String, &str, ()>(&cache_key, response_str.as_ref(), ttl_seconds)
+                                        .await
+                                    {
+                                        Ok(_) => debug!("Successfully cached response"),
+                                        Err(e) => warn!(error = %e, "Failed to cache response"),
+                                    }
+                                }
+                                .instrument(cache_store_span)
+                                .await;
                             }
+                            else {
+                                debug!("Skipping cache due to GraphQL errors in response");
+                            }
+                        }
+                        else {
+                            debug!("Skipping cache due to invalid JSON response");
                         }
 
                         // Reconstruct response with cached indicator
@@ -181,6 +221,7 @@ where
 }
 
 /// Generate a cache key from the GraphQL request body
+#[instrument(skip(body, skip_pattern), fields(body_size = body.len()))]
 fn generate_cache_key(body: &[u8], skip_pattern: &Option<Regex>) -> Option<String> {
     // Parse the GraphQL request
     let request: Value = serde_json::from_slice(body).ok()?;
@@ -190,8 +231,11 @@ fn generate_cache_key(body: &[u8], skip_pattern: &Option<Regex>) -> Option<Strin
     let variables = request.get("variables").unwrap_or(&Value::Null);
     let operation_name = request.get("operationName").unwrap_or(&Value::Null);
 
+    debug!(operation_name = ?operation_name, "Generating cache key for GraphQL operation");
+
     // Check if we should skip caching based on regex pattern
     if should_skip_caching(query, operation_name, skip_pattern) {
+        debug!("Skipping cache due to skip pattern match");
         return None;
     }
 

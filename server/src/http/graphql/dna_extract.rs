@@ -1,11 +1,12 @@
 use async_graphql::*;
+use tracing::{instrument, info};
 use uuid::Uuid;
 
 use crate::database::{models, Database};
 use crate::http::{Context as State, Error};
 
 
-#[derive(OneofObject)]
+#[derive(OneofObject, Debug)]
 pub enum DnaExtractBy {
     Id(Uuid),
     RecordId(String),
@@ -16,7 +17,9 @@ pub enum DnaExtractBy {
 pub struct DnaExtract(DnaExtractDetails, DnaExtractQuery);
 
 impl DnaExtract {
+    #[instrument(skip(db), fields(dna_extract_by = ?by))]
     pub async fn new(db: &Database, by: &DnaExtractBy) -> Result<Option<DnaExtract>, Error> {
+        info!("Creating new DNA extract query");
         let dna_extract = match by {
             DnaExtractBy::Id(id) => db.dna_extracts.find_by_id(&id).await?,
             DnaExtractBy::RecordId(id) => db.dna_extracts.find_by_record_id(&id).await?,
@@ -41,7 +44,9 @@ struct DnaExtractQuery {
 
 #[Object]
 impl DnaExtractQuery {
+    #[instrument(skip(self, ctx))]
     async fn events(&self, ctx: &Context<'_>) -> Result<DnaExtractEvents, Error> {
+        info!("Fetching DNA extract events");
         let state = ctx.data::<State>()?;
         let extracts = state
             .database

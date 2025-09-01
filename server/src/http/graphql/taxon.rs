@@ -3,6 +3,7 @@ use async_graphql::*;
 use bigdecimal::ToPrimitive;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use tracing::{instrument, info};
 use uuid::Uuid;
 
 use super::common::species::{SortDirection, SpeciesSort};
@@ -108,14 +109,14 @@ pub enum TaxonRank {
     Biovar,
 }
 
-#[derive(InputObject)]
+#[derive(InputObject, Debug)]
 pub struct TaxonByClassification {
     pub canonical_name: String,
     pub rank: TaxonRank,
     pub dataset_id: Uuid,
 }
 
-#[derive(OneofObject)]
+#[derive(OneofObject, Debug)]
 pub enum TaxonBy {
     Id(Uuid),
     Classification(TaxonByClassification),
@@ -125,7 +126,9 @@ pub enum TaxonBy {
 pub struct Taxon(TaxonDetails, TaxonQuery);
 
 impl Taxon {
+    #[instrument(skip(db, filters), fields(taxon_by = ?by))]
     pub async fn new(db: &Database, by: TaxonBy, filters: Option<Vec<FilterItem>>) -> Result<Taxon, Error> {
+        info!("Creating new taxon query");
         let taxon = match by {
             TaxonBy::Id(id) => db.taxa.find_by_id(&id).await?,
             TaxonBy::Classification(name) => {
@@ -159,14 +162,18 @@ pub struct TaxonQuery {
 
 #[Object]
 impl TaxonQuery {
+    #[instrument(skip(self, ctx))]
     async fn hierarchy(&self, ctx: &Context<'_>) -> Result<Vec<TaxonNode>, Error> {
+        info!("Fetching taxon hierarchy");
         let state = ctx.data::<State>()?;
         let hierarchy = state.database.taxa.hierarchy(&self.taxon.id).await?;
         let hierarchy = hierarchy.into_iter().map(TaxonNode::from).collect();
         Ok(hierarchy)
     }
 
+    #[instrument(skip(self, ctx), fields(rank = ?rank))]
     async fn summary(&self, ctx: &Context<'_>, rank: TaxonomicRank) -> Result<RankSummary, Error> {
+        info!("Fetching taxon rank summary");
         let state = ctx.data::<State>()?;
         let summary = state.database.taxa.rank_summary(&self.taxon.id, &rank.into()).await?;
         Ok(summary.into())
@@ -185,7 +192,9 @@ impl TaxonQuery {
         csv::rank_summaries(rank_summary.into(), species_summary.into()).await
     }
 
+    #[instrument(skip(self, ctx))]
     async fn species_genomic_data_summary(&self, ctx: &Context<'_>) -> Result<Vec<DataBreakdown>, Error> {
+        info!("Fetching species genomic data summary");
         let state = ctx.data::<State>()?;
         let summaries = state.database.taxa.species_genomic_data_summary(&self.taxon.id).await?;
         let summaries = summaries.into_iter().map(|r| r.into()).collect();
@@ -425,7 +434,7 @@ impl From<models::TaxonTreeNode> for TaxonNode {
     }
 }
 
-#[derive(SimpleObject)]
+#[derive(SimpleObject, Debug)]
 pub struct RankSummary {
     /// Total amount of taxa in the rank
     pub total: i64,

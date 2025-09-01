@@ -126,4 +126,20 @@ impl Database {
             _ => {}
         }))
     }
+
+    // detailed logger for telemetry with performance metrics
+    pub fn detailed_logger() -> Option<Box<dyn Instrumentation>> {
+        Some(Box::new(|event: InstrumentationEvent<'_>| match event {
+            InstrumentationEvent::StartEstablishConnection { url, .. } => {
+                tracing::debug!(url, "Establishing database connection")
+            }
+            InstrumentationEvent::StartQuery { query, .. } => {
+                tracing::debug!(query = %query, "Executing database query")
+            }
+            InstrumentationEvent::CacheQuery { .. } => {
+                tracing::debug!("Database query result cached")
+            }
+            _ => {}
+        }))
+    }
 }

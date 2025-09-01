@@ -28,6 +28,7 @@ use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::{Extension, Router};
+use tracing::instrument;
 
 use self::common::FilterItem;
 use self::dataset::Dataset;
@@ -69,6 +70,7 @@ impl Query {
         Search {}
     }
 
+    #[instrument(skip(self, ctx), fields(canonical_name = %canonical_name))]
     async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<Species, Error> {
         let state = ctx.data::<State>()?;
         Species::new(&state.database, canonical_name).await
@@ -82,11 +84,13 @@ impl Query {
         Maps { tolerance }
     }
 
+    #[instrument(skip(self, ctx))]
     async fn sources(&self, ctx: &Context<'_>) -> Result<Vec<Source>, Error> {
         let state = ctx.data::<State>()?;
         Source::all(&state.database).await
     }
 
+    #[instrument(skip(self, ctx), fields(source_by = ?by))]
     async fn source(
         &self,
         ctx: &Context<'_>,
@@ -97,21 +101,25 @@ impl Query {
         Source::new(&state.database, &by, filters.unwrap_or_default()).await
     }
 
+    #[instrument(skip(self, ctx), fields(dataset_by = ?by))]
     async fn dataset(&self, ctx: &Context<'_>, by: dataset::DatasetBy) -> Result<Dataset, Error> {
         let state = ctx.data::<State>()?;
         Dataset::new(&state.database, &by).await
     }
 
+    #[instrument(skip(self, ctx), fields(organism_by = ?by))]
     async fn organism(&self, ctx: &Context<'_>, by: organism::OrganismBy) -> Result<Organism, Error> {
         let state = ctx.data::<State>()?;
         Organism::new(&state.database, &by).await
     }
 
+    #[instrument(skip(self, ctx), fields(specimen_by = ?by))]
     async fn specimen(&self, ctx: &Context<'_>, by: specimen::SpecimenBy) -> Result<Specimen, Error> {
         let state = ctx.data::<State>()?;
         Specimen::new(&state.database, &by).await
     }
 
+    #[instrument(skip(self, ctx), fields(accession = %accession))]
     async fn marker(&self, ctx: &Context<'_>, accession: String) -> Result<Marker, Error> {
         let state = ctx.data::<State>()?;
         Marker::new(&state.database, &accession).await
@@ -125,21 +133,25 @@ impl Query {
         Taxa::new(filters)
     }
 
+    #[instrument(skip(self, ctx), fields(subsample_by = ?by))]
     async fn subsample(&self, ctx: &Context<'_>, by: subsample::SubsampleBy) -> Result<Option<Subsample>, Error> {
         let state = ctx.data::<State>()?;
         Subsample::new(&state.database, &by).await
     }
 
+    #[instrument(skip(self, ctx), fields(dna_extract_by = ?by))]
     async fn dna_extract(&self, ctx: &Context<'_>, by: dna_extract::DnaExtractBy) -> Result<Option<DnaExtract>, Error> {
         let state = ctx.data::<State>()?;
         DnaExtract::new(&state.database, &by).await
     }
 
+    #[instrument(skip(self, ctx), fields(sequence_by = ?by))]
     async fn sequence(&self, ctx: &Context<'_>, by: sequence::SequenceBy) -> Result<Vec<Sequence>, Error> {
         let state = ctx.data::<State>()?;
         Sequence::new(&state.database, &by).await
     }
 
+    #[instrument(skip(self, ctx), fields(taxon_by = ?by))]
     async fn taxon(
         &self,
         ctx: &Context<'_>,

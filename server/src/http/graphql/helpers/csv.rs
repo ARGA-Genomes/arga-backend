@@ -3,6 +3,7 @@ use async_graphql::*;
 use base64::Engine;
 use serde::Serialize;
 use serde_json::Value;
+use tracing::instrument;
 use uuid::Uuid;
 
 use crate::http::graphql::taxon::RankSummary;
@@ -96,6 +97,7 @@ pub struct RankSummaryCsv {
 }
 
 /// This takes a collection of Species objects, and converts them into a CSV representation that is compressed by Brotli & base64 encoded
+#[instrument(fields(species_count = species.len()))]
 pub async fn species(species: Vec<Species>) -> Result<String, Error> {
     let species_csv: Vec<SpeciesCsv> = species
         .into_iter()
@@ -132,6 +134,7 @@ pub async fn species(species: Vec<Species>) -> Result<String, Error> {
 }
 
 /// This takes two rank summaries, and converts them into a CSV representation that is compressed by Brotli & base64 encoded
+#[instrument]
 pub async fn rank_summaries(rank_summary: RankSummary, species_summary: RankSummary) -> Result<String, Error> {
     // Encode species_csv into CSV, compress with Brotli, and encode to base64
     encode_to_csv_brotli_base64(&[RankSummaryCsv {
@@ -146,6 +149,7 @@ pub async fn rank_summaries(rank_summary: RankSummary, species_summary: RankSumm
 
 
 /// Generic version: takes any Vec of serializable records and produces a Brotli-compressed, base64-encoded CSV string
+#[instrument(skip(records), fields(records_count = records.len()))]
 pub async fn generic<T: Serialize>(records: Vec<T>) -> Result<String, Error> {
     // Encode records into CSV, compress with Brotli, and encode to base64
     encode_to_csv_brotli_base64(&records)

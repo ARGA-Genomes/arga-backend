@@ -2,7 +2,7 @@ use async_graphql::OneofObject;
 
 use crate::database::extensions::classification_filters::Classification;
 
-#[derive(OneofObject)]
+#[derive(OneofObject, Debug)]
 pub enum ClassificationFilter {
     Domain(String),
     Superkingdom(String),

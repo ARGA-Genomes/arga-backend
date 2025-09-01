@@ -1,6 +1,7 @@
 use arga_core::schema;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::{RunQueryDsl, *};
+use tracing::{instrument, info};
 
 
 /// Create a new admin user
@@ -8,9 +9,11 @@ use diesel::{RunQueryDsl, *};
 /// Admin users can access the admin curation frontend but other than that
 /// its not used within the rest of the backend since the vast majority is
 /// open access
+#[instrument(skip(password), fields(name = name, email = email))]
 pub fn create_admin(name: &str, email: &str, password: &str) {
     use schema::users;
 
+    info!("Creating new admin user");
     let url = arga_core::get_database_url();
     let manager = ConnectionManager::<PgConnection>::new(url);
     let pool = Pool::builder().build(manager).expect("Could not build connection pool");

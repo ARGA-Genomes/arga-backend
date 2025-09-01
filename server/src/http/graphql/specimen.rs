@@ -6,7 +6,7 @@ use crate::database::{Database, models};
 use crate::http::{Context as State, Error};
 
 
-#[derive(OneofObject)]
+#[derive(OneofObject, Debug)]
 pub enum SpecimenBy {
     EntityId(String),
     RecordId(String),
@@ -18,6 +18,7 @@ pub enum SpecimenBy {
 pub struct Specimen(SpecimenDetails, SpecimenQuery);
 
 impl Specimen {
+    #[instrument(skip(db), fields(specimen_by = ?by))]
     pub async fn new(db: &Database, by: &SpecimenBy) -> Result<Specimen, Error> {
         let specimen = match by {
             SpecimenBy::EntityId(id) => db.specimens.find_by_id(&id).await?,
@@ -38,12 +39,14 @@ struct SpecimenQuery {
 
 #[Object]
 impl SpecimenQuery {
+    #[instrument(skip(self, ctx))]
     async fn canonical_name(&self, ctx: &Context<'_>) -> Result<String, Error> {
         let state = ctx.data::<State>()?;
         let name = state.database.names.find_by_name_id(&self.specimen.name_id).await?;
         Ok(name.canonical_name)
     }
 
+    #[instrument(skip(self, ctx))]
     async fn organism(&self, ctx: &Context<'_>) -> Result<OrganismDetails, Error> {
         let state = ctx.data::<State>()?;
         let organism = state.database.specimens.organism(&self.specimen.entity_id).await?;

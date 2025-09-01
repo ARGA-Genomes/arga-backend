@@ -1,4 +1,5 @@
 use async_graphql::*;
+use tracing::{instrument, info};
 
 use super::common::species::DataType;
 use super::taxon::Taxon;
@@ -36,7 +37,9 @@ impl Taxa {
         })
     }
 
+    #[instrument(skip(self, ctx), fields(taxa_filters = ?self.taxa_filters))]
     async fn records(&self, ctx: &Context<'_>) -> Result<Vec<Taxon>, Error> {
+        info!("Fetching taxa records");
         let state = ctx.data::<State>()?;
         let records = state.database.taxa.find(&self.taxa_filters).await?;
         let taxa = records.into_iter().map(|r| Taxon::init(r, vec![])).collect();
@@ -70,31 +73,41 @@ pub struct FilterOptions {
 
 #[Object]
 impl FilterOptions {
+    #[instrument(skip(self, ctx))]
     async fn ecology(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
+        info!("Fetching ecology options");
         let state = ctx.data::<State>()?;
         let options = state.database.taxa.ecology_options(&self.filters).await?;
         Ok(options)
     }
 
+    #[instrument(skip(self, ctx))]
     async fn ibra(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
+        info!("Fetching IBRA options");
         let state = ctx.data::<State>()?;
         let options = state.database.taxa.ibra_options(&self.filters).await?;
         Ok(options)
     }
 
+    #[instrument(skip(self, ctx))]
     async fn imcra(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
+        info!("Fetching IMCRA options");
         let state = ctx.data::<State>()?;
         let options = state.database.taxa.imcra_options(&self.filters).await?;
         Ok(options)
     }
 
+    #[instrument(skip(self, ctx))]
     async fn state(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
+        info!("Fetching state options");
         let state = ctx.data::<State>()?;
         let options = state.database.taxa.state_options(&self.filters).await?;
         Ok(options)
     }
 
+    #[instrument(skip(self, ctx))]
     async fn drainage_basin(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
+        info!("Fetching drainage basin options");
         let state = ctx.data::<State>()?;
         let options = state.database.taxa.drainage_basin_options(&self.filters).await?;
         Ok(options)

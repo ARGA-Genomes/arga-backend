@@ -1,11 +1,12 @@
 use async_graphql::*;
+use tracing::{instrument, info};
 use uuid::Uuid;
 
 use crate::database::{Database, models};
 use crate::http::{Context as State, Error};
 
 
-#[derive(OneofObject)]
+#[derive(OneofObject, Debug)]
 pub enum SubsampleBy {
     Id(Uuid),
     RecordId(String),
@@ -16,7 +17,9 @@ pub enum SubsampleBy {
 pub struct Subsample(SubsampleDetails, SubsampleQuery);
 
 impl Subsample {
+    #[instrument(skip(db), fields(subsample_by = ?by))]
     pub async fn new(db: &Database, by: &SubsampleBy) -> Result<Option<Subsample>, Error> {
+        info!("Creating new subsample query");
         let subsample = match by {
             SubsampleBy::Id(id) => db.subsamples.find_by_id(&id).await?,
             SubsampleBy::RecordId(id) => db.subsamples.find_by_record_id(&id).await?,
@@ -41,7 +44,9 @@ struct SubsampleQuery {
 
 #[Object]
 impl SubsampleQuery {
+    #[instrument(skip(self, ctx))]
     async fn events(&self, ctx: &Context<'_>) -> Result<SubsampleEvents, Error> {
+        info!("Fetching subsample events");
         let state = ctx.data::<State>()?;
         let subsamples = state.database.subsamples.subsample_events(&self.subsample.id).await?;
 

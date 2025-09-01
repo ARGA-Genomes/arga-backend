@@ -2,7 +2,7 @@ use arga_core::models;
 use async_graphql::*;
 use bigdecimal::ToPrimitive;
 use serde::{Deserialize, Serialize};
-use tracing::instrument;
+use tracing::{instrument, info, warn};
 
 use super::common::taxonomy::TaxonomicRank;
 use super::helpers::csv;
@@ -14,12 +14,14 @@ pub struct Statistics;
 
 #[Object]
 impl Statistics {
-    #[instrument(skip(self, ctx))]
+    #[instrument(skip(self, ctx), fields(canonical_name = %canonical_name))]
     async fn species(&self, ctx: &Context<'_>, canonical_name: String) -> Result<SpeciesStatistics> {
+        info!("Fetching species statistics for: {}", canonical_name);
         let state = ctx.data::<State>()?;
         let names = state.database.names.find_by_canonical_name(&canonical_name).await?;
 
         if names.is_empty() {
+            warn!("Species not found: {}", canonical_name);
             return Err(Error::new(format!("Species not found: {}", canonical_name)));
         }
 
@@ -43,6 +45,7 @@ impl Statistics {
         Ok(stats)
     }
 
+    #[instrument(skip(self, ctx), fields(taxon_rank = ?taxon_rank, taxon_canonical_name = %taxon_canonical_name))]
     async fn taxon_breakdown(
         &self,
         ctx: &Context<'_>,
@@ -50,6 +53,7 @@ impl Statistics {
         taxon_canonical_name: String,
         include_ranks: Vec<TaxonomicRank>,
     ) -> Result<Vec<TaxonTreeNodeStatistics>> {
+        info!(include_ranks = ?include_ranks, "Fetching taxon breakdown");
         let state = ctx.data::<State>()?;
         let classification = taxon_rank.to_classification(taxon_canonical_name);
         let include_ranks = include_ranks.into_iter().map(|i| i.into()).collect();
@@ -62,8 +66,9 @@ impl Statistics {
         Ok(stats)
     }
 
-    #[instrument(skip(self, ctx))]
+    #[instrument(skip(self, ctx), fields(dataset_name = %name))]
     async fn dataset(&self, ctx: &Context<'_>, name: String) -> Result<DatasetStatistics> {
+        info!("Fetching dataset statistics for: {}", name);
         let state = ctx.data::<State>()?;
         let breakdown = state.database.stats.dataset_breakdown(&name).await?;
 
@@ -74,6 +79,7 @@ impl Statistics {
         })
     }
 
+    #[instrument(skip(self, ctx), fields(taxon_rank = ?taxon_rank, taxon_canonical_name = %taxon_canonical_name))]
     async fn taxonomic_ranks(
         &self,
         ctx: &Context<'_>,
@@ -81,6 +87,7 @@ impl Statistics {
         taxon_canonical_name: String,
         ranks: Vec<TaxonomicRank>,
     ) -> Result<Vec<TaxonomicRankStatistic>> {
+        info!(ranks = ?ranks, "Fetching taxonomic ranks statistics");
         let state = ctx.data::<State>()?;
         let classification = taxon_rank.to_classification(taxon_canonical_name);
         let ranks: Vec<models::TaxonomicRank> = ranks.into_iter().map(|r| r.into()).collect();
@@ -89,6 +96,7 @@ impl Statistics {
         Ok(stats.into_iter().map(|s| s.into()).collect())
     }
 
+    #[instrument(skip(self, ctx), fields(taxon_rank = ?taxon_rank, taxon_canonical_name = %taxon_canonical_name))]
     async fn taxonomic_ranks_csv(
         &self,
         ctx: &Context<'_>,
@@ -96,6 +104,7 @@ impl Statistics {
         taxon_canonical_name: String,
         ranks: Vec<TaxonomicRank>,
     ) -> Result<String> {
+        info!(ranks = ?ranks, "Generating taxonomic ranks CSV");
         let state = ctx.data::<State>()?;
         let classification = taxon_rank.to_classification(taxon_canonical_name);
         let ranks: Vec<models::TaxonomicRank> = ranks.into_iter().map(|r| r.into()).collect();
@@ -106,12 +115,14 @@ impl Statistics {
         csv::generic(stats_mapped).await
     }
 
+    #[instrument(skip(self, ctx), fields(taxon_rank = ?taxon_rank, taxon_canonical_name = %taxon_canonical_name))]
     async fn complete_genomes_by_year(
         &self,
         ctx: &Context<'_>,
         taxon_rank: TaxonomicRank,
         taxon_canonical_name: String,
     ) -> Result<Vec<CompleteGenomesByYearStatistic>> {
+        info!("Fetching complete genomes by year statistics");
         let state = ctx.data::<State>()?;
         let classification = taxon_rank.to_classification(taxon_canonical_name);
         let stats = state.database.stats.complete_genomes_by_year(classification).await?;
@@ -122,12 +133,14 @@ impl Statistics {
         Ok(stats)
     }
 
+    #[instrument(skip(self, ctx), fields(taxon_rank = ?taxon_rank, taxon_canonical_name = %taxon_canonical_name))]
     async fn complete_genomes_by_year_csv(
         &self,
         ctx: &Context<'_>,
         taxon_rank: TaxonomicRank,
         taxon_canonical_name: String,
     ) -> Result<String> {
+        info!("Generating complete genomes by year CSV");
         let state = ctx.data::<State>()?;
         let classification = taxon_rank.to_classification(taxon_canonical_name);
         let stats = state.database.stats.complete_genomes_by_year(classification).await?;

@@ -201,7 +201,7 @@ impl SpecimenAtom {
 }
 
 
-#[derive(OneofObject)]
+#[derive(OneofObject, Debug)]
 pub enum OperationBy {
     EntityId(String),
 }
