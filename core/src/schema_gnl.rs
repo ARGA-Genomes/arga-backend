@@ -218,6 +218,12 @@ diesel::table! {
 }
 
 diesel::table! {
+    tissue_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
+diesel::table! {
     accession_event_entities (entity_id) {
         entity_id -> Varchar,
     }

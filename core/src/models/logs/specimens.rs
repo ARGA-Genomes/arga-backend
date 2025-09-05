@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use super::{Action, LogOperation};
 use crate::crdt::DataFrameOperation;
-use crate::models::{schema, DatasetVersion};
+use crate::models::{DatasetVersion, schema};
 
 
 #[derive(Atom, Debug, Default, Clone, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Display)]
@@ -227,4 +227,46 @@ pub struct AccessionEventOperation {
     pub dataset_version_id: Uuid,
     pub action: Action,
     pub atom: AccessionEventAtom,
+}
+
+
+#[derive(Atom, Debug, Clone, Default, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Display)]
+#[diesel(sql_type = diesel::sql_types::Jsonb)]
+pub enum TissueAtom {
+    #[default]
+    Empty,
+
+    /// Used to link the specimen to a name
+    ScientificName(String),
+    /// The global identifier for the organism that the tissue is from
+    OrganismId(String),
+
+    /// The global specimen id of the collected tissue.
+    TissueId(String),
+    /// The global specimen id of the collected material sample.
+    MaterialSampleId(String),
+
+    IdentificationVerified(bool),
+    ReferenceMaterial(bool),
+    Custodian(String),
+    Institution(String),
+    InstitutionCode(String),
+    SamplingProtocol(String),
+    TissueType(String),
+    Disposition(String),
+    Fixation(String),
+    Storage(String),
+}
+
+#[derive(OperationLog, Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]
+#[diesel(belongs_to(DatasetVersion))]
+#[diesel(table_name = schema::tissue_logs)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct TissueOperation {
+    pub operation_id: BigDecimal,
+    pub parent_id: BigDecimal,
+    pub entity_id: String,
+    pub dataset_version_id: Uuid,
+    pub action: Action,
+    pub atom: TissueAtom,
 }

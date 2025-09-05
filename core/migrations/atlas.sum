@@ -1,4 +1,4 @@
-h1:CRzyNIYxU2i2xLaVWWHLTJACH5g0cZPvQMtns4wCqBo=
+h1:TMSEa8JEygEh4zSlBaWuXACncUIcPZAWZQwhx+6oVpI=
 20250605060808_initial.sql h1:hN3eGaQNsqm+ws4akS+D+e+TqDUHZkZwPaFGW/Gyor4=
 20250605084357_drop_legacy_tables.sql h1:M0SD3ETeanSyo3GDWanw1xpGCJIQg7U11EE5IQ617EU=
 20250606063639_create_baseline_views.sql h1:bjh8zumpl5MFPRc1OAIB9jidVWxu1GPXAu5yGorDjFo=
@@ -9,3 +9,6 @@ h1:CRzyNIYxU2i2xLaVWWHLTJACH5g0cZPvQMtns4wCqBo=
 20250613054532_add_specimen_entities_views.sql h1:n8LsT1iEfXYGTsy6a4EBDchWm7PAN6cJmL/TjGIQXGM=
 20250625114457_add-breakdown-stats-to-specimen-stats.sql h1:e8xmcQ0fO4XlLVffDC6qNbXUNQjszFmINPR71522rY8=
 20250709034536_add-session-id-to-users.sql h1:+yyV/ss2/ZLr9yJ2Wjwb2LGhJyx47bQ8ty5I3QMS0h0=
+20250903102540_create_tissues.sql h1:tFfgbHTPCBwxSJhmlVfkgvqIl4MwZeiPbAutU/yS5pc=
+20250903105546_create_tissue_logs.sql h1:L1uoqGsKg7GtrcPjAaUQPyg2koa5j+dy6sNiXyNG94c=
+20250903112316_create_tissue_entities.sql h1:A6IibtUnPTxEo1aIlM/mBm8P/1L1Nx+a9+2wgEr5ECY=
