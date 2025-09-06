@@ -161,3 +161,40 @@ impl From<models::AccessionEvent> for AccessionEvent {
         }
     }
 }
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct Tissue {
+    pub entity_id: String,
+    pub specimen_id: String,
+    pub material_sample_id: String,
+    pub identification_verified: Option<bool>,
+    pub reference_material: Option<bool>,
+    pub custodian: Option<String>,
+    pub institution: Option<String>,
+    pub institution_code: Option<String>,
+    pub sampling_protocol: Option<String>,
+    pub tissue_type: Option<String>,
+    pub disposition: Option<String>,
+    pub fixation: Option<String>,
+    pub storage: Option<String>,
+}
+
+impl From<models::Tissue> for Tissue {
+    fn from(value: models::Tissue) -> Self {
+        Self {
+            entity_id: value.entity_id,
+            specimen_id: value.specimen_id,
+            material_sample_id: value.material_sample_id,
+            identification_verified: value.identification_verified,
+            reference_material: value.reference_material,
+            custodian: value.custodian,
+            institution: value.institution,
+            institution_code: value.institution_code,
+            sampling_protocol: value.sampling_protocol,
+            tissue_type: value.tissue_type,
+            disposition: value.disposition,
+            fixation: value.fixation,
+            storage: value.storage,
+        }
+    }
+}

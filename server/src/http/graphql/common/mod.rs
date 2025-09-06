@@ -20,7 +20,7 @@ pub use filters::{
     convert_whole_genome_filters,
 };
 pub use species::{SpeciesCard, SpeciesDataSummary, SpeciesPhoto};
-pub use specimens::{AccessionEvent, CollectionEvent, OrganismDetails};
+pub use specimens::{AccessionEvent, CollectionEvent, OrganismDetails, Tissue};
 pub use taxonomy::{NameDetails, Taxonomy};
 
 use super::markers::SpeciesMarker;

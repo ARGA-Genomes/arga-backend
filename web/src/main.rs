@@ -527,7 +527,18 @@ fn TaxaList(rank: ReadOnlySignal<String>, onspecies: EventHandler<TaxonName>) ->
                     for name in selected() {
                         div { class: "join join-horizontal",
                             RightCaret {}
-                            p { class: "text-xs pl-2", "{name.canonical_name}" }
+                            a {
+                                href: "",
+                                class: "text-xs pl-2",
+                                prevent_default: "onclick",
+                                onclick: move |ev| {
+                                    ev.prevent_default();
+                                    if let Some(idx) = selected().iter().rposition(|taxon| name.scientific_name == taxon.scientific_name) {
+                                        selected.truncate(idx + 1);
+                                    }
+                                },
+                                "{name.canonical_name}"
+                            }
                         }
                     }
                 }
