@@ -756,6 +756,7 @@ diesel::table! {
         disposition -> Nullable<Varchar>,
         fixation -> Nullable<Varchar>,
         storage -> Nullable<Varchar>,
+        tissue_id -> Varchar,
     }
 }
 

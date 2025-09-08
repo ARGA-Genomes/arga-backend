@@ -314,6 +314,7 @@ CREATE TABLE tissues (
     entity_id varchar PRIMARY KEY NOT NULL,
     specimen_id varchar REFERENCES specimens ON DELETE CASCADE NOT NULL,
     material_sample_id varchar REFERENCES specimens ON DELETE CASCADE NOT NULL,
+    tissue_id varchar NOT NULL,
     identification_verified boolean,
     reference_material boolean,
     custodian varchar,

@@ -38,6 +38,7 @@ pub struct Tissue {
     pub entity_id: String,
     pub specimen_id: String,
     pub material_sample_id: String,
+    pub tissue_id: String,
     pub identification_verified: Option<bool>,
     pub reference_material: Option<bool>,
     pub custodian: Option<String>,
