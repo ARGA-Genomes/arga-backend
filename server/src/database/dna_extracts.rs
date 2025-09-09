@@ -1,9 +1,8 @@
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use uuid::Uuid;
 
 use super::{Error, PgPool, schema};
-use crate::database::models::{DnaExtract, DnaExtractionEvent, entity_hash};
+use crate::database::models::{DnaExtract, entity_hash};
 
 
 #[derive(Clone)]
@@ -12,12 +11,12 @@ pub struct DnaExtractProvider {
 }
 
 impl DnaExtractProvider {
-    pub async fn find_by_id(&self, dna_extract_id: &Uuid) -> Result<Option<DnaExtract>, Error> {
+    pub async fn find_by_id(&self, dna_extract_id: &str) -> Result<Option<DnaExtract>, Error> {
         use schema::dna_extracts;
         let mut conn = self.pool.get().await?;
 
         let dna_extract = dna_extracts::table
-            .filter(dna_extracts::id.eq(dna_extract_id))
+            .filter(dna_extracts::entity_id.eq(dna_extract_id))
             .get_result::<DnaExtract>(&mut conn)
             .await
             .optional()?;
@@ -30,7 +29,7 @@ impl DnaExtractProvider {
         let mut conn = self.pool.get().await?;
 
         let dna_extract = dna_extracts::table
-            .filter(dna_extracts::record_id.eq(record_id))
+            .filter(dna_extracts::extract_id.eq(record_id))
             .get_result::<DnaExtract>(&mut conn)
             .await
             .optional()?;
@@ -51,17 +50,5 @@ impl DnaExtractProvider {
             .optional()?;
 
         Ok(extract)
-    }
-
-    pub async fn dna_extraction_events(&self, dna_extract_id: &Uuid) -> Result<Vec<DnaExtractionEvent>, Error> {
-        use schema::dna_extraction_events;
-        let mut conn = self.pool.get().await?;
-
-        let dna_extracts = dna_extraction_events::table
-            .filter(dna_extraction_events::dna_extract_id.eq(dna_extract_id))
-            .load::<DnaExtractionEvent>(&mut conn)
-            .await?;
-
-        Ok(dna_extracts)
     }
 }

@@ -2,7 +2,7 @@ use async_graphql::*;
 use chrono::{NaiveDate, NaiveDateTime};
 use uuid::Uuid;
 
-use crate::database::{models, Database};
+use crate::database::{Database, models};
 use crate::http::{Context as State, Error};
 
 
@@ -84,7 +84,7 @@ impl SequenceQuery {
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SequenceDetails {
     pub id: Uuid,
-    pub dna_extract_id: Uuid,
+    pub dna_extract_id: String,
     pub record_id: String,
 }
 

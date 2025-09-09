@@ -11,7 +11,7 @@ pub struct Markers;
 #[derive(SimpleObject)]
 pub struct SpeciesMarker {
     pub sequence_id: Uuid,
-    pub dna_extract_id: Uuid,
+    pub dna_extract_id: String,
     pub dataset_name: String,
 
     pub record_id: String,

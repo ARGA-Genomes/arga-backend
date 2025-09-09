@@ -1,13 +1,12 @@
 use async_graphql::*;
-use uuid::Uuid;
 
 use crate::database::{Database, models};
-use crate::http::{Context as State, Error};
+use crate::http::Error;
 
 
 #[derive(OneofObject)]
 pub enum SubsampleBy {
-    Id(Uuid),
+    Id(String),
     RecordId(String),
     SpecimenRecordId(String),
 }
@@ -41,13 +40,8 @@ struct SubsampleQuery {
 
 #[Object]
 impl SubsampleQuery {
-    async fn events(&self, ctx: &Context<'_>) -> Result<SubsampleEvents, Error> {
-        let state = ctx.data::<State>()?;
-        let subsamples = state.database.subsamples.subsample_events(&self.subsample.id).await?;
-
-        Ok(SubsampleEvents {
-            subsamples: subsamples.into_iter().map(|r| r.into()).collect(),
-        })
+    async fn publication(&self, ctx: &Context<'_>) -> Result<String, Error> {
+        Ok("".to_string())
     }
 }
 
@@ -55,54 +49,59 @@ impl SubsampleQuery {
 /// A specimen from a specific species.
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SubsampleDetails {
-    pub id: Uuid,
-    pub specimen_id: String,
-
-    pub record_id: String,
-    pub material_sample_id: Option<String>,
+    pub entity_id: String,
+    pub subsample_id: String,
     pub institution_name: Option<String>,
     pub institution_code: Option<String>,
-    pub type_status: Option<String>,
+    pub event_date: Option<chrono::NaiveDate>,
+    pub event_time: Option<chrono::NaiveTime>,
+    pub sample_type: Option<String>,
+    pub name: Option<String>,
+    pub custodian: Option<String>,
+    pub description: Option<String>,
+    pub notes: Option<String>,
+    pub culture_method: Option<String>,
+    pub culture_media: Option<String>,
+    pub weight_or_volume: Option<String>,
+    pub preservation_method: Option<String>,
+    pub preservation_temperature: Option<String>,
+    pub preservation_duration: Option<String>,
+    pub quality: Option<String>,
+    pub cell_type: Option<String>,
+    pub cell_line: Option<String>,
+    pub clone_name: Option<String>,
+    pub lab_host: Option<String>,
+    pub sample_processing: Option<String>,
+    pub sample_pooling: Option<String>,
 }
 
 impl From<models::Subsample> for SubsampleDetails {
     fn from(value: models::Subsample) -> Self {
         Self {
-            id: value.id,
-            specimen_id: value.specimen_id,
-            record_id: value.record_id,
-            material_sample_id: value.material_sample_id,
+            entity_id: value.entity_id,
+            subsample_id: value.subsample_id,
             institution_name: value.institution_name,
             institution_code: value.institution_code,
-            type_status: value.type_status,
-        }
-    }
-}
-
-
-#[derive(SimpleObject)]
-pub struct SubsampleEvents {
-    subsamples: Vec<SubsampleEvent>,
-}
-
-
-#[derive(Clone, Debug, SimpleObject)]
-pub struct SubsampleEvent {
-    pub id: Uuid,
-    pub event_date: Option<String>,
-    pub event_time: Option<String>,
-    pub subsampled_by: Option<String>,
-    pub preparation_type: Option<String>,
-}
-
-impl From<models::SubsampleEvent> for SubsampleEvent {
-    fn from(value: models::SubsampleEvent) -> Self {
-        Self {
-            id: value.id,
             event_date: value.event_date,
             event_time: value.event_time,
-            subsampled_by: value.subsampled_by,
-            preparation_type: value.preparation_type,
+            sample_type: value.sample_type,
+            name: value.name,
+            custodian: value.custodian,
+            description: value.description,
+            notes: value.notes,
+            culture_method: value.culture_method,
+            culture_media: value.culture_media,
+            weight_or_volume: value.weight_or_volume,
+            preservation_method: value.preservation_method,
+            preservation_temperature: value.preservation_temperature,
+            preservation_duration: value.preservation_duration,
+            quality: value.quality,
+            cell_type: value.cell_type,
+            cell_line: value.cell_line,
+            clone_name: value.clone_name,
+            lab_host: value.lab_host,
+            sample_processing: value.sample_processing,
+            sample_pooling: value.sample_pooling,
         }
     }
 }

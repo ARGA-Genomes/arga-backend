@@ -279,6 +279,44 @@ CREATE UNIQUE INDEX names_scientific_name ON names (scientific_name);
 CREATE INDEX names_canonical_name ON names (canonical_name);
 
 
+-- A publication for any record
+CREATE TABLE publications (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_id varchar NOT NULL,
+
+    title varchar NOT NULL,
+    authors text[] NOT NULL,
+    published_year int NOT NULL,
+    published_date timestamp with time zone,
+    language varchar,
+    publisher varchar,
+    doi varchar,
+    source_urls text[],
+    publication_type publication_type,
+    citation varchar,
+
+    -- these are timestamps from the dataset, not our own timestamps
+    record_created_at timestamp with time zone,
+    record_updated_at timestamp with time zone,
+
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
+-- each entity is a globally unique publication so we ensure that there is only one
+-- record that can be reduced from the publication logs
+CREATE UNIQUE INDEX publications_entity_id ON publications (entity_id);
+
+
+-- Agent data. An agent is a person that is referenced in various tables. We want to associate data with
+-- and agent via the full name or some other identifier and for that we use our entity hash approach so that
+-- lookups aren't necessary when importing.
+CREATE TABLE agents (
+    entity_id varchar PRIMARY KEY NOT NULL,
+    full_name varchar NOT NULL,
+    orcid varchar
+);
+
 
 -- Organism data. Referenced by specimens and collection events to determine the 'thing' that has
 -- been sampled/collected at a specific instant in time. The organisms table represents the latest version
@@ -333,38 +371,71 @@ CREATE INDEX tissues_material_sample_id ON tissues (material_sample_id);
 
 -- Subsample data
 CREATE TABLE subsamples (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
-    name_id uuid REFERENCES names NOT NULL,
+    entity_id varchar PRIMARY KEY NOT NULL,
     specimen_id varchar REFERENCES specimens ON DELETE CASCADE NOT NULL,
+    species_name_id bigint NOT NULL,
+    publication_id varchar REFERENCES publications (entity_id),
+    subsample_id varchar NOT NULL,
 
-    record_id varchar NOT NULL,
-    material_sample_id varchar,
+    event_date date,
+    event_time time,
+    sample_type varchar,
     institution_name varchar,
     institution_code varchar,
-    type_status varchar,
-    entity_id varchar
+    name varchar,
+    custodian varchar,
+    description varchar,
+    notes varchar,
+    culture_method varchar,
+    culture_media varchar,
+    weight_or_volume varchar,
+    preservation_method varchar,
+    preservation_temperature varchar,
+    preservation_duration varchar,
+    quality varchar,
+    cell_type varchar,
+    cell_line varchar,
+    clone_name varchar,
+    lab_host varchar,
+    sample_processing varchar,
+    sample_pooling varchar
 );
 
-CREATE INDEX subsamples_dataset_id ON subsamples (dataset_id);
-CREATE INDEX subsamples_name_id ON subsamples (name_id);
 CREATE INDEX subsamples_specimen_id ON subsamples (specimen_id);
+CREATE INDEX subsamples_species_name_id ON subsamples (species_name_id);
 
 
 -- DNA extraction data
 CREATE TABLE dna_extracts (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
-    name_id uuid REFERENCES names NOT NULL,
-    subsample_id uuid REFERENCES subsamples ON DELETE CASCADE NOT NULL,
+    entity_id varchar PRIMARY KEY NOT NULL,
+    subsample_id varchar REFERENCES subsamples ON DELETE CASCADE NOT NULL,
+    species_name_id bigint NOT NULL,
+    publication_id varchar REFERENCES publications (entity_id),
+    extract_id varchar NOT NULL,
 
-    record_id varchar NOT NULL,
-    entity_id varchar
+    event_date date,
+    event_time time,
+    extracted_by varchar REFERENCES agents,
+    material_extracted_by varchar REFERENCES agents,
+    nucleic_acid_type varchar,
+    preparation_type varchar,
+    preservation_type varchar,
+    preservation_method varchar,
+    extraction_method varchar,
+    concentration_method varchar,
+    conformation varchar,
+    concentration float,
+    concentration_unit varchar,
+    quantification varchar,
+    absorbance_260_230_ratio float,
+    absorbance_260_280_ratio float,
+    cell_lysis_method varchar,
+    action_extracted varchar,
+    number_of_extracts_pooled varchar
 );
 
-CREATE INDEX dna_extracts_dataset_id ON dna_extracts (dataset_id);
-CREATE INDEX dna_extracts_name_id ON dna_extracts (name_id);
 CREATE INDEX dna_extracts_subsample_id ON dna_extracts (subsample_id);
+CREATE INDEX dna_extracts_species_name_id ON dna_extracts (species_name_id);
 
 
 -- Sequence data
@@ -372,7 +443,7 @@ CREATE TABLE sequences (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
     name_id uuid REFERENCES names NOT NULL,
-    dna_extract_id uuid REFERENCES dna_extracts ON DELETE CASCADE NOT NULL,
+    dna_extract_id varchar REFERENCES dna_extracts ON DELETE CASCADE NOT NULL,
 
     record_id varchar NOT NULL,
     entity_id varchar
@@ -479,35 +550,6 @@ CREATE TABLE regions (
     region_type region_type NOT NULL,
     values text[] NOT NULL
 );
-
-
--- A publication for any record
-CREATE TABLE publications (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    entity_id varchar NOT NULL,
-
-    title varchar NOT NULL,
-    authors text[] NOT NULL,
-    published_year int NOT NULL,
-    published_date timestamp with time zone,
-    language varchar,
-    publisher varchar,
-    doi varchar,
-    source_urls text[],
-    publication_type publication_type,
-    citation varchar,
-
-    -- these are timestamps from the dataset, not our own timestamps
-    record_created_at timestamp with time zone,
-    record_updated_at timestamp with time zone,
-
-    created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
-);
-
--- each entity is a globally unique publication so we ensure that there is only one
--- record that can be reduced from the publication logs
-CREATE UNIQUE INDEX publications_entity_id ON publications (entity_id);
 
 
 -- A specific act being made on a name
@@ -688,48 +730,6 @@ CREATE TABLE accession_events (
 
 CREATE INDEX accession_events_specimen_id ON accession_events (specimen_id);
 CREATE INDEX accession_events_name_id ON accession_events (name_id);
-
-
--- Subsample events
-CREATE TABLE subsample_events (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
-    subsample_id uuid REFERENCES subsamples ON DELETE CASCADE NOT NULL,
-
-    event_date varchar,
-    event_time varchar,
-    subsampled_by varchar,
-    preparation_type varchar,
-    entity_id varchar
-);
-
-CREATE INDEX subsample_events_subsample_id ON subsample_events (subsample_id);
-
-
--- DNA extraction events
-CREATE TABLE dna_extraction_events (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    dataset_id uuid REFERENCES datasets ON DELETE CASCADE NOT NULL,
-    dna_extract_id uuid REFERENCES dna_extracts ON DELETE CASCADE NOT NULL,
-
-    event_date varchar,
-    event_time varchar,
-    extracted_by varchar,
-
-    preservation_type varchar,
-    preparation_type varchar,
-    extraction_method varchar,
-    measurement_method varchar,
-    concentration_method varchar,
-    quality varchar,
-
-    concentration float,
-    absorbance_260_230 float,
-    absorbance_260_280 float,
-    entity_id varchar
-);
-
-CREATE INDEX dna_extraction_events_dna_extracts_id ON dna_extraction_events (dna_extract_id);
 
 
 -- Sequencing event
@@ -1095,8 +1095,8 @@ JOIN sequencing_events ON sequences.id = sequencing_events.sequence_id
 JOIN assembly_events ON sequences.id = assembly_events.sequence_id
 JOIN annotation_events ON sequences.id = annotation_events.sequence_id
 JOIN deposition_events ON sequences.id = deposition_events.sequence_id
-LEFT JOIN dna_extracts ON sequences.dna_extract_id = dna_extracts.id
-LEFT JOIN subsamples ON dna_extracts.subsample_id = subsamples.id
+LEFT JOIN dna_extracts ON sequences.dna_extract_id = dna_extracts.entity_id
+LEFT JOIN subsamples ON dna_extracts.subsample_id = subsamples.entity_id
 LEFT JOIN specimens ON subsamples.specimen_id = specimens.entity_id
 LEFT JOIN collection_events ON specimens.entity_id = collection_events.specimen_id;
 
@@ -1121,8 +1121,8 @@ FROM sequences
 JOIN datasets ON sequences.dataset_id = datasets.id
 JOIN sequencing_events ON sequences.id = sequencing_events.sequence_id
 LEFT JOIN deposition_events ON sequences.id = deposition_events.sequence_id
-LEFT JOIN dna_extracts ON sequences.dna_extract_id = dna_extracts.id
-LEFT JOIN subsamples ON dna_extracts.subsample_id = subsamples.id
+LEFT JOIN dna_extracts ON sequences.dna_extract_id = dna_extracts.entity_id
+LEFT JOIN subsamples ON dna_extracts.subsample_id = subsamples.entity_id
 LEFT JOIN specimens ON subsamples.specimen_id = specimens.entity_id
 LEFT JOIN collection_events ON specimens.entity_id = collection_events.specimen_id
 WHERE sequencing_events.target_gene IS NOT NULL;
@@ -1157,8 +1157,8 @@ JOIN datasets ON sequences.dataset_id = datasets.id
 JOIN sequencing_events ON sequences.id = sequencing_events.sequence_id
 JOIN deposition_events ON sequences.id = deposition_events.sequence_id
 LEFT JOIN assembly_events on sequences.id = assembly_events.sequence_id
-LEFT JOIN dna_extracts ON sequences.dna_extract_id = dna_extracts.id
-LEFT JOIN subsamples ON dna_extracts.subsample_id = subsamples.id
+LEFT JOIN dna_extracts ON sequences.dna_extract_id = dna_extracts.entity_id
+LEFT JOIN subsamples ON dna_extracts.subsample_id = subsamples.entity_id
 LEFT JOIN specimens ON subsamples.specimen_id = specimens.entity_id
 LEFT JOIN collection_events ON specimens.entity_id = collection_events.specimen_id
 WHERE assembly_events.id IS NULL AND target_gene IS NULL;
@@ -1646,8 +1646,8 @@ SELECT DISTINCT
 
 FROM specimens
 LEFT JOIN subsamples ON subsamples.specimen_id = specimens.entity_id
-LEFT JOIN dna_extracts ON dna_extracts.subsample_id = subsamples.id
-LEFT JOIN sequences ON sequences.dna_extract_id = dna_extracts.id
+LEFT JOIN dna_extracts ON dna_extracts.subsample_id = subsamples.entity_id
+LEFT JOIN sequences ON sequences.dna_extract_id = dna_extracts.entity_id
 LEFT JOIN sequencing_events ON sequencing_events.sequence_id = sequences.id
 LEFT JOIN annotation_events ON annotation_events.sequence_id = sequences.id
 LEFT JOIN assembly_events ON assembly_events.sequence_id = sequences.id

@@ -2,7 +2,7 @@ use async_graphql::*;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::database::{models, Database};
+use crate::database::{Database, models};
 use crate::http::{Context as State, Error};
 
 
@@ -36,7 +36,7 @@ impl MarkerQuery {
 #[derive(Clone, Debug, Serialize, Deserialize, SimpleObject)]
 pub struct MarkerDetails {
     pub sequence_id: Uuid,
-    pub dna_extract_id: Uuid,
+    pub dna_extract_id: String,
     pub dataset_name: String,
 
     pub record_id: String,
