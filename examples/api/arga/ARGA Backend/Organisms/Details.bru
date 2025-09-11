@@ -16,7 +16,7 @@ headers {
 
 body:graphql {
   {
-    organism(by: { entityId: "3954723964711069130" }) {
+    organism(by: { entityId: "1258155573621003740" }) {
       entityId
       organismId
       sex
@@ -44,6 +44,33 @@ body:graphql {
         institutionCode
         disposition
         preparation
+      }
+      
+      subsamples {
+        entityId
+        subsampleId
+        eventDate
+        eventTime
+        institutionName
+        institutionCode
+        sampleType
+        name
+        custodian
+        description
+        notes
+        cultureMedia
+        cultureMethod
+        weightOrVolume
+        preservationMethod
+        preservationTemperature
+        preservationDuration
+        quality
+        cellType
+        cellLine
+        cloneName
+        labHost
+        sampleProcessing
+        samplePooling
       }
     }
   }

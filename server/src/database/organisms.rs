@@ -1,4 +1,4 @@
-use arga_core::models::Tissue;
+use arga_core::models::{Subsample, Tissue};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
@@ -66,6 +66,20 @@ impl OrganismProvider {
             .filter(specimens::organism_id.eq(organism_entity_id))
             .select(Tissue::as_select())
             .load::<Tissue>(&mut conn)
+            .await?;
+
+        Ok(tissues)
+    }
+
+    pub async fn subsamples(&self, organism_entity_id: &str) -> Result<Vec<Subsample>, Error> {
+        use schema::{specimens, subsamples};
+        let mut conn = self.pool.get().await?;
+
+        let tissues = subsamples::table
+            .inner_join(specimens::table.on(specimens::entity_id.eq(subsamples::specimen_id)))
+            .filter(specimens::organism_id.eq(organism_entity_id))
+            .select(Subsample::as_select())
+            .load::<Subsample>(&mut conn)
             .await?;
 
         Ok(tissues)

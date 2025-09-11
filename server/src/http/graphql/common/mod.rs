@@ -5,6 +5,7 @@ pub mod operation_logs;
 pub mod search;
 pub mod species;
 pub mod specimens;
+pub mod subsamples;
 pub mod taxonomy;
 pub mod whole_genomes;
 
@@ -21,6 +22,7 @@ pub use filters::{
 };
 pub use species::{SpeciesCard, SpeciesDataSummary, SpeciesPhoto};
 pub use specimens::{AccessionEvent, CollectionEvent, OrganismDetails, Tissue};
+pub use subsamples::SubsampleDetails;
 pub use taxonomy::{NameDetails, Taxonomy};
 
 use super::markers::SpeciesMarker;

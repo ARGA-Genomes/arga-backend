@@ -303,6 +303,20 @@ diesel::table! {
 
 diesel::table! {
     use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    extraction_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
     use super::sql_types::Geometry;
 
     ibra (ogc_fid) {
@@ -618,6 +632,20 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    subsample_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
     subsamples (entity_id) {
         specimen_id -> Varchar,
         institution_name -> Nullable<Varchar>,
@@ -808,6 +836,7 @@ diesel::joinable!(datasets -> sources (source_id));
 diesel::joinable!(deposition_events -> datasets (dataset_id));
 diesel::joinable!(deposition_events -> sequences (sequence_id));
 diesel::joinable!(dna_extracts -> subsamples (subsample_id));
+diesel::joinable!(extraction_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(name_attributes -> datasets (dataset_id));
 diesel::joinable!(name_attributes -> names (name_id));
 diesel::joinable!(nomenclatural_act_logs -> dataset_versions (dataset_version_id));
@@ -827,6 +856,7 @@ diesel::joinable!(sequencing_run_events -> sequencing_events (sequencing_event_i
 diesel::joinable!(specimen_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(specimens -> names (name_id));
 diesel::joinable!(specimens -> organisms (organism_id));
+diesel::joinable!(subsample_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(subsamples -> specimens (specimen_id));
 diesel::joinable!(taxa -> datasets (dataset_id));
 diesel::joinable!(taxa_logs -> dataset_versions (dataset_version_id));
@@ -851,6 +881,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     datasets,
     deposition_events,
     dna_extracts,
+    extraction_logs,
     ibra,
     imcra_mesoscale,
     imcra_provincial,
@@ -871,6 +902,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     sources,
     specimen_logs,
     specimens,
+    subsample_logs,
     subsamples,
     taxa,
     taxa_logs,

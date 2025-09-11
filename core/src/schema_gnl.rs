@@ -229,6 +229,18 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    subsample_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
+diesel::table! {
+    extraction_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
 
 use super::schema::{
     accession_events,

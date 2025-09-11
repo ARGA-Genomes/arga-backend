@@ -10,6 +10,7 @@ use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Sel
 pub use extracts::*;
 pub use logs::entity_hash;
 pub use logs::specimens::*;
+pub use logs::subsamples::*;
 pub use operation_logs::*;
 use serde::{Deserialize, Serialize};
 pub use specimens::*;
