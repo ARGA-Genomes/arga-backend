@@ -303,6 +303,7 @@ pub enum TaxonomicVernacularGroup {
     Chromists,
     ConifersAndCycads,
     Ferns,
+    Invertebrates,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash, diesel_derive_enum::DbEnum)]

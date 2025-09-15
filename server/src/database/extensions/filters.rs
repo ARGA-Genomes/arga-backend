@@ -207,15 +207,22 @@ pub fn with_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpressio
                 .eq("Bacillariophyta"),
         ),
         Group::Chromists => Box::new(species::classification.retrieve_as_text("regnum").eq("Chromista")),
-        Group::ConifersAndCycads => Box::new(
-            species::classification
-                .retrieve_as_text("ordo")
-                .eq_any(vec!["Pinales", "Cycadales"]),
-        ),
+        Group::ConifersAndCycads => Box::new(species::classification.retrieve_as_text("ordo").eq_any(vec![
+            "Pinales",
+            "Cycadales",
+            "Araucariales",
+            "Cupressales",
+        ])),
         Group::Ferns => Box::new(
             species::classification
                 .retrieve_as_text("subclassis")
                 .eq("Polypodiidae"),
+        ),
+        Group::Invertebrates => Box::new(
+            species::classification
+                .retrieve_as_text("kingdom")
+                .eq("Animalia")
+                .and(species::classification.retrieve_as_text("subphylum").ne("Vertebrata")),
         ),
     }
 }
@@ -271,17 +278,23 @@ pub fn without_vernacular_group(group: &TaxonomicVernacularGroup) -> BoxedExpres
                 .ne("Bacillariophyta"),
         ),
         Group::Chromists => Box::new(species::classification.retrieve_as_text("regnum").ne("Chromista")),
-        Group::ConifersAndCycads => Box::new(
-            species::classification
-                .retrieve_as_text("ordo")
-                .ne("Pinales")
-                .and(species::classification.retrieve_as_text("ordo").ne("Cycadales")),
-        ),
+        Group::ConifersAndCycads => Box::new(species::classification.retrieve_as_text("ordo").ne_all(vec![
+            "Pinales",
+            "Cycadales",
+            "Araucariales",
+            "Cupressales",
+        ])),
         Group::Ferns => Box::new(
             species::classification
                 .retrieve_as_text("subclassis")
                 .ne("Polypodiidae"),
         ),
+        Group::Invertebrates => Box::new(diesel::dsl::not(
+            species::classification
+                .retrieve_as_text("kingdom")
+                .eq("Animalia")
+                .and(species::classification.retrieve_as_text("subphylum").ne("Vertebrata")),
+        )),
     }
 }
 

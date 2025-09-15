@@ -253,6 +253,7 @@ pub enum TaxonomicVernacularGroup {
     Chromists,
     ConifersAndCycads,
     Ferns,
+    Invertebrates,
 }
 
 
