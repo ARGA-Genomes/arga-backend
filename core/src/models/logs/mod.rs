@@ -1,7 +1,9 @@
+pub mod agents;
 pub mod extractions;
 pub mod specimens;
 pub mod subsamples;
 
+pub use agents::*;
 use bigdecimal::BigDecimal;
 pub use extractions::*;
 use serde::{Deserialize, Serialize};

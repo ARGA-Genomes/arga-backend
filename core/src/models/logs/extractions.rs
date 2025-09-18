@@ -48,7 +48,7 @@ pub enum ExtractionAtom {
     Absorbance260280Ratio(f64),
     CellLysisMethod(String),
     ActionExtracted(String),
-    NumberOfExtractsPolled(String),
+    NumberOfExtractsPooled(String),
 }
 
 #[derive(OperationLog, Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]

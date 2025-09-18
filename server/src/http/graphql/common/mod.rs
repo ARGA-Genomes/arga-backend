@@ -1,5 +1,6 @@
 pub mod attributes;
 pub mod datasets;
+pub mod extractions;
 pub mod filters;
 pub mod operation_logs;
 pub mod search;
@@ -11,6 +12,7 @@ pub mod whole_genomes;
 
 use async_graphql::{OutputType, SimpleObject};
 pub use datasets::{DatasetDetails, DatasetVersion};
+pub use extractions::DnaExtractDetails;
 pub use filters::{
     FilterAction,
     FilterItem,

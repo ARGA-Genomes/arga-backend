@@ -111,6 +111,20 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    agent_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
     agents (entity_id) {
         entity_id -> Varchar,
         full_name -> Varchar,
@@ -823,6 +837,7 @@ diesel::joinable!(accession_event_logs -> dataset_versions (dataset_version_id))
 diesel::joinable!(accession_events -> names (name_id));
 diesel::joinable!(accession_events -> specimens (specimen_id));
 diesel::joinable!(admin_media -> names (name_id));
+diesel::joinable!(agent_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(annotation_events -> datasets (dataset_id));
 diesel::joinable!(annotation_events -> sequences (sequence_id));
 diesel::joinable!(assembly_events -> datasets (dataset_id));
@@ -872,6 +887,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     accession_event_logs,
     accession_events,
     admin_media,
+    agent_logs,
     agents,
     annotation_events,
     assembly_events,
