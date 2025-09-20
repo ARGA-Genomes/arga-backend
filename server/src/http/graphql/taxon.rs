@@ -325,14 +325,14 @@ pub enum PublicationType {
 #[derive(SimpleObject)]
 pub struct Publication {
     pub entity_id: String,
-    pub title: String,
-    pub authors: Vec<String>,
-    pub published_year: i32,
+    pub title: Option<String>,
+    pub authors: Option<Vec<String>>,
+    pub published_year: Option<i32>,
     pub published_date: Option<DateTime<Utc>>,
     pub language: Option<String>,
     pub publisher: Option<String>,
     pub doi: Option<String>,
-    pub source_urls: Vec<String>,
+    pub source_urls: Option<Vec<String>>,
     pub publication_type: Option<PublicationType>,
     pub citation: Option<String>,
 }
@@ -342,16 +342,13 @@ impl From<models::Publication> for Publication {
         Self {
             entity_id: value.entity_id,
             title: value.title,
-            authors: value.authors.into_iter().filter_map(|v| v).collect(),
+            authors: value.authors.map(|i| i.into_iter().filter_map(|v| v).collect()),
             published_year: value.published_year,
             published_date: value.published_date,
             language: value.language,
             publisher: value.publisher,
             doi: value.doi,
-            source_urls: value
-                .source_urls
-                .map(|i| i.into_iter().filter_map(|v| v).collect())
-                .unwrap_or_default(),
+            source_urls: value.source_urls.map(|i| i.into_iter().filter_map(|v| v).collect()),
             publication_type: value.publication_type.map(|t| t.into()),
             citation: value.citation,
         }

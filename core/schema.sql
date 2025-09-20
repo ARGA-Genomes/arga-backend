@@ -284,9 +284,9 @@ CREATE TABLE publications (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     entity_id varchar NOT NULL,
 
-    title varchar NOT NULL,
-    authors text[] NOT NULL,
-    published_year int NOT NULL,
+    title varchar,
+    authors text[],
+    published_year int,
     published_date timestamp with time zone,
     language varchar,
     publisher varchar,
@@ -1752,3 +1752,7 @@ CREATE UNIQUE INDEX extraction_entities_entity_id ON extraction_entities (entity
 CREATE MATERIALIZED VIEW agent_entities AS
 SELECT entity_id FROM agent_logs GROUP BY entity_id ORDER BY entity_id;
 CREATE UNIQUE INDEX agent_entities_entity_id ON agent_entities (entity_id);
+
+CREATE MATERIALIZED VIEW publication_entities AS
+SELECT entity_id FROM publication_logs GROUP BY entity_id ORDER BY entity_id;
+CREATE UNIQUE INDEX publication_entities_entity_id ON publication_entities (entity_id);

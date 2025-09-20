@@ -503,9 +503,9 @@ diesel::table! {
     publications (id) {
         id -> Uuid,
         entity_id -> Varchar,
-        title -> Varchar,
-        authors -> Array<Nullable<Text>>,
-        published_year -> Int4,
+        title -> Nullable<Varchar>,
+        authors -> Nullable<Array<Nullable<Text>>>,
+        published_year -> Nullable<Int4>,
         published_date -> Nullable<Timestamptz>,
         language -> Nullable<Varchar>,
         publisher -> Nullable<Varchar>,

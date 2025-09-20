@@ -1225,9 +1225,9 @@ pub enum PublicationType {
 pub struct Publication {
     pub id: Uuid,
     pub entity_id: String,
-    pub title: String,
-    pub authors: Vec<Option<String>>,
-    pub published_year: i32,
+    pub title: Option<String>,
+    pub authors: Option<Vec<Option<String>>>,
+    pub published_year: Option<i32>,
     pub published_date: Option<DateTime<Utc>>,
     pub language: Option<String>,
     pub publisher: Option<String>,
