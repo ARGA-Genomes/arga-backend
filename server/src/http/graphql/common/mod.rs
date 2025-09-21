@@ -1,8 +1,10 @@
+pub mod agents;
 pub mod attributes;
 pub mod datasets;
 pub mod extractions;
 pub mod filters;
 pub mod operation_logs;
+pub mod publications;
 pub mod search;
 pub mod species;
 pub mod specimens;
@@ -10,6 +12,7 @@ pub mod subsamples;
 pub mod taxonomy;
 pub mod whole_genomes;
 
+pub use agents::Agent;
 use async_graphql::{OutputType, SimpleObject};
 pub use datasets::{DatasetDetails, DatasetVersion};
 pub use extractions::DnaExtractDetails;
@@ -22,8 +25,16 @@ pub use filters::{
     convert_filters,
     convert_whole_genome_filters,
 };
+pub use publications::{Publication, PublicationType};
 pub use species::{SpeciesCard, SpeciesDataSummary, SpeciesPhoto};
-pub use specimens::{AccessionEvent, CollectionEvent, OrganismDetails, Tissue};
+pub use specimens::{
+    AccessionEvent,
+    CollectionDetails,
+    CollectionEvent,
+    OrganismDetails,
+    RegistrationDetails,
+    TissueDetails,
+};
 pub use subsamples::SubsampleDetails;
 pub use taxonomy::{NameDetails, Taxonomy};
 

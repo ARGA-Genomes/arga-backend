@@ -1,6 +1,7 @@
 pub mod common;
 pub mod helpers;
 
+pub mod collection;
 pub mod dataset;
 pub mod dna_extract;
 pub mod extensions;
@@ -11,6 +12,7 @@ pub mod names;
 pub mod organism;
 pub mod overview;
 pub mod provenance;
+pub mod registration;
 pub mod search;
 pub mod sequence;
 pub mod source;
@@ -20,6 +22,7 @@ pub mod stats;
 pub mod subsample;
 pub mod taxa;
 pub mod taxon;
+pub mod tissue;
 
 use async_graphql::extensions::Tracing;
 use async_graphql::http::GraphiQLSource;

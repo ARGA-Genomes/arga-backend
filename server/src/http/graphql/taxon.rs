@@ -7,7 +7,16 @@ use uuid::Uuid;
 
 use super::common::species::{SortDirection, SpeciesSort};
 use super::common::taxonomy::{NomenclaturalActType, TaxonDetails, TaxonomicRank};
-use super::common::{AccessionEvent, CollectionEvent, FilterItem, NameDetails, Page, SpeciesCard, convert_filters};
+use super::common::{
+    AccessionEvent,
+    CollectionEvent,
+    FilterItem,
+    NameDetails,
+    Page,
+    Publication,
+    SpeciesCard,
+    convert_filters,
+};
 use super::helpers::{self, SpeciesHelper, csv};
 use crate::database::extensions::classification_filters::Classification;
 use crate::database::extensions::filters::{Filter, FilterKind};
@@ -307,51 +316,6 @@ impl TaxonQuery {
         let csv = helpers::csv::species(page.records).await?;
 
         Ok(csv)
-    }
-}
-
-
-#[derive(Enum, Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-#[graphql(remote = "models::PublicationType")]
-pub enum PublicationType {
-    Book,
-    BookChapter,
-    JournalArticle,
-    JournalVolume,
-    ProceedingsPaper,
-    Url,
-}
-
-#[derive(SimpleObject)]
-pub struct Publication {
-    pub entity_id: String,
-    pub title: Option<String>,
-    pub authors: Option<Vec<String>>,
-    pub published_year: Option<i32>,
-    pub published_date: Option<DateTime<Utc>>,
-    pub language: Option<String>,
-    pub publisher: Option<String>,
-    pub doi: Option<String>,
-    pub source_urls: Option<Vec<String>>,
-    pub publication_type: Option<PublicationType>,
-    pub citation: Option<String>,
-}
-
-impl From<models::Publication> for Publication {
-    fn from(value: models::Publication) -> Self {
-        Self {
-            entity_id: value.entity_id,
-            title: value.title,
-            authors: value.authors.map(|i| i.into_iter().filter_map(|v| v).collect()),
-            published_year: value.published_year,
-            published_date: value.published_date,
-            language: value.language,
-            publisher: value.publisher,
-            doi: value.doi,
-            source_urls: value.source_urls.map(|i| i.into_iter().filter_map(|v| v).collect()),
-            publication_type: value.publication_type.map(|t| t.into()),
-            citation: value.citation,
-        }
     }
 }
 

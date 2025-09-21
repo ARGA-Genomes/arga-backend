@@ -1,8 +1,8 @@
 use async_graphql::*;
 
-use super::common::DnaExtractDetails;
+use super::common::{Agent, DnaExtractDetails, Publication};
 use crate::database::{Database, models};
-use crate::http::Error;
+use crate::http::{Context as State, Error};
 
 
 #[derive(OneofObject)]
@@ -25,23 +25,43 @@ impl DnaExtract {
 
         match dna_extract {
             None => Ok(None),
-            Some(dna_extract) => {
-                let details = dna_extract.clone().into();
-                let query = DnaExtractQuery { dna_extract };
-                Ok(Some(DnaExtract(details, query)))
-            }
+            Some(extract) => Ok(Some(Self::from_record(extract))),
         }
+    }
+
+    pub fn from_record(extract: models::DnaExtract) -> DnaExtract {
+        let details = extract.clone().into();
+        let query = DnaExtractQuery { extract };
+        DnaExtract(details, query)
     }
 }
 
 
 struct DnaExtractQuery {
-    dna_extract: models::DnaExtract,
+    extract: models::DnaExtract,
 }
 
 #[Object]
 impl DnaExtractQuery {
-    async fn publication(&self, ctx: &Context<'_>) -> Result<String, Error> {
-        Ok("".to_string())
+    async fn publication(&self, ctx: &Context<'_>) -> Result<Option<Publication>, Error> {
+        let state = ctx.data::<State>()?;
+
+        let publication = match &self.extract.publication_id {
+            None => None,
+            Some(publication_id) => Some(state.database.publications.find_by_id(publication_id).await?.into()),
+        };
+
+        Ok(publication)
+    }
+
+    async fn extracted_by(&self, ctx: &Context<'_>) -> Result<Option<Agent>, Error> {
+        let state = ctx.data::<State>()?;
+
+        let agent = match &self.extract.extracted_by {
+            None => None,
+            Some(agent_id) => Some(state.database.agents.find_by_id(agent_id).await?.into()),
+        };
+
+        Ok(agent)
     }
 }

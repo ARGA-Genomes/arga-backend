@@ -29,7 +29,7 @@ impl OrganismProvider {
         Ok(organism?)
     }
 
-    pub async fn collection_events(&self, organism_entity_id: &str) -> Result<Vec<CollectionEvent>, Error> {
+    pub async fn collections(&self, organism_entity_id: &str) -> Result<Vec<CollectionEvent>, Error> {
         use schema::{collection_events, specimens};
         let mut conn = self.pool.get().await?;
 
@@ -43,18 +43,18 @@ impl OrganismProvider {
         Ok(collections)
     }
 
-    pub async fn accession_events(&self, organism_entity_id: &str) -> Result<Vec<AccessionEvent>, Error> {
+    pub async fn registrations(&self, organism_entity_id: &str) -> Result<Vec<AccessionEvent>, Error> {
         use schema::{accession_events, specimens};
         let mut conn = self.pool.get().await?;
 
-        let accessions = accession_events::table
+        let registrations = accession_events::table
             .inner_join(specimens::table)
             .filter(specimens::organism_id.eq(organism_entity_id))
             .select(AccessionEvent::as_select())
             .load::<AccessionEvent>(&mut conn)
             .await?;
 
-        Ok(accessions)
+        Ok(registrations)
     }
 
     pub async fn tissues(&self, organism_entity_id: &str) -> Result<Vec<Tissue>, Error> {

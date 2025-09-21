@@ -1,8 +1,8 @@
 use async_graphql::*;
 
-use super::common::SubsampleDetails;
+use super::common::{Publication, SubsampleDetails};
 use crate::database::{Database, models};
-use crate::http::Error;
+use crate::http::{Context as State, Error};
 
 
 #[derive(OneofObject)]
@@ -25,12 +25,14 @@ impl Subsample {
 
         match subsample {
             None => Ok(None),
-            Some(subsample) => {
-                let details = subsample.clone().into();
-                let query = SubsampleQuery { subsample };
-                Ok(Some(Subsample(details, query)))
-            }
+            Some(subsample) => Ok(Some(Self::from_record(subsample))),
         }
+    }
+
+    pub fn from_record(subsample: models::Subsample) -> Subsample {
+        let details = subsample.clone().into();
+        let query = SubsampleQuery { subsample };
+        Subsample(details, query)
     }
 }
 
@@ -41,7 +43,14 @@ struct SubsampleQuery {
 
 #[Object]
 impl SubsampleQuery {
-    async fn publication(&self, ctx: &Context<'_>) -> Result<String, Error> {
-        Ok("".to_string())
+    async fn publication(&self, ctx: &Context<'_>) -> Result<Option<Publication>, Error> {
+        let state = ctx.data::<State>()?;
+
+        let publication = match &self.subsample.publication_id {
+            None => None,
+            Some(publication_id) => Some(state.database.publications.find_by_id(publication_id).await?.into()),
+        };
+
+        Ok(publication)
     }
 }

@@ -1,5 +1,7 @@
 pub mod extensions;
 
+pub mod agents;
+pub mod collections;
 pub mod datasets;
 pub mod dna_extracts;
 pub mod maps;
@@ -8,6 +10,8 @@ pub mod names;
 pub mod organisms;
 pub mod overview;
 pub mod provenance;
+pub mod publications;
+pub mod registrations;
 pub mod sequences;
 pub mod sources;
 pub mod species;
@@ -15,6 +19,7 @@ pub mod specimens;
 pub mod stats;
 pub mod subsamples;
 pub mod taxa;
+pub mod tissues;
 
 
 pub use arga_core::{get_database_url, models, schema, schema_gnl};
@@ -86,6 +91,11 @@ pub struct Database {
     pub sequences: sequences::SequenceProvider,
     pub maps: maps::MapsProvider,
     pub provenance: provenance::ProvenanceProvider,
+    pub publications: publications::PublicationProvider,
+    pub agents: agents::AgentProvider,
+    pub tissues: tissues::TissueProvider,
+    pub registrations: registrations::RegistrationProvider,
+    pub collections: collections::CollectionProvider,
 }
 
 impl Database {
@@ -110,6 +120,11 @@ impl Database {
             sequences: sequences::SequenceProvider { pool: pool.clone() },
             maps: maps::MapsProvider { pool: pool.clone() },
             provenance: provenance::ProvenanceProvider { pool: pool.clone() },
+            publications: publications::PublicationProvider { pool: pool.clone() },
+            agents: agents::AgentProvider { pool: pool.clone() },
+            tissues: tissues::TissueProvider { pool: pool.clone() },
+            registrations: registrations::RegistrationProvider { pool: pool.clone() },
+            collections: collections::CollectionProvider { pool: pool.clone() },
             pool,
         })
     }
