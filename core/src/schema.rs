@@ -479,6 +479,29 @@ diesel::table! {
         life_stage -> Nullable<Varchar>,
         reproductive_condition -> Nullable<Varchar>,
         behavior -> Nullable<Varchar>,
+        publication_id -> Nullable<Varchar>,
+        live_state -> Nullable<Varchar>,
+        remarks -> Nullable<Varchar>,
+        identified_by -> Nullable<Varchar>,
+        identification_date -> Nullable<Date>,
+        disposition -> Nullable<Varchar>,
+        first_observed_at -> Nullable<Date>,
+        last_known_alive_at -> Nullable<Date>,
+        biome -> Nullable<Varchar>,
+        habitat -> Nullable<Varchar>,
+        bioregion -> Nullable<Varchar>,
+        ibra_imcra -> Nullable<Varchar>,
+        latitude -> Nullable<Float8>,
+        longitude -> Nullable<Float8>,
+        coordinate_system -> Nullable<Varchar>,
+        location_source -> Nullable<Varchar>,
+        holding -> Nullable<Varchar>,
+        holding_id -> Nullable<Varchar>,
+        holding_permit -> Nullable<Varchar>,
+        record_created_at -> Nullable<Timestamptz>,
+        record_updated_at -> Nullable<Timestamptz>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -857,6 +880,7 @@ diesel::joinable!(name_attributes -> names (name_id));
 diesel::joinable!(nomenclatural_act_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(nomenclatural_acts -> publications (publication_id));
 diesel::joinable!(organism_logs -> dataset_versions (dataset_version_id));
+diesel::joinable!(organisms -> agents (identified_by));
 diesel::joinable!(organisms -> names (name_id));
 diesel::joinable!(publication_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(regions -> datasets (dataset_id));

@@ -325,13 +325,43 @@ CREATE TABLE agents (
 CREATE TABLE organisms (
     entity_id varchar PRIMARY KEY NOT NULL,
     name_id uuid REFERENCES names ON DELETE CASCADE NOT NULL,
+    publication_id varchar REFERENCES publications (entity_id),
     organism_id varchar NOT NULL,
+
     sex varchar,
     genotypic_sex varchar,
     phenotypic_sex varchar,
     life_stage varchar,
     reproductive_condition varchar,
-    behavior varchar
+    behavior varchar,
+    live_state varchar,
+    remarks varchar,
+
+    identified_by varchar REFERENCES agents,
+    identification_date date,
+    disposition varchar,
+    first_observed_at date,
+    last_known_alive_at date,
+
+    biome varchar,
+    habitat varchar,
+    bioregion varchar,
+    ibra_imcra varchar,
+
+    latitude float,
+    longitude float,
+    coordinate_system varchar,
+    location_source varchar,
+    holding varchar,
+    holding_id varchar,
+    holding_permit varchar,
+
+    -- these are timestamps from the dataset, not our own timestamps
+    record_created_at timestamp with time zone,
+    record_updated_at timestamp with time zone,
+
+    created_at timestamp with time zone NOT NULL DEFAULT current_timestamp,
+    updated_at timestamp with time zone NOT NULL DEFAULT current_timestamp
 );
 
 

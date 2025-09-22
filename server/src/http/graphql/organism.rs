@@ -73,13 +73,12 @@ impl OrganismQuery {
 
     async fn publication(&self, ctx: &Context<'_>) -> Result<Option<Publication>, Error> {
         let state = ctx.data::<State>()?;
-        Ok(None)
 
-        // let publication = match &self.organism.publication_id {
-        //     None => None,
-        //     Some(publication_id) => Some(state.database.publications.find_by_id(publication_id).await?.into()),
-        // };
+        let publication = match &self.organism.publication_id {
+            None => None,
+            Some(publication_id) => Some(state.database.publications.find_by_id(publication_id).await?.into()),
+        };
 
-        // Ok(publication)
+        Ok(publication)
     }
 }
