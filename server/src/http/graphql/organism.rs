@@ -1,7 +1,7 @@
 use async_graphql::*;
 
 use super::collection::Collection;
-use super::common::{OrganismDetails, Publication};
+use super::common::{NameDetails, OrganismDetails, Publication};
 use super::dna_extract::DnaExtract;
 use super::registration::Registration;
 use super::subsample::Subsample;
@@ -36,6 +36,12 @@ struct OrganismQuery {
 
 #[Object]
 impl OrganismQuery {
+    async fn name(&self, ctx: &Context<'_>) -> Result<NameDetails, Error> {
+        let state = ctx.data::<State>()?;
+        let name = state.database.names.find_by_name_id(&self.organism.name_id).await?;
+        Ok(name.into())
+    }
+
     async fn collections(&self, ctx: &Context<'_>) -> Result<Vec<Collection>, Error> {
         let state = ctx.data::<State>()?;
         let entity_id = &self.organism.entity_id;
