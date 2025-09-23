@@ -1,7 +1,7 @@
 use async_graphql::*;
 
-use super::common::{AccessionEvent, CollectionEvent, OrganismDetails};
-use crate::database::{models, Database};
+use super::common::{AccessionEvent, CollectionEvent, OrganismDetails, Tissue};
+use crate::database::{Database, models};
 use crate::http::{Context as State, Error};
 
 
@@ -43,5 +43,12 @@ impl OrganismQuery {
         let entity_id = &self.organism.entity_id;
         let accessions = state.database.organisms.accession_events(entity_id).await?;
         Ok(accessions.into_iter().map(|r| r.into()).collect())
+    }
+
+    async fn tissues(&self, ctx: &Context<'_>) -> Result<Vec<Tissue>, Error> {
+        let state = ctx.data::<State>()?;
+        let entity_id = &self.organism.entity_id;
+        let tissues = state.database.organisms.tissues(entity_id).await?;
+        Ok(tissues.into_iter().map(|r| r.into()).collect())
     }
 }

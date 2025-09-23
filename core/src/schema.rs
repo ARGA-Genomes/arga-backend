@@ -728,6 +728,39 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    tissue_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
+    tissues (entity_id) {
+        entity_id -> Varchar,
+        specimen_id -> Varchar,
+        material_sample_id -> Varchar,
+        identification_verified -> Nullable<Bool>,
+        reference_material -> Nullable<Bool>,
+        custodian -> Nullable<Varchar>,
+        institution -> Nullable<Varchar>,
+        institution_code -> Nullable<Varchar>,
+        sampling_protocol -> Nullable<Varchar>,
+        tissue_type -> Nullable<Varchar>,
+        disposition -> Nullable<Varchar>,
+        fixation -> Nullable<Varchar>,
+        storage -> Nullable<Varchar>,
+        tissue_id -> Varchar,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Uuid,
         name -> Varchar,
@@ -800,6 +833,7 @@ diesel::joinable!(taxon_names -> names (name_id));
 diesel::joinable!(taxon_names -> taxa (taxon_id));
 diesel::joinable!(taxon_photos -> taxa (taxon_id));
 diesel::joinable!(taxonomic_act_logs -> dataset_versions (dataset_version_id));
+diesel::joinable!(tissue_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(vernacular_names -> datasets (dataset_id));
 diesel::joinable!(vernacular_names -> names (name_id));
 
@@ -844,6 +878,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     taxon_photos,
     taxonomic_act_logs,
     taxonomic_acts,
+    tissue_logs,
+    tissues,
     users,
     vernacular_names,
 );

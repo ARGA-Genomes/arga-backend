@@ -1,7 +1,8 @@
+use arga_core::models::Tissue;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
-use super::{schema, Error, PgPool};
+use super::{Error, PgPool, schema};
 use crate::database::models::{AccessionEvent, CollectionEvent, Organism};
 
 
@@ -54,5 +55,19 @@ impl OrganismProvider {
             .await?;
 
         Ok(accessions)
+    }
+
+    pub async fn tissues(&self, organism_entity_id: &str) -> Result<Vec<Tissue>, Error> {
+        use schema::{specimens, tissues};
+        let mut conn = self.pool.get().await?;
+
+        let tissues = tissues::table
+            .inner_join(specimens::table.on(specimens::entity_id.eq(tissues::specimen_id)))
+            .filter(specimens::organism_id.eq(organism_entity_id))
+            .select(Tissue::as_select())
+            .load::<Tissue>(&mut conn)
+            .await?;
+
+        Ok(tissues)
     }
 }

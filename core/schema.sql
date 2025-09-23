@@ -297,7 +297,7 @@ CREATE TABLE organisms (
 );
 
 
--- Specimens. A stub table to hang specimen events off. A specimen is anything collected so
+-- Specimens. A stub table to hang specimen events off. A specimen is anything collected
 -- which in turn is anything registered. A specimen always comes from an organism so it's a mandatory
 -- reference. A name is also associated for convenience and performance when searching for specimens.
 CREATE TABLE specimens (
@@ -305,6 +305,30 @@ CREATE TABLE specimens (
     organism_id varchar REFERENCES organisms ON DELETE CASCADE NOT NULL,
     name_id uuid REFERENCES names ON DELETE CASCADE NOT NULL
 );
+
+
+-- Tissues. Specimens that are taken from a material sample. Material samples are the output
+-- of collection events which are represented as a specimen with a collection event. It is then
+-- possible that multiple tissues are extracted from that marterial sample.
+CREATE TABLE tissues (
+    entity_id varchar PRIMARY KEY NOT NULL,
+    specimen_id varchar REFERENCES specimens ON DELETE CASCADE NOT NULL,
+    material_sample_id varchar REFERENCES specimens ON DELETE CASCADE NOT NULL,
+    tissue_id varchar NOT NULL,
+    identification_verified boolean,
+    reference_material boolean,
+    custodian varchar,
+    institution varchar,
+    institution_code varchar,
+    sampling_protocol varchar,
+    tissue_type varchar,
+    disposition varchar,
+    fixation varchar,
+    storage varchar
+);
+
+CREATE INDEX tissues_specimen_id ON tissues (specimen_id);
+CREATE INDEX tissues_material_sample_id ON tissues (material_sample_id);
 
 
 -- Subsample data
@@ -882,6 +906,20 @@ CREATE TABLE specimen_logs (
 CREATE INDEX specimen_logs_parent_id ON specimen_logs (parent_id);
 CREATE INDEX specimen_logs_entity_id ON specimen_logs (entity_id);
 CREATE INDEX specimen_logs_dataset_version_id ON specimen_logs (dataset_version_id);
+
+
+CREATE TABLE tissue_logs (
+    operation_id numeric PRIMARY KEY NOT NULL,
+    parent_id numeric NOT NULL,
+    entity_id varchar NOT NULL,
+    dataset_version_id uuid REFERENCES dataset_versions ON DELETE CASCADE NOT NULL,
+    action operation_action NOT NULL,
+    atom jsonb DEFAULT '{}' NOT NULL
+);
+
+CREATE INDEX tissue_logs_parent_id ON tissue_logs (parent_id);
+CREATE INDEX tissue_logs_entity_id ON tissue_logs (entity_id);
+CREATE INDEX tissue_logs_dataset_version_id ON tissue_logs (dataset_version_id);
 
 
 CREATE TABLE collection_event_logs (
@@ -1652,6 +1690,10 @@ CREATE UNIQUE INDEX collection_event_entities_entity_id ON collection_event_enti
 CREATE MATERIALIZED VIEW organism_entities AS
 SELECT entity_id FROM organism_logs GROUP BY entity_id ORDER BY entity_id;
 CREATE UNIQUE INDEX organism_entities_entity_id ON organism_entities (entity_id);
+
+CREATE MATERIALIZED VIEW tissue_entities AS
+SELECT entity_id FROM tissue_logs GROUP BY entity_id ORDER BY entity_id;
+CREATE UNIQUE INDEX tissue_entities_entity_id ON tissue_entities (entity_id);
 
 CREATE MATERIALIZED VIEW accession_event_entities AS
 SELECT entity_id FROM accession_event_logs GROUP BY entity_id ORDER BY entity_id;

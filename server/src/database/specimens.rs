@@ -1,10 +1,17 @@
-use arga_core::models::{Organism, SpecimenStats};
 use arga_core::schema_gnl;
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
 use super::{Error, PgPool, schema};
-use crate::database::models::{AccessionEvent, CollectionEvent, Specimen, entity_hash};
+use crate::database::models::{
+    AccessionEvent,
+    CollectionEvent,
+    Organism,
+    Specimen,
+    SpecimenStats,
+    Tissue,
+    entity_hash,
+};
 
 
 pub enum SpecimenEvent {
@@ -132,6 +139,26 @@ impl SpecimenProvider {
             .await?;
 
         Ok(accessions)
+    }
+
+    /// Get tissues that have been sampled from a specific specimen.
+    ///
+    /// This does not get the tissue with the provided specimen_id, rather
+    /// it gets all tissues that have been sampled from it, specifically all tissues
+    /// that reference the `specimen_id` as the `material_sample_id`. For example,
+    /// providing the specimen for a collecting event where the whole organism was collected
+    /// could result in tissues for blood, kidney, skin, etc.
+    pub async fn tissues(&self, specimen_id: &str) -> Result<Vec<Tissue>, Error> {
+        use schema::tissues;
+        let mut conn = self.pool.get().await?;
+
+        let tissues = tissues::table
+            .filter(tissues::material_sample_id.eq(specimen_id))
+            .select(Tissue::as_select())
+            .load::<Tissue>(&mut conn)
+            .await?;
+
+        Ok(tissues)
     }
 
     pub async fn stats(&self, specimen_id: &str) -> Result<SpecimenStats, Error> {

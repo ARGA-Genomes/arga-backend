@@ -32,6 +32,27 @@ pub struct Organism {
 
 
 #[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::tissues)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Tissue {
+    pub entity_id: String,
+    pub specimen_id: String,
+    pub material_sample_id: String,
+    pub tissue_id: String,
+    pub identification_verified: Option<bool>,
+    pub reference_material: Option<bool>,
+    pub custodian: Option<String>,
+    pub institution: Option<String>,
+    pub institution_code: Option<String>,
+    pub sampling_protocol: Option<String>,
+    pub tissue_type: Option<String>,
+    pub disposition: Option<String>,
+    pub fixation: Option<String>,
+    pub storage: Option<String>,
+}
+
+
+#[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::collection_events)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct CollectionEvent {
