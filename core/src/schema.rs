@@ -395,6 +395,54 @@ diesel::table! {
 }
 
 diesel::table! {
+    libraries (entity_id) {
+        entity_id -> Varchar,
+        extract_id -> Varchar,
+        species_name_id -> Int8,
+        publication_id -> Nullable<Varchar>,
+        library_id -> Varchar,
+        event_date -> Nullable<Date>,
+        event_time -> Nullable<Time>,
+        prepared_by -> Nullable<Varchar>,
+        concentration -> Nullable<Float8>,
+        concentration_unit -> Nullable<Varchar>,
+        pcr_cycles -> Nullable<Int4>,
+        layout -> Nullable<Varchar>,
+        selection -> Nullable<Varchar>,
+        bait_set_name -> Nullable<Varchar>,
+        bait_set_reference -> Nullable<Varchar>,
+        construction_protocol -> Nullable<Varchar>,
+        source -> Nullable<Varchar>,
+        insert_size -> Nullable<Varchar>,
+        design_description -> Nullable<Varchar>,
+        strategy -> Nullable<Varchar>,
+        index_tag -> Nullable<Varchar>,
+        index_dual_tag -> Nullable<Varchar>,
+        index_oligo -> Nullable<Varchar>,
+        index_dual_oligo -> Nullable<Varchar>,
+        location -> Nullable<Varchar>,
+        remarks -> Nullable<Varchar>,
+        dna_treatment -> Nullable<Varchar>,
+        number_of_libraries_pooled -> Nullable<Int4>,
+        pcr_replicates -> Nullable<Int4>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    library_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::AttributeCategory;
     use super::sql_types::AttributeValueType;
@@ -875,6 +923,9 @@ diesel::joinable!(deposition_events -> datasets (dataset_id));
 diesel::joinable!(deposition_events -> sequences (sequence_id));
 diesel::joinable!(dna_extracts -> subsamples (subsample_id));
 diesel::joinable!(extraction_logs -> dataset_versions (dataset_version_id));
+diesel::joinable!(libraries -> agents (prepared_by));
+diesel::joinable!(libraries -> dna_extracts (extract_id));
+diesel::joinable!(library_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(name_attributes -> datasets (dataset_id));
 diesel::joinable!(name_attributes -> names (name_id));
 diesel::joinable!(nomenclatural_act_logs -> dataset_versions (dataset_version_id));
@@ -926,6 +977,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     imcra_mesoscale,
     imcra_provincial,
     jobs,
+    libraries,
+    library_logs,
     name_attributes,
     names,
     nomenclatural_act_logs,

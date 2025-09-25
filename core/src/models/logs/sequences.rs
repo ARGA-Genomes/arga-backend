@@ -1,0 +1,66 @@
+use bigdecimal::BigDecimal;
+use chrono::{NaiveDate, NaiveTime};
+use core_derive::{Atom, OperationLog};
+use diesel::backend::Backend;
+use diesel::deserialize::{self, FromSql};
+use diesel::pg::Pg;
+use diesel::serialize::{self, Output, ToSql};
+use diesel::sql_types::Jsonb;
+use diesel::{AsExpression, Associations, FromSqlRow, Insertable, Queryable, Selectable};
+use serde::{Deserialize, Serialize};
+use strum::Display;
+use uuid::Uuid;
+
+use super::{Action, LogOperation};
+use crate::crdt::DataFrameOperation;
+use crate::models::{DatasetVersion, schema};
+
+
+#[derive(Atom, Debug, Clone, Default, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Display)]
+#[diesel(sql_type = diesel::sql_types::Jsonb)]
+pub enum LibraryAtom {
+    #[default]
+    Empty,
+    ExtractId(String),
+    LibraryId(String),
+    PublicationId(String),
+    ScientificName(String),
+
+    EventDate(NaiveDate),
+    EventTime(NaiveTime),
+    PreparedBy(String),
+    Concentration(f64),
+    ConcentrationUnit(String),
+    PcrCycles(i32),
+    Layout(String),
+    Selection(String),
+    BaitSetName(String),
+    BaitSetReference(String),
+    ConstructionProtocol(String),
+    Source(String),
+    InsertSize(String),
+    DesignDescription(String),
+    Strategy(String),
+    IndexTag(String),
+    IndexDualTag(String),
+    IndexOligo(String),
+    IndexDualOligo(String),
+    Location(String),
+    Remarks(String),
+    DnaTreatment(String),
+    NumberOfLibrariesPooled(i32),
+    PcrReplicates(i32),
+}
+
+#[derive(OperationLog, Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]
+#[diesel(belongs_to(DatasetVersion))]
+#[diesel(table_name = schema::library_logs)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct LibraryOperation {
+    pub operation_id: BigDecimal,
+    pub parent_id: BigDecimal,
+    pub entity_id: String,
+    pub dataset_version_id: Uuid,
+    pub action: Action,
+    pub atom: LibraryAtom,
+}
