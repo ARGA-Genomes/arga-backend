@@ -1,9 +1,15 @@
+pub mod agents;
+pub mod extractions;
 pub mod specimens;
+pub mod subsamples;
 
+pub use agents::*;
 use bigdecimal::BigDecimal;
+pub use extractions::*;
 use serde::{Deserialize, Serialize};
 pub use specimens::*;
 use strum::Display;
+pub use subsamples::*;
 
 use super::{Dataset, DatasetVersion};
 use crate::schema;

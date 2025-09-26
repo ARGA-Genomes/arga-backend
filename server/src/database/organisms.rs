@@ -1,4 +1,4 @@
-use arga_core::models::Tissue;
+use arga_core::models::{DnaExtract, Subsample, Tissue};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
@@ -29,7 +29,7 @@ impl OrganismProvider {
         Ok(organism?)
     }
 
-    pub async fn collection_events(&self, organism_entity_id: &str) -> Result<Vec<CollectionEvent>, Error> {
+    pub async fn collections(&self, organism_entity_id: &str) -> Result<Vec<CollectionEvent>, Error> {
         use schema::{collection_events, specimens};
         let mut conn = self.pool.get().await?;
 
@@ -43,18 +43,18 @@ impl OrganismProvider {
         Ok(collections)
     }
 
-    pub async fn accession_events(&self, organism_entity_id: &str) -> Result<Vec<AccessionEvent>, Error> {
+    pub async fn registrations(&self, organism_entity_id: &str) -> Result<Vec<AccessionEvent>, Error> {
         use schema::{accession_events, specimens};
         let mut conn = self.pool.get().await?;
 
-        let accessions = accession_events::table
+        let registrations = accession_events::table
             .inner_join(specimens::table)
             .filter(specimens::organism_id.eq(organism_entity_id))
             .select(AccessionEvent::as_select())
             .load::<AccessionEvent>(&mut conn)
             .await?;
 
-        Ok(accessions)
+        Ok(registrations)
     }
 
     pub async fn tissues(&self, organism_entity_id: &str) -> Result<Vec<Tissue>, Error> {
@@ -69,5 +69,34 @@ impl OrganismProvider {
             .await?;
 
         Ok(tissues)
+    }
+
+    pub async fn subsamples(&self, organism_entity_id: &str) -> Result<Vec<Subsample>, Error> {
+        use schema::{specimens, subsamples};
+        let mut conn = self.pool.get().await?;
+
+        let subsamples = subsamples::table
+            .inner_join(specimens::table.on(specimens::entity_id.eq(subsamples::specimen_id)))
+            .filter(specimens::organism_id.eq(organism_entity_id))
+            .select(Subsample::as_select())
+            .load::<Subsample>(&mut conn)
+            .await?;
+
+        Ok(subsamples)
+    }
+
+    pub async fn extractions(&self, organism_entity_id: &str) -> Result<Vec<DnaExtract>, Error> {
+        use schema::{dna_extracts, specimens, subsamples};
+        let mut conn = self.pool.get().await?;
+
+        let extracts = dna_extracts::table
+            .inner_join(subsamples::table)
+            .inner_join(specimens::table.on(specimens::entity_id.eq(subsamples::specimen_id)))
+            .filter(specimens::organism_id.eq(organism_entity_id))
+            .select(DnaExtract::as_select())
+            .load::<DnaExtract>(&mut conn)
+            .await?;
+
+        Ok(extracts)
     }
 }

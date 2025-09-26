@@ -58,7 +58,7 @@ impl SequenceProvider {
 
         let sequences = sequences::table
             .inner_join(dna_extracts::table)
-            .inner_join(subsamples::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
+            .inner_join(subsamples::table.on(subsamples::entity_id.eq(dna_extracts::subsample_id)))
             .select(sequences::all_columns)
             .filter(subsamples::specimen_id.eq(entity_hash(record_id)))
             .load::<Sequence>(&mut conn)

@@ -1,4 +1,5 @@
 use bigdecimal::BigDecimal;
+use chrono::{DateTime, NaiveDate, Utc};
 use core_derive::{Atom, OperationLog};
 use diesel::backend::Backend;
 use diesel::deserialize::{self, FromSql};
@@ -152,6 +153,7 @@ pub enum OrganismAtom {
     #[default]
     Empty,
     OrganismId(String),
+    PublicationId(String),
 
     /// Used to link the organism to a name
     ScientificName(String),
@@ -162,6 +164,26 @@ pub enum OrganismAtom {
     LifeStage(String),
     ReproductiveCondition(String),
     Behavior(String),
+    LiveState(String),
+    Remarks(String),
+    IdentifiedBy(String),
+    IdentificationDate(NaiveDate),
+    Disposition(String),
+    FirstObservedAt(NaiveDate),
+    LastKnownAliveAt(NaiveDate),
+    Biome(String),
+    Habitat(String),
+    Bioregion(String),
+    IbraImcra(String),
+    Latitude(f64),
+    Longitude(f64),
+    CoordinateSystem(String),
+    LocationSource(String),
+    Holding(String),
+    HoldingId(String),
+    HoldingPermit(String),
+    CreatedAt(DateTime<Utc>),
+    UpdatedAt(DateTime<Utc>),
 }
 
 #[derive(OperationLog, Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]

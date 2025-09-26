@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: localhost:5000/api
+  url: http://localhost:5000/api
   body: graphql
   auth: none
 }
@@ -16,24 +16,32 @@ headers {
 
 body:graphql {
   {
-  	subsample(by: { recordId: "BSECO289-11" }) {
-  		id
-  		specimenId
-  		recordId
-  		materialSampleId
+  	subsample(by: { id: "17047099326961927705" }) {
+  		entityId
+  		subsampleId
   		institutionName
   		institutionCode
-  		typeStatus
-  		
-  		events {
-  			subsamples {
-  				id
-  				eventDate
-  				eventTime
-  				subsampledBy
-  				preparationType
-  			}
-  		}
+  		eventDate
+  		eventTime
+  		sampleType
+      name
+      custodian
+      description
+      notes
+      cultureMethod
+      cultureMedia
+      weightOrVolume
+      preservationMethod
+      preservationTemperature
+      preservationDuration
+      quality
+      cellType
+      cellLine
+      cloneName
+      labHost
+      sampleProcessing
+      samplePooling
+      publication
   	}
   }
   

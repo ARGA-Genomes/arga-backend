@@ -1,7 +1,7 @@
 use async_graphql::*;
 use tracing::instrument;
 
-use super::common::specimens::Tissue;
+use super::common::specimens::TissueDetails;
 use super::common::{AccessionEvent, CollectionEvent, OrganismDetails};
 use crate::database::{Database, models};
 use crate::http::{Context as State, Error};
@@ -65,7 +65,7 @@ impl SpecimenQuery {
         Ok(accessions.into_iter().map(|r| r.into()).collect())
     }
 
-    async fn tissues(&self, ctx: &Context<'_>) -> Result<Vec<Tissue>, Error> {
+    async fn tissues(&self, ctx: &Context<'_>) -> Result<Vec<TissueDetails>, Error> {
         let state = ctx.data::<State>()?;
         let specimen_id = &self.specimen.entity_id;
         let tissues = state.database.specimens.tissues(specimen_id).await?;

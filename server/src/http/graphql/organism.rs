@@ -1,6 +1,11 @@
 use async_graphql::*;
 
-use super::common::{AccessionEvent, CollectionEvent, OrganismDetails, Tissue};
+use super::collection::Collection;
+use super::common::{NameDetails, OrganismDetails, Publication};
+use super::dna_extract::DnaExtract;
+use super::registration::Registration;
+use super::subsample::Subsample;
+use super::tissue::Tissue;
 use crate::database::{Database, models};
 use crate::http::{Context as State, Error};
 
@@ -31,24 +36,55 @@ struct OrganismQuery {
 
 #[Object]
 impl OrganismQuery {
-    async fn collections(&self, ctx: &Context<'_>) -> Result<Vec<CollectionEvent>, Error> {
+    async fn name(&self, ctx: &Context<'_>) -> Result<NameDetails, Error> {
         let state = ctx.data::<State>()?;
-        let entity_id = &self.organism.entity_id;
-        let collections = state.database.organisms.collection_events(entity_id).await?;
-        Ok(collections.into_iter().map(|r| r.into()).collect())
+        let name = state.database.names.find_by_name_id(&self.organism.name_id).await?;
+        Ok(name.into())
     }
 
-    async fn accessions(&self, ctx: &Context<'_>) -> Result<Vec<AccessionEvent>, Error> {
+    async fn collections(&self, ctx: &Context<'_>) -> Result<Vec<Collection>, Error> {
         let state = ctx.data::<State>()?;
         let entity_id = &self.organism.entity_id;
-        let accessions = state.database.organisms.accession_events(entity_id).await?;
-        Ok(accessions.into_iter().map(|r| r.into()).collect())
+        let collections = state.database.organisms.collections(entity_id).await?;
+        Ok(collections.into_iter().map(|r| Collection::from_record(r)).collect())
+    }
+
+    async fn registrations(&self, ctx: &Context<'_>) -> Result<Vec<Registration>, Error> {
+        let state = ctx.data::<State>()?;
+        let entity_id = &self.organism.entity_id;
+        let records = state.database.organisms.registrations(entity_id).await?;
+        Ok(records.into_iter().map(|r| Registration::from_record(r)).collect())
     }
 
     async fn tissues(&self, ctx: &Context<'_>) -> Result<Vec<Tissue>, Error> {
         let state = ctx.data::<State>()?;
         let entity_id = &self.organism.entity_id;
-        let tissues = state.database.organisms.tissues(entity_id).await?;
-        Ok(tissues.into_iter().map(|r| r.into()).collect())
+        let records = state.database.organisms.tissues(entity_id).await?;
+        Ok(records.into_iter().map(|r| Tissue::from_record(r)).collect())
+    }
+
+    async fn subsamples(&self, ctx: &Context<'_>) -> Result<Vec<Subsample>, Error> {
+        let state = ctx.data::<State>()?;
+        let entity_id = &self.organism.entity_id;
+        let records = state.database.organisms.subsamples(entity_id).await?;
+        Ok(records.into_iter().map(|r| Subsample::from_record(r)).collect())
+    }
+
+    async fn extractions(&self, ctx: &Context<'_>) -> Result<Vec<DnaExtract>, Error> {
+        let state = ctx.data::<State>()?;
+        let entity_id = &self.organism.entity_id;
+        let records = state.database.organisms.extractions(entity_id).await?;
+        Ok(records.into_iter().map(|r| DnaExtract::from_record(r)).collect())
+    }
+
+    async fn publication(&self, ctx: &Context<'_>) -> Result<Option<Publication>, Error> {
+        let state = ctx.data::<State>()?;
+
+        let publication = match &self.organism.publication_id {
+            None => None,
+            Some(publication_id) => Some(state.database.publications.find_by_id(publication_id).await?.into()),
+        };
+
+        Ok(publication)
     }
 }

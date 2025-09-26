@@ -1,15 +1,24 @@
+pub mod agents;
+pub mod extracts;
 pub mod logs;
 pub mod operation_logs;
 pub mod specimens;
+pub mod subsamples;
 
+pub use agents::*;
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable};
+pub use extracts::*;
+pub use logs::agents::*;
 pub use logs::entity_hash;
+pub use logs::extractions::*;
 pub use logs::specimens::*;
+pub use logs::subsamples::*;
 pub use operation_logs::*;
 use serde::{Deserialize, Serialize};
 pub use specimens::*;
+pub use subsamples::*;
 use uuid::Uuid;
 
 use super::{schema, schema_gnl};
@@ -897,32 +906,6 @@ pub struct TaxonPhoto {
     pub priority: i32,
 }
 
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::subsamples)]
-pub struct Subsample {
-    pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
-    pub specimen_id: String,
-
-    pub record_id: String,
-    pub material_sample_id: Option<String>,
-    pub institution_name: Option<String>,
-    pub institution_code: Option<String>,
-    pub type_status: Option<String>,
-    pub entity_id: Option<String>,
-}
-
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::dna_extracts)]
-pub struct DnaExtract {
-    pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub name_id: Uuid,
-    pub subsample_id: Uuid,
-    pub record_id: String,
-    pub entity_id: Option<String>,
-}
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::sequences)]
@@ -930,48 +913,11 @@ pub struct Sequence {
     pub id: Uuid,
     pub dataset_id: Uuid,
     pub name_id: Uuid,
-    pub dna_extract_id: Uuid,
+    pub dna_extract_id: String,
     pub record_id: String,
     pub entity_id: Option<String>,
 }
 
-
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::subsample_events)]
-pub struct SubsampleEvent {
-    pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub subsample_id: Uuid,
-    pub event_date: Option<String>,
-    pub event_time: Option<String>,
-    pub subsampled_by: Option<String>,
-    pub preparation_type: Option<String>,
-    pub entity_id: Option<String>,
-}
-
-#[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
-#[diesel(table_name = schema::dna_extraction_events)]
-pub struct DnaExtractionEvent {
-    pub id: Uuid,
-    pub dataset_id: Uuid,
-    pub dna_extract_id: Uuid,
-
-    pub event_date: Option<String>,
-    pub event_time: Option<String>,
-    pub extracted_by: Option<String>,
-
-    pub preservation_type: Option<String>,
-    pub preparation_type: Option<String>,
-    pub extraction_method: Option<String>,
-    pub measurement_method: Option<String>,
-    pub concentration_method: Option<String>,
-    pub quality: Option<String>,
-
-    pub concentration: Option<f64>,
-    pub absorbance_260_230: Option<f64>,
-    pub absorbance_260_280: Option<f64>,
-    pub entity_id: Option<String>,
-}
 
 #[derive(Clone, Queryable, Insertable, Debug, Serialize, Deserialize)]
 #[diesel(table_name = schema::sequencing_events)]
@@ -1098,7 +1044,7 @@ pub struct Marker {
     pub sequence_id: Uuid,
     pub dataset_id: Uuid,
     pub name_id: Uuid,
-    pub dna_extract_id: Uuid,
+    pub dna_extract_id: String,
 
     pub dataset_name: String,
     pub record_id: String,
@@ -1120,7 +1066,7 @@ pub struct WholeGenome {
     pub sequence_id: Uuid,
     pub dataset_id: Uuid,
     pub name_id: Uuid,
-    pub dna_extract_id: Uuid,
+    pub dna_extract_id: String,
 
     pub dataset_name: String,
     pub record_id: String,
@@ -1154,7 +1100,7 @@ pub struct GenomicComponent {
     pub sequence_id: Uuid,
     pub dataset_id: Uuid,
     pub name_id: Uuid,
-    pub dna_extract_id: Uuid,
+    pub dna_extract_id: String,
 
     pub dataset_name: String,
     pub record_id: String,
@@ -1280,9 +1226,9 @@ pub enum PublicationType {
 pub struct Publication {
     pub id: Uuid,
     pub entity_id: String,
-    pub title: String,
-    pub authors: Vec<Option<String>>,
-    pub published_year: i32,
+    pub title: Option<String>,
+    pub authors: Option<Vec<Option<String>>>,
+    pub published_year: Option<i32>,
     pub published_date: Option<DateTime<Utc>>,
     pub language: Option<String>,
     pub publisher: Option<String>,

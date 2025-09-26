@@ -3,7 +3,7 @@ diesel::table! {
         sequence_id -> Uuid,
         dataset_id -> Uuid,
         name_id -> Uuid,
-        dna_extract_id -> Uuid,
+        dna_extract_id -> Varchar,
         dataset_name -> Varchar,
         record_id -> Varchar,
         latitude -> Nullable<Float8>,
@@ -33,7 +33,7 @@ diesel::table! {
         sequence_id -> Uuid,
         dataset_id -> Uuid,
         name_id -> Uuid,
-        dna_extract_id -> Uuid,
+        dna_extract_id -> Varchar,
         dataset_name -> Varchar,
         record_id -> Varchar,
         latitude -> Nullable<Float8>,
@@ -51,7 +51,7 @@ diesel::table! {
         sequence_id -> Uuid,
         dataset_id -> Uuid,
         name_id -> Uuid,
-        dna_extract_id -> Uuid,
+        dna_extract_id -> Varchar,
         dataset_name -> Varchar,
         record_id -> Varchar,
         latitude -> Nullable<Float8>,
@@ -225,6 +225,30 @@ diesel::table! {
 
 diesel::table! {
     accession_event_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
+diesel::table! {
+    subsample_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
+diesel::table! {
+    extraction_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
+diesel::table! {
+    agent_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
+diesel::table! {
+    publication_entities (entity_id) {
         entity_id -> Varchar,
     }
 }

@@ -111,6 +111,28 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    agent_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
+    agents (entity_id) {
+        entity_id -> Varchar,
+        full_name -> Varchar,
+        orcid -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     annotation_events (id) {
         id -> Uuid,
         dataset_id -> Uuid,
@@ -265,34 +287,45 @@ diesel::table! {
 }
 
 diesel::table! {
-    dna_extraction_events (id) {
-        id -> Uuid,
-        dataset_id -> Uuid,
-        dna_extract_id -> Uuid,
-        event_date -> Nullable<Varchar>,
-        event_time -> Nullable<Varchar>,
+    dna_extracts (entity_id) {
+        subsample_id -> Varchar,
+        entity_id -> Varchar,
+        species_name_id -> Int8,
+        publication_id -> Nullable<Varchar>,
+        extract_id -> Varchar,
+        event_date -> Nullable<Date>,
+        event_time -> Nullable<Time>,
         extracted_by -> Nullable<Varchar>,
-        preservation_type -> Nullable<Varchar>,
+        material_extracted_by -> Nullable<Varchar>,
+        nucleic_acid_type -> Nullable<Varchar>,
         preparation_type -> Nullable<Varchar>,
+        preservation_type -> Nullable<Varchar>,
+        preservation_method -> Nullable<Varchar>,
         extraction_method -> Nullable<Varchar>,
-        measurement_method -> Nullable<Varchar>,
         concentration_method -> Nullable<Varchar>,
-        quality -> Nullable<Varchar>,
+        conformation -> Nullable<Varchar>,
         concentration -> Nullable<Float8>,
-        absorbance_260_230 -> Nullable<Float8>,
-        absorbance_260_280 -> Nullable<Float8>,
-        entity_id -> Nullable<Varchar>,
+        concentration_unit -> Nullable<Varchar>,
+        quantification -> Nullable<Varchar>,
+        absorbance_260_230_ratio -> Nullable<Float8>,
+        absorbance_260_280_ratio -> Nullable<Float8>,
+        cell_lysis_method -> Nullable<Varchar>,
+        action_extracted -> Nullable<Varchar>,
+        number_of_extracts_pooled -> Nullable<Varchar>,
     }
 }
 
 diesel::table! {
-    dna_extracts (id) {
-        id -> Uuid,
-        dataset_id -> Uuid,
-        name_id -> Uuid,
-        subsample_id -> Uuid,
-        record_id -> Varchar,
-        entity_id -> Nullable<Varchar>,
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    extraction_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
     }
 }
 
@@ -446,6 +479,29 @@ diesel::table! {
         life_stage -> Nullable<Varchar>,
         reproductive_condition -> Nullable<Varchar>,
         behavior -> Nullable<Varchar>,
+        publication_id -> Nullable<Varchar>,
+        live_state -> Nullable<Varchar>,
+        remarks -> Nullable<Varchar>,
+        identified_by -> Nullable<Varchar>,
+        identification_date -> Nullable<Date>,
+        disposition -> Nullable<Varchar>,
+        first_observed_at -> Nullable<Date>,
+        last_known_alive_at -> Nullable<Date>,
+        biome -> Nullable<Varchar>,
+        habitat -> Nullable<Varchar>,
+        bioregion -> Nullable<Varchar>,
+        ibra_imcra -> Nullable<Varchar>,
+        latitude -> Nullable<Float8>,
+        longitude -> Nullable<Float8>,
+        coordinate_system -> Nullable<Varchar>,
+        location_source -> Nullable<Varchar>,
+        holding -> Nullable<Varchar>,
+        holding_id -> Nullable<Varchar>,
+        holding_permit -> Nullable<Varchar>,
+        record_created_at -> Nullable<Timestamptz>,
+        record_updated_at -> Nullable<Timestamptz>,
+        created_at -> Timestamptz,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -470,9 +526,9 @@ diesel::table! {
     publications (id) {
         id -> Uuid,
         entity_id -> Varchar,
-        title -> Varchar,
-        authors -> Array<Nullable<Text>>,
-        published_year -> Int4,
+        title -> Nullable<Varchar>,
+        authors -> Nullable<Array<Nullable<Text>>>,
+        published_year -> Nullable<Int4>,
         published_date -> Nullable<Timestamptz>,
         language -> Nullable<Varchar>,
         publisher -> Nullable<Varchar>,
@@ -519,7 +575,7 @@ diesel::table! {
         id -> Uuid,
         dataset_id -> Uuid,
         name_id -> Uuid,
-        dna_extract_id -> Uuid,
+        dna_extract_id -> Varchar,
         record_id -> Varchar,
         entity_id -> Nullable<Varchar>,
     }
@@ -613,30 +669,48 @@ diesel::table! {
 }
 
 diesel::table! {
-    subsample_events (id) {
-        id -> Uuid,
-        dataset_id -> Uuid,
-        subsample_id -> Uuid,
-        event_date -> Nullable<Varchar>,
-        event_time -> Nullable<Varchar>,
-        subsampled_by -> Nullable<Varchar>,
-        preparation_type -> Nullable<Varchar>,
-        entity_id -> Nullable<Varchar>,
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    subsample_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
     }
 }
 
 diesel::table! {
-    subsamples (id) {
-        id -> Uuid,
-        dataset_id -> Uuid,
-        name_id -> Uuid,
+    subsamples (entity_id) {
         specimen_id -> Varchar,
-        record_id -> Varchar,
-        material_sample_id -> Nullable<Varchar>,
         institution_name -> Nullable<Varchar>,
         institution_code -> Nullable<Varchar>,
-        type_status -> Nullable<Varchar>,
-        entity_id -> Nullable<Varchar>,
+        entity_id -> Varchar,
+        species_name_id -> Int8,
+        publication_id -> Nullable<Varchar>,
+        subsample_id -> Varchar,
+        event_date -> Nullable<Date>,
+        event_time -> Nullable<Time>,
+        sample_type -> Nullable<Varchar>,
+        name -> Nullable<Varchar>,
+        custodian -> Nullable<Varchar>,
+        description -> Nullable<Varchar>,
+        notes -> Nullable<Varchar>,
+        culture_method -> Nullable<Varchar>,
+        culture_media -> Nullable<Varchar>,
+        weight_or_volume -> Nullable<Varchar>,
+        preservation_method -> Nullable<Varchar>,
+        preservation_temperature -> Nullable<Varchar>,
+        preservation_duration -> Nullable<Varchar>,
+        quality -> Nullable<Varchar>,
+        cell_type -> Nullable<Varchar>,
+        cell_line -> Nullable<Varchar>,
+        clone_name -> Nullable<Varchar>,
+        lab_host -> Nullable<Varchar>,
+        sample_processing -> Nullable<Varchar>,
+        sample_pooling -> Nullable<Varchar>,
     }
 }
 
@@ -786,6 +860,7 @@ diesel::joinable!(accession_event_logs -> dataset_versions (dataset_version_id))
 diesel::joinable!(accession_events -> names (name_id));
 diesel::joinable!(accession_events -> specimens (specimen_id));
 diesel::joinable!(admin_media -> names (name_id));
+diesel::joinable!(agent_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(annotation_events -> datasets (dataset_id));
 diesel::joinable!(annotation_events -> sequences (sequence_id));
 diesel::joinable!(assembly_events -> datasets (dataset_id));
@@ -798,16 +873,14 @@ diesel::joinable!(dataset_versions -> datasets (dataset_id));
 diesel::joinable!(datasets -> sources (source_id));
 diesel::joinable!(deposition_events -> datasets (dataset_id));
 diesel::joinable!(deposition_events -> sequences (sequence_id));
-diesel::joinable!(dna_extraction_events -> datasets (dataset_id));
-diesel::joinable!(dna_extraction_events -> dna_extracts (dna_extract_id));
-diesel::joinable!(dna_extracts -> datasets (dataset_id));
-diesel::joinable!(dna_extracts -> names (name_id));
 diesel::joinable!(dna_extracts -> subsamples (subsample_id));
+diesel::joinable!(extraction_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(name_attributes -> datasets (dataset_id));
 diesel::joinable!(name_attributes -> names (name_id));
 diesel::joinable!(nomenclatural_act_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(nomenclatural_acts -> publications (publication_id));
 diesel::joinable!(organism_logs -> dataset_versions (dataset_version_id));
+diesel::joinable!(organisms -> agents (identified_by));
 diesel::joinable!(organisms -> names (name_id));
 diesel::joinable!(publication_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(regions -> datasets (dataset_id));
@@ -822,10 +895,7 @@ diesel::joinable!(sequencing_run_events -> sequencing_events (sequencing_event_i
 diesel::joinable!(specimen_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(specimens -> names (name_id));
 diesel::joinable!(specimens -> organisms (organism_id));
-diesel::joinable!(subsample_events -> datasets (dataset_id));
-diesel::joinable!(subsample_events -> subsamples (subsample_id));
-diesel::joinable!(subsamples -> datasets (dataset_id));
-diesel::joinable!(subsamples -> names (name_id));
+diesel::joinable!(subsample_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(subsamples -> specimens (specimen_id));
 diesel::joinable!(taxa -> datasets (dataset_id));
 diesel::joinable!(taxa_logs -> dataset_versions (dataset_version_id));
@@ -841,6 +911,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     accession_event_logs,
     accession_events,
     admin_media,
+    agent_logs,
+    agents,
     annotation_events,
     assembly_events,
     collection_event_logs,
@@ -848,8 +920,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     dataset_versions,
     datasets,
     deposition_events,
-    dna_extraction_events,
     dna_extracts,
+    extraction_logs,
     ibra,
     imcra_mesoscale,
     imcra_provincial,
@@ -870,7 +942,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     sources,
     specimen_logs,
     specimens,
-    subsample_events,
+    subsample_logs,
     subsamples,
     taxa,
     taxa_logs,

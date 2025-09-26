@@ -1,3 +1,4 @@
+use chrono::{DateTime, NaiveDate, Utc};
 use diesel::{Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -28,6 +29,29 @@ pub struct Organism {
     pub life_stage: Option<String>,
     pub reproductive_condition: Option<String>,
     pub behavior: Option<String>,
+    pub publication_id: Option<String>,
+    pub live_state: Option<String>,
+    pub remarks: Option<String>,
+    pub identified_by: Option<String>,
+    pub identification_date: Option<NaiveDate>,
+    pub disposition: Option<String>,
+    pub first_observed_at: Option<NaiveDate>,
+    pub last_known_alive_at: Option<NaiveDate>,
+    pub biome: Option<String>,
+    pub habitat: Option<String>,
+    pub bioregion: Option<String>,
+    pub ibra_imcra: Option<String>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub coordinate_system: Option<String>,
+    pub location_source: Option<String>,
+    pub holding: Option<String>,
+    pub holding_id: Option<String>,
+    pub holding_permit: Option<String>,
+    pub record_created_at: Option<DateTime<Utc>>,
+    pub record_updated_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 

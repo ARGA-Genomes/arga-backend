@@ -1,4 +1,4 @@
-h1:P+jBHG2I34JVDMcaayYidpZVYGp55lBNYeniGAlCuQw=
+h1:X+jJI9lDokJ8RBH730ziTNWqMsK4p2m4GaBKwyqhEAA=
 20250605060808_initial.sql h1:hN3eGaQNsqm+ws4akS+D+e+TqDUHZkZwPaFGW/Gyor4=
 20250605084357_drop_legacy_tables.sql h1:M0SD3ETeanSyo3GDWanw1xpGCJIQg7U11EE5IQ617EU=
 20250606063639_create_baseline_views.sql h1:bjh8zumpl5MFPRc1OAIB9jidVWxu1GPXAu5yGorDjFo=
@@ -13,3 +13,9 @@ h1:P+jBHG2I34JVDMcaayYidpZVYGp55lBNYeniGAlCuQw=
 20250903105546_create_tissue_logs.sql h1:L1uoqGsKg7GtrcPjAaUQPyg2koa5j+dy6sNiXyNG94c=
 20250903112316_create_tissue_entities.sql h1:A6IibtUnPTxEo1aIlM/mBm8P/1L1Nx+a9+2wgEr5ECY=
 20250908064442_add_tissue_id.sql h1:tBqrOKoMsDxKzWPjYAkKZWr/vtvupcHoywZtOKmbqZg=
+20250909051844_refactor_subsamples_and_extracts.sql h1:5poQTKjbZ7XTy/HGoQARUuJx54UyKnk+pixoH6DxyPs=
+20250909073111_create_subsample_logs_and_extraction_logs.sql h1:wzLvyyBQDYQ0ZsD00SsoIrPhD02oTAUPhepMBVng828=
+20250912065735_create_agent_logs.sql h1:AHDD5JSmQtEzfJrOeVBHtnyRuPsrct3aL1e9P7sF6DI=
+20250920051119_less-restrictive-publications.sql h1:1/b5tiEMXfcj+JDmm2Rg8nGYJ2YX+L6NjBGWYI1ratw=
+20250920053610_create_publication_entities.sql h1:OoG7KwVlWUCUlCvmeZhLMQHADNwsC6rS9Jqlhuu9aj4=
+20250922083337_add_live_state_fields_to_organisms.sql h1:8WleE3QqJxE7wD4RNwitKP4ZQRDaeIqbq+LWED/J6Kg=

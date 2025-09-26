@@ -1,9 +1,8 @@
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use uuid::Uuid;
 
 use super::{Error, PgPool, schema};
-use crate::database::models::{Subsample, SubsampleEvent, entity_hash};
+use crate::database::models::{Subsample, entity_hash};
 
 
 #[derive(Clone)]
@@ -12,12 +11,12 @@ pub struct SubsampleProvider {
 }
 
 impl SubsampleProvider {
-    pub async fn find_by_id(&self, subsample_id: &Uuid) -> Result<Option<Subsample>, Error> {
+    pub async fn find_by_id(&self, subsample_id: &str) -> Result<Option<Subsample>, Error> {
         use schema::subsamples;
         let mut conn = self.pool.get().await?;
 
         let subsample = subsamples::table
-            .filter(subsamples::id.eq(subsample_id))
+            .filter(subsamples::entity_id.eq(subsample_id))
             .get_result::<Subsample>(&mut conn)
             .await
             .optional()?;
@@ -30,7 +29,7 @@ impl SubsampleProvider {
         let mut conn = self.pool.get().await?;
 
         let subsample = subsamples::table
-            .filter(subsamples::record_id.eq(record_id))
+            .filter(subsamples::subsample_id.eq(record_id))
             .get_result::<Subsample>(&mut conn)
             .await
             .optional()?;
@@ -53,17 +52,5 @@ impl SubsampleProvider {
             .optional()?;
 
         Ok(subsample)
-    }
-
-    pub async fn subsample_events(&self, subsample_id: &Uuid) -> Result<Vec<SubsampleEvent>, Error> {
-        use schema::subsample_events;
-        let mut conn = self.pool.get().await?;
-
-        let subsamples = subsample_events::table
-            .filter(subsample_events::subsample_id.eq(subsample_id))
-            .load::<SubsampleEvent>(&mut conn)
-            .await?;
-
-        Ok(subsamples)
     }
 }

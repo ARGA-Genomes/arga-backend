@@ -66,8 +66,8 @@ impl SpecimenProvider {
 
         let specimen = specimens::table
             .inner_join(subsamples::table)
-            .inner_join(dna_extracts::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
-            .inner_join(sequences::table.on(dna_extracts::id.eq(sequences::dna_extract_id)))
+            .inner_join(dna_extracts::table.on(subsamples::entity_id.eq(dna_extracts::subsample_id)))
+            .inner_join(sequences::table.on(dna_extracts::entity_id.eq(sequences::dna_extract_id)))
             .inner_join(deposition_events::table.on(sequences::id.eq(deposition_events::sequence_id)))
             .select(Specimen::as_select())
             .filter(deposition_events::accession.eq(accession))
@@ -87,8 +87,8 @@ impl SpecimenProvider {
 
         let specimen = specimens::table
             .inner_join(subsamples::table)
-            .inner_join(dna_extracts::table.on(subsamples::id.eq(dna_extracts::subsample_id)))
-            .inner_join(sequences::table.on(dna_extracts::id.eq(sequences::dna_extract_id)))
+            .inner_join(dna_extracts::table.on(subsamples::entity_id.eq(dna_extracts::subsample_id)))
+            .inner_join(sequences::table.on(dna_extracts::entity_id.eq(sequences::dna_extract_id)))
             .select(Specimen::as_select())
             .filter(sequences::record_id.eq(record_id))
             .get_result::<Specimen>(&mut conn)

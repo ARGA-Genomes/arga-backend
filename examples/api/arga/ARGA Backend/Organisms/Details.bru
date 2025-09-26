@@ -16,7 +16,7 @@ headers {
 
 body:graphql {
   {
-    organism(by: { entityId: "3954723964711069130" }) {
+    organism(by: { entityId: "1258155573621003740" }) {
       entityId
       organismId
       sex
@@ -25,6 +25,37 @@ body:graphql {
       lifeStage
       reproductiveCondition
       behavior
+      liveState
+      remarks
+      identifiedBy
+      identificationDate
+      disposition
+      firstObservedAt
+      lastKnownAliveAt
+      biome
+      habitat
+      bioregion
+      ibraImcra
+      latitude
+      longitude
+      coordinateSystem
+      locationSource
+      holding
+      holdingId
+      holdingPermit
+      recordCreatedAt
+      recordUpdatedAt
+      
+      name {
+        scientificName
+        canonicalName
+        authorship
+      }
+  
+      publication {
+        citation
+        doi
+      }
   
       collections {
         entityId
@@ -34,7 +65,7 @@ body:graphql {
         country
       }
   
-      accessions {
+      registrations {
         entityId
         typeStatus
         eventDate
@@ -44,6 +75,65 @@ body:graphql {
         institutionCode
         disposition
         preparation
+      }
+  
+      subsamples {
+        entityId
+        subsampleId
+        eventDate
+        eventTime
+        institutionName
+        institutionCode
+        sampleType
+        name
+        custodian
+        description
+        notes
+        cultureMedia
+        cultureMethod
+        weightOrVolume
+        preservationMethod
+        preservationTemperature
+        preservationDuration
+        quality
+        cellType
+        cellLine
+        cloneName
+        labHost
+        sampleProcessing
+        samplePooling
+      }
+  
+      extractions {
+        entityId
+        extractId
+        eventDate
+        eventTime
+        nucleicAcidType
+        preparationType
+        preservationType
+        preservationMethod
+        extractionMethod
+        concentrationMethod
+        conformation
+        concentration
+        concentrationUnit
+        quantification
+        absorbance260230Ratio
+        absorbance260280Ratio
+        cellLysisMethod
+        actionExtracted
+        numberOfExtractsPooled
+  
+        publication {
+          citation
+          doi
+        }
+  
+        extractedBy {
+          fullName
+          orcid
+        }
       }
     }
   }

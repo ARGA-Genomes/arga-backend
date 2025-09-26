@@ -449,7 +449,7 @@ impl From<models::Regions> for RegionDetails {
 #[derive(Clone, Debug, SimpleObject)]
 pub struct WholeGenome {
     pub sequence_id: Uuid,
-    pub dna_extract_id: Uuid,
+    pub dna_extract_id: String,
     pub dataset_name: String,
 
     pub record_id: String,
@@ -510,7 +510,7 @@ impl From<models::WholeGenome> for WholeGenome {
 #[derive(Clone, Debug, SimpleObject)]
 pub struct GenomicComponent {
     pub sequence_id: Uuid,
-    pub dna_extract_id: Uuid,
+    pub dna_extract_id: String,
     pub dataset_name: String,
 
     pub record_id: String,
