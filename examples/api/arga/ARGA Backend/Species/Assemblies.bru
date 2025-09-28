@@ -1,0 +1,113 @@
+meta {
+  name: Assemblies
+  type: graphql
+  seq: 7
+}
+
+post {
+  url: http://localhost:5000/api
+  body: graphql
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  {
+    species(canonicalName: "Dendrolagus lumholtzi") {
+      assemblies(page: 1, pageSize: 20) {
+        total
+        records {
+          entityId
+          assemblyId
+          eventDate
+          eventTime
+          name
+          type
+          method
+          methodVersion
+          methodLink
+          size
+          minimumGapLength
+          completeness
+          completenessMethod
+          sourceMolecule
+          referenceGenomeUsed
+          referenceGenomeLink
+          numberOfScaffolds
+          genomeCoverage
+          hybrid
+          hybridInformation
+          polishingOrScaffoldingData
+          polishingOrScaffoldingMethod
+          computationalInfrastructure
+          systemUsed
+          assemblyN50
+        }
+      }
+  
+      specimens(
+        page: 1
+        pageSize: 20
+        filters: [{ country: "Australia" }, { data: GENOMIC_DATA }]
+        sorting: { sortable: VOUCHER, order: ASCENDING }
+      ) {
+        total
+        options {
+          institutions
+          countries
+        }
+        records {
+          entityId
+          collectionRepositoryId
+          collectionRepositoryCode
+          institutionCode
+          institutionName
+          typeStatus
+          country
+          latitude
+          longitude
+          sequences
+          loci
+        }
+      }
+  
+      overview {
+        specimens {
+          total
+          majorCollections
+          holotype
+          holotypeEntityId
+          otherTypes
+          formalVouchers
+          tissues
+          genomicDna
+          australianMaterial
+          nonAustralianMaterial
+          collectionYears {
+            year
+            value
+          }
+          topCountries {
+            label
+            value
+          }
+        }
+      }
+  
+      mapping {
+        specimens {
+          entityId
+          collectionRepositoryId
+          institutionCode
+          typeStatus
+          latitude
+          longitude
+        }
+      }
+    }
+  }
+  
+}

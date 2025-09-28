@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 use super::common::attributes::AttributeValueType;
 use super::common::{
+    AssemblyDetails,
     DatasetDetails,
     Page,
     SpeciesPhoto,
@@ -208,6 +209,16 @@ impl Species {
         let genome = state.database.species.reference_genome(&self.names).await?;
         let genome = genome.map(|g| g.into());
         Ok(genome)
+    }
+
+    async fn assemblies(&self, ctx: &Context<'_>, page: i64, page_size: i64) -> Result<Page<AssemblyDetails>, Error> {
+        let state = ctx.data::<State>()?;
+        let page = state.database.species.assemblies(&self.names, page, page_size).await?;
+        let records = page.records.into_iter().map(|m| m.into()).collect();
+        Ok(Page {
+            records,
+            total: page.total,
+        })
     }
 
     async fn attributes(&self, ctx: &Context<'_>) -> Result<Vec<NameAttribute>, Error> {

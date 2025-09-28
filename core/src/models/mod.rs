@@ -863,6 +863,7 @@ pub struct Name {
     pub scientific_name: String,
     pub canonical_name: String,
     pub authorship: Option<String>,
+    pub entity_id: Option<i64>,
 }
 
 impl From<Taxon> for Name {
@@ -872,6 +873,7 @@ impl From<Taxon> for Name {
             scientific_name: value.scientific_name,
             canonical_name: value.canonical_name,
             authorship: value.authorship,
+            entity_id: None,
         }
     }
 }

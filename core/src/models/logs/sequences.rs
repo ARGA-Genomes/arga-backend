@@ -64,3 +64,91 @@ pub struct LibraryOperation {
     pub action: Action,
     pub atom: LibraryAtom,
 }
+
+
+#[derive(Atom, Debug, Clone, Default, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Display)]
+#[diesel(sql_type = diesel::sql_types::Jsonb)]
+pub enum SequenceRunAtom {
+    #[default]
+    Empty,
+    LibraryId(String),
+    SequenceRunId(String),
+    PublicationId(String),
+    ScientificName(String),
+
+    EventDate(NaiveDate),
+    EventTime(NaiveTime),
+    Facility(String),
+    InstrumentOrMethod(String),
+    Platform(String),
+    KitChemistry(String),
+    FlowcellType(String),
+    CellMovieLength(String),
+    BaseCallerModel(String),
+    Fast5Compression(String),
+    AnalysisSoftware(String),
+    AnalysisSoftwareVersion(String),
+    TargetGene(String),
+    SraRunAccession(String),
+}
+
+#[derive(OperationLog, Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]
+#[diesel(belongs_to(DatasetVersion))]
+#[diesel(table_name = schema::sequence_run_logs)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct SequenceRunOperation {
+    pub operation_id: BigDecimal,
+    pub parent_id: BigDecimal,
+    pub entity_id: String,
+    pub dataset_version_id: Uuid,
+    pub action: Action,
+    pub atom: SequenceRunAtom,
+}
+
+
+#[derive(Atom, Debug, Clone, Default, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Display)]
+#[diesel(sql_type = diesel::sql_types::Jsonb)]
+pub enum AssemblyAtom {
+    #[default]
+    Empty,
+    AssemblyId(String),
+    PublicationId(String),
+    ScientificName(String),
+
+    EventDate(NaiveDate),
+    EventTime(NaiveTime),
+    Name(String),
+    Type(String),
+    Method(String),
+    MethodVersion(String),
+    MethodLink(String),
+    Size(String),
+    MinimumGapLength(String),
+    Completeness(String),
+    CompletenessMethod(String),
+    SourceMolecule(String),
+    ReferenceGenomeUsed(String),
+    ReferenceGenomeLink(String),
+    NumberOfScaffolds(String),
+    GenomeCoverage(String),
+    Hybrid(String),
+    HybridInformation(String),
+    PolishingOrScaffoldingMethod(String),
+    PolishingOrScaffoldingData(String),
+    ComputationalInfrastructure(String),
+    SystemUsed(String),
+    AssemblyN50(String),
+}
+
+#[derive(OperationLog, Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]
+#[diesel(belongs_to(DatasetVersion))]
+#[diesel(table_name = schema::assembly_logs)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct AssemblyOperation {
+    pub operation_id: BigDecimal,
+    pub parent_id: BigDecimal,
+    pub entity_id: String,
+    pub dataset_version_id: Uuid,
+    pub action: Action,
+    pub atom: AssemblyAtom,
+}

@@ -1,6 +1,7 @@
 pub mod extensions;
 
 pub mod agents;
+pub mod assemblies;
 pub mod collections;
 pub mod datasets;
 pub mod dna_extracts;
@@ -96,6 +97,7 @@ pub struct Database {
     pub tissues: tissues::TissueProvider,
     pub registrations: registrations::RegistrationProvider,
     pub collections: collections::CollectionProvider,
+    pub assemblies: assemblies::AssemblyProvider,
 }
 
 impl Database {
@@ -125,6 +127,7 @@ impl Database {
             tissues: tissues::TissueProvider { pool: pool.clone() },
             registrations: registrations::RegistrationProvider { pool: pool.clone() },
             collections: collections::CollectionProvider { pool: pool.clone() },
+            assemblies: assemblies::AssemblyProvider { pool: pool.clone() },
             pool,
         })
     }

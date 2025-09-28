@@ -43,11 +43,8 @@ body:graphql {
       specimens(
         page: 1
         pageSize: 20
-        filters: [
-          { country: "Australia" },
-          { data: GENOMIC_DATA },
-        ]
-        sorting: { sortable:VOUCHER, order:ASCENDING}
+        filters: [{ country: "Australia" }, { data: GENOMIC_DATA }]
+        sorting: { sortable: VOUCHER, order: ASCENDING }
       ) {
         total
         options {
@@ -68,8 +65,8 @@ body:graphql {
           loci
         }
       }
-      
-          mapping {
+  
+      mapping {
         specimens {
           entityId
           collectionRepositoryId

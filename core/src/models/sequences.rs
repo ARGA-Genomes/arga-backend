@@ -40,3 +40,65 @@ pub struct Library {
     pub number_of_libraries_pooled: Option<i32>,
     pub pcr_replicates: Option<i32>,
 }
+
+
+#[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::sequence_runs)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct SequenceRun {
+    pub entity_id: String,
+    pub library_id: String,
+    pub species_name_id: i64,
+    pub publication_id: Option<String>,
+    pub sequence_run_id: String,
+
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
+    pub facility: Option<String>,
+    pub instrument_or_method: Option<String>,
+    pub platform: Option<String>,
+    pub kit_chemistry: Option<String>,
+    pub flowcell_type: Option<String>,
+    pub cell_movie_length: Option<String>,
+    pub base_caller_model: Option<String>,
+    pub fast5_compression: Option<String>,
+    pub analysis_software: Option<String>,
+    pub analysis_software_version: Option<String>,
+    pub target_gene: Option<String>,
+    pub sra_run_accession: Option<String>,
+}
+
+
+#[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::assemblies)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Assembly {
+    pub entity_id: String,
+    pub species_name_id: i64,
+    pub publication_id: Option<String>,
+    pub assembly_id: String,
+
+    pub event_date: Option<NaiveDate>,
+    pub event_time: Option<NaiveTime>,
+    pub name: Option<String>,
+    pub type_: Option<String>,
+    pub method: Option<String>,
+    pub method_version: Option<String>,
+    pub method_link: Option<String>,
+    pub size: Option<String>,
+    pub minimum_gap_length: Option<String>,
+    pub completeness: Option<String>,
+    pub completeness_method: Option<String>,
+    pub source_molecule: Option<String>,
+    pub reference_genome_used: Option<String>,
+    pub reference_genome_link: Option<String>,
+    pub number_of_scaffolds: Option<String>,
+    pub genome_coverage: Option<String>,
+    pub hybrid: Option<String>,
+    pub hybrid_information: Option<String>,
+    pub polishing_or_scaffolding_method: Option<String>,
+    pub polishing_or_scaffolding_data: Option<String>,
+    pub computational_infrastructure: Option<String>,
+    pub system_used: Option<String>,
+    pub assembly_n50: Option<String>,
+}

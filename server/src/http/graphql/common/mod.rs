@@ -6,6 +6,7 @@ pub mod filters;
 pub mod operation_logs;
 pub mod publications;
 pub mod search;
+pub mod sequences;
 pub mod species;
 pub mod specimens;
 pub mod subsamples;
@@ -26,6 +27,7 @@ pub use filters::{
     convert_whole_genome_filters,
 };
 pub use publications::{Publication, PublicationType};
+pub use sequences::AssemblyDetails;
 pub use species::{SpeciesCard, SpeciesDataSummary, SpeciesPhoto};
 pub use specimens::{
     AccessionEvent,
@@ -47,6 +49,7 @@ use super::species::{GenomicComponent, SpecimenOptions, SpecimenSummary, WholeGe
 #[graphql(concrete(name = "WholeGenomePage", params(WholeGenome)))]
 #[graphql(concrete(name = "SpeciesMarkerPage", params(SpeciesMarker)))]
 #[graphql(concrete(name = "GenomicComponentPage", params(GenomicComponent)))]
+#[graphql(concrete(name = "AssemblyPage", params(AssemblyDetails)))]
 pub struct Page<T: OutputType> {
     pub records: Vec<T>,
     pub total: i64,

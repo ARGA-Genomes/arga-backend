@@ -9,6 +9,7 @@ use uuid::Uuid;
 use super::extensions::Paginate;
 use super::extensions::filters_new::Sort;
 use super::models::{
+    Assembly,
     GenomicComponent,
     Marker,
     Name,
@@ -341,6 +342,23 @@ impl SpeciesProvider {
             .optional()?;
 
         Ok(record)
+    }
+
+    pub async fn assemblies(&self, names: &Vec<Name>, page: i64, page_size: i64) -> PageResult<Assembly> {
+        use schema::assemblies;
+        let mut conn = self.pool.get().await?;
+
+        let name_ids: Vec<i64> = names.iter().filter_map(|n| n.entity_id).collect();
+
+        let records = assemblies::table
+            .filter(assemblies::species_name_id.eq_any(name_ids))
+            .order(assemblies::assembly_id)
+            .paginate(page)
+            .per_page(page_size)
+            .load::<(Assembly, i64)>(&mut conn)
+            .await?;
+
+        Ok(records.into())
     }
 
     pub async fn attributes(&self, names: &Vec<Name>) -> Result<Vec<NameAttribute>, Error> {

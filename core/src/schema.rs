@@ -150,6 +150,39 @@ diesel::table! {
 }
 
 diesel::table! {
+    assemblies (entity_id) {
+        entity_id -> Varchar,
+        species_name_id -> Int8,
+        publication_id -> Nullable<Varchar>,
+        assembly_id -> Varchar,
+        event_date -> Nullable<Date>,
+        event_time -> Nullable<Time>,
+        name -> Nullable<Varchar>,
+        #[sql_name = "type"]
+        type_ -> Nullable<Varchar>,
+        method -> Nullable<Varchar>,
+        method_version -> Nullable<Varchar>,
+        method_link -> Nullable<Varchar>,
+        size -> Nullable<Varchar>,
+        minimum_gap_length -> Nullable<Varchar>,
+        completeness -> Nullable<Varchar>,
+        completeness_method -> Nullable<Varchar>,
+        source_molecule -> Nullable<Varchar>,
+        reference_genome_used -> Nullable<Varchar>,
+        reference_genome_link -> Nullable<Varchar>,
+        number_of_scaffolds -> Nullable<Varchar>,
+        genome_coverage -> Nullable<Varchar>,
+        hybrid -> Nullable<Varchar>,
+        hybrid_information -> Nullable<Varchar>,
+        polishing_or_scaffolding_method -> Nullable<Varchar>,
+        polishing_or_scaffolding_data -> Nullable<Varchar>,
+        computational_infrastructure -> Nullable<Varchar>,
+        system_used -> Nullable<Varchar>,
+        assembly_n50 -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     assembly_events (id) {
         id -> Uuid,
         dataset_id -> Uuid,
@@ -163,6 +196,20 @@ diesel::table! {
         assembly_type -> Nullable<Varchar>,
         genome_size -> Nullable<Int8>,
         entity_id -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    assembly_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
     }
 }
 
@@ -468,6 +515,7 @@ diesel::table! {
         scientific_name -> Varchar,
         canonical_name -> Varchar,
         authorship -> Nullable<Varchar>,
+        entity_id -> Nullable<Int8>,
     }
 }
 
@@ -615,6 +663,44 @@ diesel::table! {
         dataset_version_id -> Uuid,
         action -> OperationAction,
         atom -> Jsonb,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    sequence_run_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
+    sequence_runs (entity_id) {
+        entity_id -> Varchar,
+        library_id -> Varchar,
+        species_name_id -> Int8,
+        publication_id -> Nullable<Varchar>,
+        sequence_run_id -> Varchar,
+        event_date -> Nullable<Date>,
+        event_time -> Nullable<Time>,
+        facility -> Nullable<Varchar>,
+        instrument_or_method -> Nullable<Varchar>,
+        platform -> Nullable<Varchar>,
+        kit_chemistry -> Nullable<Varchar>,
+        flowcell_type -> Nullable<Varchar>,
+        cell_movie_length -> Nullable<Varchar>,
+        base_caller_model -> Nullable<Varchar>,
+        fast5_compression -> Nullable<Varchar>,
+        analysis_software -> Nullable<Varchar>,
+        analysis_software_version -> Nullable<Varchar>,
+        target_gene -> Nullable<Varchar>,
+        sra_run_accession -> Nullable<Varchar>,
     }
 }
 
@@ -913,6 +999,7 @@ diesel::joinable!(annotation_events -> datasets (dataset_id));
 diesel::joinable!(annotation_events -> sequences (sequence_id));
 diesel::joinable!(assembly_events -> datasets (dataset_id));
 diesel::joinable!(assembly_events -> sequences (sequence_id));
+diesel::joinable!(assembly_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(collection_event_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(collection_events -> names (name_id));
 diesel::joinable!(collection_events -> organisms (organism_id));
@@ -937,6 +1024,8 @@ diesel::joinable!(publication_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(regions -> datasets (dataset_id));
 diesel::joinable!(regions -> names (name_id));
 diesel::joinable!(sequence_logs -> dataset_versions (dataset_version_id));
+diesel::joinable!(sequence_run_logs -> dataset_versions (dataset_version_id));
+diesel::joinable!(sequence_runs -> libraries (library_id));
 diesel::joinable!(sequences -> datasets (dataset_id));
 diesel::joinable!(sequences -> dna_extracts (dna_extract_id));
 diesel::joinable!(sequences -> names (name_id));
@@ -965,7 +1054,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     agent_logs,
     agents,
     annotation_events,
+    assemblies,
     assembly_events,
+    assembly_logs,
     collection_event_logs,
     collection_events,
     dataset_versions,
@@ -989,6 +1080,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     publications,
     regions,
     sequence_logs,
+    sequence_run_logs,
+    sequence_runs,
     sequences,
     sequencing_events,
     sequencing_run_events,
