@@ -26,9 +26,19 @@ impl Specimen {
             SpecimenBy::SequenceRecordId(id) => db.specimens.find_by_sequence_record_id(&id).await?,
             SpecimenBy::SequenceAccession(id) => db.specimens.find_by_sequence_accession(&id).await?,
         };
+        Ok(specimen.into())
+    }
+
+    pub fn from_record(specimen: models::Specimen) -> Specimen {
         let details = specimen.clone().into();
         let query = SpecimenQuery { specimen };
-        Ok(Specimen(details, query))
+        Specimen(details, query)
+    }
+}
+
+impl From<models::Specimen> for Specimen {
+    fn from(value: models::Specimen) -> Self {
+        Self::from_record(value)
     }
 }
 

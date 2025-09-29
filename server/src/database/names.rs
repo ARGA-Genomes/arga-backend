@@ -27,6 +27,19 @@ impl NameProvider {
         Ok(record)
     }
 
+    pub async fn find_by_entity_id(&self, entity_id: &i64) -> Result<Name, Error> {
+        use schema::names;
+        let mut conn = self.pool.get().await?;
+
+        let record = names::table
+            .filter(names::entity_id.eq(entity_id))
+            .order_by(names::scientific_name)
+            .get_result::<Name>(&mut conn)
+            .await?;
+
+        Ok(record)
+    }
+
     pub async fn find_by_canonical_name(&self, name: &str) -> Result<Vec<Name>, Error> {
         use schema::names::dsl::*;
         let mut conn = self.pool.get().await?;

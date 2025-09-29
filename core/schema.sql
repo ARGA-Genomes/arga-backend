@@ -563,6 +563,17 @@ CREATE TABLE assemblies (
 );
 
 
+-- Library <-> Assembly through table
+CREATE TABLE library_assemblies (
+    library_entity_id varchar REFERENCES libraries ON DELETE CASCADE NOT NULL,
+    assembly_entity_id varchar REFERENCES assemblies ON DELETE CASCADE NOT NULL,
+    PRIMARY KEY (library_entity_id, assembly_entity_id)
+);
+
+CREATE INDEX library_assemblies_library_entity_id ON library_assemblies (library_entity_id);
+CREATE INDEX library_assemblies_assembly_entity_id ON library_assemblies (assembly_entity_id);
+
+
 -- Sequence data
 CREATE TABLE sequences (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

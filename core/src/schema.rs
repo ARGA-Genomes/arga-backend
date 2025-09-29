@@ -476,6 +476,13 @@ diesel::table! {
 }
 
 diesel::table! {
+    library_assemblies (library_entity_id, assembly_entity_id) {
+        library_entity_id -> Varchar,
+        assembly_entity_id -> Varchar,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::OperationAction;
 
@@ -1012,6 +1019,8 @@ diesel::joinable!(dna_extracts -> subsamples (subsample_id));
 diesel::joinable!(extraction_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(libraries -> agents (prepared_by));
 diesel::joinable!(libraries -> dna_extracts (extract_id));
+diesel::joinable!(library_assemblies -> assemblies (assembly_entity_id));
+diesel::joinable!(library_assemblies -> libraries (library_entity_id));
 diesel::joinable!(library_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(name_attributes -> datasets (dataset_id));
 diesel::joinable!(name_attributes -> names (name_id));
@@ -1069,6 +1078,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     imcra_provincial,
     jobs,
     libraries,
+    library_assemblies,
     library_logs,
     name_attributes,
     names,

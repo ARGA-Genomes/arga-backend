@@ -5,6 +5,7 @@ pub mod assemblies;
 pub mod collections;
 pub mod datasets;
 pub mod dna_extracts;
+pub mod libraries;
 pub mod maps;
 pub mod markers;
 pub mod names;
@@ -98,6 +99,7 @@ pub struct Database {
     pub registrations: registrations::RegistrationProvider,
     pub collections: collections::CollectionProvider,
     pub assemblies: assemblies::AssemblyProvider,
+    pub libraries: libraries::LibraryProvider,
 }
 
 impl Database {
@@ -128,6 +130,7 @@ impl Database {
             registrations: registrations::RegistrationProvider { pool: pool.clone() },
             collections: collections::CollectionProvider { pool: pool.clone() },
             assemblies: assemblies::AssemblyProvider { pool: pool.clone() },
+            libraries: libraries::LibraryProvider { pool: pool.clone() },
             pool,
         })
     }

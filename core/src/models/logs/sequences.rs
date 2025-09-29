@@ -111,6 +111,9 @@ pub struct SequenceRunOperation {
 pub enum AssemblyAtom {
     #[default]
     Empty,
+    // libraries and assemblies actually have a many to many relationship
+    // but for now we treat it as a one to many
+    LibraryId(String),
     AssemblyId(String),
     PublicationId(String),
     ScientificName(String),
