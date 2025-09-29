@@ -49,6 +49,7 @@ pub struct MarkerSummary {
 #[derive(Debug, Queryable)]
 pub struct SpecimenSummary {
     pub entity_id: String,
+    pub organism_id: String,
     pub collection_repository_id: Option<String>,
     pub collection_repository_code: Option<String>,
     pub institution_code: Option<String>,
@@ -206,6 +207,7 @@ impl SpeciesProvider {
         let mut query = filters_new::specimens::with_filter_tables()
             .select((
                 specimens::entity_id,
+                specimens::organism_id,
                 accession_events::collection_repository_id.nullable(),
                 accession_events::collection_repository_code.nullable(),
                 accession_events::institution_code.nullable(),
