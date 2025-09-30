@@ -9,6 +9,7 @@ use uuid::Uuid;
 
 use super::common::attributes::AttributeValueType;
 use super::common::{
+    AccessionEvent,
     AssemblyDetails,
     DatasetDetails,
     Page,
@@ -261,18 +262,32 @@ impl SpeciesOverview {
         let overview = state.database.species.specimens_overview(&name_ids).await?;
         Ok(overview.into())
     }
+
+    /// The specimen accessions, if any. There should only ever be one holotype
+    /// per species but conflicting data sources can give us multiple and rather than
+    /// hiding it we surface all possible accessions here.
+    async fn accessions(&self, ctx: &Context<'_>) -> Result<Vec<AccessionEvent>, Error> {
+        let state = ctx.data::<State>()?;
+        let name_ids: Vec<Uuid> = self.names.iter().map(|name| name.id.clone()).collect();
+        let accessions = state.database.species.specimen_accessions(&name_ids).await?;
+        let accessions = accessions.into_iter().map(AccessionEvent::from).collect();
+        Ok(accessions)
+    }
+
+    /// A list of the collections that have the most specimens for the species
+    async fn major_collections(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
+        let state = ctx.data::<State>()?;
+        let name_ids: Vec<Uuid> = self.names.iter().map(|name| name.id.clone()).collect();
+        let collections = state.database.species.major_collections(&name_ids).await?;
+        Ok(collections)
+    }
 }
+
 
 #[derive(Clone, Debug, SimpleObject)]
 pub struct SpecimensOverview {
     /// The total amount of specimens associated with the species
     pub total: i64,
-    /// A list of the collections that have the most specimens for the species
-    pub major_collections: Vec<String>,
-    /// The accession of the holotype, if any
-    pub holotype: Option<String>,
-    /// The entity_id of the holotype, if any
-    pub holotype_entity_id: Option<String>,
     /// The total amount of type specimens that are not the holotype
     pub other_types: i64,
     /// The total amount of specimen registrations
@@ -303,13 +318,11 @@ pub struct StringValue<T: Sync + Send + Serialize + Clone + std::fmt::Debug + as
     pub value: T,
 }
 
+
 impl From<species::SpecimensOverview> for SpecimensOverview {
     fn from(value: species::SpecimensOverview) -> Self {
         SpecimensOverview {
             total: value.total,
-            major_collections: value.major_collections,
-            holotype: value.holotype,
-            holotype_entity_id: value.holotype_entity_id,
             other_types: value.other_types,
             formal_vouchers: value.formal_vouchers,
             tissues: value.tissues,
