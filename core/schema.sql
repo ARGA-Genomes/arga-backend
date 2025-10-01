@@ -269,6 +269,7 @@ CREATE UNIQUE INDEX dataset_version_dataset_id_created_at ON dataset_versions (d
 -- The central names table. Most tables link to this
 CREATE TABLE names (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_id bigint,
     scientific_name varchar NOT NULL,
     canonical_name varchar NOT NULL,
     authorship varchar
@@ -466,6 +467,111 @@ CREATE TABLE dna_extracts (
 
 CREATE INDEX dna_extracts_subsample_id ON dna_extracts (subsample_id);
 CREATE INDEX dna_extracts_species_name_id ON dna_extracts (species_name_id);
+
+
+-- Library preparations
+CREATE TABLE libraries (
+    entity_id varchar PRIMARY KEY NOT NULL,
+    extract_id varchar REFERENCES dna_extracts ON DELETE CASCADE NOT NULL,
+    species_name_id bigint NOT NULL,
+    publication_id varchar REFERENCES publications (entity_id),
+    library_id varchar NOT NULL,
+
+    event_date date,
+    event_time time,
+    prepared_by varchar REFERENCES agents,
+    concentration float,
+    concentration_unit varchar,
+    pcr_cycles int,
+    layout varchar,
+    selection varchar,
+    bait_set_name varchar,
+    bait_set_reference varchar,
+    construction_protocol varchar,
+    source varchar,
+    insert_size varchar,
+    design_description varchar,
+    strategy varchar,
+    index_tag varchar,
+    index_dual_tag varchar,
+    index_oligo varchar,
+    index_dual_oligo varchar,
+    location varchar,
+    remarks varchar,
+    dna_treatment varchar,
+    number_of_libraries_pooled int,
+    pcr_replicates int
+);
+
+
+-- Sequence run data
+CREATE TABLE sequence_runs (
+    entity_id varchar PRIMARY KEY NOT NULL,
+    library_id varchar REFERENCES libraries ON DELETE CASCADE NOT NULL,
+    species_name_id bigint NOT NULL,
+    publication_id varchar REFERENCES publications (entity_id),
+    sequence_run_id varchar NOT NULL,
+
+    event_date date,
+    event_time time,
+    facility varchar,
+    instrument_or_method varchar,
+    platform varchar,
+    kit_chemistry varchar,
+    flowcell_type varchar,
+    cell_movie_length varchar,
+    base_caller_model varchar,
+    fast5_compression varchar,
+    analysis_software varchar,
+    analysis_software_version varchar,
+    target_gene varchar,
+
+    sra_run_accession varchar
+);
+
+
+-- Assembly data
+CREATE TABLE assemblies (
+    entity_id varchar PRIMARY KEY NOT NULL,
+    species_name_id bigint NOT NULL,
+    publication_id varchar REFERENCES publications (entity_id),
+    assembly_id varchar NOT NULL,
+
+    event_date date,
+    event_time time,
+    name varchar,
+    type varchar,
+    method varchar,
+    method_version varchar,
+    method_link varchar,
+    size varchar,
+    minimum_gap_length varchar,
+    completeness varchar,
+    completeness_method varchar,
+    source_molecule varchar,
+    reference_genome_used varchar,
+    reference_genome_link varchar,
+    number_of_scaffolds varchar,
+    genome_coverage varchar,
+    hybrid varchar,
+    hybrid_information varchar,
+    polishing_or_scaffolding_method varchar,
+    polishing_or_scaffolding_data varchar,
+    computational_infrastructure varchar,
+    system_used varchar,
+    assembly_n50 varchar
+);
+
+
+-- Library <-> Assembly through table
+CREATE TABLE library_assemblies (
+    library_entity_id varchar REFERENCES libraries ON DELETE CASCADE NOT NULL,
+    assembly_entity_id varchar REFERENCES assemblies ON DELETE CASCADE NOT NULL,
+    PRIMARY KEY (library_entity_id, assembly_entity_id)
+);
+
+CREATE INDEX library_assemblies_library_entity_id ON library_assemblies (library_entity_id);
+CREATE INDEX library_assemblies_assembly_entity_id ON library_assemblies (assembly_entity_id);
 
 
 -- Sequence data
@@ -950,6 +1056,49 @@ CREATE TABLE tissue_logs (
 CREATE INDEX tissue_logs_parent_id ON tissue_logs (parent_id);
 CREATE INDEX tissue_logs_entity_id ON tissue_logs (entity_id);
 CREATE INDEX tissue_logs_dataset_version_id ON tissue_logs (dataset_version_id);
+
+
+CREATE TABLE library_logs (
+    operation_id numeric PRIMARY KEY NOT NULL,
+    parent_id numeric NOT NULL,
+    entity_id varchar NOT NULL,
+    dataset_version_id uuid REFERENCES dataset_versions ON DELETE CASCADE NOT NULL,
+    action operation_action NOT NULL,
+    atom jsonb DEFAULT '{}' NOT NULL
+);
+
+CREATE INDEX library_logs_parent_id ON library_logs (parent_id);
+CREATE INDEX library_logs_entity_id ON library_logs (entity_id);
+CREATE INDEX library_logs_dataset_version_id ON library_logs (dataset_version_id);
+
+
+CREATE TABLE sequence_run_logs (
+    operation_id numeric PRIMARY KEY NOT NULL,
+    parent_id numeric NOT NULL,
+    entity_id varchar NOT NULL,
+    dataset_version_id uuid REFERENCES dataset_versions ON DELETE CASCADE NOT NULL,
+    action operation_action NOT NULL,
+    atom jsonb DEFAULT '{}' NOT NULL
+);
+
+CREATE INDEX sequence_run_logs_parent_id ON sequence_run_logs (parent_id);
+CREATE INDEX sequence_run_logs_entity_id ON sequence_run_logs (entity_id);
+CREATE INDEX sequence_run_logs_dataset_version_id ON sequence_run_logs (dataset_version_id);
+
+
+CREATE TABLE assembly_logs (
+    operation_id numeric PRIMARY KEY NOT NULL,
+    parent_id numeric NOT NULL,
+    entity_id varchar NOT NULL,
+    dataset_version_id uuid REFERENCES dataset_versions ON DELETE CASCADE NOT NULL,
+    action operation_action NOT NULL,
+    atom jsonb DEFAULT '{}' NOT NULL
+);
+
+CREATE INDEX assembly_logs_parent_id ON assembly_logs (parent_id);
+CREATE INDEX assembly_logs_entity_id ON assembly_logs (entity_id);
+CREATE INDEX assembly_logs_dataset_version_id ON assembly_logs (dataset_version_id);
+
 
 
 CREATE TABLE collection_event_logs (
@@ -1786,3 +1935,15 @@ CREATE UNIQUE INDEX agent_entities_entity_id ON agent_entities (entity_id);
 CREATE MATERIALIZED VIEW publication_entities AS
 SELECT entity_id FROM publication_logs GROUP BY entity_id ORDER BY entity_id;
 CREATE UNIQUE INDEX publication_entities_entity_id ON publication_entities (entity_id);
+
+CREATE MATERIALIZED VIEW library_entities AS
+SELECT entity_id FROM library_logs GROUP BY entity_id ORDER BY entity_id;
+CREATE UNIQUE INDEX library_entities_entity_id ON library_entities (entity_id);
+
+CREATE MATERIALIZED VIEW sequence_run_entities AS
+SELECT entity_id FROM sequence_run_logs GROUP BY entity_id ORDER BY entity_id;
+CREATE UNIQUE INDEX sequence_run_entities_entity_id ON sequence_run_entities (entity_id);
+
+CREATE MATERIALIZED VIEW assembly_entities AS
+SELECT entity_id FROM assembly_logs GROUP BY entity_id ORDER BY entity_id;
+CREATE UNIQUE INDEX assembly_entities_entity_id ON assembly_entities (entity_id);

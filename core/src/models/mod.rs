@@ -2,6 +2,7 @@ pub mod agents;
 pub mod extracts;
 pub mod logs;
 pub mod operation_logs;
+pub mod sequences;
 pub mod specimens;
 pub mod subsamples;
 
@@ -13,9 +14,11 @@ pub use extracts::*;
 pub use logs::agents::*;
 pub use logs::entity_hash;
 pub use logs::extractions::*;
+pub use logs::sequences::*;
 pub use logs::specimens::*;
 pub use logs::subsamples::*;
 pub use operation_logs::*;
+pub use sequences::*;
 use serde::{Deserialize, Serialize};
 pub use specimens::*;
 pub use subsamples::*;
@@ -861,6 +864,7 @@ pub struct Name {
     pub scientific_name: String,
     pub canonical_name: String,
     pub authorship: Option<String>,
+    pub entity_id: Option<i64>,
 }
 
 impl From<Taxon> for Name {
@@ -870,6 +874,7 @@ impl From<Taxon> for Name {
             scientific_name: value.scientific_name,
             canonical_name: value.canonical_name,
             authorship: value.authorship,
+            entity_id: None,
         }
     }
 }

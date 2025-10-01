@@ -9,6 +9,8 @@ use uuid::Uuid;
 use super::extensions::Paginate;
 use super::extensions::filters_new::Sort;
 use super::models::{
+    AccessionEvent,
+    Assembly,
     GenomicComponent,
     Marker,
     Name,
@@ -48,6 +50,7 @@ pub struct MarkerSummary {
 #[derive(Debug, Queryable)]
 pub struct SpecimenSummary {
     pub entity_id: String,
+    pub organism_id: String,
     pub collection_repository_id: Option<String>,
     pub collection_repository_code: Option<String>,
     pub institution_code: Option<String>,
@@ -81,9 +84,6 @@ pub struct DataSummary {
 #[derive(Debug, Clone, Default, Queryable, Serialize, Deserialize)]
 pub struct SpecimensOverview {
     pub total: i64,
-    pub major_collections: Vec<String>,
-    pub holotype: Option<String>,
-    pub holotype_entity_id: Option<String>,
     pub other_types: i64,
     pub formal_vouchers: i64,
     pub tissues: i64,
@@ -205,6 +205,7 @@ impl SpeciesProvider {
         let mut query = filters_new::specimens::with_filter_tables()
             .select((
                 specimens::entity_id,
+                specimens::organism_id,
                 accession_events::collection_repository_id.nullable(),
                 accession_events::collection_repository_code.nullable(),
                 accession_events::institution_code.nullable(),
@@ -343,6 +344,23 @@ impl SpeciesProvider {
         Ok(record)
     }
 
+    pub async fn assemblies(&self, names: &Vec<Name>, page: i64, page_size: i64) -> PageResult<Assembly> {
+        use schema::assemblies;
+        let mut conn = self.pool.get().await?;
+
+        let name_ids: Vec<i64> = names.iter().filter_map(|n| n.entity_id).collect();
+
+        let records = assemblies::table
+            .filter(assemblies::species_name_id.eq_any(name_ids))
+            .order(assemblies::assembly_id)
+            .paginate(page)
+            .per_page(page_size)
+            .load::<(Assembly, i64)>(&mut conn)
+            .await?;
+
+        Ok(records.into())
+    }
+
     pub async fn attributes(&self, names: &Vec<Name>) -> Result<Vec<NameAttribute>, Error> {
         use schema::name_attributes;
         let mut conn = self.pool.get().await?;
@@ -436,24 +454,6 @@ impl SpeciesProvider {
 
         let mut conn = self.pool.get().await?;
 
-        let (holotype_entity_id, institution, id) = accession_events::table
-            .inner_join(specimens::table)
-            .filter(specimens::name_id.eq_any(name_ids))
-            .filter(lower_opt(accession_events::type_status.nullable()).eq("holotype"))
-            .select((
-                specimens::entity_id,
-                accession_events::institution_code,
-                accession_events::collection_repository_id,
-            ))
-            .get_result::<(String, Option<String>, Option<String>)>(&mut conn)
-            .await?;
-
-        let holotype = match (institution, id) {
-            (Some(institution), Some(id)) => Some(format!("{institution} {id}")),
-            (None, Some(id)) => Some(format!("{id}")),
-            _ => None,
-        };
-
         // we can get the stats for a small amount of names without requiring a materialized view as it
         // is fast enough. importantly note that we don't check for null for columns that don't match
         // a value; this is because a null compared with a value is always false, so they aren't counted
@@ -472,16 +472,6 @@ impl SpeciesProvider {
             .get_result::<(i64, i64, i64, i64, i64)>(&mut conn)
             .await?;
 
-        let major_collections = specimens::table
-            .inner_join(accession_events::table)
-            .filter(specimens::name_id.eq_any(name_ids))
-            .filter(accession_events::institution_code.is_not_null())
-            .group_by(accession_events::institution_code)
-            .select(accession_events::institution_code.assume_not_null())
-            .order(count_star().desc())
-            .limit(4)
-            .load::<String>(&mut conn)
-            .await?;
 
         // NOTE: This is not ideal but diesel doesn't have support for aliased expressions yet
         // so we can't group by an extracted date and then select it
@@ -511,9 +501,6 @@ impl SpeciesProvider {
 
         Ok(SpecimensOverview {
             total,
-            major_collections,
-            holotype,
-            holotype_entity_id: Some(holotype_entity_id),
             other_types,
             formal_vouchers,
             tissues: 0,
@@ -548,6 +535,44 @@ impl SpeciesProvider {
             .await?;
 
         Ok(records)
+    }
+
+    pub async fn specimen_accessions(&self, name_ids: &Vec<Uuid>) -> Result<Vec<AccessionEvent>, Error> {
+        use schema::{accession_events, specimens};
+
+        let mut conn = self.pool.get().await?;
+
+        // get all the accessions associated with all names for the specimen. we don't just
+        // want a specific type of accession but all types that have an 'official status'
+        let accessions = accession_events::table
+            .inner_join(specimens::table)
+            .filter(specimens::name_id.eq_any(name_ids))
+            .filter(accession_events::type_status.is_not_null())
+            .select(AccessionEvent::as_select())
+            .load::<AccessionEvent>(&mut conn)
+            .await?;
+
+        Ok(accessions)
+    }
+
+    pub async fn major_collections(&self, name_ids: &Vec<Uuid>) -> Result<Vec<String>, Error> {
+        use diesel::dsl::count_star;
+        use schema::{accession_events, specimens};
+
+        let mut conn = self.pool.get().await?;
+
+        let major_collections = specimens::table
+            .inner_join(accession_events::table)
+            .filter(specimens::name_id.eq_any(name_ids))
+            .filter(accession_events::institution_code.is_not_null())
+            .group_by(accession_events::institution_code)
+            .select(accession_events::institution_code.assume_not_null())
+            .order(count_star().desc())
+            .limit(4)
+            .load::<String>(&mut conn)
+            .await?;
+
+        Ok(major_collections)
     }
 }
 

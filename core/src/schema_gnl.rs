@@ -253,6 +253,24 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    library_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
+diesel::table! {
+    sequence_run_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
+diesel::table! {
+    assembly_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
 
 use super::schema::{
     accession_events,

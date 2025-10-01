@@ -1,10 +1,12 @@
 pub mod common;
 pub mod helpers;
 
+pub mod assembly;
 pub mod collection;
 pub mod dataset;
 pub mod dna_extract;
 pub mod extensions;
+pub mod library;
 pub mod maps;
 pub mod marker;
 pub mod markers;
@@ -24,6 +26,7 @@ pub mod taxa;
 pub mod taxon;
 pub mod tissue;
 
+use assembly::Assembly;
 use async_graphql::extensions::Tracing;
 use async_graphql::http::GraphiQLSource;
 use async_graphql::{Context, EmptyMutation, EmptySubscription, Object, Schema};
@@ -140,6 +143,11 @@ impl Query {
     async fn sequence(&self, ctx: &Context<'_>, by: sequence::SequenceBy) -> Result<Vec<Sequence>, Error> {
         let state = ctx.data::<State>()?;
         Sequence::new(&state.database, &by).await
+    }
+
+    async fn assembly(&self, ctx: &Context<'_>, by: assembly::AssemblyBy) -> Result<Assembly, Error> {
+        let state = ctx.data::<State>()?;
+        Assembly::new(&state.database, &by).await
     }
 
     async fn taxon(
