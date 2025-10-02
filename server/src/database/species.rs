@@ -351,6 +351,7 @@ impl SpeciesProvider {
         let name_ids: Vec<i64> = names.iter().filter_map(|n| n.entity_id).collect();
 
         let records = assemblies::table
+            .select(Assembly::as_select())
             .filter(assemblies::species_name_id.eq_any(name_ids))
             .order(assemblies::assembly_id)
             .paginate(page)
