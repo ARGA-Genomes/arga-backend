@@ -2,6 +2,7 @@ use async_graphql::*;
 
 use super::collection::Collection;
 use super::common::{NameDetails, OrganismDetails, Publication};
+use super::data_product::DataProduct;
 use super::dna_extract::DnaExtract;
 use super::registration::Registration;
 use super::subsample::Subsample;
@@ -75,6 +76,13 @@ impl OrganismQuery {
         let entity_id = &self.organism.entity_id;
         let records = state.database.organisms.extractions(entity_id).await?;
         Ok(records.into_iter().map(|r| DnaExtract::from_record(r)).collect())
+    }
+
+    async fn data_products(&self, ctx: &Context<'_>) -> Result<Vec<DataProduct>, Error> {
+        let state = ctx.data::<State>()?;
+        let entity_id = &self.organism.entity_id;
+        let records = state.database.organisms.data_products(entity_id).await?;
+        Ok(records.into_iter().map(|r| DataProduct::from_record(r)).collect())
     }
 
     async fn publication(&self, ctx: &Context<'_>) -> Result<Option<Publication>, Error> {

@@ -1,4 +1,4 @@
-h1:a9wXGZqBpjAXa0XsR3Qelid04mpTZmVWl0A8VX8QLOw=
+h1:ZrAjr6r13zRJ5SaMXxDC2u5U/vkPYNhc4Uot6Kdtnzw=
 20250605060808_initial.sql h1:hN3eGaQNsqm+ws4akS+D+e+TqDUHZkZwPaFGW/Gyor4=
 20250605084357_drop_legacy_tables.sql h1:M0SD3ETeanSyo3GDWanw1xpGCJIQg7U11EE5IQ617EU=
 20250606063639_create_baseline_views.sql h1:bjh8zumpl5MFPRc1OAIB9jidVWxu1GPXAu5yGorDjFo=
@@ -24,3 +24,5 @@ h1:a9wXGZqBpjAXa0XsR3Qelid04mpTZmVWl0A8VX8QLOw=
 20250927052046_add_entity_id_to_names.sql h1:owMWI6CLeQA7iBgvKd8uwMxtSCrq3bISqw7a9GiiVJc=
 20250929043505_create_library_assemblies.sql h1:1+NOBxsnzC+VWgEbzgLs8TSzVknQMCcI5A33O9K7Gts=
 20251001124402_add_genbank_assembly_fields.sql h1:pp+8bnrzlheeCqyf8wo8FeTaxJM/CHJlNCmwBPdeqS0=
+20251003065225_create_data_products.sql h1:CYOkBdXXNn2CbN8z/TCmb8S6A8nYbnxFC6HnvIuLCfI=
+20251003065608_create_data_product_logs.sql h1:UGLIlEL4v+HZQos6hwaqgCj+kQcGgZMgDm7JHHJTTLc=

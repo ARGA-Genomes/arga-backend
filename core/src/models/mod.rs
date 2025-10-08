@@ -1,4 +1,5 @@
 pub mod agents;
+pub mod data_products;
 pub mod extracts;
 pub mod logs;
 pub mod operation_logs;
@@ -9,9 +10,11 @@ pub mod subsamples;
 pub use agents::*;
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
+pub use data_products::*;
 use diesel::{AsChangeset, Associations, Identifiable, Insertable, Queryable, Selectable};
 pub use extracts::*;
 pub use logs::agents::*;
+pub use logs::data_products::*;
 pub use logs::entity_hash;
 pub use logs::extractions::*;
 pub use logs::sequences::*;

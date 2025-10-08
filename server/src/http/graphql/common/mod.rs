@@ -1,5 +1,6 @@
 pub mod agents;
 pub mod attributes;
+pub mod data_products;
 pub mod datasets;
 pub mod extractions;
 pub mod filters;
@@ -15,6 +16,7 @@ pub mod whole_genomes;
 
 pub use agents::Agent;
 use async_graphql::{OutputType, SimpleObject};
+pub use data_products::DataProductDetails;
 pub use datasets::{DatasetDetails, DatasetVersion};
 pub use extractions::DnaExtractDetails;
 pub use filters::{

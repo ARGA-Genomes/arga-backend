@@ -276,6 +276,41 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    data_product_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
+    data_products (entity_id) {
+        entity_id -> Varchar,
+        publication_id -> Nullable<Varchar>,
+        organism_id -> Nullable<Varchar>,
+        extract_id -> Nullable<Varchar>,
+        sequence_run_id -> Nullable<Varchar>,
+        custodian -> Nullable<Varchar>,
+        sequence_sample_id -> Nullable<Varchar>,
+        sequence_analysis_id -> Nullable<Varchar>,
+        notes -> Nullable<Varchar>,
+        context -> Nullable<Varchar>,
+        #[sql_name = "type"]
+        type_ -> Nullable<Varchar>,
+        file_type -> Nullable<Varchar>,
+        url -> Nullable<Varchar>,
+        licence -> Nullable<Varchar>,
+        access -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     dataset_versions (id) {
         id -> Uuid,
         dataset_id -> Uuid,
@@ -1017,6 +1052,11 @@ diesel::joinable!(collection_event_logs -> dataset_versions (dataset_version_id)
 diesel::joinable!(collection_events -> names (name_id));
 diesel::joinable!(collection_events -> organisms (organism_id));
 diesel::joinable!(collection_events -> specimens (specimen_id));
+diesel::joinable!(data_product_logs -> dataset_versions (dataset_version_id));
+diesel::joinable!(data_products -> agents (custodian));
+diesel::joinable!(data_products -> dna_extracts (extract_id));
+diesel::joinable!(data_products -> organisms (organism_id));
+diesel::joinable!(data_products -> sequence_runs (sequence_run_id));
 diesel::joinable!(dataset_versions -> datasets (dataset_id));
 diesel::joinable!(datasets -> sources (source_id));
 diesel::joinable!(deposition_events -> datasets (dataset_id));
@@ -1074,6 +1114,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     assembly_logs,
     collection_event_logs,
     collection_events,
+    data_product_logs,
+    data_products,
     dataset_versions,
     datasets,
     deposition_events,

@@ -1,4 +1,4 @@
-use arga_core::models::{DnaExtract, Subsample, Tissue};
+use arga_core::models::{DataProduct, DnaExtract, Subsample, Tissue};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 
@@ -98,5 +98,18 @@ impl OrganismProvider {
             .await?;
 
         Ok(extracts)
+    }
+
+    pub async fn data_products(&self, organism_entity_id: &str) -> Result<Vec<DataProduct>, Error> {
+        use schema::data_products;
+        let mut conn = self.pool.get().await?;
+
+        let products = data_products::table
+            .filter(data_products::organism_id.eq(organism_entity_id))
+            .select(DataProduct::as_select())
+            .load::<DataProduct>(&mut conn)
+            .await?;
+
+        Ok(products)
     }
 }

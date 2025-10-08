@@ -3,6 +3,7 @@ pub mod helpers;
 
 pub mod assembly;
 pub mod collection;
+pub mod data_product;
 pub mod dataset;
 pub mod dna_extract;
 pub mod extensions;
