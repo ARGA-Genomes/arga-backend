@@ -272,6 +272,7 @@ diesel::table! {
         environment_broad_scale -> Nullable<Varchar>,
         environment_local_scale -> Nullable<Varchar>,
         environment_medium -> Nullable<Varchar>,
+        material_sample_id -> Nullable<Varchar>,
     }
 }
 
@@ -847,6 +848,7 @@ diesel::table! {
         name_id -> Uuid,
         organism_id -> Varchar,
         entity_id -> Varchar,
+        specimen_id -> Nullable<Varchar>,
     }
 }
 

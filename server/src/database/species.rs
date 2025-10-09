@@ -51,6 +51,7 @@ pub struct MarkerSummary {
 pub struct SpecimenSummary {
     pub entity_id: String,
     pub organism_id: String,
+    pub specimen_id: Option<String>,
     pub collection_repository_id: Option<String>,
     pub collection_repository_code: Option<String>,
     pub institution_code: Option<String>,
@@ -206,6 +207,7 @@ impl SpeciesProvider {
             .select((
                 specimens::entity_id,
                 specimens::organism_id,
+                specimens::specimen_id,
                 accession_events::collection_repository_id.nullable(),
                 accession_events::collection_repository_code.nullable(),
                 accession_events::institution_code.nullable(),

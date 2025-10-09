@@ -1,4 +1,4 @@
-h1:ZrAjr6r13zRJ5SaMXxDC2u5U/vkPYNhc4Uot6Kdtnzw=
+h1:wCdAnjS63lgxAoaieRFUPRZdaPIYvgHR4sdWR/FBBLY=
 20250605060808_initial.sql h1:hN3eGaQNsqm+ws4akS+D+e+TqDUHZkZwPaFGW/Gyor4=
 20250605084357_drop_legacy_tables.sql h1:M0SD3ETeanSyo3GDWanw1xpGCJIQg7U11EE5IQ617EU=
 20250606063639_create_baseline_views.sql h1:bjh8zumpl5MFPRc1OAIB9jidVWxu1GPXAu5yGorDjFo=
@@ -26,3 +26,4 @@ h1:ZrAjr6r13zRJ5SaMXxDC2u5U/vkPYNhc4Uot6Kdtnzw=
 20251001124402_add_genbank_assembly_fields.sql h1:pp+8bnrzlheeCqyf8wo8FeTaxJM/CHJlNCmwBPdeqS0=
 20251003065225_create_data_products.sql h1:CYOkBdXXNn2CbN8z/TCmb8S6A8nYbnxFC6HnvIuLCfI=
 20251003065608_create_data_product_logs.sql h1:UGLIlEL4v+HZQos6hwaqgCj+kQcGgZMgDm7JHHJTTLc=
+20251009001851_add_id_text_fields_to_collection_specimens.sql h1:TbF1+MuV5z7cELp5pbpFIeAu9eP8XuiasodpebE+3YM=

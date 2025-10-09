@@ -164,6 +164,7 @@ pub struct CollectionEvent {
     pub entity_id: String,
     pub specimen_id: String,
     pub organism_id: String,
+    pub material_sample_id: Option<String>,
     pub field_collecting_id: Option<String>,
 
     pub event_date: Option<chrono::NaiveDate>,
@@ -209,6 +210,7 @@ impl From<models::CollectionEvent> for CollectionEvent {
             entity_id: value.entity_id,
             specimen_id: value.specimen_id,
             organism_id: value.organism_id,
+            material_sample_id: value.material_sample_id,
             field_collecting_id: value.field_collecting_id,
             event_date: value.event_date,
             event_time: value.event_time,

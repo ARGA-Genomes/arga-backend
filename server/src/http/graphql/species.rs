@@ -588,6 +588,7 @@ impl From<models::GenomicComponent> for GenomicComponent {
 pub struct SpecimenSummary {
     pub entity_id: String,
     pub organism_id: String,
+    pub specimen_id: Option<String>,
     pub collection_repository_id: Option<String>,
     pub collection_repository_code: Option<String>,
     pub institution_code: Option<String>,
@@ -614,6 +615,7 @@ impl From<species::SpecimenSummary> for SpecimenSummary {
         Self {
             entity_id: value.entity_id,
             organism_id: value.organism_id,
+            specimen_id: value.specimen_id,
             collection_repository_id: value.collection_repository_id,
             collection_repository_code: value.collection_repository_code,
             institution_code: value.institution_code,

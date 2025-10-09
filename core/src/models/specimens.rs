@@ -13,6 +13,7 @@ pub struct Specimen {
     pub entity_id: String,
     pub organism_id: String,
     pub name_id: Uuid,
+    pub specimen_id: Option<String>,
 }
 
 
@@ -84,6 +85,7 @@ pub struct CollectionEvent {
     pub specimen_id: String,
     pub name_id: Uuid,
     pub organism_id: String,
+    pub material_sample_id: Option<String>,
     pub field_collecting_id: Option<String>,
 
     pub event_date: Option<chrono::NaiveDate>,

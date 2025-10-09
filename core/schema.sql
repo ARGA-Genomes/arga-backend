@@ -372,7 +372,8 @@ CREATE TABLE organisms (
 CREATE TABLE specimens (
     entity_id varchar PRIMARY KEY NOT NULL,
     organism_id varchar REFERENCES organisms ON DELETE CASCADE NOT NULL,
-    name_id uuid REFERENCES names ON DELETE CASCADE NOT NULL
+    name_id uuid REFERENCES names ON DELETE CASCADE NOT NULL,
+    specimen_id varchar
 );
 
 
@@ -818,6 +819,7 @@ CREATE TABLE collection_events (
 
     name_id uuid REFERENCES names ON DELETE CASCADE NOT NULL,
     organism_id varchar REFERENCES organisms ON DELETE CASCADE NOT NULL,
+    material_sample_id varchar,
     field_collecting_id varchar,
 
     event_date date,
