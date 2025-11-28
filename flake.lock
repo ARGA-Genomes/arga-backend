@@ -1,21 +1,5 @@
 {
   "nodes": {
-    "dioxus-alpha": {
-      "locked": {
-        "lastModified": 1752751799,
-        "narHash": "sha256-aRIjZxhuaWEXPCp9r/EMmgoXPv3KuuZvwTI1BCyps9U=",
-        "owner": "CathalMullan",
-        "repo": "nixpkgs",
-        "rev": "6e552fb29d6498587a2a88ac0248758575546a24",
-        "type": "github"
-      },
-      "original": {
-        "owner": "CathalMullan",
-        "ref": "dioxus-cli-v0.7.0",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "fenix": {
       "inputs": {
         "nixpkgs": [
@@ -46,11 +30,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1752689277,
-        "narHash": "sha256-uldUBFkZe/E7qbvxa3mH1ItrWZyT6w1dBKJQF/3ZSsc=",
+        "lastModified": 1763384566,
+        "narHash": "sha256-r+wgI+WvNaSdxQmqaM58lVNvJYJ16zoq+tKN20cLst4=",
         "owner": "nix-community",
         "repo": "naersk",
-        "rev": "0e72363d0938b0208d6c646d10649164c43f4d64",
+        "rev": "d4155d6ebb70fbe2314959842f744aa7cabbbf6a",
         "type": "github"
       },
       "original": {
@@ -61,11 +45,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1753934836,
-        "narHash": "sha256-G06FmIBj0I5bMW1Q8hAEIl5N7IHMK7+Ta4KA+BmneDA=",
+        "lastModified": 1764230294,
+        "narHash": "sha256-Z63xl5Scj3Y/zRBPAWq1eT68n2wBWGCIEF4waZ0bQBE=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "8679b16e11becd487b45d568358ddf9d5640d860",
+        "rev": "0d59e0290eefe0f12512043842d7096c4070f30e",
         "type": "github"
       },
       "original": {
@@ -101,19 +85,18 @@
     },
     "web": {
       "inputs": {
-        "dioxus-alpha": "dioxus-alpha",
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
         "lastModified": 1,
-        "narHash": "sha256-DfkpsrlqT2VKr9PLvcvOC0ckLH0hCDkX3w+/rTsPQ3Y=",
-        "path": "/nix/store/4i33mhxy2g0a0h9s0gv861hqb7jdpc7x-source/web",
+        "narHash": "sha256-ONntfUB2Xb/HDwMnCppdecuyOnpHrA4pMEwt+fL9HOc=",
+        "path": "/nix/store/k68rwcgz550075jd4dawznpzsd4db0rj-source/web",
         "type": "path"
       },
       "original": {
-        "path": "/nix/store/4i33mhxy2g0a0h9s0gv861hqb7jdpc7x-source/web",
+        "path": "/nix/store/k68rwcgz550075jd4dawznpzsd4db0rj-source/web",
         "type": "path"
       }
     }

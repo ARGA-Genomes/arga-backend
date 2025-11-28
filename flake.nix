@@ -43,7 +43,7 @@
 
           contents = [
             backend
-            admin
+            # admin
           ];
 
           config = {

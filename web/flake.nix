@@ -1,19 +1,16 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    dioxus-alpha.url = "github:CathalMullan/nixpkgs/dioxus-cli-v0.7.0";
   };
 
   outputs =
     {
       self,
       nixpkgs,
-      dioxus-alpha,
     }@inputs:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
-      dioxus = import dioxus-alpha { inherit system; };
     in
     rec {
       packages.${system} = rec {
@@ -23,10 +20,10 @@
           pname = "web";
           src = ./.;
           nativeBuildInputs = with pkgs; [
-            dioxus.dioxus-cli
+            dioxus-cli
             wasm-bindgen-cli
             binaryen
-            llvmPackages_14.bintools
+            llvmPackages_20.bintools
           ];
           buildInputs = with pkgs; [
             postgresql.lib
