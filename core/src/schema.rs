@@ -150,6 +150,32 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    annotation_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
+    annotations (entity_id) {
+        entity_id -> Varchar,
+        assembly_id -> Varchar,
+        name -> Nullable<Varchar>,
+        provider -> Nullable<Varchar>,
+        event_date -> Nullable<Date>,
+        number_of_genes -> Nullable<Int4>,
+        number_of_proteins -> Nullable<Int4>,
+    }
+}
+
+diesel::table! {
     assemblies (entity_id) {
         entity_id -> Varchar,
         species_name_id -> Int8,
@@ -1047,6 +1073,8 @@ diesel::joinable!(admin_media -> names (name_id));
 diesel::joinable!(agent_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(annotation_events -> datasets (dataset_id));
 diesel::joinable!(annotation_events -> sequences (sequence_id));
+diesel::joinable!(annotation_logs -> dataset_versions (dataset_version_id));
+diesel::joinable!(annotations -> assemblies (assembly_id));
 diesel::joinable!(assembly_events -> datasets (dataset_id));
 diesel::joinable!(assembly_events -> sequences (sequence_id));
 diesel::joinable!(assembly_logs -> dataset_versions (dataset_version_id));
@@ -1111,6 +1139,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     agent_logs,
     agents,
     annotation_events,
+    annotation_logs,
+    annotations,
     assemblies,
     assembly_events,
     assembly_logs,

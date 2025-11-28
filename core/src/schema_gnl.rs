@@ -277,6 +277,12 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    annotation_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
 
 use super::schema::{
     accession_events,

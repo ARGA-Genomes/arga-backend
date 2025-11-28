@@ -1,6 +1,7 @@
 pub mod extensions;
 
 pub mod agents;
+pub mod annotations;
 pub mod assemblies;
 pub mod collections;
 pub mod datasets;
@@ -100,6 +101,7 @@ pub struct Database {
     pub collections: collections::CollectionProvider,
     pub assemblies: assemblies::AssemblyProvider,
     pub libraries: libraries::LibraryProvider,
+    pub annotations: annotations::AnnotationProvider,
 }
 
 impl Database {
@@ -131,6 +133,7 @@ impl Database {
             collections: collections::CollectionProvider { pool: pool.clone() },
             assemblies: assemblies::AssemblyProvider { pool: pool.clone() },
             libraries: libraries::LibraryProvider { pool: pool.clone() },
+            annotations: annotations::AnnotationProvider { pool: pool.clone() },
             pool,
         })
     }

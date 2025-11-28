@@ -140,3 +140,29 @@ impl From<models::Assembly> for AssemblyDetails {
         }
     }
 }
+
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct AnnotationDetails {
+    pub entity_id: String,
+    pub assembly_id: String,
+    pub name: Option<String>,
+    pub provider: Option<String>,
+    pub event_date: Option<NaiveDate>,
+    pub number_of_genes: Option<i32>,
+    pub number_of_proteins: Option<i32>,
+}
+
+impl From<models::Annotation> for AnnotationDetails {
+    fn from(value: models::Annotation) -> Self {
+        AnnotationDetails {
+            entity_id: value.entity_id,
+            assembly_id: value.assembly_id,
+            name: value.name,
+            provider: value.provider,
+            event_date: value.event_date,
+            number_of_genes: value.number_of_genes,
+            number_of_proteins: value.number_of_proteins,
+        }
+    }
+}

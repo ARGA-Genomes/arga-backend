@@ -1,6 +1,7 @@
 pub mod common;
 pub mod helpers;
 
+pub mod annotation;
 pub mod assembly;
 pub mod collection;
 pub mod data_product;

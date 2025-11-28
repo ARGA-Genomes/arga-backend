@@ -162,3 +162,31 @@ pub struct AssemblyOperation {
     pub action: Action,
     pub atom: AssemblyAtom,
 }
+
+
+#[derive(Atom, Debug, Clone, Default, Serialize, Deserialize, AsExpression, FromSqlRow, PartialEq, Display)]
+#[diesel(sql_type = diesel::sql_types::Jsonb)]
+pub enum AnnotationAtom {
+    #[default]
+    Empty,
+    AssemblyId(String),
+
+    Name(String),
+    Provider(String),
+    EventDate(NaiveDate),
+    NumberOfGenes(i32),
+    NumberOfProteins(i32),
+}
+
+#[derive(OperationLog, Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]
+#[diesel(belongs_to(DatasetVersion))]
+#[diesel(table_name = schema::annotation_logs)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct AnnotationOperation {
+    pub operation_id: BigDecimal,
+    pub parent_id: BigDecimal,
+    pub entity_id: String,
+    pub dataset_version_id: Uuid,
+    pub action: Action,
+    pub atom: AnnotationAtom,
+}

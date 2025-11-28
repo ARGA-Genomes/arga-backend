@@ -29,7 +29,7 @@ pub use filters::{
     convert_whole_genome_filters,
 };
 pub use publications::{Publication, PublicationType};
-pub use sequences::{AssemblyDetails, LibraryDetails};
+pub use sequences::{AnnotationDetails, AssemblyDetails, LibraryDetails};
 pub use species::{SpeciesCard, SpeciesDataSummary, SpeciesPhoto};
 pub use specimens::{
     AccessionEvent,

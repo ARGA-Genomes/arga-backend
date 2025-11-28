@@ -108,3 +108,18 @@ pub struct Assembly {
     pub system_used: Option<String>,
     pub assembly_n50: Option<String>,
 }
+
+
+#[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::annotations)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Annotation {
+    pub entity_id: String,
+    pub assembly_id: String,
+
+    pub name: Option<String>,
+    pub provider: Option<String>,
+    pub event_date: Option<NaiveDate>,
+    pub number_of_genes: Option<i32>,
+    pub number_of_proteins: Option<i32>,
+}

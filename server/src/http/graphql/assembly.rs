@@ -1,5 +1,6 @@
 use async_graphql::*;
 
+use super::annotation::Annotation;
 use super::common::{AssemblyDetails, NameDetails, Publication};
 use super::library::Library;
 use super::specimen::Specimen;
@@ -63,6 +64,17 @@ impl AssemblyQuery {
             .await?;
 
         Ok(records.into_iter().map(Library::from).collect())
+    }
+
+    async fn annotations(&self, ctx: &Context<'_>) -> Result<Vec<Annotation>, Error> {
+        let state = ctx.data::<State>()?;
+        let records = state
+            .database
+            .annotations
+            .find_by_assembly_id(&self.assembly.entity_id)
+            .await?;
+
+        Ok(records.into_iter().map(Annotation::from).collect())
     }
 
     async fn specimens(&self, ctx: &Context<'_>) -> Result<Vec<Specimen>, Error> {
