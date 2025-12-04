@@ -402,6 +402,30 @@ diesel::table! {
 }
 
 diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
+    deposition_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
+    depositions (entity_id) {
+        entity_id -> Varchar,
+        assembly_id -> Varchar,
+        event_date -> Nullable<Date>,
+        url -> Nullable<Varchar>,
+        institution -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     dna_extracts (entity_id) {
         subsample_id -> Varchar,
         entity_id -> Varchar,
@@ -1091,6 +1115,8 @@ diesel::joinable!(dataset_versions -> datasets (dataset_id));
 diesel::joinable!(datasets -> sources (source_id));
 diesel::joinable!(deposition_events -> datasets (dataset_id));
 diesel::joinable!(deposition_events -> sequences (sequence_id));
+diesel::joinable!(deposition_logs -> dataset_versions (dataset_version_id));
+diesel::joinable!(depositions -> assemblies (assembly_id));
 diesel::joinable!(dna_extracts -> subsamples (subsample_id));
 diesel::joinable!(extraction_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(libraries -> agents (prepared_by));
@@ -1151,6 +1177,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     dataset_versions,
     datasets,
     deposition_events,
+    deposition_logs,
+    depositions,
     dna_extracts,
     extraction_logs,
     ibra,

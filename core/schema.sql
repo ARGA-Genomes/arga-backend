@@ -617,6 +617,19 @@ CREATE TABLE annotations (
 CREATE INDEX annotations_assembly_id ON annotations (assembly_id);
 
 
+-- Assembly depositions
+CREATE TABLE depositions (
+    entity_id varchar PRIMARY KEY NOT NULL,
+    assembly_id varchar REFERENCES assemblies (entity_id) ON DELETE CASCADE NOT NULL,
+
+    event_date date,
+    url varchar,
+    institution varchar
+);
+
+CREATE INDEX depositions_assembly_id ON depositions (assembly_id);
+
+
 -- Sequence data
 CREATE TABLE sequences (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1170,6 +1183,20 @@ CREATE TABLE annotation_logs (
 CREATE INDEX annotation_logs_parent_id ON annotation_logs (parent_id);
 CREATE INDEX annotation_logs_entity_id ON annotation_logs (entity_id);
 CREATE INDEX annotation_logs_dataset_version_id ON annotation_logs (dataset_version_id);
+
+
+CREATE TABLE deposition_logs (
+    operation_id numeric PRIMARY KEY NOT NULL,
+    parent_id numeric NOT NULL,
+    entity_id varchar NOT NULL,
+    dataset_version_id uuid REFERENCES dataset_versions ON DELETE CASCADE NOT NULL,
+    action operation_action NOT NULL,
+    atom jsonb DEFAULT '{}' NOT NULL
+);
+
+CREATE INDEX deposition_logs_parent_id ON deposition_logs (parent_id);
+CREATE INDEX deposition_logs_entity_id ON deposition_logs (entity_id);
+CREATE INDEX deposition_logs_dataset_version_id ON deposition_logs (dataset_version_id);
 
 
 CREATE TABLE collection_event_logs (
@@ -2026,3 +2053,7 @@ CREATE UNIQUE INDEX data_product_entities_entity_id ON data_product_entities (en
 CREATE MATERIALIZED VIEW annotation_entities AS
 SELECT entity_id FROM annotation_logs GROUP BY entity_id ORDER BY entity_id;
 CREATE UNIQUE INDEX annotation_entities_entity_id ON annotation_entities (entity_id);
+
+CREATE MATERIALIZED VIEW deposition_entities AS
+SELECT entity_id FROM deposition_logs GROUP BY entity_id ORDER BY entity_id;
+CREATE UNIQUE INDEX deposition_entities_entity_id ON deposition_entities (entity_id);

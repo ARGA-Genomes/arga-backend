@@ -166,3 +166,25 @@ impl From<models::Annotation> for AnnotationDetails {
         }
     }
 }
+
+
+#[derive(Clone, Debug, SimpleObject)]
+pub struct DepositionDetails {
+    pub entity_id: String,
+    pub assembly_id: String,
+    pub event_date: Option<NaiveDate>,
+    pub url: Option<String>,
+    pub institution: Option<String>,
+}
+
+impl From<models::Deposition> for DepositionDetails {
+    fn from(value: models::Deposition) -> Self {
+        DepositionDetails {
+            entity_id: value.entity_id,
+            assembly_id: value.assembly_id,
+            event_date: value.event_date,
+            url: value.url,
+            institution: value.institution,
+        }
+    }
+}

@@ -5,6 +5,7 @@ pub mod annotations;
 pub mod assemblies;
 pub mod collections;
 pub mod datasets;
+pub mod depositions;
 pub mod dna_extracts;
 pub mod libraries;
 pub mod maps;
@@ -102,6 +103,7 @@ pub struct Database {
     pub assemblies: assemblies::AssemblyProvider,
     pub libraries: libraries::LibraryProvider,
     pub annotations: annotations::AnnotationProvider,
+    pub depositions: depositions::DepositionProvider,
 }
 
 impl Database {
@@ -134,6 +136,7 @@ impl Database {
             assemblies: assemblies::AssemblyProvider { pool: pool.clone() },
             libraries: libraries::LibraryProvider { pool: pool.clone() },
             annotations: annotations::AnnotationProvider { pool: pool.clone() },
+            depositions: depositions::DepositionProvider { pool: pool.clone() },
             pool,
         })
     }

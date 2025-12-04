@@ -123,3 +123,16 @@ pub struct Annotation {
     pub number_of_genes: Option<i32>,
     pub number_of_proteins: Option<i32>,
 }
+
+
+#[derive(Clone, Queryable, Selectable, Insertable, Debug, Serialize, Deserialize)]
+#[diesel(table_name = schema::depositions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Deposition {
+    pub entity_id: String,
+    pub assembly_id: String,
+
+    pub event_date: Option<NaiveDate>,
+    pub url: Option<String>,
+    pub institution: Option<String>,
+}

@@ -283,6 +283,12 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    deposition_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
 
 use super::schema::{
     accession_events,
