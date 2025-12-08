@@ -107,13 +107,12 @@ pub struct SpecimenItem {
 
     pub canonical_name: Option<String>,
     pub accession: String,
-    pub data_source: Option<String>,
     pub institution_code: Option<String>,
-    pub collection_code: Option<String>,
-    pub recorded_by: Option<String>,
+    pub collection_repository_id: Option<String>,
+    pub collection_repository_code: Option<String>,
+    pub collected_by: Option<String>,
     pub identified_by: Option<String>,
     pub event_date: Option<NaiveDateTime>,
-    pub event_location: Option<String>,
 }
 
 
@@ -169,13 +168,12 @@ struct LocusFields {
 #[derive(Debug, Clone)]
 struct SpecimenFields {
     accession: Field,
-    data_source: Field,
     institution_code: Field,
-    collection_code: Field,
-    recorded_by: Field,
+    collection_repository_id: Field,
+    collection_repository_code: Field,
+    collected_by: Field,
     identified_by: Field,
     event_date: Field,
-    event_location: Field,
 }
 
 
@@ -270,13 +268,12 @@ impl SearchIndex {
         };
         let specimen = SpecimenFields {
             accession: get_field(&schema, "accession")?,
-            data_source: get_field(&schema, "data_source")?,
             institution_code: get_field(&schema, "institution_code")?,
-            collection_code: get_field(&schema, "collection_code")?,
-            recorded_by: get_field(&schema, "recorded_by")?,
+            collection_repository_id: get_field(&schema, "collection_repository_id")?,
+            collection_repository_code: get_field(&schema, "collection_repository_code")?,
+            collected_by: get_field(&schema, "collected_by")?,
             identified_by: get_field(&schema, "identified_by")?,
             event_date: get_field(&schema, "event_date")?,
-            event_location: get_field(&schema, "event_location")?,
         };
 
         Ok(SearchIndex {
@@ -352,8 +349,9 @@ impl SearchIndex {
 
     pub fn specimen_schema(schema_builder: &mut SchemaBuilder) {
         schema_builder.add_text_field("institution_code", STRING | STORED);
-        schema_builder.add_text_field("collection_code", TEXT | STORED);
-        schema_builder.add_text_field("recorded_by", TEXT | STORED);
+        schema_builder.add_text_field("collection_repository_id", TEXT | STORED);
+        schema_builder.add_text_field("collection_repository_code", TEXT | STORED);
+        schema_builder.add_text_field("collected_by", TEXT | STORED);
         schema_builder.add_text_field("identified_by", TEXT | STORED);
     }
 
@@ -397,10 +395,10 @@ impl SearchIndex {
                 self.locus.locus_type,
                 self.locus.data_source,
                 self.specimen.accession,
-                self.specimen.data_source,
                 self.specimen.institution_code,
-                self.specimen.collection_code,
-                self.specimen.recorded_by,
+                self.specimen.collection_repository_id,
+                self.specimen.collection_repository_code,
+                self.specimen.collected_by,
                 self.taxon.kingdom,
                 self.taxon.phylum,
                 self.taxon.class,
@@ -499,13 +497,12 @@ impl SearchIndex {
                         score,
                         canonical_name: get_text(&doc, self.common.canonical_name),
                         accession: get_text(&doc, self.specimen.accession).unwrap_or_default(),
-                        data_source: get_text(&doc, self.specimen.data_source),
                         institution_code: get_text(&doc, self.specimen.institution_code),
-                        collection_code: get_text(&doc, self.specimen.collection_code),
-                        recorded_by: get_text(&doc, self.specimen.recorded_by),
+                        collection_repository_id: get_text(&doc, self.specimen.collection_repository_id),
+                        collection_repository_code: get_text(&doc, self.specimen.collection_repository_code),
+                        collected_by: get_text(&doc, self.specimen.collected_by),
                         identified_by: get_text(&doc, self.specimen.identified_by),
                         event_date: get_datetime(&doc, self.specimen.event_date),
-                        event_location: get_text(&doc, self.specimen.event_location),
                     }),
                 };
 

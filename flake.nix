@@ -33,6 +33,14 @@
           nativeBuildInputs = [ pkgs.postgresql.lib ];
         };
 
+        # build the backend executable
+        tasks = naersk'.buildPackage {
+          name = "arga-tasks";
+          pname = "arga-tasks";
+          src = ./.;
+          nativeBuildInputs = [ pkgs.postgresql.lib ];
+        };
+
         # build the admin frontend web assembly
         admin = web.packages.${system}.admin;
 
@@ -43,6 +51,7 @@
 
           contents = [
             backend
+            tasks
             # admin
           ];
 

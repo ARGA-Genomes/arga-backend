@@ -112,13 +112,12 @@ impl Search {
                         canonical_name: item.canonical_name,
 
                         accession: item.accession,
-                        data_source: item.data_source,
                         institution_code: item.institution_code,
-                        collection_code: item.collection_code,
-                        recorded_by: item.recorded_by,
+                        collection_repository_id: item.collection_repository_id,
+                        collection_repository_code: item.collection_repository_code,
+                        collected_by: item.collected_by,
                         identified_by: item.identified_by,
                         event_date: item.event_date.map(|d| d.format("%d/%m/%Y").to_string()),
-                        event_location: item.event_location,
                     });
                 }
             }
@@ -242,13 +241,12 @@ pub struct LocusItem {
 pub struct SpecimenItem {
     pub accession: String,
     pub canonical_name: Option<String>,
-    pub data_source: Option<String>,
     pub institution_code: Option<String>,
-    pub collection_code: Option<String>,
-    pub recorded_by: Option<String>,
+    pub collection_repository_id: Option<String>,
+    pub collection_repository_code: Option<String>,
+    pub collected_by: Option<String>,
     pub identified_by: Option<String>,
     pub event_date: Option<String>,
-    pub event_location: Option<String>,
     pub score: f32,
     pub r#type: FullTextType,
     pub status: String,

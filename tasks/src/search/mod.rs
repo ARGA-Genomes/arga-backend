@@ -287,14 +287,13 @@ fn index_specimens(schema: &Schema, index: &Index) -> Result<(), Error> {
 
     let data_type = get_field(schema, "data_type")?;
     let name_id = get_field(schema, "name_id")?;
-    // let status = get_field(schema, "status")?;
     let canonical_name = get_field(schema, "canonical_name")?;
 
     let accession = get_field(schema, "accession")?;
-    let data_source = get_field(schema, "data_source")?;
     let institution_code = get_field(schema, "institution_code")?;
-    let collection_code = get_field(schema, "collection_code")?;
-    let recorded_by = get_field(schema, "recorded_by")?;
+    let collection_repository_id = get_field(schema, "collection_repository_id")?;
+    let collection_repository_code = get_field(schema, "collection_repository_code")?;
+    let collected_by = get_field(schema, "collected_by")?;
     let identified_by = get_field(schema, "identified_by")?;
     let event_date = get_field(schema, "event_date")?;
 
@@ -314,19 +313,22 @@ fn index_specimens(schema: &Schema, index: &Index) -> Result<(), Error> {
                 canonical_name => specimen.canonical_name.clone(),
                 data_type => DataType::Specimen.to_string(),
                 name_id => specimen.name_id.to_string(),
-                // status => serde_json::to_string(&specimen.status)?,
-                accession => specimen.accession.clone(),
-                data_source => specimen.data_source.clone(),
             );
 
+            if let Some(value) = &specimen.accession {
+                doc.add_text(accession, value);
+            }
             if let Some(value) = &specimen.institution_code {
                 doc.add_text(institution_code, value);
             }
-            if let Some(value) = &specimen.collection_code {
-                doc.add_text(collection_code, value);
+            if let Some(value) = &specimen.collection_repository_id {
+                doc.add_text(collection_repository_id, value);
             }
-            if let Some(value) = &specimen.recorded_by {
-                doc.add_text(recorded_by, value);
+            if let Some(value) = &specimen.collection_repository_code {
+                doc.add_text(collection_repository_code, value);
+            }
+            if let Some(value) = &specimen.collected_by {
+                doc.add_text(collected_by, value);
             }
             if let Some(value) = &specimen.identified_by {
                 doc.add_text(identified_by, value);
