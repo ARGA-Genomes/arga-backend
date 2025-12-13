@@ -141,6 +141,12 @@ pub enum AssemblyAtom {
     NumberOfScaffolds(i32),
     NumberOfContigs(i32),
     NumberOfReplicons(i32),
+    NumberOfChromosomes(i32),
+    NumberOfComponentSequences(i32),
+    NumberOfOrganelles(i32),
+    NumberOfGapsBetweenScaffolds(i32),
+    NumberOfGuanineCytosine(i64),
+    NumberOfATGC(i64),
     Hybrid(String),
     HybridInformation(String),
     PolishingOrScaffoldingMethod(String),
@@ -148,6 +154,15 @@ pub enum AssemblyAtom {
     ComputationalInfrastructure(String),
     SystemUsed(String),
     AssemblyN50(String),
+    ContigN50(i32),
+    ContigL50(i32),
+    ScaffoldN50(i32),
+    ScaffoldL50(i32),
+
+    LongestContig(i32),
+    LongestScaffold(i32),
+    TotalContigSize(i64),
+    TotalScaffoldSize(i64),
 }
 
 #[derive(OperationLog, Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]

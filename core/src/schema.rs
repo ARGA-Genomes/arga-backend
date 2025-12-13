@@ -211,6 +211,20 @@ diesel::table! {
         size -> Nullable<Int8>,
         minimum_gap_length -> Nullable<Int8>,
         number_of_scaffolds -> Nullable<Int4>,
+        number_of_chromosomes -> Nullable<Int4>,
+        number_of_component_sequences -> Nullable<Int4>,
+        number_of_organelles -> Nullable<Int4>,
+        number_of_gaps_between_scaffolds -> Nullable<Int4>,
+        number_of_guanine_cytosine -> Nullable<Int8>,
+        number_of_atgc -> Nullable<Int8>,
+        contig_n50 -> Nullable<Int4>,
+        contig_l50 -> Nullable<Int4>,
+        scaffold_n50 -> Nullable<Int4>,
+        scaffold_l50 -> Nullable<Int4>,
+        longest_contig -> Nullable<Int4>,
+        longest_scaffold -> Nullable<Int4>,
+        total_contig_size -> Nullable<Int8>,
+        total_scaffold_size -> Nullable<Int8>,
     }
 }
 

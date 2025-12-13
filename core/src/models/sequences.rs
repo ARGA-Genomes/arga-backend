@@ -100,6 +100,12 @@ pub struct Assembly {
     pub number_of_scaffolds: Option<i32>,
     pub number_of_contigs: Option<i32>,
     pub number_of_replicons: Option<i32>,
+    pub number_of_chromosomes: Option<i32>,
+    pub number_of_component_sequences: Option<i32>,
+    pub number_of_organelles: Option<i32>,
+    pub number_of_gaps_between_scaffolds: Option<i32>,
+    pub number_of_guanine_cytosine: Option<i64>,
+    pub number_of_atgc: Option<i64>,
     pub hybrid: Option<String>,
     pub hybrid_information: Option<String>,
     pub polishing_or_scaffolding_method: Option<String>,
@@ -107,6 +113,15 @@ pub struct Assembly {
     pub computational_infrastructure: Option<String>,
     pub system_used: Option<String>,
     pub assembly_n50: Option<String>,
+    pub contig_n50: Option<i32>,
+    pub contig_l50: Option<i32>,
+    pub scaffold_n50: Option<i32>,
+    pub scaffold_l50: Option<i32>,
+
+    pub longest_contig: Option<i32>,
+    pub longest_scaffold: Option<i32>,
+    pub total_contig_size: Option<i64>,
+    pub total_scaffold_size: Option<i64>,
 }
 
 

@@ -560,13 +560,28 @@ CREATE TABLE assemblies (
     number_of_scaffolds int,
     number_of_contigs int,
     number_of_replicons int,
+    number_of_chromosomes int,
+    number_of_component_sequences int,
+    number_of_organelles int,
+    number_of_gaps_between_scaffolds int,
+    number_of_guanine_cytosine bigint,
+    number_of_atgc bigint,
     hybrid varchar,
     hybrid_information varchar,
     polishing_or_scaffolding_method varchar,
     polishing_or_scaffolding_data varchar,
     computational_infrastructure varchar,
     system_used varchar,
-    assembly_n50 varchar
+    assembly_n50 varchar,
+    contig_n50 int,
+    contig_l50 int,
+    scaffold_n50 int,
+    scaffold_l50 int,
+
+    longest_contig int,
+    longest_scaffold int,
+    total_contig_size bigint,
+    total_scaffold_size bigint
 );
 
 

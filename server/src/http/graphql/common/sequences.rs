@@ -94,6 +94,12 @@ pub struct AssemblyDetails {
     pub number_of_scaffolds: Option<i32>,
     pub number_of_contigs: Option<i32>,
     pub number_of_replicons: Option<i32>,
+    pub number_of_chromosomes: Option<i32>,
+    pub number_of_component_sequences: Option<i32>,
+    pub number_of_organelles: Option<i32>,
+    pub number_of_gaps_between_scaffolds: Option<i32>,
+    pub number_of_guanine_cytosine: Option<i64>,
+    pub number_of_atgc: Option<i64>,
     pub hybrid: Option<String>,
     pub hybrid_information: Option<String>,
     pub polishing_or_scaffolding_method: Option<String>,
@@ -101,6 +107,15 @@ pub struct AssemblyDetails {
     pub computational_infrastructure: Option<String>,
     pub system_used: Option<String>,
     pub assembly_n50: Option<String>,
+    pub contig_n50: Option<i32>,
+    pub contig_l50: Option<i32>,
+    pub scaffold_n50: Option<i32>,
+    pub scaffold_l50: Option<i32>,
+
+    pub longest_contig: Option<i32>,
+    pub longest_scaffold: Option<i32>,
+    pub total_contig_size: Option<i64>,
+    pub total_scaffold_size: Option<i64>,
 }
 
 impl From<models::Assembly> for AssemblyDetails {
@@ -137,6 +152,20 @@ impl From<models::Assembly> for AssemblyDetails {
             computational_infrastructure: value.computational_infrastructure,
             system_used: value.system_used,
             assembly_n50: value.assembly_n50,
+            number_of_chromosomes: value.number_of_chromosomes,
+            number_of_component_sequences: value.number_of_component_sequences,
+            number_of_organelles: value.number_of_organelles,
+            number_of_gaps_between_scaffolds: value.number_of_gaps_between_scaffolds,
+            number_of_guanine_cytosine: value.number_of_guanine_cytosine,
+            number_of_atgc: value.number_of_atgc,
+            contig_n50: value.contig_n50,
+            contig_l50: value.contig_l50,
+            scaffold_n50: value.scaffold_n50,
+            scaffold_l50: value.scaffold_l50,
+            longest_contig: value.longest_contig,
+            longest_scaffold: value.longest_scaffold,
+            total_contig_size: value.total_contig_size,
+            total_scaffold_size: value.total_scaffold_size,
         }
     }
 }
