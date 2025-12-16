@@ -34,6 +34,10 @@ pub mod sql_types {
     pub struct OperationAction;
 
     #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "project_member_role_type"))]
+    pub struct ProjectMemberRoleType;
+
+    #[derive(diesel::query_builder::QueryId, diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "publication_type"))]
     pub struct PublicationType;
 
@@ -171,7 +175,16 @@ diesel::table! {
         provider -> Nullable<Varchar>,
         event_date -> Nullable<Date>,
         number_of_genes -> Nullable<Int4>,
-        number_of_proteins -> Nullable<Int4>,
+        method -> Nullable<Varchar>,
+        #[sql_name = "type"]
+        type_ -> Nullable<Varchar>,
+        version -> Nullable<Varchar>,
+        software -> Nullable<Varchar>,
+        software_version -> Nullable<Varchar>,
+        number_of_coding_proteins -> Nullable<Int4>,
+        number_of_non_coding_proteins -> Nullable<Int4>,
+        number_of_pseudogenes -> Nullable<Int4>,
+        number_of_other_genes -> Nullable<Int4>,
     }
 }
 
@@ -718,6 +731,48 @@ diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::OperationAction;
 
+    project_logs (operation_id) {
+        operation_id -> Numeric,
+        parent_id -> Numeric,
+        entity_id -> Varchar,
+        dataset_version_id -> Uuid,
+        action -> OperationAction,
+        atom -> Jsonb,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::ProjectMemberRoleType;
+
+    project_members (project_entity_id, agent_entity_id) {
+        project_entity_id -> Varchar,
+        agent_entity_id -> Varchar,
+        organisation -> Nullable<Varchar>,
+        project_role -> ProjectMemberRoleType,
+    }
+}
+
+diesel::table! {
+    projects (entity_id) {
+        entity_id -> Varchar,
+        project_id -> Nullable<Varchar>,
+        target_species_name_id -> Nullable<Int8>,
+        title -> Nullable<Varchar>,
+        description -> Nullable<Text>,
+        initiative -> Nullable<Varchar>,
+        registration_date -> Nullable<Date>,
+        data_context -> Nullable<Array<Nullable<Text>>>,
+        data_types -> Nullable<Array<Nullable<Text>>>,
+        data_assay_types -> Nullable<Array<Nullable<Text>>>,
+        partners -> Nullable<Array<Nullable<Text>>>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OperationAction;
+
     publication_logs (operation_id) {
         operation_id -> Numeric,
         parent_id -> Numeric,
@@ -1145,6 +1200,9 @@ diesel::joinable!(nomenclatural_acts -> publications (publication_id));
 diesel::joinable!(organism_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(organisms -> agents (identified_by));
 diesel::joinable!(organisms -> names (name_id));
+diesel::joinable!(project_logs -> dataset_versions (dataset_version_id));
+diesel::joinable!(project_members -> agents (agent_entity_id));
+diesel::joinable!(project_members -> projects (project_entity_id));
 diesel::joinable!(publication_logs -> dataset_versions (dataset_version_id));
 diesel::joinable!(regions -> datasets (dataset_id));
 diesel::joinable!(regions -> names (name_id));
@@ -1208,6 +1266,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     nomenclatural_acts,
     organism_logs,
     organisms,
+    project_logs,
+    project_members,
+    projects,
     publication_logs,
     publications,
     regions,

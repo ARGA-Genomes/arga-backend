@@ -1,0 +1,2 @@
+-- Modify "annotations" table
+ALTER TABLE "public"."annotations" DROP COLUMN "number_of_proteins", ADD COLUMN "method" character varying NULL, ADD COLUMN "type" character varying NULL, ADD COLUMN "version" character varying NULL, ADD COLUMN "software" character varying NULL, ADD COLUMN "software_version" character varying NULL, ADD COLUMN "number_of_coding_proteins" integer NULL, ADD COLUMN "number_of_non_coding_proteins" integer NULL, ADD COLUMN "number_of_pseudogenes" integer NULL, ADD COLUMN "number_of_other_genes" integer NULL;

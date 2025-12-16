@@ -134,9 +134,17 @@ pub struct Annotation {
 
     pub name: Option<String>,
     pub provider: Option<String>,
+    pub method: Option<String>,
+    pub type_: Option<String>,
+    pub version: Option<String>,
+    pub software: Option<String>,
+    pub software_version: Option<String>,
     pub event_date: Option<NaiveDate>,
     pub number_of_genes: Option<i32>,
-    pub number_of_proteins: Option<i32>,
+    pub number_of_coding_proteins: Option<i32>,
+    pub number_of_non_coding_proteins: Option<i32>,
+    pub number_of_pseudogenes: Option<i32>,
+    pub number_of_other_genes: Option<i32>,
 }
 
 

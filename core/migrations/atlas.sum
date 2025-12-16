@@ -1,4 +1,4 @@
-h1:WHc6I4QKpBhpi8Usudqzdy9uTptSgm6oM2LSDo/PJEU=
+h1:6fJAfWfUdZCIAXQz8K61DswrQccEUOhqMFNVfQanmBw=
 20250605060808_initial.sql h1:hN3eGaQNsqm+ws4akS+D+e+TqDUHZkZwPaFGW/Gyor4=
 20250605084357_drop_legacy_tables.sql h1:M0SD3ETeanSyo3GDWanw1xpGCJIQg7U11EE5IQ617EU=
 20250606063639_create_baseline_views.sql h1:bjh8zumpl5MFPRc1OAIB9jidVWxu1GPXAu5yGorDjFo=
@@ -31,3 +31,7 @@ h1:WHc6I4QKpBhpi8Usudqzdy9uTptSgm6oM2LSDo/PJEU=
 20251204045946_create_depositions.sql h1:FiXZ5klV+LoZIlInBE6KCpf1RZDM27bgBUjMePHvw5c=
 20251213052245_add_more_stats_to_assemblies.sql h1:RK57WGKzPPyu8HHP/lbPF2cOPoQBffnzZi0+xH4WApM=
 20251213060649_change_asm_stat_totals_to_bigint.sql h1:PmxU1XfOvAgH7W/9tgzL9iQILx0f3CoIlSmvL2zybQ0=
+20251215043057_create_projects.sql h1:lTnLucb9yppu7AFVF4uRncqIla9S+gQjMhovOdC6XA0=
+20251215043226_change_projects_string_arr_to_text_arr.sql h1:R9txR0n9V9dk+OaEOnkVQGJkYU8CClwaEI1yAZ1aKho=
+20251215050737_create_project_logs.sql h1:/bdhQ5H+qwtjN/hxJI53W1vkohX4sy7PBCQyCmDkLgQ=
+20251215101021_add_more_annotation_stats.sql h1:qSHUYDWTg0vGFknAdof8R8SSaAgW60zjFtokqJ/WtpA=

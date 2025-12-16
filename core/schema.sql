@@ -206,6 +206,11 @@ CREATE TYPE publication_type AS ENUM (
 CREATE TYPE job_status AS ENUM ('pending', 'initialized', 'running', 'completed', 'failed', 'dead');
 
 
+CREATE TYPE project_member_role_type AS ENUM (
+    'lead'
+);
+
+
 ---------------------------
 -- Core tables
 ---------------------------
@@ -617,6 +622,41 @@ CREATE TABLE data_products (
 );
 
 
+-- Funded projects
+CREATE TABLE projects (
+    entity_id varchar PRIMARY KEY NOT NULL,
+    project_id varchar,
+
+    target_species_name_id bigint,
+
+    title varchar,
+    description text,
+    initiative varchar,
+    registration_date date,
+
+    data_context text[],
+    data_types text[],
+    data_assay_types text[],
+
+    partners text[]
+);
+
+CREATE INDEX projects_target_species_name_id ON projects (target_species_name_id);
+
+
+-- Porject <-> Agent through table
+CREATE TABLE project_members (
+    project_entity_id varchar REFERENCES projects ON DELETE CASCADE NOT NULL,
+    agent_entity_id varchar REFERENCES agents ON DELETE CASCADE NOT NULL,
+    organisation varchar,
+    project_role project_member_role_type NOT NULL,
+    PRIMARY KEY (project_entity_id, agent_entity_id)
+);
+
+CREATE INDEX project_members_project_entity_id ON project_members (project_entity_id);
+CREATE INDEX project_members_agent_entity_id ON project_members (agent_entity_id);
+
+
 -- Assembly annotations
 CREATE TABLE annotations (
     entity_id varchar PRIMARY KEY NOT NULL,
@@ -624,9 +664,17 @@ CREATE TABLE annotations (
 
     name varchar,
     provider varchar,
+    method varchar,
+    type varchar,
+    version varchar,
+    software varchar,
+    software_version varchar,
     event_date date,
     number_of_genes integer,
-    number_of_proteins integer
+    number_of_coding_proteins integer,
+    number_of_non_coding_proteins integer,
+    number_of_pseudogenes integer,
+    number_of_other_genes integer
 );
 
 CREATE INDEX annotations_assembly_id ON annotations (assembly_id);
@@ -1338,6 +1386,20 @@ CREATE TABLE agent_logs (
 CREATE INDEX agent_logs_parent_id ON agent_logs (parent_id);
 CREATE INDEX agent_logs_entity_id ON agent_logs (entity_id);
 CREATE INDEX agent_logs_dataset_version_id ON agent_logs (dataset_version_id);
+
+
+CREATE TABLE project_logs (
+    operation_id numeric PRIMARY KEY NOT NULL,
+    parent_id numeric NOT NULL,
+    entity_id varchar NOT NULL,
+    dataset_version_id uuid REFERENCES dataset_versions ON DELETE CASCADE NOT NULL,
+    action operation_action NOT NULL,
+    atom jsonb DEFAULT '{}' NOT NULL
+);
+
+CREATE INDEX project_logs_parent_id ON project_logs (parent_id);
+CREATE INDEX project_logs_entity_id ON project_logs (entity_id);
+CREATE INDEX project_logs_dataset_version_id ON project_logs (dataset_version_id);
 
 
 ---------------------------
@@ -2072,3 +2134,7 @@ CREATE UNIQUE INDEX annotation_entities_entity_id ON annotation_entities (entity
 CREATE MATERIALIZED VIEW deposition_entities AS
 SELECT entity_id FROM deposition_logs GROUP BY entity_id ORDER BY entity_id;
 CREATE UNIQUE INDEX deposition_entities_entity_id ON deposition_entities (entity_id);
+
+CREATE MATERIALIZED VIEW project_entities AS
+SELECT entity_id FROM project_logs GROUP BY entity_id ORDER BY entity_id;
+CREATE UNIQUE INDEX project_entities_entity_id ON project_entities (entity_id);

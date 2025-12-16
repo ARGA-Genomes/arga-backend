@@ -289,6 +289,12 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    project_entities (entity_id) {
+        entity_id -> Varchar,
+    }
+}
+
 
 use super::schema::{
     accession_events,

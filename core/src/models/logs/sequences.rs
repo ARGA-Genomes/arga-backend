@@ -188,9 +188,17 @@ pub enum AnnotationAtom {
 
     Name(String),
     Provider(String),
+    Method(String),
+    Type(String),
+    Version(String),
+    Software(String),
+    SoftwareVersion(String),
     EventDate(NaiveDate),
     NumberOfGenes(i32),
-    NumberOfProteins(i32),
+    NumberOfCodingProteins(i32),
+    NumberOfNonCodingProteins(i32),
+    NumberOfPseudogenes(i32),
+    NumberOfOtherGenes(i32),
 }
 
 #[derive(OperationLog, Queryable, Selectable, Insertable, Associations, Debug, Serialize, Deserialize, Clone)]

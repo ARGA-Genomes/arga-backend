@@ -177,9 +177,17 @@ pub struct AnnotationDetails {
     pub assembly_id: String,
     pub name: Option<String>,
     pub provider: Option<String>,
+    pub method: Option<String>,
+    pub r#type: Option<String>,
+    pub version: Option<String>,
+    pub software: Option<String>,
+    pub software_version: Option<String>,
     pub event_date: Option<NaiveDate>,
     pub number_of_genes: Option<i32>,
-    pub number_of_proteins: Option<i32>,
+    pub number_of_coding_proteins: Option<i32>,
+    pub number_of_non_coding_proteins: Option<i32>,
+    pub number_of_pseudogenes: Option<i32>,
+    pub number_of_other_genes: Option<i32>,
 }
 
 impl From<models::Annotation> for AnnotationDetails {
@@ -189,9 +197,17 @@ impl From<models::Annotation> for AnnotationDetails {
             assembly_id: value.assembly_id,
             name: value.name,
             provider: value.provider,
+            method: value.method,
+            r#type: value.type_,
+            version: value.version,
+            software: value.software,
+            software_version: value.software_version,
             event_date: value.event_date,
             number_of_genes: value.number_of_genes,
-            number_of_proteins: value.number_of_proteins,
+            number_of_coding_proteins: value.number_of_coding_proteins,
+            number_of_non_coding_proteins: value.number_of_non_coding_proteins,
+            number_of_pseudogenes: value.number_of_pseudogenes,
+            number_of_other_genes: value.number_of_other_genes,
         }
     }
 }
