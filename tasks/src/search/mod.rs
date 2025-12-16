@@ -198,13 +198,14 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
                 canonical_name => genome.canonical_name.clone(),
                 data_type => DataType::Genome.to_string(),
                 name_id => genome.name_id.to_string(),
+                accession => genome.accession.to_string(),
                 // status => serde_json::to_string(&genome.status)?,
-                data_source => genome.data_source.clone(),
+                // data_source => genome.data_source.clone(),
             );
 
-            if let Some(value) = &genome.accession {
-                doc.add_text(accession, value);
-            }
+            // if let Some(value) = &genome.accession {
+            //     doc.add_text(accession, value);
+            // }
             if let Some(value) = &genome.genome_rep {
                 doc.add_text(genome_rep, value);
             }
@@ -215,11 +216,9 @@ fn index_genomes(schema: &Schema, index: &Index) -> Result<(), Error> {
                 doc.add_text(assembly_type, value);
             }
             if let Some(value) = &genome.release_date {
-                if let Ok(date) = chrono::NaiveDate::parse_from_str(value, "%Y/%m/%d") {
-                    let timestamp =
-                        DateTime::from_timestamp_secs(date.and_time(NaiveTime::default()).and_utc().timestamp());
-                    doc.add_date(release_date, timestamp);
-                }
+                let timestamp =
+                    DateTime::from_timestamp_secs(value.and_time(NaiveTime::default()).and_utc().timestamp());
+                doc.add_date(release_date, timestamp);
             }
             if let Some(value) = &genome.source_uri {
                 doc.add_text(source_uri, value);
