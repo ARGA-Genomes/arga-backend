@@ -228,6 +228,9 @@ impl SpeciesProvider {
                 specimen_stats::assembly_contigs,
             ))
             .filter(specimens::name_id.eq_any(&name_ids))
+            // filter out specimens that aren't from the original collection.
+            // we might wanna move this out to a filter instead at some point
+            .filter(collection_events::entity_id.is_not_null())
             .dynamic_filters(&filters)
             .into_boxed();
 
