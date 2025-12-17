@@ -109,6 +109,7 @@ impl SpecimenQuery {
 pub struct SpecimenDetails {
     pub entity_id: String,
     pub organism_id: String,
+    pub specimen_id: Option<String>,
 }
 
 impl From<models::Specimen> for SpecimenDetails {
@@ -116,6 +117,7 @@ impl From<models::Specimen> for SpecimenDetails {
         Self {
             entity_id: value.entity_id,
             organism_id: value.organism_id,
+            specimen_id: value.specimen_id,
         }
     }
 }
