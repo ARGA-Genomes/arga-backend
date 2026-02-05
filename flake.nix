@@ -104,6 +104,7 @@
               atlasConfig
               schema
               migrations
+              pkgs.busybox
             ];
 
             config = {

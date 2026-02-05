@@ -92,11 +92,11 @@
       "locked": {
         "lastModified": 1,
         "narHash": "sha256-ONntfUB2Xb/HDwMnCppdecuyOnpHrA4pMEwt+fL9HOc=",
-        "path": "/nix/store/4g0gblkv2ckjcknngjxdlywzhmllqg93-source/web",
+        "path": "/nix/store/xi3ias9m56669pwlpc4ibl5hdd33xh06-source/web",
         "type": "path"
       },
       "original": {
-        "path": "/nix/store/4g0gblkv2ckjcknngjxdlywzhmllqg93-source/web",
+        "path": "/nix/store/xi3ias9m56669pwlpc4ibl5hdd33xh06-source/web",
         "type": "path"
       }
     }
