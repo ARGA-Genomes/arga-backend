@@ -5,7 +5,6 @@ env "arga" {
 
     migrations {
         dir = "file://migrations"
-        baseline = "20250605060808"
     }
 
     format {
