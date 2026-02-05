@@ -117,8 +117,6 @@
                 "apply"
                 "--env"
                 "arga"
-                "--baseline"
-                "20250605060808"
               ];
               Labels = {
                 "org.opencontainers.image.source" = "https://github.com/ARGA-Genomes/arga-backend";
