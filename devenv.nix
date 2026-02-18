@@ -1,7 +1,7 @@
 { pkgs, inputs, ... }:
 
 let
-  dioxus-alpha = import inputs.dioxus-alpha { system = pkgs.stdenv.system; };
+  # dioxus-alpha = import inputs.dioxus-alpha { system = pkgs.stdenv.system; };
 in
 {
   packages =
@@ -17,7 +17,7 @@ in
 
       wasm-bindgen-cli
       tailwindcss_4
-      dioxus-alpha.dioxus-cli
+      # dioxus-alpha.dioxus-cli
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       pkgs.darwin.apple_sdk.frameworks.CoreFoundation

@@ -1566,20 +1566,56 @@ WHERE assembly_events.id IS NULL AND target_gene IS NULL;
 
 -- The earliest dates for specific events within a sequence
 CREATE MATERIALIZED VIEW sequence_milestones AS
+-- get the earliest event date for all sequence runs
+WITH first_sequence_runs AS (
+    SELECT
+        sequence_runs.species_name_id,
+        MIN(sequence_runs.event_date) AS sequencing_date
+    FROM sequence_runs
+    GROUP BY sequence_runs.species_name_id
+),
+-- get the earliest event date for all assemblies
+first_assemblies AS (
+    SELECT
+        assemblies.species_name_id,
+        assemblies.representation,
+        MIN(assemblies.event_date) AS assembly_date
+    FROM assemblies
+    GROUP BY assemblies.species_name_id, assemblies.representation
+),
+first_annotations AS (
+    SELECT
+        assemblies.species_name_id,
+        assemblies.representation,
+        MIN(annotations.event_date) AS annotation_date
+    FROM annotations
+    JOIN assemblies ON annotations.assembly_id = assemblies.entity_id
+    GROUP BY assemblies.species_name_id, assemblies.representation
+),
+first_depositions AS (
+    SELECT
+        assemblies.species_name_id,
+        assemblies.representation,
+        MIN(depositions.event_date) AS deposition_date
+    FROM depositions
+    JOIN assemblies ON depositions.assembly_id = assemblies.entity_id
+    GROUP BY assemblies.species_name_id, assemblies.representation
+)
+
 SELECT
-    sequences.name_id,
-    annotation_events.representation,
-    MIN(sequencing_events.event_date) AS sequencing_date,
-    MIN(assembly_events.event_date) AS assembly_date,
-    MIN(annotation_events.event_date) AS annotation_date,
-    MIN(deposition_events.event_date) AS deposition_date
-FROM sequences
-JOIN sequencing_events ON sequences.id = sequencing_events.sequence_id
-JOIN assembly_events ON sequences.id = assembly_events.sequence_id
-JOIN annotation_events ON sequences.id = annotation_events.sequence_id
-JOIN deposition_events ON sequences.id = deposition_events.sequence_id
-JOIN taxon_names ON sequences.name_id = taxon_names.name_id
-GROUP BY sequences.name_id, representation;
+    names.id AS name_id,
+    first_assemblies.representation,
+    MIN(first_sequence_runs.sequencing_date) AS sequencing_date,
+    MIN(first_assemblies.assembly_date) AS assembly_date,
+    MIN(first_annotations.annotation_date) AS annotation_date,
+    to_char(MIN(first_depositions.deposition_date), 'YYYY/MM/DD') AS deposition_date
+FROM names
+JOIN taxon_names ON names.id = taxon_names.name_id
+JOIN first_assemblies ON first_assemblies.species_name_id = names.entity_id
+JOIN first_annotations ON first_annotations.species_name_id = names.entity_id
+JOIN first_depositions ON first_depositions.species_name_id = names.entity_id
+LEFT JOIN first_sequence_runs ON first_sequence_runs.species_name_id = names.entity_id
+GROUP BY names.id, first_assemblies.representation;
 
 CREATE UNIQUE INDEX sequence_milestones_name_representation ON sequence_milestones (name_id, representation);
 
@@ -1610,11 +1646,10 @@ LEFT JOIN (
 ) markers ON markers.name_id = names.id
 
 LEFT JOIN (
-     SELECT name_id, count(*)::int AS total
-     FROM assembly_events
-     JOIN sequences ON assembly_events.sequence_id = sequences.id
-     GROUP BY name_id
-) genomes ON genomes.name_id = names.id
+     SELECT species_name_id, count(*)::int AS total
+     FROM assemblies
+     GROUP BY species_name_id
+) genomes ON genomes.species_name_id = names.entity_id
 
 LEFT JOIN (
      SELECT name_id, count(*)::int AS total
@@ -1633,52 +1668,46 @@ LEFT JOIN (
 ) other_data ON other_data.name_id = names.id
 
 LEFT JOIN (
-     SELECT name_id, count(*)::int AS total
-     FROM annotation_events
-     JOIN sequences ON annotation_events.sequence_id = sequences.id
+     SELECT species_name_id, count(*)::int AS total
+     FROM assemblies
      WHERE representation = 'Full'
-     GROUP BY name_id
-) full_genomes ON full_genomes.name_id = names.id
+     GROUP BY species_name_id
+) full_genomes ON full_genomes.species_name_id = names.entity_id
 
 LEFT JOIN (
-     SELECT name_id, count(*)::int AS total
-     FROM annotation_events
-     JOIN sequences ON annotation_events.sequence_id = sequences.id
+     SELECT species_name_id, count(*)::int AS total
+     FROM assemblies
      WHERE representation = 'Partial'
-     GROUP BY name_id
-) partial_genomes ON partial_genomes.name_id = names.id
+     GROUP BY species_name_id
+) partial_genomes ON partial_genomes.species_name_id = names.entity_id
 
 LEFT JOIN (
-     SELECT name_id, count(*)::int AS total
-     FROM assembly_events
-     JOIN sequences ON assembly_events.sequence_id = sequences.id
-     WHERE quality = 'Complete Genome'
-     GROUP BY name_id
-) complete_genomes ON complete_genomes.name_id = names.id
+     SELECT species_name_id, count(*)::int AS total
+     FROM assemblies
+     WHERE level = 'Complete Genome'
+     GROUP BY species_name_id
+) complete_genomes ON complete_genomes.species_name_id = names.entity_id
 
 LEFT JOIN (
-     SELECT name_id, count(*)::int AS total
-     FROM assembly_events
-     JOIN sequences ON assembly_events.sequence_id = sequences.id
-     WHERE quality = 'Chromosome'
-     GROUP BY name_id
-) assembly_chromosomes ON assembly_chromosomes.name_id = names.id
+     SELECT species_name_id, count(*)::int AS total
+     FROM assemblies
+     WHERE level = 'Chromosome'
+     GROUP BY species_name_id
+) assembly_chromosomes ON assembly_chromosomes.species_name_id = names.entity_id
 
 LEFT JOIN (
-     SELECT name_id, count(*)::int AS total
-     FROM assembly_events
-     JOIN sequences ON assembly_events.sequence_id = sequences.id
-     WHERE quality = 'Scaffold'
-     GROUP BY name_id
-) assembly_scaffolds ON assembly_scaffolds.name_id = names.id
+     SELECT species_name_id, count(*)::int AS total
+     FROM assemblies
+     WHERE level = 'Scaffold'
+     GROUP BY species_name_id
+) assembly_scaffolds ON assembly_scaffolds.species_name_id = names.entity_id
 
 LEFT JOIN (
-     SELECT name_id, count(*)::int AS total
-     FROM assembly_events
-     JOIN sequences ON assembly_events.sequence_id = sequences.id
-     WHERE quality = 'Contig'
-     GROUP BY name_id
-) assembly_contigs ON assembly_contigs.name_id = names.id;
+     SELECT species_name_id, count(*)::int AS total
+     FROM assemblies
+     WHERE level = 'Contig'
+     GROUP BY species_name_id
+) assembly_contigs ON assembly_contigs.species_name_id = names.entity_id;
 
 CREATE UNIQUE INDEX name_data_summaries_name_id ON name_data_summaries (name_id);
 

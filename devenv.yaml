@@ -26,5 +26,5 @@ inputs:
 
   # use the alpha version of dioxus for the ability to
   # bundle the admin web wasm
-  dioxus-alpha:
-    url: github:CathalMullan/nixpkgs/dioxus-cli-v0.7.0
+  # dioxus-alpha:
+  #   url: github:CathalMullan/nixpkgs/dioxus-cli-v0.7.0
