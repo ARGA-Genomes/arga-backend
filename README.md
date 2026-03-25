@@ -13,6 +13,35 @@ vim .env
 
 and then set the variables to point at your Solr and [arga-frontend](https://github.com/ARGA-Genomes/arga-frontend) services. The frontend service is only useful for development as it'll add your nodejs server to the CORS list allowing it to make requests. In production this wont be necessary.
 
+### First-time setup
+
+If this is your first time running the backend server, you'll need to setup the Postgres database and [tantivy](https://github.com/quickwit-oss/tantivy) search index first.
+
+Open a new terminal tab, and run `devenv up` to start postgres on your machine.
+
+The ARGA database can then be created by connecting to your postgres instance via `psql -d postgres` and running:
+
+```postgres
+CREATE DATABASE arga;
+```
+
+Once created, to follow the instructions in `core/README.md` to setup the database schema. In short, make sure you have `DATABASE_URL` set as an environment variable, and then run the following command from the `core` folder:
+
+```bash
+atlas migrate apply --env arga
+```
+
+You can also restore from a database dump (see [pg_dump](https://www.postgresql.org/docs/current/app-pgdump.html) and [pg_restore](https://www.postgresql.org/docs/current/app-pgrestore.html)).
+
+Once complete, create a `.index` folder at the root of the project directory, and run:
+
+```bash
+cargo run --bin arga-tasks search create
+```
+
+
+### Running the backend server
+
 To run a development server:
 
 ```bash
@@ -25,6 +54,7 @@ To build a production version and serve it with the nextjs server (optional)
 cargo build --release
 ./target/release/arga-backend
 ```
+
 
 ## Reproducible Builds
 

@@ -11,13 +11,14 @@ in
       diesel-cli
       cargo-udeps
       cargo-expand
-      mold
       postgresql.lib
       atlas
-
       wasm-bindgen-cli
       tailwindcss_4
       # dioxus-alpha.dioxus-cli
+    ]
+    ++ lib.optionals pkgs.stdenv.isLinux [
+      mold
     ]
     ++ lib.optionals pkgs.stdenv.isDarwin [
       pkgs.darwin.apple_sdk.frameworks.CoreFoundation
